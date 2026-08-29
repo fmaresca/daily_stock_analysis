@@ -4,8 +4,7 @@ on:
   schedule:
     # Runs at 20:30 UTC (4:30 PM EDT) Mon-Fri
     - cron: '30 20 * * 1-5'
-  workflow_dispatch: # Allows manual on-demand triggers
-  
+ 
   # 手动触发
   workflow_dispatch:
     inputs:
