@@ -20,6 +20,7 @@ interface HelpHandbookModalProps {
 
 type HandbookTab =
   | 'STRATEGY_RULES'
+  | 'CHART_READING'
   | 'CADENCE_GUIDE'
   | 'GREEKS_FORMULAS'
   | 'LIQUIDITY_TIERS'
@@ -46,7 +47,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>DeltaHarvest Strategy Handbook &amp; Educational Center</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  v1.2
+                  v1.3
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
@@ -78,6 +79,18 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
           </button>
 
           <button
+            onClick={() => setActiveTab('CHART_READING')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'CHART_READING'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Activity className="w-4 h-4 text-cyan-400" />
+            <span>2. Visual Charting &amp; Strike Positioning</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('CADENCE_GUIDE')}
             className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
               activeTab === 'CADENCE_GUIDE'
@@ -86,7 +99,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>2. Weekly vs Monthly Expirations</span>
+            <span>3. Weekly vs Monthly Expirations</span>
           </button>
 
           <button
@@ -209,7 +222,77 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             </div>
           )}
 
-          {/* TAB 2: Expiration Cadence Guide */}
+          {/* TAB 2: Visual Chart Reading & Strike Positioning */}
+          {activeTab === 'CHART_READING' && (
+            <div className="space-y-6">
+              <div className="border-l-2 border-cyan-500 pl-4 py-1">
+                <h3 className="text-base font-bold text-white">Visual Chart Reading &amp; Strike Positioning</h3>
+                <p className="text-slate-400 mt-1">
+                  How to read candlestick price action against Bollinger Bands and confirm optimal option strike entries.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-sky-500/30 space-y-2">
+                  <div className="flex items-center space-x-2 text-sky-400 font-bold text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-400" />
+                    <span>20-Day SMA Mean Regression</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    The 20-day Simple Moving Average serves as the equilibrium baseline. Price deviations far above or below the 20 SMA experience strong magnetic mean-reverting pull back toward the center.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-2">
+                  <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    <span>Lower Bollinger Band (2 SD)</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Statistically, 95.4% of all closing prices remain inside the 2 Standard Deviation envelope. Writing Put strikes <strong>below the Lower Band</strong> gives an institutional statistical edge against adverse downward moves.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-pink-500/30 space-y-2">
+                  <div className="flex items-center space-x-2 text-pink-400 font-bold text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-pink-400" />
+                    <span>Upper Bollinger Band (2 SD)</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    When a stock rallies to the Upper Band, momentum often stalls or consolidates. Writing Covered Calls <strong>at or above the Upper Band</strong> maximizes upside capital appreciation before potential assignment.
+                  </p>
+                </div>
+              </div>
+
+              {/* Confluence Checklist */}
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  <span>The 4-Step Confluence Checklist for Writing Cash-Secured Puts</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-emerald-400">Step 1: Candlestick Test of Lower Band</div>
+                    <p className="text-slate-400 text-[11px]">Look for long bottom wicks or hammer candles piercing and rejecting the Lower Bollinger Band.</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-emerald-400">Step 2: 14-Day RSI Oversold Check</div>
+                    <p className="text-slate-400 text-[11px]">RSI &le; 35 indicates selling exhaustion, reducing the likelihood of sustained immediate breakdown.</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-emerald-400">Step 3: Elevated IV Rank (&ge; 45%)</div>
+                    <p className="text-slate-400 text-[11px]">Ensure option premium is historically rich so theta decay pays handsomely for your risk.</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-emerald-400">Step 4: Confirm 4%–8% Cushion to Strike</div>
+                    <p className="text-slate-400 text-[11px]">Verify that the visual green dotted strike line sits comfortably outside the daily ATR noise band.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Expiration Cadence Guide */}
           {activeTab === 'CADENCE_GUIDE' && (
             <div className="space-y-6">
               <div className="border-l-2 border-teal-500 pl-4 py-1">

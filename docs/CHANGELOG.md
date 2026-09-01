@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [新功能] DeltaHarvest Web UI: 集成 TradingView Lightweight Charts 交互式 K 线图、20日均线、2倍标准差布林带通道、期权目标行权价动态标线、图表切换工作区及技术形态图表帮助手册。
 - [新功能] DeltaHarvest Web UI: 新增美股技术分析与期权双导航菜单树、全局搜索与命令面板(Ctrl+K)、策略帮助手册、多自选列表管理(支持批量导入与CSV/Excel上传解析)及多格式执行报表查询与导出(CSV/Excel/PDF)。
 - [修复] 美股日线路由现按各数据源当前优先级排序，单项 `*_PRIORITY` 配置（如 `YFINANCE_PRIORITY=0`）对美股即时生效；指数固定首选与 Longbridge preferred 语义保持不变
 

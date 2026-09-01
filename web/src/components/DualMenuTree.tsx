@@ -113,7 +113,19 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
               }`}
             >
               <Activity className="w-3.5 h-3.5" />
-              <span>Technical Screener &amp; Bollinger Bands</span>
+              <span>Technical Screener</span>
+            </button>
+
+            <button
+              onClick={() => onSelectEquitiesTab('INTERACTIVE_CHARTS')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                activeEquitiesTab === 'INTERACTIVE_CHARTS'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Interactive Candlestick Charts &amp; BB Envelopes</span>
             </button>
 
             <button

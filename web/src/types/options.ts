@@ -142,6 +142,7 @@ export type MenuTreeType = 'EQUITIES' | 'OPTIONS';
 
 export type EquitiesTabType =
   | 'TECHNICAL_SCREENER'
+  | 'INTERACTIVE_CHARTS'
   | 'TREND_SUPPORT'
   | 'VOLATILITY_RISK'
   | 'EARNINGS_CALENDAR'

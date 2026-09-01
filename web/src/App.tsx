@@ -11,6 +11,7 @@ import { ScreenerTable } from './components/ScreenerTable';
 import { TickerAuditModal } from './components/TickerAuditModal';
 import { OptionDetailModal } from './components/OptionDetailModal';
 import { IncomeCalculatorModal } from './components/IncomeCalculatorModal';
+import { InteractiveChart } from './components/InteractiveChart';
 import {
   Search,
   RotateCcw,
@@ -85,6 +86,7 @@ export const App: React.FC = () => {
   const [activeTree, setActiveTree] = useState<MenuTreeType>('EQUITIES');
   const [activeEquitiesTab, setActiveEquitiesTab] = useState<EquitiesTabType>('TECHNICAL_SCREENER');
   const [activeOptionsTab, setActiveOptionsTab] = useState<OptionsTabType>('INCOME_SCREENER');
+  const [activeChartSymbol, setActiveChartSymbol] = useState<string>('SPY');
 
   // Interactive Modal States
   const [selectedTicker, setSelectedTicker] = useState<TickerMeta | null>(null);
@@ -761,18 +763,61 @@ export const App: React.FC = () => {
 
         {/* Primary Content View Switcher */}
         {activeTree === 'EQUITIES' ? (
-          /* Tree 1: US Equities Analysis (Primary Screener Table) */
-          <div className="space-y-4">
-            <PrimaryScreenerTable
-              tickers={filteredTickers}
-              watchlist={currentWatchlistSymbols}
-              onToggleWatchlist={handleToggleWatchlist}
-              sortBy={filters.sortBy}
-              sortOrder={filters.sortOrder}
-              onSort={handleSort}
-              onSelectTicker={(ticker) => setSelectedTicker(ticker)}
-            />
-          </div>
+          activeEquitiesTab === 'INTERACTIVE_CHARTS' ? (
+            /* Dedicated Interactive Technical Chart Workspace */
+            <div className="space-y-4">
+              {/* Ticker Selector Strip */}
+              <div className="glass-panel p-2.5 rounded-xl border border-slate-800 flex items-center space-x-2 overflow-x-auto">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider pl-2 pr-1 shrink-0">
+                  Select Ticker:
+                </span>
+                {filteredTickers.map((t) => (
+                  <button
+                    key={t.symbol}
+                    onClick={() => setActiveChartSymbol(t.symbol)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all shrink-0 flex items-center space-x-1.5 ${
+                      activeChartSymbol === t.symbol
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-400'
+                        : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                    }`}
+                  >
+                    <span>{t.symbol}</span>
+                    <span className="text-[10px] text-slate-300 font-sans font-normal">
+                      ${t.spot_price.toFixed(0)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Chart Canvas */}
+              {(() => {
+                const targetTicker =
+                  filteredTickers.find((t) => t.symbol === activeChartSymbol) ||
+                  filteredTickers[0] ||
+                  universeTickers[0];
+                return targetTicker ? (
+                  <InteractiveChart
+                    ticker={targetTicker}
+                    opportunities={dataPayload?.opportunities || []}
+                    height={460}
+                  />
+                ) : null;
+              })()}
+            </div>
+          ) : (
+            /* Tree 1: US Equities Analysis (Primary Screener Table) */
+            <div className="space-y-4">
+              <PrimaryScreenerTable
+                tickers={filteredTickers}
+                watchlist={currentWatchlistSymbols}
+                onToggleWatchlist={handleToggleWatchlist}
+                sortBy={filters.sortBy}
+                sortOrder={filters.sortOrder}
+                onSort={handleSort}
+                onSelectTicker={(ticker) => setSelectedTicker(ticker)}
+              />
+            </div>
+          )
         ) : (
           /* Tree 2: Options & Weekly Yield Engine */
           <div className="space-y-4">

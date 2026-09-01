@@ -14,6 +14,7 @@ import {
   ArrowRight,
 } from './icons';
 import { TickerMeta, OptionOpportunity } from '../types/options';
+import { InteractiveChart } from './InteractiveChart';
 
 interface TickerAuditModalProps {
   ticker: TickerMeta | null;
@@ -235,11 +236,14 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
           </div>
 
           {/* SECTION 3: Technical Boundaries */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
               <Layers className="w-4 h-4 text-indigo-400" />
-              <span>Part 3: Technical Boundaries &amp; Bollinger Envelope (2 SD)</span>
+              <span>Part 3: Technical Boundaries, Bollinger Envelope &amp; Interactive Chart</span>
             </h3>
+
+            {/* Embedded TradingView Lightweight Candlestick Chart */}
+            <InteractiveChart ticker={ticker} opportunities={opportunities} height={300} />
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
               <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
