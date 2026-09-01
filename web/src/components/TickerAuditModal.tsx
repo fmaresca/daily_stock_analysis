@@ -44,20 +44,31 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 
   if (!ticker) return null;
 
-  const isTier1 = ticker.liquidity_tier.includes('Tier 1');
-  const isTier4 = ticker.liquidity_tier.includes('Tier 4');
+  const liquidityTier = ticker.liquidity_tier || 'Tier 2/3 (Moderate)';
+  const isTier1 = liquidityTier.includes('Tier 1');
+  const isTier4 = liquidityTier.includes('Tier 4');
+
+  const spotPrice = typeof ticker.spot_price === 'number' && !isNaN(ticker.spot_price) && ticker.spot_price > 0 ? ticker.spot_price : 100.0;
+  const lowerBb = typeof ticker.lower_bb === 'number' && !isNaN(ticker.lower_bb) ? ticker.lower_bb : spotPrice * 0.93;
+  const upperBb = typeof ticker.upper_bb === 'number' && !isNaN(ticker.upper_bb) ? ticker.upper_bb : spotPrice * 1.07;
+  const sma20 = typeof ticker.sma_20 === 'number' && !isNaN(ticker.sma_20) ? ticker.sma_20 : spotPrice;
+  const rsi14 = typeof ticker.rsi_14 === 'number' && !isNaN(ticker.rsi_14) ? ticker.rsi_14 : 50;
+  const ivCurrent = typeof ticker.iv_current === 'number' && !isNaN(ticker.iv_current) ? ticker.iv_current : 25.0;
+  const hv30 = typeof ticker.hv_30 === 'number' && !isNaN(ticker.hv_30) ? ticker.hv_30 : 25.0;
+  const ivRank = typeof ticker.iv_rank === 'number' && !isNaN(ticker.iv_rank) ? ticker.iv_rank : 35;
+  const avgVolume30 = typeof ticker.avg_volume_30 === 'number' && !isNaN(ticker.avg_volume_30) ? ticker.avg_volume_30 : 1000000;
 
   // Put Cushion % to Lower BB
-  const putCushionPct = (((ticker.spot_price - ticker.lower_bb) / ticker.spot_price) * 100).toFixed(1);
-  const callUpsidePct = (((ticker.upper_bb - ticker.spot_price) / ticker.spot_price) * 100).toFixed(1);
+  const putCushionPct = spotPrice > 0 ? (((spotPrice - lowerBb) / spotPrice) * 100).toFixed(1) : '7.0';
+  const callUpsidePct = spotPrice > 0 ? (((upperBb - spotPrice) / spotPrice) * 100).toFixed(1) : '7.0';
 
   // Associated option opportunities for this ticker
-  const tickerOpps = opportunities.filter((o) => o.symbol === ticker.symbol);
+  const tickerOpps = (opportunities || []).filter((o) => o?.symbol === ticker?.symbol);
   const bestCSP = tickerOpps.find((o) => o.strategy === 'CSP') || null;
   const bestCC = tickerOpps.find((o) => o.strategy === 'CC') || null;
 
   // Security Intelligence (Scores, News, 13F Institutional Backing, Sentiment)
-  const intel = useMemo(() => getSecurityIntelligence(ticker.symbol, ticker), [ticker]);
+  const intel = useMemo(() => getSecurityIntelligence(ticker?.symbol || 'ASSET', ticker), [ticker]);
 
   // Merge context data from ticker meta or fallback
   const analystTargets = ticker.analyst_intelligence || intel.analystTargets;
@@ -66,9 +77,9 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   const socialSentiment = ticker.social_sentiment || intel.socialSentiment;
 
   // Assignment collateral for 1 put contract at Lower BB
-  const putStrikeTarget = bestCSP ? bestCSP.strike : Math.floor(ticker.lower_bb);
+  const putStrikeTarget = bestCSP ? bestCSP.strike : Math.max(1, Math.floor(lowerBb));
   const putCollateral = putStrikeTarget * 100;
-  const estimatedWeeklyPutPremium = bestCSP ? bestCSP.premium_total : Math.round(putStrikeTarget * (ticker.iv_current / 100) * 0.12 * 100);
+  const estimatedWeeklyPutPremium = bestCSP ? bestCSP.premium_total : Math.round(putStrikeTarget * (ivCurrent / 100) * 0.12 * 100);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -96,7 +107,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   {ticker.symbol}
                 </span>
                 <span className="text-xs px-2.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-medium">
-                  ${ticker.spot_price.toFixed(2)}
+                  ${spotPrice.toFixed(2)}
                 </span>
                 <span
                   className={`text-xs px-2.5 py-0.5 rounded-md font-semibold border ${
@@ -107,7 +118,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                       : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
                   }`}
                 >
-                  {ticker.liquidity_tier}
+                  {liquidityTier}
                 </span>
                 {ticker.earnings_within_7d && (
                   <span className="text-xs px-2 py-0.5 rounded-md font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">
@@ -116,7 +127,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                {ticker.name} • {ticker.sector} • Comprehensive AI Intelligence &amp; Options Audit
+                {ticker.name || ticker.symbol} • {ticker.sector || 'Equities'} • Comprehensive AI Intelligence &amp; Options Audit
               </p>
             </div>
           </div>
@@ -215,12 +226,12 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   </h3>
                   <span
                     className={`text-xs px-2.5 py-0.5 rounded font-mono font-bold ${
-                      ticker.iv_rank >= 50
+                      ivRank >= 50
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                         : 'bg-slate-800 text-slate-300'
                     }`}
                   >
-                    IV Rank: {ticker.iv_rank} / 100
+                    IV Rank: {ivRank} / 100
                   </span>
                 </div>
 
@@ -228,7 +239,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
                     <div className="text-[11px] text-slate-400">Current Implied Volatility (IV)</div>
                     <div className="text-base font-bold font-mono text-amber-400 mt-1">
-                      {ticker.iv_current.toFixed(1)}%
+                      {ivCurrent.toFixed(1)}%
                     </div>
                     <p className="text-[10px] text-slate-500 mt-1">Market pricing for future 30d swing</p>
                   </div>
@@ -236,7 +247,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
                     <div className="text-[11px] text-slate-400">30-Day Historical Volatility (HV)</div>
                     <div className="text-base font-bold font-mono text-cyan-400 mt-1">
-                      {ticker.hv_30.toFixed(1)}%
+                      {hv30.toFixed(1)}%
                     </div>
                     <p className="text-[10px] text-slate-500 mt-1">Realized underlying movement</p>
                   </div>
@@ -245,13 +256,13 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                     <div className="text-[11px] text-slate-400">IV / HV Volatility Premium</div>
                     <div
                       className={`text-base font-bold font-mono mt-1 ${
-                        ticker.iv_current > ticker.hv_30 ? 'text-emerald-400' : 'text-slate-300'
+                        ivCurrent > hv30 ? 'text-emerald-400' : 'text-slate-300'
                       }`}
                     >
-                      {(ticker.iv_current - ticker.hv_30).toFixed(1)}%
+                      {(ivCurrent - hv30).toFixed(1)}%
                     </div>
                     <p className="text-[10px] text-slate-500 mt-1">
-                      {ticker.iv_current > ticker.hv_30
+                      {ivCurrent > hv30
                         ? '✓ Implied volatility rich vs realized'
                         : 'Normalized option pricing'}
                     </p>
@@ -264,7 +275,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                         ticker.earnings_within_7d ? 'text-rose-400 animate-pulse' : 'text-white'
                       }`}
                     >
-                      {ticker.next_earnings_date}
+                      {ticker.next_earnings_date || 'N/A'}
                     </div>
                     <p className="text-[10px] text-slate-500 mt-1">
                       {ticker.earnings_within_7d
@@ -300,7 +311,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
                     <div className="text-[11px] text-slate-400">30-Day Average Volume</div>
                     <div className="text-base font-bold font-mono text-slate-200 mt-1">
-                      {ticker.avg_volume_30.toLocaleString()} shares
+                      {avgVolume30.toLocaleString()} shares
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1">
                       Ensures underlying market-making activity.
@@ -335,7 +346,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
                     <div className="text-[11px] text-slate-400">20-Day SMA</div>
                     <div className="text-lg font-bold font-mono text-white mt-0.5">
-                      ${ticker.sma_20.toFixed(2)}
+                      ${sma20.toFixed(2)}
                     </div>
                     <div className="text-[10px] text-slate-500">Mean regression line</div>
                   </div>
@@ -343,7 +354,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   <div className="bg-slate-950/70 p-2.5 rounded-lg border border-emerald-500/30">
                     <div className="text-[11px] text-emerald-400 font-semibold">Lower BB (Put Strike Target)</div>
                     <div className="text-lg font-black font-mono text-emerald-400 mt-0.5">
-                      ${ticker.lower_bb.toFixed(2)}
+                      ${lowerBb.toFixed(2)}
                     </div>
                     <div className="text-[10px] text-emerald-300">+{putCushionPct}% downside cushion</div>
                   </div>
@@ -351,7 +362,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   <div className="bg-slate-950/70 p-2.5 rounded-lg border border-cyan-500/30">
                     <div className="text-[11px] text-cyan-400 font-semibold">Upper BB (Call Strike Target)</div>
                     <div className="text-lg font-black font-mono text-cyan-400 mt-0.5">
-                      ${ticker.upper_bb.toFixed(2)}
+                      ${upperBb.toFixed(2)}
                     </div>
                     <div className="text-[10px] text-cyan-300">+{callUpsidePct}% upside room</div>
                   </div>
@@ -360,14 +371,14 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                     <div className="text-[11px] text-slate-400">14-Day RSI</div>
                     <div
                       className={`text-lg font-black font-mono mt-0.5 ${
-                        ticker.rsi_14 < 30
+                        rsi14 < 30
                           ? 'text-emerald-400'
-                          : ticker.rsi_14 > 70
+                          : rsi14 > 70
                           ? 'text-rose-400'
                           : 'text-white'
                       }`}
                     >
-                      {ticker.rsi_14}
+                      {rsi14}
                     </div>
                     <div className="text-[10px] text-slate-500">
                       {ticker.rsi_14 < 30
@@ -456,7 +467,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                     <div className="flex justify-between py-1 border-b border-slate-800">
                       <span className="text-slate-400">Recommended Strike:</span>
                       <span className="font-bold font-mono text-white">
-                        ${bestCC ? bestCC.strike.toFixed(1) : Math.ceil(ticker.upper_bb).toFixed(1)}
+                        ${bestCC ? bestCC.strike.toFixed(1) : Math.ceil(upperBb).toFixed(1)}
                       </span>
                     </div>
 
@@ -467,13 +478,13 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 
                     <div className="flex justify-between py-1 border-b border-slate-800">
                       <span className="text-slate-400">Shares Required (1 ct):</span>
-                      <span className="font-mono text-slate-200">100 Shares (${(ticker.spot_price * 100).toLocaleString()})</span>
+                      <span className="font-mono text-slate-200">100 Shares (${(spotPrice * 100).toLocaleString()})</span>
                     </div>
 
                     <div className="flex justify-between py-1">
                       <span className="text-slate-400">Est. Cash Income (Weekly):</span>
                       <span className="font-bold font-mono text-cyan-400">
-                        +${bestCC ? bestCC.premium_total : Math.round(ticker.spot_price * (ticker.iv_current / 100) * 0.12 * 100)}
+                        +${bestCC ? bestCC.premium_total : Math.round(spotPrice * (ivCurrent / 100) * 0.12 * 100)}
                       </span>
                     </div>
                   </div>

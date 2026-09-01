@@ -20,6 +20,7 @@ import { OptionsBacktestView } from './components/OptionsBacktestView';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { BrokerOrderStagingModal } from './components/BrokerOrderStagingModal';
 import { BrokerStagingWorkbench } from './components/BrokerStagingWorkbench';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   stageSingleLegOrder,
   stageMultiLegSpreadOrder,
@@ -1333,41 +1334,49 @@ export const App: React.FC = () => {
       />
 
       {/* 5. Ticker Detail 5-Part Audit Modal */}
-      <TickerAuditModal
-        ticker={selectedTicker}
-        opportunities={dataPayload?.opportunities || []}
-        onClose={() => setSelectedTicker(null)}
-      />
+      <ErrorBoundary fallbackTitle="Ticker Detail View Recovered" onReset={() => setSelectedTicker(null)}>
+        <TickerAuditModal
+          ticker={selectedTicker}
+          opportunities={dataPayload?.opportunities || []}
+          onClose={() => setSelectedTicker(null)}
+        />
+      </ErrorBoundary>
 
       {/* 6. Option Opportunity Detail Modal */}
-      <OptionDetailModal
-        opportunity={selectedOpportunity}
-        onClose={() => setSelectedOpportunity(null)}
-        onOpenCalculator={(opp) => {
-          setSelectedOpportunity(null);
-          setCalculatorOpportunity(opp);
-        }}
-        onStageOrder={(opp) => {
-          setSelectedOpportunity(null);
-          handleStageOpportunity(opp);
-        }}
-      />
+      <ErrorBoundary fallbackTitle="Option Details Recovered" onReset={() => setSelectedOpportunity(null)}>
+        <OptionDetailModal
+          opportunity={selectedOpportunity}
+          onClose={() => setSelectedOpportunity(null)}
+          onOpenCalculator={(opp) => {
+            setSelectedOpportunity(null);
+            setCalculatorOpportunity(opp);
+          }}
+          onStageOrder={(opp) => {
+            setSelectedOpportunity(null);
+            handleStageOpportunity(opp);
+          }}
+        />
+      </ErrorBoundary>
 
       {/* 7. Cash Income Calculator Modal */}
-      <IncomeCalculatorModal
-        opportunity={calculatorOpportunity}
-        onClose={() => setCalculatorOpportunity(null)}
-      />
+      <ErrorBoundary fallbackTitle="Income Calculator Recovered" onReset={() => setCalculatorOpportunity(null)}>
+        <IncomeCalculatorModal
+          opportunity={calculatorOpportunity}
+          onClose={() => setCalculatorOpportunity(null)}
+        />
+      </ErrorBoundary>
 
       {/* 8. Broker Order Staging & 1-Click Execution Payloads Modal */}
-      <BrokerOrderStagingModal
-        isOpen={isStagedModalOpen}
-        onClose={() => setIsStagedModalOpen(false)}
-        stagedOrder={stagedOrder}
-        onQuantityChange={handleUpdateStagedQuantity}
-        onAccountTypeChange={handleUpdateStagedAccountType}
-        onPricingTypeChange={handleUpdateStagedPricingType}
-      />
+      <ErrorBoundary fallbackTitle="Broker Staging Recovered" onReset={() => setIsStagedModalOpen(false)}>
+        <BrokerOrderStagingModal
+          isOpen={isStagedModalOpen}
+          onClose={() => setIsStagedModalOpen(false)}
+          stagedOrder={stagedOrder}
+          onQuantityChange={handleUpdateStagedQuantity}
+          onAccountTypeChange={handleUpdateStagedAccountType}
+          onPricingTypeChange={handleUpdateStagedPricingType}
+        />
+      </ErrorBoundary>
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-400">
