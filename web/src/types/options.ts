@@ -1,4 +1,65 @@
-export type StrategyType = 'CSP' | 'CC';
+export type StrategyType =
+  | 'CSP'
+  | 'CC'
+  | 'BULL_PUT_SPREAD'
+  | 'BEAR_CALL_SPREAD'
+  | 'IRON_CONDOR';
+
+export interface MultiLegSpread {
+  id: string;
+  symbol: string;
+  name: string;
+  sector: string;
+  strategy: 'BULL_PUT_SPREAD' | 'BEAR_CALL_SPREAD' | 'IRON_CONDOR';
+  strategy_name: string;
+  expiration: string;
+  dte: number;
+  current_price: number;
+  // Short leg anchored in 0.15 - 0.20 Delta outside Bollinger Bands
+  short_strike: number;
+  short_delta: number;
+  short_type: 'put' | 'call';
+  // Long protective wing
+  long_strike: number;
+  long_delta: number;
+  long_type: 'put' | 'call';
+  // Call side if Iron Condor
+  call_short_strike?: number;
+  call_short_delta?: number;
+  call_long_strike?: number;
+  call_long_delta?: number;
+
+  spread_width: number;
+  net_credit: number;
+  max_loss: number;
+  collateral_required: number;
+  breakeven: number;
+  upper_breakeven?: number;
+  cushion_pct: number;
+  roc_pct: number;
+  annualized_roc: number;
+  pop_pct: number;
+  iv_rank: number;
+  liquidity_tier?: string;
+  has_weeklys?: boolean;
+  is_monthly_adjusted?: boolean;
+}
+
+export interface VolatilitySkewData {
+  symbol: string;
+  name: string;
+  spot_price: number;
+  put_iv_25d: number;
+  call_iv_25d: number;
+  iv_skew_spread: number;
+  skew_sentiment: 'Heavy Put Demand (Bearish Fear)' | 'Neutral Skew' | 'Call Skew (Bullish Speculation)';
+  term_structure: {
+    label: string;
+    dte: number;
+    iv: number;
+    isInverted: boolean;
+  }[];
+}
 
 export interface TickerMeta {
   symbol: string;
@@ -150,6 +211,8 @@ export type EquitiesTabType =
 
 export type OptionsTabType =
   | 'INCOME_SCREENER'
+  | 'MULTI_LEG_SPREADS'
+  | 'VOLATILITY_SKEW'
   | 'EXPIRATION_CADENCE'
   | 'DELTA_GREEKS'
   | 'TICKER_AUDIT'

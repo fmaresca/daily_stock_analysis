@@ -198,7 +198,31 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
               }`}
             >
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>Conservative Income Screener (CSPs &amp; CCs)</span>
+              <span>Conservative Income (CSPs &amp; CCs)</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('MULTI_LEG_SPREADS')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                activeOptionsTab === 'MULTI_LEG_SPREADS'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Multi-Leg Spreads &amp; Iron Condors</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('VOLATILITY_SKEW')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                activeOptionsTab === 'VOLATILITY_SKEW'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5 text-cyan-400" />
+              <span>25Δ Volatility Skew &amp; Term Structure</span>
             </button>
 
             <button

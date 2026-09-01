@@ -12,6 +12,9 @@ import { TickerAuditModal } from './components/TickerAuditModal';
 import { OptionDetailModal } from './components/OptionDetailModal';
 import { IncomeCalculatorModal } from './components/IncomeCalculatorModal';
 import { InteractiveChart } from './components/InteractiveChart';
+import { MultiLegSpreadTable } from './components/MultiLegSpreadTable';
+import { VolatilitySkewRadar } from './components/VolatilitySkewRadar';
+import { generateMultiLegSpreads, generateVolatilitySkew } from './utils/optionsMultiLeg';
 import {
   Search,
   RotateCcw,
@@ -379,6 +382,16 @@ export const App: React.FC = () => {
     activeOptionsTab,
     universeTickers,
   ]);
+
+  // Synthesized Multi-Leg Spreads (anchored strictly in 0.15 - 0.20 Delta)
+  const multiLegSpreads = useMemo(() => {
+    return generateMultiLegSpreads(filteredTickers, dataPayload?.opportunities || []);
+  }, [filteredTickers, dataPayload?.opportunities]);
+
+  // 25-Delta Volatility Skew & Term Structure
+  const volatilitySkewData = useMemo(() => {
+    return generateVolatilitySkew(filteredTickers);
+  }, [filteredTickers]);
 
   // Watchlist Actions
   const handleToggleWatchlist = (symbol: string) => {
@@ -821,7 +834,13 @@ export const App: React.FC = () => {
         ) : (
           /* Tree 2: Options & Weekly Yield Engine */
           <div className="space-y-4">
-            {activeOptionsTab === 'EXPIRATION_CADENCE' ? (
+            {activeOptionsTab === 'MULTI_LEG_SPREADS' ? (
+              /* Defined-Risk Vertical Spreads & Iron Condors (anchored in 0.15 - 0.20 Delta) */
+              <MultiLegSpreadTable spreads={multiLegSpreads} />
+            ) : activeOptionsTab === 'VOLATILITY_SKEW' ? (
+              /* 25-Delta Volatility Skew & Term Structure Radar */
+              <VolatilitySkewRadar skewData={volatilitySkewData} />
+            ) : activeOptionsTab === 'EXPIRATION_CADENCE' ? (
               /* Expiration Cadence view: Focus on weekly vs monthly metadata */
               <PrimaryScreenerTable
                 tickers={filteredTickers}
