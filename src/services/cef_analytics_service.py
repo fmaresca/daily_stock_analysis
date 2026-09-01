@@ -223,3 +223,6 @@ class CEFAnalyticsService:
             nii_coverage_pct=nii_coverage,
             notes=notes,
         )
+
+
+cef_analytics_service = CEFAnalyticsService()

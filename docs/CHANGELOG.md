@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [测试] DeltaHarvest Test Suite & Type Remediation: 交付 DeltaHarvest 期权/CEF/风控完整单元测试套件 (`tests/test_delta_harvest_options.py`)，修复 `liveMarketFetcher.ts` 中的 TypeScript 类型声明与单例服务导出，通过 100% 全量类型校验与生产构建。
 - [修复] DeltaHarvest Ticker Audit Modal & Chart Resilience: 修复点击 Ticker 时由于指标未定义访问与轻量级图表异步初始化引起的黑屏崩溃问题；交付统一 React ErrorBoundary 容错保护层、严格升序交易日合成算法与完整的空值/NaN安全降级，确保在任何网络与标的状态下均能稳定渲染个股审计与技术面图表。
 - [新功能] DeltaHarvest Client-Side Live Market Engine: 交付纯前端浏览器实时行情与期权推演引擎 (`web/src/utils/liveMarketFetcher.ts`)，当在 Cloudflare Pages 等无后端环境点击“⚡ Live Fetch”或自选股“⚡ Fetch Real Market Data & Options”时，直接并行抓取实时行情并瞬时重算 20日均线、2倍标准差布林带、RSI-14 及 0.15-0.20 Delta 期权策略，彻底解决静态托管环境无法拉取日内实时价的问题。
 - [修复] DeltaHarvest Live Price Pipeline: 优化 `scripts/generate_options_data.py` `process_ticker()`，增加 `fast_info` / `regularMarketPrice` 日内实时价穿透提取与雅虎财经图表 API 自动回退，确保生成的数据快照包含盘中最新价而非昨日收盘价。
