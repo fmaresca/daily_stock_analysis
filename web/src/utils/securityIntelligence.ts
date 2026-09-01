@@ -16,7 +16,7 @@ export interface NewsStory {
   date: string;
   timeAgo: string;
   category: 'Earnings' | 'Product/AI' | 'Macro/Fed' | 'Analyst Rating' | 'Regulatory' | 'Dividends' | 'Operations';
-  sentiment: 'Bullish' | 'Neutral' | 'Bearish';
+  sentiment: 'Strong Bullish' | 'Bullish' | 'Neutral' | 'Bearish';
   summary: string;
   optionsImplication: string;
   url?: string;
