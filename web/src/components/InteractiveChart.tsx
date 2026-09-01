@@ -49,12 +49,24 @@ function generateSyntheticCandles(
   const lowerBb: LineData<Time>[] = [];
   const volume: HistogramData<Time>[] = [];
 
-  const today = new Date();
-  const spot = ticker.spot_price;
-  const currentSma = ticker.sma_20;
-  const currentUpper = ticker.upper_bb;
-  const currentLower = ticker.lower_bb;
-  const dailyVol = Math.max(0.008, (ticker.hv_30 || 25) / 100 / Math.sqrt(252));
+  const sym = ticker?.symbol || 'ASSET';
+  const spot = typeof ticker?.spot_price === 'number' && !isNaN(ticker.spot_price) && ticker.spot_price > 0 ? ticker.spot_price : 100.0;
+  const currentSma = typeof ticker?.sma_20 === 'number' && !isNaN(ticker.sma_20) && ticker.sma_20 > 0 ? ticker.sma_20 : spot;
+  const currentUpper = typeof ticker?.upper_bb === 'number' && !isNaN(ticker.upper_bb) ? ticker.upper_bb : spot * 1.07;
+  const currentLower = typeof ticker?.lower_bb === 'number' && !isNaN(ticker.lower_bb) ? ticker.lower_bb : spot * 0.93;
+  const dailyVol = Math.max(0.008, ((ticker?.hv_30 || 25) / 100) / Math.sqrt(252));
+
+  // Generate list of strictly ascending valid business days
+  const businessDays: string[] = [];
+  const startDay = new Date();
+  startDay.setDate(startDay.getDate() - Math.floor(numDays * 1.55));
+  const cur = new Date(startDay);
+  while (businessDays.length < numDays) {
+    cur.setDate(cur.getDate() + 1);
+    if (cur.getDay() !== 0 && cur.getDay() !== 6) {
+      businessDays.push(cur.toISOString().split('T')[0]);
+    }
+  }
 
   // Anchor ending at today
   const prices: number[] = new Array(numDays);
@@ -63,22 +75,16 @@ function generateSyntheticCandles(
   // Walk backwards using random walk with mean reversion toward current SMA
   for (let i = numDays - 2; i >= 0; i--) {
     const meanReversion = (currentSma - prices[i + 1]) * 0.04;
-    // Deterministic pseudo-random based on ticker symbol and index
-    const seed = (ticker.symbol.charCodeAt(0) * 17 + i * 31) % 100;
+    const seed = (sym.charCodeAt(0) * 17 + i * 31) % 100;
     const randNorm = (seed / 50 - 1) * dailyVol;
-    prices[i] = Math.max(1, prices[i + 1] * (1 - randNorm - meanReversion));
+    prices[i] = Math.max(0.5, prices[i + 1] * (1 - randNorm - meanReversion));
   }
 
   // Build daily OHLC bars and moving averages
-  let currentVol = ticker.avg_volume_30 || 5000000;
+  const currentVol = ticker?.avg_volume_30 || 5000000;
 
   for (let i = 0; i < numDays; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (numDays - 1 - i));
-    // Skip weekends
-    if (date.getDay() === 0 || date.getDay() === 6) continue;
-
-    const timeStr = date.toISOString().split('T')[0] as Time;
+    const timeStr = businessDays[i] as Time;
     const baseClose = prices[i];
     const open = i === 0 ? baseClose * 0.995 : prices[i - 1];
     const high = Math.max(open, baseClose) * (1 + dailyVol * 0.6);
@@ -139,18 +145,22 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = ({
   const [showStrikes, setShowStrikes] = useState(true);
   const [timeframe, setTimeframe] = useState<'1M' | '3M' | '6M'>('3M');
 
+  const spot = typeof ticker?.spot_price === 'number' && !isNaN(ticker.spot_price) ? ticker.spot_price : 100.0;
+  const lowerBb = typeof ticker?.lower_bb === 'number' && !isNaN(ticker.lower_bb) ? ticker.lower_bb : spot * 0.93;
+  const upperBb = typeof ticker?.upper_bb === 'number' && !isNaN(ticker.upper_bb) ? ticker.upper_bb : spot * 1.07;
+
   // Find optimal CSP and CC opportunities for visual strike overlays
   const cspOpp = useMemo(
-    () => opportunities.find((o) => o.symbol === ticker.symbol && o.strategy === 'CSP'),
-    [opportunities, ticker.symbol]
+    () => opportunities.find((o) => o.symbol === ticker?.symbol && o.strategy === 'CSP'),
+    [opportunities, ticker?.symbol]
   );
   const ccOpp = useMemo(
-    () => opportunities.find((o) => o.symbol === ticker.symbol && o.strategy === 'CC'),
-    [opportunities, ticker.symbol]
+    () => opportunities.find((o) => o.symbol === ticker?.symbol && o.strategy === 'CC'),
+    [opportunities, ticker?.symbol]
   );
 
-  const cspStrike = cspOpp?.strike || ticker.lower_bb * 0.98;
-  const ccStrike = ccOpp?.strike || ticker.upper_bb * 1.02;
+  const cspStrike = cspOpp?.strike || lowerBb * 0.98;
+  const ccStrike = ccOpp?.strike || upperBb * 1.02;
 
   // Technical Indicators
   const numDays = timeframe === '1M' ? 30 : timeframe === '3M' ? 90 : 180;
@@ -159,133 +169,147 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = ({
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Initialize Lightweight Chart
-    const chart = createChart(chartContainerRef.current, {
-      height,
-      layout: {
-        background: { type: ColorType.Solid, color: '#090d16' },
-        textColor: '#94a3b8',
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: 'rgba(30, 41, 59, 0.5)' },
-        horzLines: { color: 'rgba(30, 41, 59, 0.5)' },
-      },
-      crosshair: {
-        vertLine: { color: '#64748b', style: LineStyle.Dashed },
-        horzLine: { color: '#64748b', style: LineStyle.Dashed },
-      },
-      rightPriceScale: {
-        borderColor: '#1e293b',
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.2,
+    // Clean up existing chart
+    if (chartRef.current) {
+      try {
+        chartRef.current.remove();
+      } catch {}
+      chartRef.current = null;
+    }
+
+    try {
+      // Initialize Lightweight Chart
+      const chart = createChart(chartContainerRef.current, {
+        height,
+        layout: {
+          background: { type: ColorType.Solid, color: '#090d16' },
+          textColor: '#94a3b8',
+          fontSize: 11,
         },
-      },
-      timeScale: {
-        borderColor: '#1e293b',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-    });
-
-    chartRef.current = chart;
-
-    // 1. Candlestick Series
-    const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#10b981',
-      downColor: '#f43f5e',
-      borderVisible: false,
-      wickUpColor: '#10b981',
-      wickDownColor: '#f43f5e',
-    });
-    candleSeries.setData(chartData.candles);
-
-    // 2. Volume Series
-    if (showVolume) {
-      const volumeSeries = chart.addSeries(HistogramSeries, {
-        color: '#64748b',
-        priceFormat: { type: 'volume' },
-        priceScaleId: '', // overlay
-      });
-      volumeSeries.priceScale().applyOptions({
-        scaleMargins: {
-          top: 0.82,
-          bottom: 0,
+        grid: {
+          vertLines: { color: 'rgba(30, 41, 59, 0.5)' },
+          horzLines: { color: 'rgba(30, 41, 59, 0.5)' },
+        },
+        crosshair: {
+          vertLine: { color: '#64748b', style: LineStyle.Dashed },
+          horzLine: { color: '#64748b', style: LineStyle.Dashed },
+        },
+        rightPriceScale: {
+          borderColor: '#1e293b',
+          scaleMargins: {
+            top: 0.1,
+            bottom: 0.2,
+          },
+        },
+        timeScale: {
+          borderColor: '#1e293b',
+          timeVisible: true,
+          secondsVisible: false,
         },
       });
-      volumeSeries.setData(chartData.volume);
+
+      chartRef.current = chart;
+
+      // 1. Candlestick Series
+      const candleSeries = chart.addSeries(CandlestickSeries, {
+        upColor: '#10b981',
+        downColor: '#f43f5e',
+        borderVisible: false,
+        wickUpColor: '#10b981',
+        wickDownColor: '#f43f5e',
+      });
+      candleSeries.setData(chartData.candles);
+
+      // 2. Volume Series
+      if (showVolume && chartData.volume.length > 0) {
+        const volumeSeries = chart.addSeries(HistogramSeries, {
+          color: '#64748b',
+          priceFormat: { type: 'volume' },
+          priceScaleId: '', // overlay
+        });
+        volumeSeries.priceScale().applyOptions({
+          scaleMargins: {
+            top: 0.82,
+            bottom: 0,
+          },
+        });
+        volumeSeries.setData(chartData.volume);
+      }
+
+      // 3. 20D SMA
+      if (showSma && chartData.sma.length > 0) {
+        const smaSeries = chart.addSeries(LineSeries, {
+          color: '#38bdf8',
+          lineWidth: 2,
+          title: '20D SMA',
+        });
+        smaSeries.setData(chartData.sma);
+      }
+
+      // 4. Bollinger Bands (Upper & Lower)
+      if (showBollinger && chartData.upperBb.length > 0 && chartData.lowerBb.length > 0) {
+        const upperBbSeries = chart.addSeries(LineSeries, {
+          color: '#f472b6',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          title: 'Upper BB (2 SD)',
+        });
+        upperBbSeries.setData(chartData.upperBb);
+
+        const lowerBbSeries = chart.addSeries(LineSeries, {
+          color: '#34d399',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          title: 'Lower BB (2 SD)',
+        });
+        lowerBbSeries.setData(chartData.lowerBb);
+      }
+
+      // 5. Strike Price Overlays
+      if (showStrikes) {
+        // Put Strike Line (Green)
+        candleSeries.createPriceLine({
+          price: cspStrike,
+          color: '#10b981',
+          lineWidth: 2,
+          lineStyle: LineStyle.Dotted,
+          axisLabelVisible: true,
+          title: `CSP Strike: $${cspStrike.toFixed(1)}`,
+        });
+
+        // Call Strike Line (Cyan)
+        candleSeries.createPriceLine({
+          price: ccStrike,
+          color: '#06b6d4',
+          lineWidth: 2,
+          lineStyle: LineStyle.Dotted,
+          axisLabelVisible: true,
+          title: `CC Strike: $${ccStrike.toFixed(1)}`,
+        });
+
+        // Spot Price Line (White)
+        candleSeries.createPriceLine({
+          price: spot,
+          color: '#f8fafc',
+          lineWidth: 1,
+          lineStyle: LineStyle.Solid,
+          axisLabelVisible: true,
+          title: `Spot: $${spot.toFixed(2)}`,
+        });
+      }
+
+      chart.timeScale().fitContent();
+    } catch (err) {
+      console.warn('Lightweight chart initialization error:', err);
     }
-
-    // 3. 20D SMA
-    if (showSma) {
-      const smaSeries = chart.addSeries(LineSeries, {
-        color: '#38bdf8',
-        lineWidth: 2,
-        title: '20D SMA',
-      });
-      smaSeries.setData(chartData.sma);
-    }
-
-    // 4. Bollinger Bands (Upper & Lower)
-    if (showBollinger) {
-      const upperBbSeries = chart.addSeries(LineSeries, {
-        color: '#f472b6',
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        title: 'Upper BB (2 SD)',
-      });
-      upperBbSeries.setData(chartData.upperBb);
-
-      const lowerBbSeries = chart.addSeries(LineSeries, {
-        color: '#34d399',
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        title: 'Lower BB (2 SD)',
-      });
-      lowerBbSeries.setData(chartData.lowerBb);
-    }
-
-    // 5. Strike Price Overlays
-    if (showStrikes) {
-      // Put Strike Line (Green)
-      candleSeries.createPriceLine({
-        price: cspStrike,
-        color: '#10b981',
-        lineWidth: 2,
-        lineStyle: LineStyle.Dotted,
-        axisLabelVisible: true,
-        title: `CSP Strike: $${cspStrike.toFixed(1)}`,
-      });
-
-      // Call Strike Line (Cyan)
-      candleSeries.createPriceLine({
-        price: ccStrike,
-        color: '#06b6d4',
-        lineWidth: 2,
-        lineStyle: LineStyle.Dotted,
-        axisLabelVisible: true,
-        title: `CC Strike: $${ccStrike.toFixed(1)}`,
-      });
-
-      // Spot Price Line (White)
-      candleSeries.createPriceLine({
-        price: ticker.spot_price,
-        color: '#f8fafc',
-        lineWidth: 1,
-        lineStyle: LineStyle.Solid,
-        axisLabelVisible: true,
-        title: `Spot: $${ticker.spot_price.toFixed(2)}`,
-      });
-    }
-
-    chart.timeScale().fitContent();
 
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-        });
+        try {
+          chartRef.current.applyOptions({
+            width: chartContainerRef.current.clientWidth,
+          });
+        } catch {}
       }
     };
 
@@ -293,9 +317,14 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = ({
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      chart.remove();
+      if (chartRef.current) {
+        try {
+          chartRef.current.remove();
+        } catch {}
+        chartRef.current = null;
+      }
     };
-  }, [chartData, showSma, showBollinger, showVolume, showStrikes, height, cspStrike, ccStrike, ticker.spot_price]);
+  }, [chartData, showSma, showBollinger, showVolume, showStrikes, height, cspStrike, ccStrike, spot]);
 
   // ATR (14) approx
   const atrApprox = Math.round(ticker.spot_price * ((ticker.hv_30 || 25) / 100 / Math.sqrt(252)) * 1.5 * 100) / 100;
