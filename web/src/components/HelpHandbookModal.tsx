@@ -1078,16 +1078,30 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Frequently Asked Questions
                 </h4>
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
-                  <div className="text-xs font-bold text-white">How often is the data refreshed?</div>
+                  <div className="text-xs font-bold text-white">How do I get real market prices &amp; options for new tickers (e.g. CLM, CRF)?</div>
                   <p className="text-xs text-slate-400">
-                    The GitHub Actions pipeline runs daily at 4:30 PM Eastern Time (Monday through Friday) immediately after market close, analyzing updated end-of-day prices, IV ranks, and fresh weekly options chains.
+                    When you add new symbols in the Watchlist Manager (<code>W</code>), click the <strong>⚡ Fetch Real Market Data &amp; Options</strong> button in the modal footer or hit <strong>⚡ Live Fetch</strong> in the top header. The backend Python calculation engine will compute live spot prices, 20 SMA, 2-SD Bollinger Bands, 14d RSI, 30d Historical Volatility, and full options chains on demand.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">What is the difference between "Sync" and "⚡ Live Fetch"?</div>
+                  <p className="text-xs text-slate-400">
+                    <strong>Sync</strong> reloads the latest pre-compiled snapshot dataset rapidly from cache/disk. <strong>⚡ Live Fetch</strong> triggers real-time calculation across market data APIs (Yahoo Finance / Schwab / Tradier) to refresh Greeks, IV ranks, and pricing for all active tickers.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">How often is the default data refreshed?</div>
+                  <p className="text-xs text-slate-400">
+                    The automated GitHub Actions workflow runs daily at 4:30 PM Eastern Time (Monday through Friday) immediately after market close, analyzing updated end-of-day prices, IV ranks, and fresh weekly options chains.
                   </p>
                 </div>
 
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">Can I import my own custom tickers?</div>
                   <p className="text-xs text-slate-400">
-                    Yes! Click "Manage Watchlists" or press <code>W</code> to add single tickers or paste a bulk list. You can also upload a CSV or Excel file containing your custom symbols.
+                    Yes! Click "Watchlists" or press <code>W</code> to add single tickers or paste a bulk list. You can also upload a CSV or Excel file containing your custom symbols.
                   </p>
                 </div>
               </div>

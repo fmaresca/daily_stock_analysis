@@ -48,12 +48,14 @@ def ensure_symlink() -> None:
     ensure_file_exists(AGENTS, "canonical AGENTS.md")
     if not CLAUDE.exists():
         fail("CLAUDE.md is missing")
-    if not CLAUDE.is_symlink():
-        fail("CLAUDE.md must be a symlink to AGENTS.md")
-
-    target = Path(CLAUDE.readlink())
-    if target != Path("AGENTS.md"):
-        fail(f"CLAUDE.md must point to AGENTS.md, found: {target}")
+    if CLAUDE.is_symlink():
+        target = Path(CLAUDE.readlink())
+        if target != Path("AGENTS.md"):
+            fail(f"CLAUDE.md must point to AGENTS.md, found: {target}")
+    else:
+        content = CLAUDE.read_text(encoding="utf-8").strip()
+        if content != "AGENTS.md":
+            fail(f"CLAUDE.md must be a symlink to AGENTS.md, found: {content}")
 
 
 def ensure_copilot_entry() -> None:
