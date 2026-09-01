@@ -1,0 +1,57 @@
+name: Daily Options Screener Data Pipeline
+
+on:
+  schedule:
+    # 20:30 UTC (4:30 PM Eastern Time / 30 mins after market close), Monday through Friday
+    - cron: '30 20 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: daily-options-screener
+  cancel-in-progress: true
+
+jobs:
+  update-screener-data:
+    name: Run Options Screener & Update Static Data
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yfinance pandas numpy
+
+      - name: Execute Options & Technical Volatility Screener
+        run: |
+          python scripts/generate_options_data.py
+
+      - name: Commit and Push Updated Data
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add web/public/data/options_data.json
+          git add data/options_data.json
+          git add reports/latest_options_audit.md
+          if git diff --staged --quiet; then
+            echo "No data changes detected. Skipping commit."
+          else
+            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            git commit -m "chore(data): update options screener dataset ($TIMESTAMP) [skip ci]"
+            git push origin main
+            echo "Successfully pushed updated options screener data to main branch."
+          fi
