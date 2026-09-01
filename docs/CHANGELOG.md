@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [新功能] Charles Schwab API 支持: 新增 Charles Schwab Retail Trader API 数据源与凭据接入模块(data_provider/schwab_fetcher.py)，支持实时美股 NBBO 行情、全量期权链与实时 Greeks 计算，并在 Web UI 交付专用的 Schwab API 接入与 OAuth 设置面板。
 - [新功能] DeltaHarvest Options Engine: 交付 Phase 2 波动率偏度与多腿期权引擎，严格保留 0.15~0.20 Delta 保守卖方核心法则，新增牛市看跌垂直信用价差(Bull Put Spread)、熊市看涨垂直信用价差(Bear Call Spread)、双翼铁鹰(Iron Condor)、25-Delta 波动率偏度与期限结构雷达，并扩充期权策略帮助手册。
 - [新功能] DeltaHarvest Web UI: 集成 TradingView Lightweight Charts 交互式 K 线图、20日均线、2倍标准差布林带通道、期权目标行权价动态标线、图表切换工作区及技术形态图表帮助手册。
 - [新功能] DeltaHarvest Web UI: 新增美股技术分析与期权双导航菜单树、全局搜索与命令面板(Ctrl+K)、策略帮助手册、多自选列表管理(支持批量导入与CSV/Excel上传解析)及多格式执行报表查询与导出(CSV/Excel/PDF)。

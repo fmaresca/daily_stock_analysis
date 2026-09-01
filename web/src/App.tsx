@@ -14,6 +14,7 @@ import { IncomeCalculatorModal } from './components/IncomeCalculatorModal';
 import { InteractiveChart } from './components/InteractiveChart';
 import { MultiLegSpreadTable } from './components/MultiLegSpreadTable';
 import { VolatilitySkewRadar } from './components/VolatilitySkewRadar';
+import { SchwabSettingsModal } from './components/SchwabSettingsModal';
 import { generateMultiLegSpreads, generateVolatilitySkew } from './utils/optionsMultiLeg';
 import {
   Search,
@@ -99,6 +100,7 @@ export const App: React.FC = () => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState<boolean>(false);
   const [isReportQueryModalOpen, setIsReportQueryModalOpen] = useState<boolean>(false);
+  const [isSchwabModalOpen, setIsSchwabModalOpen] = useState<boolean>(false);
 
   // Multi-Watchlist persistent state
   const [watchlistGroups, setWatchlistGroups] = useState<WatchlistGroup[]>(() => {
@@ -522,6 +524,7 @@ export const App: React.FC = () => {
         onOpenHelp={() => setIsHelpModalOpen(true)}
         onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
+        onOpenSchwab={() => setIsSchwabModalOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -883,6 +886,7 @@ export const App: React.FC = () => {
         onOpenHelp={() => setIsHelpModalOpen(true)}
         onOpenWatchlist={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
+        onOpenSchwab={() => setIsSchwabModalOpen(true)}
         onExportCSV={handleExportCSV}
         onExportExcel={handleExportExcel}
         onTriggerPrint={triggerPrintReport}
@@ -894,7 +898,13 @@ export const App: React.FC = () => {
         onClose={() => setIsHelpModalOpen(false)}
       />
 
-      {/* 3. Multi-Watchlist Manager with Bulk & CSV/Excel Ingestion (W) */}
+      {/* 3. Charles Schwab Retail Trader API Provisioning Modal */}
+      <SchwabSettingsModal
+        isOpen={isSchwabModalOpen}
+        onClose={() => setIsSchwabModalOpen(false)}
+      />
+
+      {/* 4. Multi-Watchlist Manager with Bulk & CSV/Excel Ingestion (W) */}
       <WatchlistManagerModal
         isOpen={isWatchlistModalOpen}
         onClose={() => setIsWatchlistModalOpen(false)}
@@ -908,7 +918,7 @@ export const App: React.FC = () => {
         onAddCustomTickerMeta={handleAddCustomTickerMeta}
       />
 
-      {/* 4. Report Queries & Multi-Format Exports (R) */}
+      {/* 5. Report Queries & Multi-Format Exports (R) */}
       <ReportQueryModal
         isOpen={isReportQueryModalOpen}
         onClose={() => setIsReportQueryModalOpen(false)}

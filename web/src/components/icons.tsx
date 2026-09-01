@@ -382,4 +382,20 @@ export const Check: React.FC<IconProps> = ({ className = "w-4 h-4", ...props }) 
   </svg>
 );
 
+export const Key: React.FC<IconProps> = ({ className = "w-4 h-4", ...props }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+    <path d="m21 2-2 2m-1.5 1.5L14 9l-1.5-1.5L10 10l2 2-6.5 6.5a3.5 3.5 0 1 1-5-5L7 7l2.5-2.5L8 3l3.5-3.5 1.5 1.5 2-2Z" />
+    <circle cx="7.5" cy="16.5" r=".5" fill="currentColor" />
+  </svg>
+);
+
+export const ExternalLink: React.FC<IconProps> = ({ className = "w-4 h-4", ...props }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" y1="14" x2="21" y2="3" />
+  </svg>
+);
+
+
 
