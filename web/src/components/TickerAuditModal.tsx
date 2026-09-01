@@ -294,8 +294,28 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
           <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
-              <span>Part 4: Proposed Weekly Strategy (3–7 DTE Targeting ~0.15–0.20 Delta)</span>
+              <span>
+                Part 4: Proposed {ticker.has_weeklys === false ? 'Monthly-Adjusted' : 'Weekly'} Strategy (
+                {ticker.has_weeklys === false
+                  ? `${ticker.days_to_nearest_expiration ?? ticker.target_dte ?? 20}d Monthly Target`
+                  : '3–7 DTE Targeting ~0.15–0.20 Delta'}
+                )
+              </span>
             </h3>
+
+            {ticker.has_weeklys === false && (
+              <div className="p-3.5 bg-amber-950/40 border border-amber-500/50 rounded-xl text-xs text-amber-200 flex items-start gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold text-amber-300">Monthly Expiration Only - Adjusted DTE</div>
+                  <div className="mt-0.5 text-slate-300 leading-relaxed">
+                    ⚠️ This ticker does not trade weekly options. The nearest available expiration is{' '}
+                    <strong className="text-white font-mono">{ticker.nearest_expiration_date || ticker.target_exp || 'Monthly'}</strong>{' '}
+                    ({ticker.days_to_nearest_expiration ?? ticker.target_dte ?? '?'} DTE). Premium decay (theta) will follow a monthly cycle.
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Cash-Secured Put Play */}

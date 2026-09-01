@@ -20,6 +20,10 @@ export interface TickerMeta {
   earnings_within_7d: boolean;
   next_earnings_date: string;
   has_weeklys?: boolean;
+  expiration_cadence?: string;
+  nearest_expiration_date?: string;
+  days_to_nearest_expiration?: number;
+  is_monthly_adjusted?: boolean;
   options_cadence?: string;
   in_cboe_registry?: boolean;
   next_options_expiration?: string;
@@ -119,6 +123,7 @@ export interface FilterState {
   onlyHighIvr?: boolean;
   onlyOversold?: boolean;
   onlyEarningsAlert?: boolean;
+  weeklyCadence?: 'ALL' | 'WEEKLY_ONLY' | 'MONTHLY_ONLY';
   liquidityTier?: string;
   strategy?: 'ALL' | 'CSP' | 'CC';
   maxDelta?: number;

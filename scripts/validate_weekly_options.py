@@ -86,30 +86,38 @@ def check_ticker_weekly_options(ticker_symbol: str, cboe_set: Set[str] = None) -
         days_to_next = (next_exp - today).days
 
         if len(upcoming_35d) >= 5:
-            cadence = "Daily / Intra-Week"
-        elif len(upcoming_35d) >= 3 or has_non_third_friday or in_cboe_list:
+            cadence = "Daily / Multi-Weekly"
+        elif has_weeklys:
             cadence = "Weekly"
         else:
             cadence = "Monthly Only"
 
+        next_exp_str = next_exp.strftime("%Y-%m-%d")
+
         return {
             "symbol": symbol,
             "has_weeklys": has_weeklys,
+            "expiration_cadence": cadence,
             "in_cboe_registry": in_cboe_list,
             "total_expirations_35d": len(upcoming_35d),
-            "next_expiration": next_exp.strftime("%Y-%m-%d"),
-            "next_expiration_days": days_to_next,
+            "nearest_expiration_date": next_exp_str,
+            "days_to_nearest_expiration": days_to_next,
             "upcoming_expirations": [d.strftime("%Y-%m-%d") for d in upcoming_35d[:4]],
             "cadence": cadence,
+            "next_expiration": next_exp_str,
+            "next_expiration_days": days_to_next,
         }
     except Exception as e:
         return {
             "symbol": symbol,
             "has_weeklys": in_cboe_list,
+            "expiration_cadence": "Weekly" if in_cboe_list else "Monthly Only",
             "in_cboe_registry": in_cboe_list,
-            "cadence": "Weekly" if in_cboe_list else "Unknown",
             "reason": f"Error querying chain: {str(e)}",
             "upcoming_expirations": [],
+            "nearest_expiration_date": "N/A",
+            "days_to_nearest_expiration": None,
+            "cadence": "Weekly" if in_cboe_list else "Monthly Only",
             "next_expiration": "N/A",
             "next_expiration_days": None,
         }

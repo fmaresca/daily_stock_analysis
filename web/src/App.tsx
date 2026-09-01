@@ -58,6 +58,7 @@ export const App: React.FC = () => {
     onlyHighIvr: false,
     onlyOversold: false,
     onlyEarningsAlert: false,
+    weeklyCadence: 'ALL',
     liquidityTier: 'ALL',
     sortBy: 'iv_rank',
     sortOrder: 'desc',
@@ -206,6 +207,7 @@ export const App: React.FC = () => {
       onlyHighIvr: false,
       onlyOversold: false,
       onlyEarningsAlert: false,
+      weeklyCadence: 'ALL',
       liquidityTier: 'ALL',
       sortBy: 'iv_rank',
       sortOrder: 'desc',
@@ -292,6 +294,14 @@ export const App: React.FC = () => {
           return false;
         }
 
+        // Weekly Options Cadence Quick Filter: [All Tickers | Weekly Options Only | Monthly Only]
+        if (filters.weeklyCadence === 'WEEKLY_ONLY' && t.has_weeklys === false) {
+          return false;
+        }
+        if (filters.weeklyCadence === 'MONTHLY_ONLY' && t.has_weeklys !== false) {
+          return false;
+        }
+
         return true;
       })
       .sort((a, b) => {
@@ -336,6 +346,12 @@ export const App: React.FC = () => {
   const universeTickersOnly = useMemo(() => {
     return tickers.filter((t) => DEFAULT_UNIVERSE_SYMBOLS.includes(t.symbol));
   }, [tickers]);
+
+  const weeklyCadenceCounts = useMemo(() => {
+    const weekly = universeTickersOnly.filter((t) => t.has_weeklys !== false).length;
+    const monthly = universeTickersOnly.filter((t) => t.has_weeklys === false).length;
+    return { all: universeTickersOnly.length, weekly, monthly };
+  }, [universeTickersOnly]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
@@ -459,6 +475,57 @@ export const App: React.FC = () => {
                 <RotateCcw className="w-4 h-4" />
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Quick Filter toggle at the top of the table: [All Tickers | Weekly Options Only | Monthly Only] */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 pt-1">
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:inline">
+              Options Cadence:
+            </span>
+            <div className="inline-flex p-1 bg-slate-900/90 rounded-xl border border-slate-800 shadow-inner">
+              <button
+                id="filter-cadence-all"
+                onClick={() => setFilters((prev) => ({ ...prev, weeklyCadence: 'ALL' }))}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  (!filters.weeklyCadence || filters.weeklyCadence === 'ALL')
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                All Tickers ({weeklyCadenceCounts.all})
+              </button>
+              <button
+                id="filter-cadence-weekly"
+                onClick={() => setFilters((prev) => ({ ...prev, weeklyCadence: 'WEEKLY_ONLY' }))}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                  filters.weeklyCadence === 'WEEKLY_ONLY'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                    : 'text-slate-400 hover:text-emerald-400'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span>Weekly Options Only ({weeklyCadenceCounts.weekly})</span>
+              </button>
+              <button
+                id="filter-cadence-monthly"
+                onClick={() => setFilters((prev) => ({ ...prev, weeklyCadence: 'MONTHLY_ONLY' }))}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                  filters.weeklyCadence === 'MONTHLY_ONLY'
+                    ? 'bg-slate-700 text-white shadow-md shadow-slate-700/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                <span>Monthly Only ({weeklyCadenceCounts.monthly})</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="text-xs text-slate-400 font-mono">
+            Showing <strong className="text-white">{filteredTickers.length}</strong> of{' '}
+            <strong className="text-slate-300">{tickers.length}</strong> tickers
           </div>
         </div>
 
