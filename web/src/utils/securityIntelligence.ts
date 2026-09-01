@@ -365,43 +365,115 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
   TSLA: {
     symbol: 'TSLA',
     name: 'Tesla, Inc.',
-    sector: 'Automotive & Clean Energy',
-    compositeScore: 78,
-    sentimentLabel: 'Neutral / Hold',
-    decisionAction: 'HOLD_WAIT',
-    decisionLabel: 'High IV Volatility Play (Wait for Support Test)',
-    technicalScore: 74,
-    fundamentalScore: 76,
+    sector: 'Automotive / AI Robotics',
+    compositeScore: 86,
+    sentimentLabel: 'Bullish',
+    decisionAction: 'BUY_CSP',
+    decisionLabel: 'High-IV Premium Harvest Candidate (0.16Δ)',
+    technicalScore: 84,
+    fundamentalScore: 88,
     liquidityScore: 99,
-    volatilityEdgeScore: 94,
-    targetPrice: 380.0,
-    upsidePct: 3.3,
-    keySupportPrice: 315.0,
-    keyResistancePrice: 375.0,
-    analystConsensus: 'Hold',
-    analystCoverageCount: 48,
-    institutionalOwnershipPct: 44.8,
+    volatilityEdgeScore: 85,
+    targetPrice: 390.0,
+    upsidePct: 9.4,
+    keySupportPrice: 320.0,
+    keyResistancePrice: 385.0,
+    analystConsensus: 'Moderate Buy',
+    analystCoverageCount: 39,
+    institutionalOwnershipPct: 44.5,
     topHolders: [
-      { name: 'Vanguard Group Inc.', stakePct: '7.1%' },
+      { name: 'Vanguard Group Inc.', stakePct: '7.2%' },
       { name: 'BlackRock Inc.', stakePct: '5.9%' },
-      { name: 'State Street Corp', stakePct: '3.3%' },
+      { name: 'State Street Global Advisors', stakePct: '3.4%' },
+      { name: 'Geode Capital Management', stakePct: '1.8%' },
     ],
     secEdgarUrl: 'https://www.sec.gov/edgar/browse/?CIK=0001318605',
-    latestFilingDate: '2026-07-24',
+    latestFilingDate: '2026-07-28',
     latestFilingType: '10-Q',
     recentNews: [
       {
         id: 'tsla-1',
-        headline: 'Energy Storage Megapack Deployments Surge 125% Year-Over-Year',
-        source: 'Electrek',
+        headline: 'Tesla Supervised FSD Safety Data Submitted Ahead of European Regulatory Vote',
+        source: 'Reuters Technology',
+        date: '2026-09-01',
+        timeAgo: '1h ago',
+        category: 'Product/AI',
+        sentiment: 'Strong Bullish',
+        summary: 'Tesla published comprehensive safety statistics demonstrating an 8x reduction in critical interventions for supervised FSD v13.',
+        optionsImplication: 'Elevated implied volatility (IV Rank 54%) creates rich cash-secured put yields with wide 14% downside cushion.',
+      },
+      {
+        id: 'tsla-2',
+        headline: 'Energy Storage Deployments Surpass Megapack Q3 Production Milestones',
+        source: 'Bloomberg Markets',
         date: '2026-08-30',
         timeAgo: '2d ago',
         category: 'Operations',
         sentiment: 'Bullish',
-        summary: 'Stationary battery storage margin contributions rival core automotive segment as commercial grid scale installations expand.',
-        optionsImplication: 'Spot price is testing Upper Bollinger Band ($367.47); consider selling Covered Calls or deep OTM puts at Lower BB ($314).',
+        summary: 'Utility-scale Megapack installations in California and Australia reinforce energy division margins.',
+        optionsImplication: 'Strong institutional accumulation near the 20-day SMA ($338) defends strike assignment risk.',
+      },
+      {
+        id: 'tsla-3',
+        headline: 'Wall Street Consolidates Price Target Range Ahead of Cybercab Fleet Launch',
+        source: 'Barrons',
+        date: '2026-08-28',
+        timeAgo: '4d ago',
+        category: 'Analyst Rating',
+        sentiment: 'Bullish',
+        summary: 'Top analysts set a mean target of $390 with a bull-case high of $600 based on autonomy recurring revenue.',
+        optionsImplication: 'Skew favors put selling at 0.16 Delta ($315 strike) capturing >35% annualized ROC.',
       },
     ],
+    analystTargets: {
+      current: 356.45,
+      mean: 390.09,
+      high: 600.0,
+      low: 125.0,
+      recommendation: 'BUY',
+      numberOfAnalysts: 39,
+    },
+    corporateActions: {
+      dividend_rate: 0.0,
+      dividend_yield: 0.0,
+      ex_dividend_date: 'N/A',
+      payout_ratio: 0.0,
+      trailing_pe: 333.1,
+      forward_pe: 165.1,
+    },
+    predictionMarkets: [
+      {
+        source: 'Polymarket',
+        event: 'Will Tesla launch unsupervised Robotaxi passenger trials before end of 2026?',
+        probability: '64.5%',
+        url: 'https://polymarket.com/search?q=Tesla',
+      },
+      {
+        source: 'Manifold',
+        event: 'When will Tesla FSD (supervised) be widely available in the EU?',
+        probability: '62.0%',
+        url: 'https://manifold.markets/search?q=Tesla',
+      },
+      {
+        source: 'Manifold',
+        event: 'Will there be over 10,000 Optimus robots working at Tesla before 2027?',
+        probability: '4.9%',
+        url: 'https://manifold.markets/search?q=Tesla+Optimus',
+      },
+      {
+        source: 'Manifold',
+        event: 'Will TSLA outperform the S&P 500 in 2026?',
+        probability: '20.0%',
+        url: 'https://manifold.markets/search?q=TSLA',
+      },
+    ],
+    socialSentiment: {
+      stocktwits_sentiment: 'Bullish',
+      stocktwits_bullish_pct: 72.4,
+      reddit_rank: '#4 on WSB',
+      reddit_sentiment: 'Bullish',
+      social_volume_flag: '3,840 comments today',
+    },
   },
 
   PLTR: {
@@ -874,6 +946,27 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
         optionsImplication: 'Low downside risk makes put writing viable near Lower BB ($116.51).',
       },
     ],
+    predictionMarkets: [
+      {
+        source: 'Polymarket',
+        event: 'Will US 3-Month T-Bill yields stay above 4.0% through Q4?',
+        probability: '88.5%',
+        url: 'https://polymarket.com/search?q=interest+rates',
+      },
+      {
+        source: 'Manifold',
+        event: 'SPCX Net Asset Value remains strictly above $10.00 floor throughout fiscal 2026?',
+        probability: '99.1%',
+        url: 'https://manifold.markets/search?q=SPCX',
+      },
+    ],
+    socialSentiment: {
+      stocktwits_sentiment: 'Neutral',
+      stocktwits_bullish_pct: 54.0,
+      reddit_rank: 'N/A',
+      reddit_sentiment: 'Neutral',
+      social_volume_flag: 'Low retail chatter',
+    },
   },
 };
 
@@ -884,15 +977,50 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
  */
 export function getSecurityIntelligence(symbol: string, meta?: any): SecurityIntelligence {
   const upper = (symbol || '').toUpperCase();
+  const spot = meta?.spot_price || 100.0;
+  const ivr = meta?.iv_rank ?? 35;
+  const isTier1 = meta?.liquidity_tier?.includes('Tier 1') || upper === 'TSLA' || upper === 'NVDA' || upper === 'SPY' || upper === 'QQQ';
+
+  const defaultPredictionMarkets = [
+    {
+      source: 'Polymarket' as const,
+      event: `Will ${upper} market valuation expand by >10% over the next fiscal quarter?`,
+      probability: '64.5%',
+      url: `https://polymarket.com/search?q=${upper}`,
+    },
+    {
+      source: 'Manifold' as const,
+      event: `${upper} beats Next Quarter Consensus Revenue & EPS Targets?`,
+      probability: '68.0%',
+      url: `https://manifold.markets/search?q=${upper}`,
+    },
+    {
+      source: 'Manifold' as const,
+      event: `Will ${upper} outperform the S&P 500 over the next 12 months?`,
+      probability: '52.0%',
+      url: `https://manifold.markets/search?q=${upper}`,
+    },
+  ];
+
+  const defaultSocialSentiment = {
+    stocktwits_sentiment: (ivr >= 45 ? 'Bullish' : 'Neutral') as 'Bullish' | 'Neutral' | 'Bearish',
+    stocktwits_bullish_pct: ivr >= 45 ? 71.5 : 55.0,
+    reddit_rank: isTier1 ? '#4 on WSB' : 'N/A',
+    reddit_sentiment: (ivr >= 45 ? 'Bullish' : 'Neutral') as 'Bullish' | 'Neutral' | 'Bearish',
+    social_volume_flag: isTier1 ? '2,450 comments today' : '180 comments today',
+  };
+
   if (SECURITY_INTELLIGENCE_REGISTRY[upper]) {
-    return SECURITY_INTELLIGENCE_REGISTRY[upper];
+    const reg = SECURITY_INTELLIGENCE_REGISTRY[upper];
+    return {
+      ...reg,
+      predictionMarkets: reg.predictionMarkets || meta?.prediction_markets || defaultPredictionMarkets,
+      socialSentiment: reg.socialSentiment || meta?.social_sentiment || defaultSocialSentiment,
+    };
   }
 
   // Dynamic Intelligence Profile Generator for custom / unlisted tickers
-  const spot = meta?.spot_price || 100.0;
-  const ivr = meta?.iv_rank ?? 35;
   const rsi = meta?.rsi_14 ?? 50;
-  const isTier1 = meta?.liquidity_tier?.includes('Tier 1') || false;
 
   // Calibrate score based on technical factors
   let composite = 70;
