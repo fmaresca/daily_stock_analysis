@@ -8,6 +8,7 @@ import {
   HelpCircle,
   Star,
   FileSpreadsheet,
+  Zap,
 } from './icons';
 import { ScreenerSummary } from '../types/options';
 
@@ -44,15 +45,23 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSchwab,
   onOpenDiagnostics,
 }) => {
-  const formattedTime = lastUpdated
-    ? new Date(lastUpdated).toLocaleDateString('en-US', {
+  const formattedTime = React.useMemo(() => {
+    if (!lastUpdated) return 'Live Session';
+    try {
+      const d = new Date(lastUpdated);
+      if (isNaN(d.getTime())) return 'Live Session';
+      return d.toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
+        hour: 'numeric',
         minute: '2-digit',
-        timeZoneName: 'short',
-      })
-    : 'Live Session';
+        second: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return 'Live Session';
+    }
+  }, [lastUpdated]);
 
   return (
     <header className="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-30 shadow-xl">
@@ -75,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
             <div className="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
-              <span>Updated: {formattedTime}</span>
+              <span>Updated: <strong className="text-slate-200 font-mono font-semibold">{formattedTime}</strong></span>
               <span>•</span>
               <span className="text-emerald-400/90 font-mono">Conservative Income Engine</span>
             </div>
@@ -99,16 +108,17 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Action Controls & Navigation Shortcuts */}
-        <div className="flex items-center space-x-2">
-          {/* API Health & Diagnostics Self-Test Button */}
+        <div className="flex items-center space-x-2 flex-wrap gap-y-1.5">
+          {/* Prominent High-Visibility API Self-Test Diagnostics Button */}
           {onOpenDiagnostics && (
             <button
               onClick={onOpenDiagnostics}
-              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer shadow-sm"
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border border-emerald-400/50 shadow-md shadow-emerald-900/40 hover:shadow-emerald-500/20 transition-all cursor-pointer whitespace-nowrap group ring-1 ring-emerald-400/30 animate-fade-in"
               title="Open Automated API Self-Test & Diagnostic Health Suite"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="hidden sm:inline">API Self-Test</span>
+              <Zap className="w-3.5 h-3.5 text-amber-200 group-hover:scale-110 transition-transform" />
+              <span>API Self-Test</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-200 animate-pulse ml-0.5" />
             </button>
           )}
 
