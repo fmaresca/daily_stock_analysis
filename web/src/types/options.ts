@@ -199,11 +199,48 @@ export interface FilterState {
   sortOrder: 'asc' | 'desc';
 }
 
+export interface FundamentalHealthData {
+  symbol: string;
+  name: string;
+  sector: string;
+  spot_price: number;
+  market_cap: string;
+  pe_ratio: number | null;
+  forward_pe: number | null;
+  ev_ebitda: number | null;
+  revenue_growth_yoy: number;
+  operating_margin: number;
+  free_cash_flow: string;
+  // Solvency & Risk Metrics
+  altman_z_score: number;
+  altman_zone: 'SAFE' | 'GREY' | 'DISTRESS';
+  piotroski_f_score: number; // 0 to 9
+  piotroski_tier: 'STRONG' | 'MODERATE' | 'WEAK';
+  debt_to_equity: number;
+  current_ratio: number;
+  interest_coverage: number;
+  // SEC EDGAR Filings
+  latest_10k_date: string;
+  latest_10q_date: string;
+  sec_edgar_url: string;
+  institutional_ownership_pct: number;
+  top_institutions: string[];
+  // Fund or CEF specific
+  is_fund_or_cef?: boolean;
+  nav_price?: number;
+  nav_discount_premium_pct?: number;
+  cef_z_score_52w?: number;
+  distribution_yield_pct?: number;
+  roc_pct?: number;
+  roc_type?: 'CONSTRUCTIVE' | 'DESTRUCTIVE' | 'NONE';
+}
+
 export type MenuTreeType = 'EQUITIES' | 'OPTIONS';
 
 export type EquitiesTabType =
   | 'TECHNICAL_SCREENER'
   | 'INTERACTIVE_CHARTS'
+  | 'FUNDAMENTAL_HEALTH'
   | 'TREND_SUPPORT'
   | 'VOLATILITY_RISK'
   | 'EARNINGS_CALENDAR'
