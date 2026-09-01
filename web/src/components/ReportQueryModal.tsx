@@ -43,21 +43,9 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
   const [liquidityTier, setLiquidityTier] = useState<string>('ALL');
   const [hideEarningsRisk, setHideEarningsRisk] = useState<boolean>(false);
 
-  if (!isOpen) return null;
-
-  const handleResetFilters = () => {
-    setStrategy('ALL');
-    setCadence('ALL');
-    setMinIvr(0);
-    setMinYield(0);
-    setMaxDte(999);
-    setLiquidityTier('ALL');
-    setHideEarningsRisk(false);
-  };
-
   // Filtered Opportunities based on query configuration
   const filteredOpps = useMemo(() => {
-    return opportunities.filter((o) => {
+    return (opportunities || []).filter((o) => {
       if (strategy !== 'ALL' && o.strategy !== strategy) return false;
       if ((o.iv_rank ?? 0) < minIvr) return false;
       if ((o.annualized_roc ?? 0) < minYield) return false;
@@ -66,7 +54,7 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
       if (hideEarningsRisk && o.earnings_within_7d) return false;
 
       if (cadence !== 'ALL') {
-        const tMeta = tickers.find((t) => t.symbol === o.symbol);
+        const tMeta = (tickers || []).find((t) => t.symbol === o.symbol);
         const isWeekly = tMeta ? tMeta.has_weeklys !== false : true;
         if (cadence === 'WEEKLY_ONLY' && !isWeekly) return false;
         if (cadence === 'MONTHLY_ONLY' && isWeekly) return false;
@@ -90,6 +78,18 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
     const sum = filteredOpps.reduce((acc, o) => acc + (o.annualized_roc || 0), 0);
     return Math.round((sum / filteredOpps.length) * 10) / 10;
   }, [filteredOpps]);
+
+  if (!isOpen) return null;
+
+  const handleResetFilters = () => {
+    setStrategy('ALL');
+    setCadence('ALL');
+    setMinIvr(0);
+    setMinYield(0);
+    setMaxDte(999);
+    setLiquidityTier('ALL');
+    setHideEarningsRisk(false);
+  };
 
   // Export handlers
   const handleExportCSV = () => {

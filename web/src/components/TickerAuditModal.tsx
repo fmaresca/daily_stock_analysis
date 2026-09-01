@@ -41,6 +41,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<TickerDetailTab>('OPTIONS_TECH');
+  const intel = useMemo(() => getSecurityIntelligence(ticker?.symbol || 'ASSET', ticker || undefined), [ticker]);
 
   if (!ticker) return null;
 
@@ -66,9 +67,6 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   const tickerOpps = (opportunities || []).filter((o) => o?.symbol === ticker?.symbol);
   const bestCSP = tickerOpps.find((o) => o.strategy === 'CSP') || null;
   const bestCC = tickerOpps.find((o) => o.strategy === 'CC') || null;
-
-  // Security Intelligence (Scores, News, 13F Institutional Backing, Sentiment)
-  const intel = useMemo(() => getSecurityIntelligence(ticker?.symbol || 'ASSET', ticker), [ticker]);
 
   // Merge context data from ticker meta or fallback
   const analystTargets = ticker.analyst_intelligence || intel.analystTargets;
