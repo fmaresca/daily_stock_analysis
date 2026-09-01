@@ -61,6 +61,40 @@ export interface VolatilitySkewData {
   }[];
 }
 
+export interface AnalystIntelligence {
+  current?: number;
+  mean?: number;
+  high?: number;
+  low?: number;
+  recommendation?: string;
+  numberOfAnalysts?: number;
+  number_of_analysts?: number;
+}
+
+export interface CorporateActions {
+  dividend_rate?: number;
+  dividend_yield?: number;
+  ex_dividend_date?: string | null;
+  payout_ratio?: number | null;
+  trailing_pe?: number | null;
+  forward_pe?: number | null;
+}
+
+export interface PredictionMarketEvent {
+  source: string;
+  event: string;
+  probability: string;
+  url?: string;
+}
+
+export interface SocialSentiment {
+  stocktwits_sentiment?: string;
+  stocktwits_bullish_pct?: number;
+  reddit_rank?: string;
+  reddit_sentiment?: string;
+  social_volume_flag?: string;
+}
+
 export interface TickerMeta {
   symbol: string;
   name: string;
@@ -91,6 +125,11 @@ export interface TickerMeta {
   next_options_dte?: number;
   target_exp?: string;
   target_dte?: number;
+  // Contextual Intelligence Layers
+  analyst_intelligence?: AnalystIntelligence;
+  corporate_actions?: CorporateActions;
+  prediction_markets?: PredictionMarketEvent[];
+  social_sentiment?: SocialSentiment;
 }
 
 export interface OptionOpportunity {

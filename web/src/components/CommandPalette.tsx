@@ -15,6 +15,7 @@ import {
   Layers,
   Printer,
   Key,
+  Zap,
 } from './icons';
 import { TickerMeta, MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 import { getSecurityIntelligence } from '../utils/securityIntelligence';
@@ -92,7 +93,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   const actions = [
     {
       id: 'nav-equities',
-      title: 'US Equities Analysis',
+      title: 'US Equities Technical Screener',
       subtitle: 'Technical screener, 20D SMA, Bollinger Bands, and RSI',
       icon: <BarChart2 className="w-4 h-4 text-blue-400" />,
       action: () => {
@@ -101,9 +102,29 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
+      id: 'nav-charts',
+      title: 'Interactive Technical Charts',
+      subtitle: 'TradingView Lightweight Candlestick charts with Bollinger Bands and strike overlays',
+      icon: <BarChart2 className="w-4 h-4 text-cyan-400" />,
+      action: () => {
+        onNavigateTree('EQUITIES', 'INTERACTIVE_CHARTS');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-fundamentals',
+      title: 'Fundamental Solvency & CEF Audit',
+      subtitle: 'Altman Z-Score bankruptcy risk, Piotroski F-Score & CEF discount/premium Z-scores',
+      icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        onNavigateTree('EQUITIES', 'FUNDAMENTAL_HEALTH');
+        onClose();
+      },
+    },
+    {
       id: 'nav-options',
-      title: 'Options & Weekly Yield Engine',
-      subtitle: 'Conservative CSP and Covered Call income screener',
+      title: 'Options Weekly Income Screener',
+      subtitle: 'Conservative 0.15-0.20 Delta Cash-Secured Puts & Covered Calls',
       icon: <TrendingUp className="w-4 h-4 text-emerald-400" />,
       action: () => {
         onNavigateTree('OPTIONS', 'INCOME_SCREENER');
@@ -111,9 +132,59 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
+      id: 'nav-spreads',
+      title: 'Multi-Leg Spreads & Iron Condors',
+      subtitle: 'Bull Put Spreads, Bear Call Spreads, and Iron Condors with defined risk',
+      icon: <Layers className="w-4 h-4 text-purple-400" />,
+      action: () => {
+        onNavigateTree('OPTIONS', 'MULTI_LEG_SPREADS');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-skew',
+      title: 'Volatility Skew & Term Structure Radar',
+      subtitle: '25-Delta Put/Call Volatility Skew and 7D-90D Term Structure Slope',
+      icon: <Flame className="w-4 h-4 text-amber-400" />,
+      action: () => {
+        onNavigateTree('OPTIONS', 'VOLATILITY_SKEW');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-backtest',
+      title: 'Strategy Backtest & Margin Stress Test',
+      subtitle: 'Historical equity curves, win rates, and FINRA 4210 Reg-T vs Portfolio Margin',
+      icon: <BarChart2 className="w-4 h-4 text-indigo-400" />,
+      action: () => {
+        onNavigateTree('OPTIONS', 'BACKTEST_MARGIN');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-staging',
+      title: 'Broker Order Staging & Execution Payloads',
+      subtitle: 'Generate bracket orders for Charles Schwab API, IBKR BasketTrader, and Thinkorswim',
+      icon: <Zap className="w-4 h-4 text-rose-400" />,
+      action: () => {
+        onNavigateTree('OPTIONS', 'BROKER_STAGING');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-calculator',
+      title: 'Compound Yield & Income Calculator',
+      subtitle: 'Simulate weekly option harvesting returns and cash collateral growth',
+      icon: <TrendingUp className="w-4 h-4 text-teal-400" />,
+      action: () => {
+        onNavigateTree('OPTIONS', 'INCOME_CALCULATOR');
+        onClose();
+      },
+    },
+    {
       id: 'nav-cadence',
       title: 'Expiration Cadence & CBOE Registry',
-      subtitle: 'Filter Weeklys vs Monthly-only cycles',
+      subtitle: 'Filter Weeklys vs Monthly-only cycles across universe',
       icon: <Layers className="w-4 h-4 text-teal-400" />,
       action: () => {
         onNavigateTree('OPTIONS', 'EXPIRATION_CADENCE');
@@ -153,7 +224,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     {
       id: 'action-export-excel',
       title: 'Export to Excel (.xlsx)',
-      subtitle: 'Download multi-sheet formatted workbook',
+      subtitle: 'Download multi-sheet formatted workbook with full dataset',
       icon: <FileSpreadsheet className="w-4 h-4 text-emerald-400" />,
       action: () => {
         onExportExcel();
@@ -183,7 +254,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     {
       id: 'action-help',
       title: 'Help & Strategy Handbook (?)',
-      subtitle: 'Audit rules, Greeks cheat sheet, and Liquidity tier guidance',
+      subtitle: 'Audit rules, Greeks cheat sheet, Polymarket sentiment, and Liquidity tiers',
       icon: <HelpCircle className="w-4 h-4 text-cyan-400" />,
       action: () => {
         onOpenHelp();

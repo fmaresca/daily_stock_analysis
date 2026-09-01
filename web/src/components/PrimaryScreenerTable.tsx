@@ -393,9 +393,9 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                       )}
                     </td>
 
-                    {/* AI Score & News Badge */}
+                    {/* AI Score & Sentiment Badge */}
                     <td className="py-3.5 px-3 text-center">
-                      <div className="flex flex-col items-center">
+                      <div className="flex flex-col items-center gap-0.5">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${
                             intel.compositeScore >= 85
@@ -408,12 +408,28 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                         >
                           {intel.compositeScore}/100
                         </span>
-                        <span
-                          className="text-[9px] text-slate-400 truncate max-w-[100px] mt-0.5"
-                          title={intel.recentNews[0]?.headline || intel.sentimentLabel}
-                        >
-                          {intel.recentNews[0] ? `📰 ${intel.recentNews[0].category}` : intel.sentimentLabel}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          {intel.socialSentiment?.stocktwits_bullish_pct && (
+                            <span
+                              className={`text-[9px] font-mono px-1 py-0.2 rounded ${
+                                intel.socialSentiment.stocktwits_bullish_pct >= 60
+                                  ? 'text-emerald-400 bg-emerald-500/10'
+                                  : 'text-slate-400 bg-slate-800'
+                              }`}
+                              title={`StockTwits: ${intel.socialSentiment.stocktwits_bullish_pct}% Bullish`}
+                            >
+                              {intel.socialSentiment.stocktwits_bullish_pct}% Bull
+                            </span>
+                          )}
+                          {intel.socialSentiment?.reddit_rank && intel.socialSentiment.reddit_rank !== 'N/A' && (
+                            <span
+                              className="text-[9px] font-mono px-1 py-0.2 rounded text-cyan-300 bg-cyan-500/10 border border-cyan-500/20"
+                              title={intel.socialSentiment.social_volume_flag}
+                            >
+                              {intel.socialSentiment.reddit_rank.split(' ')[0]}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
 

@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [新功能] DeltaHarvest Contextual Intelligence Layer: 交付多源语境情报与情绪分析系统（`src/services/contextual_intelligence_service.py`），集成华尔街分析师目标价区间与共识评级、公司财务比率/股息率/远期PE、Polymarket Gamma API 及 Manifold Markets 真实二元预测市场赔率、StockTwits 多空情绪比率与 Reddit /r/WallStreetBets 24小时讨论热度排行；个股审计模态框升级为 4-Tab 现代化多维情报工作台（期权与技术面、新闻与分析师共识、预测市场、社区情绪），主筛选表新增紧凑情绪徽标。
+- [新功能] DeltaHarvest Live API & WebSocket Stream: 交付 FastAPI 后端 `/api/v1/options/snapshot` 与 `/api/v1/ws/stream` 实时 WebSocket 管道，Web 前端优先连接 FastAPI 动态引擎并在断网时无缝降级至本地数据；配置 Vite dev server 全局 `/api` 与 `/ws` 代理。
+- [新功能] DeltaHarvest CEF Analytics: 交付 Closed-End Fund (CEF) 估值与收益质量引擎 (`src/services/cef_analytics_service.py` 及 `/api/v1/options/cef/{symbol}`)，支持 52 周净值折溢价 Z-Score、NII 净利息覆盖率及建设性 vs. 破坏性资本返还 (RoC) 自动审计。
+- [新功能] DeltaHarvest Risk Circuit-Breaker: 交付量化风险熔断服务 (`src/services/risk_circuit_breaker.py` 及 `/api/v1/options/risk/check-order`)，支持组合最大回撤熔断门限、Delta 中性偏离边界及单标的集中度限制核验。
+- [新功能] DeltaHarvest QuantLib Greeks Engine: 交付高精度解析 Greeks 与美式提前行权风险计算引擎 (`src/services/quantlib_greeks.py`)，支持 BSM/BAW 波动率反解、除息日前深度实值提前指派概率评估与纯 Python 跨平台兼容。
+- [新功能] Tradier API 数据源: 新增 Tradier API 提供者 (`data_provider/tradier_fetcher.py`) 作为 Charles Schwab 会话离线或待认证时的二级期权链及美股行情自动回退源。
 - [修复] DeltaHarvest Reports & Exports: 修复全局过滤器状态残留污染导致的报表与导出返回空数据问题；重置 EARNINGS_CALENDAR 视图为按财报日期升序全量排序而不剔除标的；在快速导出中增加数据安全回退保护；并在报表查询模态框提供过滤器一键重置与 1-Click 全量数据库导出 (.xlsx)。
 - [新功能] DeltaHarvest Security Intelligence & News: 全面暴露后端深度分析能力，在个股审计详情、期权详情、命令面板及主筛选表中深度集成 AI 综合决策评分（0–100分量化、技术面/基本面/流动性/波动率边际四大因子卡）、华尔街分析师共识目标价与潜在上涨空间、真实近期新闻资讯与期权波动率催化剂剖析、13F 机构顶级持仓机构比重及 SEC EDGAR 官方披露直链。
 - [改进] DeltaHarvest Primary Screener: 主筛选表新增 AI 评分与新闻催化剂展示列，并修复列头点击排序（布林带安全垫、支撑位距离、IVR、RSI）在表格行的实时响应与动态排序。

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   X,
   ShieldCheck,
@@ -17,10 +17,17 @@ import {
   Building,
   ExternalLink,
   Target,
+  BarChart2,
+  MessageSquare,
 } from './icons';
 import { TickerMeta, OptionOpportunity } from '../types/options';
 import { InteractiveChart } from './InteractiveChart';
 import { getSecurityIntelligence } from '../utils/securityIntelligence';
+import { AnalystPriceTargetBar } from './AnalystPriceTargetBar';
+import { PredictionMarketCards } from './PredictionMarketCards';
+import { SocialSentimentGauge } from './SocialSentimentGauge';
+
+type TickerDetailTab = 'OPTIONS_TECH' | 'NEWS_ANALYST' | 'PREDICTION_MARKETS' | 'SOCIAL_SENTIMENT';
 
 interface TickerAuditModalProps {
   ticker: TickerMeta | null;
@@ -33,6 +40,8 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   opportunities,
   onClose,
 }) => {
+  const [activeTab, setActiveTab] = useState<TickerDetailTab>('OPTIONS_TECH');
+
   if (!ticker) return null;
 
   const isTier1 = ticker.liquidity_tier.includes('Tier 1');
@@ -47,8 +56,14 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   const bestCSP = tickerOpps.find((o) => o.strategy === 'CSP') || null;
   const bestCC = tickerOpps.find((o) => o.strategy === 'CC') || null;
 
-  // Security Intelligence (Scores, News, 13F Institutional Backing)
+  // Security Intelligence (Scores, News, 13F Institutional Backing, Sentiment)
   const intel = useMemo(() => getSecurityIntelligence(ticker.symbol, ticker), [ticker]);
+
+  // Merge context data from ticker meta or fallback
+  const analystTargets = ticker.analyst_intelligence || intel.analystTargets;
+  const corporateActions = ticker.corporate_actions || intel.corporateActions;
+  const predictionMarkets = ticker.prediction_markets || intel.predictionMarkets || [];
+  const socialSentiment = ticker.social_sentiment || intel.socialSentiment;
 
   // Assignment collateral for 1 put contract at Lower BB
   const putStrikeTarget = bestCSP ? bestCSP.strike : Math.floor(ticker.lower_bb);
@@ -134,521 +149,588 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Scrollable Body: Comprehensive Audit */}
-        <div className="p-6 overflow-y-auto space-y-6 text-xs">
-          {/* SECTION 1: Volatility Profile */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Flame className="w-4 h-4 text-emerald-400" />
-                <span>Part 1: Volatility Profile &amp; Earnings Risk</span>
-              </h3>
-              <span
-                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                  ticker.iv_rank >= 45
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                }`}
-              >
-                {ticker.iv_rank >= 45 ? 'ELEVATED PREMIUM (IVR ≥ 45%)' : 'COMPRESSED PREMIUM (IVR < 45%)'}
+        {/* Tab Navigation Selector */}
+        <div className="flex border-b border-slate-800 bg-slate-950/60 px-6 overflow-x-auto gap-2">
+          <button
+            onClick={() => setActiveTab('OPTIONS_TECH')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'OPTIONS_TECH'
+                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <span>🎯 Options &amp; Technicals</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('NEWS_ANALYST')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'NEWS_ANALYST'
+                ? 'border-blue-500 text-blue-400 bg-blue-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <span>📰 News &amp; Analyst Consensus</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('PREDICTION_MARKETS')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'PREDICTION_MARKETS'
+                ? 'border-cyan-500 text-cyan-400 bg-cyan-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <span>🎲 Prediction Markets</span>
+            {predictionMarkets.length > 0 && (
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300">
+                {predictionMarkets.length}
               </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">52-Wk IV Rank (IVR)</div>
-                <div className="text-xl font-black font-mono text-emerald-400 mt-0.5">
-                  {ticker.iv_rank} / 100
-                </div>
-                <div className="text-[10px] text-slate-500">Relative volatility tier</div>
-              </div>
-
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Current Implied Vol (IV)</div>
-                <div className="text-xl font-black font-mono text-cyan-400 mt-0.5">
-                  {ticker.iv_current}%
-                </div>
-                <div className="text-[10px] text-slate-500">Option market pricing</div>
-              </div>
-
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">30-Day Historical Vol (HV)</div>
-                <div className="text-xl font-black font-mono text-white mt-0.5">
-                  {ticker.hv_30}%
-                </div>
-                <div className="text-[10px] text-slate-500">Realized 30d price swings</div>
-              </div>
-
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Earnings Status</div>
-                <div
-                  className={`text-xl font-black font-mono mt-0.5 ${
-                    ticker.earnings_within_7d ? 'text-rose-400' : 'text-emerald-400'
-                  }`}
-                >
-                  {ticker.earnings_within_7d ? '⚠️ RISK' : 'CLEAR'}
-                </div>
-                <div className="text-[10px] text-slate-500">
-                  {ticker.next_earnings_date !== 'N/A' ? ticker.next_earnings_date : 'No earnings near'}
-                </div>
-              </div>
-            </div>
-
-            {ticker.earnings_within_7d && (
-              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-400" />
-                <span>
-                  <strong>Earnings Alert:</strong> Earnings are expected within 7 days. Selling weekly options during earnings carries severe binary gap risk and potential post-announcement IV crush. Consider waiting until after the report.
-                </span>
-              </div>
             )}
-          </div>
+          </button>
 
-          {/* SECTION 2: Liquidity & Slippage Audit */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
-            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <Activity className="w-4 h-4 text-cyan-400" />
-              <span>Part 2: Liquidity &amp; Slippage Audit</span>
-            </h3>
+          <button
+            onClick={() => setActiveTab('SOCIAL_SENTIMENT')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'SOCIAL_SENTIMENT'
+                ? 'border-amber-500 text-amber-400 bg-amber-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <span>💬 Social &amp; Forum Sentiment</span>
+          </button>
+        </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Liquidity Tier Rating</div>
-                <div className="text-sm font-bold font-mono text-white mt-1">
-                  {ticker.liquidity_tier}
+        {/* Modal Scrollable Body */}
+        <div className="p-6 overflow-y-auto space-y-6 text-xs max-h-[75vh]">
+          {/* TAB 1: OPTIONS STRATEGY & TECHNICALS */}
+          {activeTab === 'OPTIONS_TECH' && (
+            <div className="space-y-6 animate-in fade-in duration-150">
+              {/* SECTION 1: Volatility Profile */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                    <span>Part 1: Volatility Profile &amp; Option Income Edge</span>
+                  </h3>
+                  <span
+                    className={`text-xs px-2.5 py-0.5 rounded font-mono font-bold ${
+                      ticker.iv_rank >= 50
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-slate-800 text-slate-300'
+                    }`}
+                  >
+                    IV Rank: {ticker.iv_rank} / 100
+                  </span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  {isTier1
-                    ? 'Penny-wide bid/ask spreads. Frictionless entries.'
-                    : isTier4
-                    ? 'Wide spreads ($0.10–$0.50). High slippage risk.'
-                    : 'Standard retail options liquidity.'}
-                </p>
-              </div>
 
-              <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Options Cadence (CBOE)</div>
-                <div className={`text-sm font-bold font-mono mt-1 ${ticker.has_weeklys === false ? 'text-amber-300' : 'text-emerald-400'}`}>
-                  {ticker.options_cadence || (ticker.has_weeklys === false ? 'Monthly Only' : 'Weekly')}
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  {ticker.in_cboe_registry
-                    ? '✓ Official CBOE Weeklys directory listing.'
-                    : ticker.has_weeklys === false
-                    ? 'Standard 3rd-Friday monthly expirations only.'
-                    : 'Active weekly cycle.'}
-                </p>
-              </div>
-
-              <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">30-Day Average Volume</div>
-                <div className="text-base font-bold font-mono text-slate-200 mt-1">
-                  {ticker.avg_volume_30.toLocaleString()} shares
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Ensures underlying market-making activity.
-                </p>
-              </div>
-
-              <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Execution Rule</div>
-                <div className="text-sm font-bold font-mono text-emerald-400 mt-1">
-                  Strict Limit Orders
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  {isTier4
-                    ? '🚨 Always enter at mid price. Never use market orders.'
-                    : 'Place limit orders at mid for optimal fills.'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 3: Technical Boundaries */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
-            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-indigo-400" />
-              <span>Part 3: Technical Boundaries, Bollinger Envelope &amp; Interactive Chart</span>
-            </h3>
-
-            {/* Embedded TradingView Lightweight Candlestick Chart */}
-            <InteractiveChart ticker={ticker} opportunities={opportunities} height={300} />
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">20-Day SMA</div>
-                <div className="text-lg font-bold font-mono text-white mt-0.5">
-                  ${ticker.sma_20.toFixed(2)}
-                </div>
-                <div className="text-[10px] text-slate-500">Mean regression line</div>
-              </div>
-
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-emerald-500/30">
-                <div className="text-[11px] text-emerald-400 font-semibold">Lower BB (Put Strike Target)</div>
-                <div className="text-lg font-black font-mono text-emerald-400 mt-0.5">
-                  ${ticker.lower_bb.toFixed(2)}
-                </div>
-                <div className="text-[10px] text-emerald-300">+{putCushionPct}% downside cushion</div>
-              </div>
-
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-cyan-500/30">
-                <div className="text-[11px] text-cyan-400 font-semibold">Upper BB (Call Strike Target)</div>
-                <div className="text-lg font-black font-mono text-cyan-400 mt-0.5">
-                  ${ticker.upper_bb.toFixed(2)}
-                </div>
-                <div className="text-[10px] text-cyan-300">+{callUpsidePct}% upside room</div>
-              </div>
-
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">14-Day RSI</div>
-                <div
-                  className={`text-lg font-black font-mono mt-0.5 ${
-                    ticker.rsi_14 < 30
-                      ? 'text-emerald-400'
-                      : ticker.rsi_14 > 70
-                      ? 'text-rose-400'
-                      : 'text-white'
-                  }`}
-                >
-                  {ticker.rsi_14}
-                </div>
-                <div className="text-[10px] text-slate-500">
-                  {ticker.rsi_14 < 30
-                    ? 'Oversold Dip'
-                    : ticker.rsi_14 > 70
-                    ? 'Overbought'
-                    : 'Neutral Zone'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 4: AI Decision Scorecard & Multi-Factor Rating Dashboard */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Award className="w-4 h-4 text-amber-400" />
-                <span>Part 4: AI Decision Scorecard &amp; Multi-Factor Rating</span>
-              </h3>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                Consensus: <strong className="text-emerald-400">{intel.analystConsensus}</strong> ({intel.analystCoverageCount} analysts)
-              </span>
-            </div>
-
-            {/* Factor Scores Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
-                <div className="text-[11px] text-slate-400">Technical Momentum</div>
-                <div className="text-xl font-black font-mono text-blue-400 mt-1">
-                  {intel.technicalScore} / 100
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">RSI, SMA &amp; BB breakout</div>
-              </div>
-
-              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
-                <div className="text-[11px] text-slate-400">Fundamental Solvency</div>
-                <div className="text-xl font-black font-mono text-emerald-400 mt-1">
-                  {intel.fundamentalScore} / 100
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Altman Z &amp; Piotroski F</div>
-              </div>
-
-              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
-                <div className="text-[11px] text-slate-400">Liquidity &amp; Execution</div>
-                <div className="text-xl font-black font-mono text-cyan-400 mt-1">
-                  {intel.liquidityScore} / 100
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Tight bid/ask &amp; volume</div>
-              </div>
-
-              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
-                <div className="text-[11px] text-slate-400">Volatility Edge</div>
-                <div className="text-xl font-black font-mono text-amber-400 mt-1">
-                  {intel.volatilityEdgeScore} / 100
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">IV vs Realized swing edge</div>
-              </div>
-            </div>
-
-            {/* Price Targets & Key Boundaries */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80 text-xs">
-              <div>
-                <span className="text-slate-500 text-[10px] block">Consensus Target</span>
-                <span className="text-white font-mono font-bold text-sm">${intel.targetPrice.toFixed(2)}</span>
-                <span className="text-[10px] text-emerald-400 font-mono ml-1.5">+{intel.upsidePct}% upside</span>
-              </div>
-              <div>
-                <span className="text-slate-500 text-[10px] block">Key Support Floor</span>
-                <span className="text-emerald-400 font-mono font-bold text-sm">${intel.keySupportPrice.toFixed(2)}</span>
-                <span className="text-[10px] text-slate-400 ml-1">Put boundary</span>
-              </div>
-              <div>
-                <span className="text-slate-500 text-[10px] block">Key Resistance Ceiling</span>
-                <span className="text-cyan-400 font-mono font-bold text-sm">${intel.keyResistancePrice.toFixed(2)}</span>
-                <span className="text-[10px] text-slate-400 ml-1">Call boundary</span>
-              </div>
-              <div>
-                <span className="text-slate-500 text-[10px] block">Institutional Stance</span>
-                <span className="text-emerald-300 font-semibold text-xs block truncate mt-0.5">{intel.decisionLabel}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 5: Recent News Stories, Catalysts & Volatility Drivers */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Newspaper className="w-4 h-4 text-blue-400" />
-                <span>Part 5: Recent News Stories, Catalysts &amp; Volatility Drivers</span>
-              </h3>
-              <span className="text-[10px] text-slate-400 font-mono">
-                {intel.recentNews.length} verified news items
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {intel.recentNews.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700 transition-colors space-y-2"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                        {item.category}
-                      </span>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                          item.sentiment === 'Bullish' || item.sentiment === 'Strong Bullish'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                            : item.sentiment === 'Neutral'
-                            ? 'bg-slate-800 text-slate-300 border-slate-700'
-                            : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                        }`}
-                      >
-                        {item.sentiment}
-                      </span>
-                      <span className="text-slate-500 text-[11px] font-mono">{item.source}</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
+                    <div className="text-[11px] text-slate-400">Current Implied Volatility (IV)</div>
+                    <div className="text-base font-bold font-mono text-amber-400 mt-1">
+                      {ticker.iv_current.toFixed(1)}%
                     </div>
-                    <span className="text-slate-500 text-[11px] font-mono">{item.timeAgo} ({item.date})</span>
+                    <p className="text-[10px] text-slate-500 mt-1">Market pricing for future 30d swing</p>
                   </div>
 
-                  <h4 className="text-xs font-bold text-white leading-snug">{item.headline}</h4>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">{item.summary}</p>
+                  <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
+                    <div className="text-[11px] text-slate-400">30-Day Historical Volatility (HV)</div>
+                    <div className="text-base font-bold font-mono text-cyan-400 mt-1">
+                      {ticker.hv_30.toFixed(1)}%
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">Realized underlying movement</p>
+                  </div>
 
-                  {/* Options Catalyst Impact Box */}
-                  <div className="p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-500/30 text-[11px] text-indigo-200 flex items-start gap-2">
-                    <Flame className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
-                    <span>
-                      <strong className="text-indigo-300">Options Volatility Catalyst:</strong> {item.optionsImplication}
+                  <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
+                    <div className="text-[11px] text-slate-400">IV / HV Volatility Premium</div>
+                    <div
+                      className={`text-base font-bold font-mono mt-1 ${
+                        ticker.iv_current > ticker.hv_30 ? 'text-emerald-400' : 'text-slate-300'
+                      }`}
+                    >
+                      {(ticker.iv_current - ticker.hv_30).toFixed(1)}%
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      {ticker.iv_current > ticker.hv_30
+                        ? '✓ Implied volatility rich vs realized'
+                        : 'Normalized option pricing'}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
+                    <div className="text-[11px] text-slate-400">Next Earnings Event</div>
+                    <div
+                      className={`text-base font-bold font-mono mt-1 ${
+                        ticker.earnings_within_7d ? 'text-rose-400 animate-pulse' : 'text-white'
+                      }`}
+                    >
+                      {ticker.next_earnings_date}
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      {ticker.earnings_within_7d
+                        ? '🚨 High binary risk. Avoid new short delta.'
+                        : '✓ Safe window for short premium'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: Liquidity Tier & Cadence */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-cyan-400" />
+                  <span>Part 2: Liquidity Tier &amp; Option Cadence</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
+                    <div className="text-[11px] text-slate-400">Option Cadence Profile</div>
+                    <div className="text-sm font-bold font-mono text-cyan-300 mt-1">
+                      {ticker.expiration_cadence || ticker.options_cadence || (ticker.has_weeklys === false ? 'Monthly Only' : 'Weekly Expirations')}
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {ticker.in_cboe_registry
+                        ? '✓ Official CBOE Weeklys directory listing.'
+                        : ticker.has_weeklys === false
+                        ? 'Standard 3rd-Friday monthly expirations only.'
+                        : 'Active weekly cycle.'}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
+                    <div className="text-[11px] text-slate-400">30-Day Average Volume</div>
+                    <div className="text-base font-bold font-mono text-slate-200 mt-1">
+                      {ticker.avg_volume_30.toLocaleString()} shares
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Ensures underlying market-making activity.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
+                    <div className="text-[11px] text-slate-400">Execution Rule</div>
+                    <div className="text-sm font-bold font-mono text-emerald-400 mt-1">
+                      Strict Limit Orders
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {isTier4
+                        ? '🚨 Always enter at mid price. Never use market orders.'
+                        : 'Place limit orders at mid for optimal fills.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: Technical Boundaries */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
+                <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-indigo-400" />
+                  <span>Part 3: Technical Boundaries, Bollinger Envelope &amp; Interactive Chart</span>
+                </h3>
+
+                {/* Embedded TradingView Lightweight Candlestick Chart */}
+                <InteractiveChart ticker={ticker} opportunities={opportunities} height={300} />
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+                    <div className="text-[11px] text-slate-400">20-Day SMA</div>
+                    <div className="text-lg font-bold font-mono text-white mt-0.5">
+                      ${ticker.sma_20.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-slate-500">Mean regression line</div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-2.5 rounded-lg border border-emerald-500/30">
+                    <div className="text-[11px] text-emerald-400 font-semibold">Lower BB (Put Strike Target)</div>
+                    <div className="text-lg font-black font-mono text-emerald-400 mt-0.5">
+                      ${ticker.lower_bb.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-emerald-300">+{putCushionPct}% downside cushion</div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-2.5 rounded-lg border border-cyan-500/30">
+                    <div className="text-[11px] text-cyan-400 font-semibold">Upper BB (Call Strike Target)</div>
+                    <div className="text-lg font-black font-mono text-cyan-400 mt-0.5">
+                      ${ticker.upper_bb.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-cyan-300">+{callUpsidePct}% upside room</div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+                    <div className="text-[11px] text-slate-400">14-Day RSI</div>
+                    <div
+                      className={`text-lg font-black font-mono mt-0.5 ${
+                        ticker.rsi_14 < 30
+                          ? 'text-emerald-400'
+                          : ticker.rsi_14 > 70
+                          ? 'text-rose-400'
+                          : 'text-white'
+                      }`}
+                    >
+                      {ticker.rsi_14}
+                    </div>
+                    <div className="text-[10px] text-slate-500">
+                      {ticker.rsi_14 < 30
+                        ? 'Oversold Dip'
+                        : ticker.rsi_14 > 70
+                        ? 'Overbought'
+                        : 'Neutral Zone'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 7: Proposed Strategy */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  <span>
+                    Part 4: Proposed {ticker.has_weeklys === false ? 'Monthly-Adjusted' : 'Weekly'} Strategy (
+                    {ticker.has_weeklys === false
+                      ? `${ticker.days_to_nearest_expiration ?? ticker.target_dte ?? 20}d Monthly Target`
+                      : '3–7 DTE Targeting ~0.15–0.20 Delta'}
+                    )
+                  </span>
+                </h3>
+
+                {ticker.has_weeklys === false && (
+                  <div className="p-3.5 bg-amber-950/40 border border-amber-500/50 rounded-xl text-xs text-amber-200 flex items-start gap-2.5">
+                    <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-amber-300">Monthly Expiration Only - Adjusted DTE</div>
+                      <div className="mt-0.5 text-slate-300 leading-relaxed">
+                        ⚠️ This ticker does not trade weekly options. The nearest available expiration is{' '}
+                        <strong className="text-white font-mono">{ticker.nearest_expiration_date || ticker.target_exp || 'Monthly'}</strong>{' '}
+                        ({ticker.days_to_nearest_expiration ?? ticker.target_dte ?? '?'} DTE). Premium decay (theta) will follow a monthly cycle.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Cash-Secured Put Play */}
+                  <div className="bg-slate-950/80 p-3.5 rounded-xl border border-emerald-500/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Cash-Secured Put (CSP)</span>
+                      </span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">
+                        ≤ Lower BB Target
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-800">
+                      <span className="text-slate-400">Recommended Strike:</span>
+                      <span className="font-bold font-mono text-white">${putStrikeTarget.toFixed(1)}</span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-800">
+                      <span className="text-slate-400">Safety Cushion to Spot:</span>
+                      <span className="font-mono text-emerald-400">+{putCushionPct}% buffer</span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-800">
+                      <span className="text-slate-400">Collateral Required (1 ct):</span>
+                      <span className="font-mono text-amber-300">${putCollateral.toLocaleString()}</span>
+                    </div>
+
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Est. Cash Income (Weekly):</span>
+                      <span className="font-bold font-mono text-emerald-400">+${estimatedWeeklyPutPremium}</span>
+                    </div>
+                  </div>
+
+                  {/* Covered Call Play */}
+                  <div className="bg-slate-950/80 p-3.5 rounded-xl border border-cyan-500/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-cyan-400 flex items-center gap-1.5">
+                        <TrendingUp className="w-4 h-4" />
+                        <span>Covered Call (CC)</span>
+                      </span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300">
+                        ≥ Upper BB Target
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-800">
+                      <span className="text-slate-400">Recommended Strike:</span>
+                      <span className="font-bold font-mono text-white">
+                        ${bestCC ? bestCC.strike.toFixed(1) : Math.ceil(ticker.upper_bb).toFixed(1)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-800">
+                      <span className="text-slate-400">Upside Run Room:</span>
+                      <span className="font-mono text-cyan-400">+{callUpsidePct}% headroom</span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-800">
+                      <span className="text-slate-400">Shares Required (1 ct):</span>
+                      <span className="font-mono text-slate-200">100 Shares (${(ticker.spot_price * 100).toLocaleString()})</span>
+                    </div>
+
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Est. Cash Income (Weekly):</span>
+                      <span className="font-bold font-mono text-cyan-400">
+                        +${bestCC ? bestCC.premium_total : Math.round(ticker.spot_price * (ticker.iv_current / 100) * 0.12 * 100)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 8: Risk Mitigation */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-400" />
+                  <span>Part 5: Institutional Risk Mitigation &amp; Assignment Plan</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-950/80 p-3 rounded-lg border border-emerald-500/20">
+                    <div className="flex items-center space-x-1.5 text-emerald-400 font-bold mb-1">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>80% Profit BTC Trigger</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      When 80% of max upfront premium is captured, <strong>Buy-to-Close (BTC)</strong> immediately. Do not risk weekend gap events.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950/80 p-3 rounded-lg border border-amber-500/20">
+                    <div className="flex items-center space-x-1.5 text-amber-400 font-bold mb-1">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>0.50 Delta Roll Trigger</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      If the underlying reaches <strong>0.50 Delta (ATM)</strong>, roll out 1–2 weeks for credit or prepare for assignment at breakeven.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950/80 p-3 rounded-lg border border-cyan-500/20">
+                    <div className="flex items-center space-x-1.5 text-cyan-400 font-bold mb-1">
+                      <DollarSign className="w-4 h-4" />
+                      <span>5% Portfolio Cap</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      Never allocate more than <strong>5% of total liquid collateral</strong> to any single underlying name.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: NEWS & ANALYST CONSENSUS */}
+          {activeTab === 'NEWS_ANALYST' && (
+            <div className="space-y-6 animate-in fade-in duration-150">
+              {/* Wall Street Price Target Visualizer */}
+              {analystTargets && (
+                <AnalystPriceTargetBar
+                  currentPrice={ticker.spot_price}
+                  targets={analystTargets}
+                  currencySymbol="$"
+                />
+              )}
+
+              {/* Corporate Financial Ratios */}
+              {corporateActions && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                    <span className="text-xs text-slate-400 block">Dividend Yield</span>
+                    <span className="text-sm font-semibold font-mono text-emerald-400 mt-0.5 block">
+                      {corporateActions.dividend_yield
+                        ? `${(corporateActions.dividend_yield * 100).toFixed(2)}%`
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                    <span className="text-xs text-slate-400 block">Payout Ratio</span>
+                    <span className="text-sm font-semibold font-mono text-slate-200 mt-0.5 block">
+                      {corporateActions.payout_ratio
+                        ? `${(corporateActions.payout_ratio * 100).toFixed(1)}%`
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                    <span className="text-xs text-slate-400 block">Trailing P/E</span>
+                    <span className="text-sm font-semibold font-mono text-slate-200 mt-0.5 block">
+                      {corporateActions.trailing_pe ? corporateActions.trailing_pe.toFixed(1) : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                    <span className="text-xs text-slate-400 block">Forward P/E</span>
+                    <span className="text-sm font-semibold font-mono text-slate-200 mt-0.5 block">
+                      {corporateActions.forward_pe ? corporateActions.forward_pe.toFixed(1) : 'N/A'}
                     </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* SECTION 6: Institutional 13F Ownership & SEC EDGAR Filings */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Building className="w-4 h-4 text-emerald-400" />
-                <span>Part 6: Institutional 13F Ownership &amp; SEC EDGAR Disclosures</span>
-              </h3>
-              <a
-                href={intel.secEdgarUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition-colors"
-                title="Open verified SEC EDGAR company filings"
-              >
-                <span>SEC EDGAR Filings</span>
-                <ExternalLink className="w-3 h-3 text-slate-400" />
-              </a>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Institutional Holders */}
-              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between text-slate-400 text-[11px]">
-                  <span>Total Institutional Float:</span>
-                  <span className="font-bold font-mono text-emerald-400 text-sm">
-                    {intel.institutionalOwnershipPct}%
+              {/* AI Factor Scores Grid */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                    <Award className="w-4 h-4 text-amber-400" />
+                    <span>AI Decision Factor Rating</span>
+                  </h3>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                    Consensus: <strong className="text-emerald-400">{intel.analystConsensus}</strong>
                   </span>
                 </div>
-                <div className="border-t border-slate-800/80 pt-1.5 space-y-1">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">
-                    Top 13F Asset Managers:
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                    <div className="text-[11px] text-slate-400">Technical Momentum</div>
+                    <div className="text-xl font-black font-mono text-blue-400 mt-1">
+                      {intel.technicalScore} / 100
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                    <div className="text-[11px] text-slate-400">Fundamental Solvency</div>
+                    <div className="text-xl font-black font-mono text-emerald-400 mt-1">
+                      {intel.fundamentalScore} / 100
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                    <div className="text-[11px] text-slate-400">Liquidity &amp; Depth</div>
+                    <div className="text-xl font-black font-mono text-cyan-400 mt-1">
+                      {intel.liquidityScore} / 100
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                    <div className="text-[11px] text-slate-400">Volatility Edge</div>
+                    <div className="text-xl font-black font-mono text-amber-400 mt-1">
+                      {intel.volatilityEdgeScore} / 100
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* News Catalyst Feed */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                    <Newspaper className="w-4 h-4 text-blue-400" />
+                    <span>Recent News Stories &amp; Volatility Drivers</span>
+                  </h3>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {intel.recentNews.length} verified news items
                   </span>
-                  {intel.topHolders.map((holder, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-[11px] py-0.5">
-                      <span className="text-slate-300 truncate max-w-[200px]">{holder.name}</span>
-                      <span className="font-mono text-slate-400">{holder.stakePct}</span>
+                </div>
+
+                <div className="space-y-3">
+                  {intel.recentNews.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700 transition-colors space-y-2"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                            {item.category}
+                          </span>
+                          <span
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
+                              item.sentiment === 'Bullish' || item.sentiment === 'Strong Bullish'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                : item.sentiment === 'Neutral'
+                                ? 'bg-slate-800 text-slate-300 border-slate-700'
+                                : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                            }`}
+                          >
+                            {item.sentiment}
+                          </span>
+                          <span className="text-slate-500 text-[11px] font-mono">{item.source}</span>
+                        </div>
+                        <span className="text-slate-500 text-[11px] font-mono">{item.timeAgo}</span>
+                      </div>
+
+                      <h4 className="text-xs font-bold text-white leading-snug">{item.headline}</h4>
+                      <p className="text-[11px] text-slate-300 leading-relaxed">{item.summary}</p>
+
+                      <div className="p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-500/30 text-[11px] text-indigo-200 flex items-start gap-2">
+                        <Flame className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
+                        <span>
+                          <strong className="text-indigo-300">Options Catalyst:</strong> {item.optionsImplication}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* SEC EDGAR Filing Summary */}
-              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2">
-                <div className="text-slate-400 text-[11px]">Latest Regulatory Disclosure:</div>
-                <div className="flex items-center justify-between bg-slate-900 p-2 rounded-lg border border-slate-800 font-mono text-xs">
-                  <span className="font-bold text-white">Form {intel.latestFilingType}</span>
-                  <span className="text-slate-400">Filed: {intel.latestFilingDate}</span>
+              {/* Institutional 13F Ownership & SEC EDGAR */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                    <Building className="w-4 h-4 text-emerald-400" />
+                    <span>Institutional 13F Ownership &amp; SEC EDGAR Disclosures</span>
+                  </h3>
+                  <a
+                    href={intel.secEdgarUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition-colors"
+                  >
+                    <span>SEC EDGAR Filings</span>
+                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                  </a>
                 </div>
-                <p className="text-[10px] text-slate-400 leading-relaxed">
-                  Verified financial statements and disclosures submitted to the U.S. Securities and Exchange Commission (SEC). 
-                  Used to cross-audit Altman Z-Score solvency ratios and balance sheet debt covenants.
-                </p>
-              </div>
-            </div>
-          </div>
 
-          {/* SECTION 7: Proposed Weekly Strategy */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
-            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400" />
-              <span>
-                Part 7: Proposed {ticker.has_weeklys === false ? 'Monthly-Adjusted' : 'Weekly'} Strategy (
-                {ticker.has_weeklys === false
-                  ? `${ticker.days_to_nearest_expiration ?? ticker.target_dte ?? 20}d Monthly Target`
-                  : '3–7 DTE Targeting ~0.15–0.20 Delta'}
-                )
-              </span>
-            </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                      <span>Total Institutional Float:</span>
+                      <span className="font-bold font-mono text-emerald-400 text-sm">
+                        {intel.institutionalOwnershipPct}%
+                      </span>
+                    </div>
+                    <div className="border-t border-slate-800/80 pt-1.5 space-y-1">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">
+                        Top 13F Asset Managers:
+                      </span>
+                      {intel.topHolders.map((holder, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-[11px] py-0.5">
+                          <span className="text-slate-300 truncate max-w-[200px]">{holder.name}</span>
+                          <span className="font-mono text-slate-400">{holder.stakePct}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-            {ticker.has_weeklys === false && (
-              <div className="p-3.5 bg-amber-950/40 border border-amber-500/50 rounded-xl text-xs text-amber-200 flex items-start gap-2.5">
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-bold text-amber-300">Monthly Expiration Only - Adjusted DTE</div>
-                  <div className="mt-0.5 text-slate-300 leading-relaxed">
-                    ⚠️ This ticker does not trade weekly options. The nearest available expiration is{' '}
-                    <strong className="text-white font-mono">{ticker.nearest_expiration_date || ticker.target_exp || 'Monthly'}</strong>{' '}
-                    ({ticker.days_to_nearest_expiration ?? ticker.target_dte ?? '?'} DTE). Premium decay (theta) will follow a monthly cycle.
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div className="text-slate-400 text-[11px]">Latest Regulatory Disclosure:</div>
+                    <div className="flex items-center justify-between bg-slate-900 p-2 rounded-lg border border-slate-800 font-mono text-xs">
+                      <span className="font-bold text-white">Form {intel.latestFilingType}</span>
+                      <span className="text-slate-400">Filed: {intel.latestFilingDate}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      Audited financial statements and corporate filings from SEC EDGAR.
+                    </p>
                   </div>
                 </div>
               </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Cash-Secured Put Play */}
-              <div className="bg-slate-950/80 p-3.5 rounded-xl border border-emerald-500/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-400 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Cash-Secured Put (CSP)</span>
-                  </span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">
-                    ≤ Lower BB Target
-                  </span>
-                </div>
-
-                <div className="flex justify-between py-1 border-b border-slate-800">
-                  <span className="text-slate-400">Recommended Strike:</span>
-                  <span className="font-bold font-mono text-white">${putStrikeTarget.toFixed(1)}</span>
-                </div>
-
-                <div className="flex justify-between py-1 border-b border-slate-800">
-                  <span className="text-slate-400">Safety Cushion to Spot:</span>
-                  <span className="font-mono text-emerald-400">+{putCushionPct}% buffer</span>
-                </div>
-
-                <div className="flex justify-between py-1 border-b border-slate-800">
-                  <span className="text-slate-400">Collateral Required (1 ct):</span>
-                  <span className="font-mono text-amber-300">${putCollateral.toLocaleString()}</span>
-                </div>
-
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-400">Est. Cash Income (Weekly):</span>
-                  <span className="font-bold font-mono text-emerald-400">+${estimatedWeeklyPutPremium}</span>
-                </div>
-              </div>
-
-              {/* Covered Call Play */}
-              <div className="bg-slate-950/80 p-3.5 rounded-xl border border-cyan-500/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-cyan-400 flex items-center gap-1.5">
-                    <TrendingUp className="w-4 h-4" />
-                    <span>Covered Call (CC)</span>
-                  </span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300">
-                    ≥ Upper BB Target
-                  </span>
-                </div>
-
-                <div className="flex justify-between py-1 border-b border-slate-800">
-                  <span className="text-slate-400">Recommended Strike:</span>
-                  <span className="font-bold font-mono text-white">
-                    ${bestCC ? bestCC.strike.toFixed(1) : Math.ceil(ticker.upper_bb).toFixed(1)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between py-1 border-b border-slate-800">
-                  <span className="text-slate-400">Upside Run Room:</span>
-                  <span className="font-mono text-cyan-400">+{callUpsidePct}% headroom</span>
-                </div>
-
-                <div className="flex justify-between py-1 border-b border-slate-800">
-                  <span className="text-slate-400">Shares Required (1 ct):</span>
-                  <span className="font-mono text-slate-200">100 Shares (${(ticker.spot_price * 100).toLocaleString()})</span>
-                </div>
-
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-400">Est. Cash Income (Weekly):</span>
-                  <span className="font-bold font-mono text-cyan-400">
-                    +${bestCC ? bestCC.premium_total : Math.round(ticker.spot_price * (ticker.iv_current / 100) * 0.12 * 100)}
-                  </span>
-                </div>
-              </div>
             </div>
-          </div>
+          )}
 
-          {/* SECTION 8: Risk Mitigation & Assignment Plan */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
-            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Part 8: Institutional Risk Mitigation &amp; Assignment Plan</span>
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Trigger 1: 80% Profit Rule */}
-              <div className="bg-slate-950/80 p-3 rounded-lg border border-emerald-500/20">
-                <div className="flex items-center space-x-1.5 text-emerald-400 font-bold mb-1">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>80% Profit BTC Trigger</span>
-                </div>
-                <p className="text-[11px] text-slate-300">
-                  When 80% of max upfront premium is captured (e.g. option value drops to 20% of sale price), 
-                  <strong> Buy-to-Close (BTC)</strong> immediately. Do not risk weekend gap events for the final pennies.
-                </p>
-              </div>
-
-              {/* Trigger 2: 0.50 Delta Roll Trigger */}
-              <div className="bg-slate-950/80 p-3 rounded-lg border border-amber-500/20">
-                <div className="flex items-center space-x-1.5 text-amber-400 font-bold mb-1">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>0.50 Delta Roll Trigger</span>
-                </div>
-                <p className="text-[11px] text-slate-300">
-                  If the underlying breaches support and the option reaches <strong>0.50 Delta (At-The-Money)</strong>, 
-                  roll out 1–2 weeks in time for an additional net credit, or prepare to accept assignment at the discounted breakeven price.
-                </p>
-              </div>
-
-              {/* Trigger 3: Collateral Management */}
-              <div className="bg-slate-950/80 p-3 rounded-lg border border-cyan-500/20">
-                <div className="flex items-center space-x-1.5 text-cyan-400 font-bold mb-1">
-                  <DollarSign className="w-4 h-4" />
-                  <span>5% Portfolio Cap</span>
-                </div>
-                <p className="text-[11px] text-slate-300">
-                  Never allocate more than <strong>5% of total liquid portfolio collateral</strong> to any single underlying name. 
-                  Diversify across Tier 1 index ETFs and defensive mega-caps.
-                </p>
-              </div>
+          {/* TAB 3: PREDICTION MARKETS */}
+          {activeTab === 'PREDICTION_MARKETS' && (
+            <div className="animate-in fade-in duration-150">
+              <PredictionMarketCards events={predictionMarkets} />
             </div>
-          </div>
+          )}
+
+          {/* TAB 4: SOCIAL & FORUM SENTIMENT */}
+          {activeTab === 'SOCIAL_SENTIMENT' && (
+            <div className="animate-in fade-in duration-150">
+              <SocialSentimentGauge sentiment={socialSentiment} />
+            </div>
+          )}
         </div>
 
         {/* Modal Footer */}
