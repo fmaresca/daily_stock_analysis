@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [新功能] DeltaHarvest On-Demand Live Recalculation: 交付 FastAPI 后端 `POST /api/v1/options/recalculate` 动态重算端点与 `scripts/generate_options_data.py` `generate_options_dataset()` 模块化解耦，支持从前端自选股管理器 (Watchlist Manager) 与页面顶栏一键触发实时全量行情、20日均线、布林带、30日历史波动率及期权链计算，彻底告别新增标的 $100 缺省值。
 - [新功能] DeltaHarvest Contextual Intelligence Layer: 交付多源语境情报与情绪分析系统（`src/services/contextual_intelligence_service.py`），集成华尔街分析师目标价区间与共识评级、公司财务比率/股息率/远期PE、Polymarket Gamma API 及 Manifold Markets 真实二元预测市场赔率、StockTwits 多空情绪比率与 Reddit /r/WallStreetBets 24小时讨论热度排行；个股审计模态框升级为 4-Tab 现代化多维情报工作台（期权与技术面、新闻与分析师共识、预测市场、社区情绪），主筛选表新增紧凑情绪徽标。
+- [新功能] DeltaHarvest Contextual Enricher Backend: 新增 `scripts/contextual_enricher.py` 数据富化模块，并将 `enrich_ticker_payload()` 集成至 `scripts/generate_options_data.py` 主处理循环，使每个自选股 meta 记录在生成 `options_data.json` 时自动附带 `analyst_intelligence`、`corporate_actions`、`news_feed`、`prediction_markets`、`social_sentiment` 五大语境情报字段；新增 `--no-enrich` CLI 标志支持快速离线运行。
 - [新功能] DeltaHarvest Live API & WebSocket Stream: 交付 FastAPI 后端 `/api/v1/options/snapshot` 与 `/api/v1/ws/stream` 实时 WebSocket 管道，Web 前端优先连接 FastAPI 动态引擎并在断网时无缝降级至本地数据；配置 Vite dev server 全局 `/api` 与 `/ws` 代理。
 - [新功能] DeltaHarvest CEF Analytics: 交付 Closed-End Fund (CEF) 估值与收益质量引擎 (`src/services/cef_analytics_service.py` 及 `/api/v1/options/cef/{symbol}`)，支持 52 周净值折溢价 Z-Score、NII 净利息覆盖率及建设性 vs. 破坏性资本返还 (RoC) 自动审计。
 - [新功能] DeltaHarvest Risk Circuit-Breaker: 交付量化风险熔断服务 (`src/services/risk_circuit_breaker.py` 及 `/api/v1/options/risk/check-order`)，支持组合最大回撤熔断门限、Delta 中性偏离边界及单标的集中度限制核验。

@@ -73,26 +73,45 @@ def get_options_snapshot(
             except Exception as e:
                 logger.warning(f"Failed to read snapshot from {p}: {e}")
 
-    # 2. Return fallback metadata
-    return {
-        "metadata": {
-            "title": "Options & Technical Volatility Screener",
-            "version": "1.2.0",
-            "last_updated": "2026-09-01T00:00:00Z",
-            "source": "FastAPI Live Engine",
-        },
-        "summary": {
-            "total_screened_tickers": 0,
-            "total_opportunities": 0,
-            "csp_count": 0,
-            "cc_count": 0,
-            "avg_annualized_yield_csp": 0.0,
-            "avg_annualized_yield_cc": 0.0,
-            "top_volatility_tickers": [],
-        },
-        "tickers": [],
-        "opportunities": [],
-    }
+class RecalculateRequest(BaseModel):
+    tickers: Optional[List[str]] = Field(default=None, description="Optional custom tickers list to calculate. Defaults to active watchlist.")
+    enrich: bool = Field(default=False, description="Whether to fetch deep sentiment & prediction market data.")
+
+
+@router.post("/recalculate")
+def recalculate_options_data(
+    request: Optional[RecalculateRequest] = None,
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    On-demand live calculation of real market prices, technical indicators (SMA, Bollinger Bands, RSI, HV),
+    and Black-Scholes options chains for all watchlist tickers.
+    """
+    tickers = request.tickers if request and request.tickers else None
+    enrich = request.enrich if request else False
+
+    try:
+        try:
+            from scripts.generate_options_data import generate_options_dataset
+        except ImportError:
+            import sys
+            sys.path.insert(0, str(Path(".").resolve()))
+            from scripts.generate_options_data import generate_options_dataset
+
+        payload = generate_options_dataset(
+            tickers=tickers,
+            output_json_web="web/public/data/options_data.json",
+            output_json_root="data/options_data.json",
+            output_audit="reports/latest_options_audit.md",
+            enrich=enrich,
+        )
+        return payload
+    except Exception as e:
+        logger.exception(f"Failed to recalculate options dataset: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Live options calculation failed: {str(e)}"
+        )
 
 
 @router.get("/cef/{symbol}")

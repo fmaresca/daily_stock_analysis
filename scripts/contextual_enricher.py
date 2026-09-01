@@ -1,0 +1,234 @@
+"""Contextual Intelligence & Multi-Source Sentiment Enricher
+
+Fetches news, analyst consensus, prediction market odds, and forum sentiment
+for a given ticker symbol. Designed to be called once per ticker after the
+core technical/options pipeline has run.
+
+Exposed entry point: enrich_ticker_payload(symbol) -> Dict[str, Any]
+"""
+
+from datetime import datetime, timezone
+from typing import Any, Dict, List
+
+import requests
+
+try:
+    import yfinance as yf
+except ImportError:
+    yf = None  # type: ignore
+
+
+def get_analyst_and_news_context(symbol: str) -> Dict[str, Any]:
+    """Fetches Wall St analyst consensus, price targets, corporate actions, and news via yfinance."""
+    if yf is None:
+        return {"error": "yfinance not installed"}
+    try:
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+
+        # 1. Analyst Price Targets & Consensus
+        targets: Dict[str, Any] = {}
+        try:
+            raw_targets = ticker.analyst_price_targets
+            if raw_targets is not None:
+                targets = {
+                    "current": raw_targets.get("current"),
+                    "mean": raw_targets.get("mean"),
+                    "high": raw_targets.get("high"),
+                    "low": raw_targets.get("low"),
+                    "recommendation": info.get("recommendationKey", "N/A").upper(),
+                    "number_of_analysts": info.get("numberOfAnalystOpinions", 0),
+                }
+        except Exception:
+            targets = {
+                "recommendation": "N/A",
+                "mean": None,
+                "high": None,
+                "low": None,
+            }
+
+        # 2. Corporate Actions & Dividends
+        corporate_actions = {
+            "dividend_rate": info.get("dividendRate", 0.0),
+            "dividend_yield": info.get("dividendYield", 0.0),
+            "ex_dividend_date": info.get("exDividendDate", None),
+            "payout_ratio": info.get("payoutRatio", None),
+            "trailing_pe": info.get("trailingPE", None),
+            "forward_pe": info.get("forwardPE", None),
+        }
+
+        # 3. News Headlines (top 5 stories)
+        news_items: List[Dict[str, Any]] = []
+        try:
+            raw_news = ticker.news or []
+            for item in raw_news[:5]:
+                title = item.get("title") or item.get("content", {}).get("title")
+                link = item.get("link") or item.get("content", {}).get(
+                    "canonicalUrl", {}
+                ).get("url")
+                publisher = item.get("publisher") or item.get("content", {}).get(
+                    "provider", {}
+                ).get("displayName")
+                if title:
+                    news_items.append(
+                        {"title": title, "link": link, "publisher": publisher}
+                    )
+        except Exception:
+            news_items = []
+
+        return {
+            "analyst_targets": targets,
+            "corporate_actions": corporate_actions,
+            "news": news_items,
+        }
+    except Exception as e:
+        return {"error": f"Analyst/News fetch error: {str(e)}"}
+
+
+def get_prediction_market_odds(symbol: str) -> List[Dict[str, Any]]:
+    """Queries Polymarket Gamma API and Manifold Markets for active binary events affecting the ticker."""
+    events: List[Dict[str, Any]] = []
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    # 1. Polymarket Public Gamma API
+    try:
+        poly_url = (
+            f"https://gamma-api.polymarket.com/events"
+            f"?limit=3&active=true&closed=false&q={symbol}"
+        )
+        r = requests.get(poly_url, headers=headers, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            for ev in data:
+                title = ev.get("title")
+                markets = ev.get("markets", [])
+                if markets and title:
+                    outcome_prices = markets[0].get("outcomePrices")
+                    yes_prob = "N/A"
+                    if outcome_prices:
+                        try:
+                            if isinstance(outcome_prices, list) and len(outcome_prices) > 0:
+                                yes_prob = f"{float(outcome_prices[0]) * 100:.1f}%"
+                        except Exception:
+                            pass
+                    events.append({
+                        "source": "Polymarket",
+                        "event": title,
+                        "probability": yes_prob,
+                        "url": f"https://polymarket.com/event/{ev.get('slug', '')}",
+                    })
+    except Exception:
+        pass
+
+    # 2. Manifold Markets Public API
+    try:
+        manifold_url = (
+            f"https://api.manifold.markets/v0/search-markets"
+            f"?term={symbol}&limit=3&filter=open"
+        )
+        r2 = requests.get(manifold_url, headers=headers, timeout=5)
+        if r2.status_code == 200:
+            data = r2.json()
+            for m in data:
+                prob = (
+                    f"{m.get('probability', 0) * 100:.1f}%"
+                    if "probability" in m
+                    else "N/A"
+                )
+                events.append({
+                    "source": "Manifold",
+                    "event": m.get("question"),
+                    "probability": prob,
+                    "url": m.get("url"),
+                })
+    except Exception:
+        pass
+
+    return events[:4]  # Return top 4 most relevant markets
+
+
+def get_social_and_forum_sentiment(symbol: str) -> Dict[str, Any]:
+    """Fetches retail sentiment from StockTwits and Reddit/WallStreetBets trackers."""
+    sentiment_summary: Dict[str, Any] = {
+        "stocktwits_sentiment": "Neutral",
+        "stocktwits_bullish_pct": 50.0,
+        "reddit_rank": "N/A",
+        "reddit_sentiment": "Neutral",
+        "social_volume_flag": "Normal",
+    }
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    # 1. StockTwits Public Stream API
+    try:
+        st_url = f"https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
+        r = requests.get(st_url, headers=headers, timeout=5)
+        if r.status_code == 200:
+            st_data = r.json()
+            messages = st_data.get("messages", [])
+            bullish, bearish = 0, 0
+            for msg in messages:
+                sent = (
+                    msg.get("entities", {})
+                    .get("sentiment", {})
+                    .get("basic", "")
+                    .lower()
+                )
+                if sent == "bullish":
+                    bullish += 1
+                elif sent == "bearish":
+                    bearish += 1
+
+            total = bullish + bearish
+            if total > 0:
+                bull_pct = (bullish / total) * 100
+                sentiment_summary["stocktwits_bullish_pct"] = round(bull_pct, 1)
+                sentiment_summary["stocktwits_sentiment"] = (
+                    "Bullish"
+                    if bull_pct >= 60
+                    else ("Bearish" if bull_pct <= 40 else "Neutral")
+                )
+    except Exception:
+        pass
+
+    # 2. Reddit / WallStreetBets Trending API (Tradestie Public Endpoint)
+    try:
+        reddit_url = "https://tradestie.com/api/v1/apps/reddit"
+        r_reddit = requests.get(reddit_url, headers=headers, timeout=5)
+        if r_reddit.status_code == 200:
+            reddit_list = r_reddit.json()
+            for idx, item in enumerate(reddit_list):
+                if item.get("ticker", "").upper() == symbol.upper():
+                    sentiment_summary["reddit_rank"] = f"#{idx + 1} on WSB"
+                    sentiment_summary["reddit_sentiment"] = item.get(
+                        "sentiment", "Neutral"
+                    )
+                    sentiment_summary["social_volume_flag"] = (
+                        f"{item.get('no_of_comments', 0)} comments today"
+                    )
+                    break
+    except Exception:
+        pass
+
+    return sentiment_summary
+
+
+def enrich_ticker_payload(symbol: str) -> Dict[str, Any]:
+    """Master context function consolidating all enrichment layers for a security.
+
+    Returns a dict with keys that map directly onto the TickerMeta contextual
+    intelligence fields expected by the frontend:
+        analyst_intelligence, corporate_actions, news_feed,
+        prediction_markets, social_sentiment, enriched_at
+    """
+    analyst_news = get_analyst_and_news_context(symbol)
+    prediction_odds = get_prediction_market_odds(symbol)
+    social_sentiment = get_social_and_forum_sentiment(symbol)
+
+    return {
+        "analyst_intelligence": analyst_news.get("analyst_targets", {}),
+        "corporate_actions": analyst_news.get("corporate_actions", {}),
+        "news_feed": analyst_news.get("news", []),
+        "prediction_markets": prediction_odds,
+        "social_sentiment": social_sentiment,
+        "enriched_at": datetime.now(timezone.utc).isoformat(),
+    }
