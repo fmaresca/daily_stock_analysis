@@ -184,6 +184,108 @@ def check_order_circuit_breaker(
     }
 
 
+class SchwabAuthExchangeRequest(BaseModel):
+    app_key: Optional[str] = None
+    app_secret: Optional[str] = None
+    callback_url: Optional[str] = "https://127.0.0.1"
+    code: str
+
+
+@router.post("/schwab/auth")
+def exchange_schwab_code(
+    request: SchwabAuthExchangeRequest,
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Exchanges an authorization code or redirect URL for Charles Schwab OAuth tokens.
+    """
+    auth = SchwabAuthManager(
+        app_key=request.app_key,
+        app_secret=request.app_secret,
+        callback_url=request.callback_url or "https://127.0.0.1",
+    )
+    if not auth.is_configured():
+        raise HTTPException(status_code=400, detail="Schwab App Key and App Secret must be provided.")
+
+    raw_code = request.code.strip()
+    if "code=" in raw_code:
+        import urllib.parse
+        parsed = urllib.parse.urlparse(raw_code)
+        query_params = urllib.parse.parse_qs(parsed.query)
+        extracted = query_params.get("code", [raw_code])[0]
+        raw_code = urllib.parse.unquote(extracted)
+
+    try:
+        tokens = auth.exchange_code_for_token(raw_code)
+        return {
+            "status": "SUCCESS",
+            "message": "Charles Schwab OAuth token exchange successful.",
+            "expires_in": tokens.get("expires_in", 1800),
+            "token_type": tokens.get("token_type", "Bearer"),
+        }
+    except Exception as e:
+        logger.warning(f"Schwab token exchange failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Schwab token exchange failed: {str(e)}")
+
+
+@router.get("/schwab/status")
+def get_schwab_status(
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Returns Schwab API connection status, token validity, and tests a live quote on SPY.
+    """
+    auth = SchwabAuthManager()
+    is_configured = auth.is_configured()
+    token = auth.get_valid_access_token() if is_configured else None
+
+    if not is_configured:
+        return {
+            "status": "UNCONFIGURED",
+            "configured": False,
+            "connected": False,
+            "message": "Schwab App Key and Secret not configured.",
+        }
+
+    if not token:
+        return {
+            "status": "TOKEN_REQUIRED",
+            "configured": True,
+            "connected": False,
+            "message": "Valid OAuth access token required. Authorize via Web UI.",
+            "auth_url": auth.get_authorization_url(),
+        }
+
+    # Test live quote on SPY
+    fetcher = SchwabFetcher(auth_manager=auth)
+    try:
+        t0 = time.time()
+        quotes = fetcher.fetch_quotes(["SPY"])
+        latency_ms = round((time.time() - t0) * 1000, 1)
+        spy_quote = quotes.get("SPY", {}).get("quote", {})
+        return {
+            "status": "CONNECTED",
+            "configured": True,
+            "connected": True,
+            "latency_ms": latency_ms,
+            "sample_quote": {
+                "symbol": "SPY",
+                "last": spy_quote.get("lastPrice"),
+                "bid": spy_quote.get("bidPrice"),
+                "ask": spy_quote.get("askPrice"),
+                "volume": spy_quote.get("totalVolume"),
+            },
+            "message": "Charles Schwab Retail Trader API is active and receiving live market data.",
+        }
+    except Exception as e:
+        return {
+            "status": "ERROR",
+            "configured": True,
+            "connected": False,
+            "message": f"Schwab live quote test failed: {str(e)}",
+        }
+
+
 @router.get("/chain/{symbol}")
 def get_live_option_chain(
     symbol: str,
