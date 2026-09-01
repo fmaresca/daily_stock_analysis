@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import {
   ShieldCheck,
   TrendingUp,
@@ -8,6 +9,9 @@ import {
   Calculator,
   Flame,
   CheckCircle2,
+  FileSpreadsheet,
+  FileText,
+  Printer,
 } from './icons';
 import { MultiLegSpread } from '../types/options';
 
@@ -44,6 +48,73 @@ export const MultiLegSpreadTable: React.FC<MultiLegSpreadTableProps> = ({
       setSortBy(col);
       setSortOrder('desc');
     }
+  };
+
+  const exportSpreadsToCSV = () => {
+    const headers = [
+      'Symbol',
+      'Strategy',
+      'Expiration',
+      'DTE',
+      'Spot Price',
+      'Short Leg',
+      'Long Wing',
+      'Net Credit ($)',
+      'Max Risk / Margin ($)',
+      'RoC %',
+      'Annualized RoC %',
+      'POP %',
+      'Short Delta',
+      'Collateral Savings %',
+    ];
+    const rows = filteredSpreads.map((s) => [
+      s.symbol,
+      `"${s.strategy_name}"`,
+      s.expiration,
+      s.dte,
+      s.current_price,
+      `Strike $${s.short_strike} (${s.short_delta}Δ)`,
+      `Strike $${s.long_strike} (${s.long_delta}Δ)`,
+      s.net_credit,
+      s.max_loss,
+      s.roc_pct,
+      s.annualized_roc,
+      s.pop_pct,
+      s.short_delta,
+      s.collateral_required,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `defined_risk_spreads_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportSpreadsToExcel = () => {
+    const sheetData = filteredSpreads.map((s) => ({
+      Symbol: s.symbol,
+      Strategy: s.strategy_name,
+      Expiration: s.expiration,
+      DTE: s.dte,
+      'Spot Price': s.current_price,
+      'Short Leg': `Strike $${s.short_strike} (${s.short_delta}Δ)`,
+      'Long Wing': `Strike $${s.long_strike} (${s.long_delta}Δ)`,
+      'Net Credit ($)': s.net_credit,
+      'Max Risk / Margin ($)': s.max_loss,
+      'Collateral Required ($)': s.collateral_required,
+      'RoC %': s.roc_pct,
+      'Annualized RoC %': s.annualized_roc,
+      'POP %': s.pop_pct,
+      'Short Delta': s.short_delta,
+    }));
+    const ws = XLSX.utils.json_to_sheet(sheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Defined Risk Spreads');
+    XLSX.writeFile(wb, `defined_risk_spreads_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   return (
@@ -98,8 +169,31 @@ export const MultiLegSpreadTable: React.FC<MultiLegSpreadTableProps> = ({
           </div>
         </div>
 
-        <div className="text-xs text-slate-400">
-          <span className="font-semibold text-emerald-400">0.15–0.20 Delta Rule:</span> Short legs are strictly anchored outside 2 SD Bollinger Bands.
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={exportSpreadsToExcel}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+            title="Export Spreads to Excel"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Excel (.xlsx)</span>
+          </button>
+          <button
+            onClick={exportSpreadsToCSV}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+            title="Export Spreads to CSV"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>CSV</span>
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 border border-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+            title="Print or Save PDF"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print PDF</span>
+          </button>
         </div>
       </div>
 

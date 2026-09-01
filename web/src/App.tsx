@@ -16,6 +16,7 @@ import { MultiLegSpreadTable } from './components/MultiLegSpreadTable';
 import { VolatilitySkewRadar } from './components/VolatilitySkewRadar';
 import { SchwabSettingsModal } from './components/SchwabSettingsModal';
 import { FundamentalHealthTable } from './components/FundamentalHealthTable';
+import { OptionsBacktestView } from './components/OptionsBacktestView';
 import { generateMultiLegSpreads, generateVolatilitySkew } from './utils/optionsMultiLeg';
 import { generateFundamentalHealthData } from './utils/fundamentalSolvency';
 import {
@@ -175,6 +176,10 @@ export const App: React.FC = () => {
       } else if (e.key.toLowerCase() === 'r') {
         e.preventDefault();
         setIsReportQueryModalOpen((prev) => !prev);
+      } else if (e.key === '1') {
+        setActiveTree('EQUITIES');
+      } else if (e.key === '2') {
+        setActiveTree('OPTIONS');
       }
     };
 
@@ -517,6 +522,32 @@ export const App: React.FC = () => {
     );
   };
 
+  const handleSelectEquitiesTab = (tab: EquitiesTabType) => {
+    setActiveEquitiesTab(tab);
+    if (tab === 'TREND_SUPPORT') {
+      setFilters((prev) => ({ ...prev, sortBy: 'dist_to_support', sortOrder: 'asc' }));
+    } else if (tab === 'VOLATILITY_RISK') {
+      setFilters((prev) => ({ ...prev, sortBy: 'hv_30', sortOrder: 'desc', onlyHighIvr: true }));
+    } else if (tab === 'EARNINGS_CALENDAR') {
+      setFilters((prev) => ({ ...prev, onlyEarningsAlert: true }));
+    } else if (tab === 'SECTOR_OVERVIEW') {
+      setFilters((prev) => ({ ...prev, sortBy: 'sector', sortOrder: 'asc' }));
+    }
+  };
+
+  const handleSelectOptionsTab = (tab: OptionsTabType) => {
+    setActiveOptionsTab(tab);
+    if (tab === 'TICKER_AUDIT') {
+      const target = selectedTicker || filteredTickers[0] || universeTickers[0];
+      if (target) setSelectedTicker(target);
+    } else if (tab === 'INCOME_CALCULATOR') {
+      const targetOpp = calculatorOpportunity || (dataPayload?.opportunities.length ? dataPayload.opportunities[0] : null);
+      if (targetOpp) setCalculatorOpportunity(targetOpp);
+    } else if (tab === 'DELTA_GREEKS') {
+      setFilters((prev) => ({ ...prev, strategy: 'ALL' }));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white">
       {/* Header with Search, Watchlists, Reports, and Help triggers */}
@@ -540,15 +571,86 @@ export const App: React.FC = () => {
           activeTree={activeTree}
           onSelectTree={(tree) => setActiveTree(tree)}
           activeEquitiesTab={activeEquitiesTab}
-          onSelectEquitiesTab={(tab) => setActiveEquitiesTab(tab)}
+          onSelectEquitiesTab={handleSelectEquitiesTab}
           activeOptionsTab={activeOptionsTab}
-          onSelectOptionsTab={(tab) => setActiveOptionsTab(tab)}
+          onSelectOptionsTab={handleSelectOptionsTab}
           totalTickersCount={universeTickers.length}
           weeklyCount={weeklyCadenceCounts.weekly}
           monthlyCount={weeklyCadenceCounts.monthly}
           highIvrCount={highIvrCount}
           earningsAlertCount={earningsAlertCount}
         />
+
+        {/* Breadcrumbs & Quick-Jump Navigation Bar */}
+        <div className="glass-panel px-4 py-2.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+          {/* Breadcrumb path */}
+          <div className="flex items-center space-x-2 text-slate-400">
+            <span className="text-slate-500 font-semibold">📍 Location:</span>
+            <button
+              onClick={() => setActiveTree('EQUITIES')}
+              className={`hover:underline font-semibold ${
+                activeTree === 'EQUITIES' ? 'text-blue-400 font-bold' : 'text-slate-400'
+              }`}
+            >
+              US Equities
+            </button>
+            <span>/</span>
+            <button
+              onClick={() => setActiveTree('OPTIONS')}
+              className={`hover:underline font-semibold ${
+                activeTree === 'OPTIONS' ? 'text-emerald-400 font-bold' : 'text-slate-400'
+              }`}
+            >
+              Options Yield
+            </button>
+            <span>/</span>
+            <span className="text-white font-bold font-mono">
+              {activeTree === 'EQUITIES'
+                ? activeEquitiesTab.replace(/_/g, ' ')
+                : activeOptionsTab.replace(/_/g, ' ')}
+            </span>
+          </div>
+
+          {/* Quick-Jump Shortcuts */}
+          <div className="flex items-center space-x-2">
+            <span className="text-slate-500 text-[11px] hidden md:inline">Jump:</span>
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[11px] font-mono flex items-center space-x-1 transition-colors"
+            >
+              <span>Search</span>
+              <kbd className="px-1 py-0.2 bg-slate-800 rounded text-[9px] text-slate-400">Ctrl+K</kbd>
+            </button>
+            <button
+              onClick={() => setIsWatchlistModalOpen(true)}
+              className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-400 hover:text-amber-300 text-[11px] font-mono flex items-center space-x-1 transition-colors"
+            >
+              <span>Watchlist</span>
+              <kbd className="px-1 py-0.2 bg-slate-800 rounded text-[9px] text-slate-400">W</kbd>
+            </button>
+            <button
+              onClick={() => setIsReportQueryModalOpen(true)}
+              className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-indigo-400 hover:text-indigo-300 text-[11px] font-mono flex items-center space-x-1 transition-colors"
+            >
+              <span>Reports</span>
+              <kbd className="px-1 py-0.2 bg-slate-800 rounded text-[9px] text-slate-400">R</kbd>
+            </button>
+            <button
+              onClick={() => setIsHelpModalOpen(true)}
+              className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-emerald-400 hover:text-emerald-300 text-[11px] font-mono flex items-center space-x-1 transition-colors"
+            >
+              <span>Help</span>
+              <kbd className="px-1 py-0.2 bg-slate-800 rounded text-[9px] text-slate-400">?</kbd>
+            </button>
+            <button
+              onClick={triggerPrintReport}
+              className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-blue-400 hover:text-blue-300 text-[11px] font-mono flex items-center space-x-1 transition-colors"
+            >
+              <span>Print</span>
+              <Printer className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
 
         {/* Global KPI Summary Ribbon */}
         <KPICards
@@ -835,6 +937,43 @@ export const App: React.FC = () => {
           ) : (
             /* Tree 1: US Equities Analysis (Primary Screener Table) */
             <div className="space-y-4">
+              {activeEquitiesTab === 'TREND_SUPPORT' && (
+                <div className="glass-panel p-3 rounded-xl border border-blue-500/30 bg-blue-950/20 text-xs flex items-center justify-between text-blue-300">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-400" />
+                    <span><strong>Trend &amp; Support Map:</strong> Tickers sorted by proximity to key support levels and 20D SMA boundaries.</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-400">Sort: Proximity to Support</span>
+                </div>
+              )}
+              {activeEquitiesTab === 'VOLATILITY_RISK' && (
+                <div className="glass-panel p-3 rounded-xl border border-amber-500/30 bg-amber-950/20 text-xs flex items-center justify-between text-amber-300">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span><strong>Volatility &amp; Risk Profiler:</strong> Filtered for high Implied Volatility Rank (IVR &ge; 40) and 30D Historical Volatility.</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-400">Sort: 30D HV (Desc)</span>
+                </div>
+              )}
+              {activeEquitiesTab === 'EARNINGS_CALENDAR' && (
+                <div className="glass-panel p-3 rounded-xl border border-rose-500/30 bg-rose-950/20 text-xs flex items-center justify-between text-rose-300">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-rose-400" />
+                    <span><strong>Earnings Calendar &amp; Binary Risk:</strong> Monitoring assets with upcoming quarterly earnings reports within the next 7–14 days.</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-400">Earnings Shock Alert Active</span>
+                </div>
+              )}
+              {activeEquitiesTab === 'SECTOR_OVERVIEW' && (
+                <div className="glass-panel p-3 rounded-xl border border-purple-500/30 bg-purple-950/20 text-xs flex items-center justify-between text-purple-300">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-400" />
+                    <span><strong>Sector &amp; Universe Overview:</strong> Tickers categorized across broad indices, technology, healthcare, and income funds.</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-400">Sort: Sector Grouping</span>
+                </div>
+              )}
+
               <PrimaryScreenerTable
                 tickers={filteredTickers}
                 watchlist={currentWatchlistSymbols}
@@ -855,27 +994,40 @@ export const App: React.FC = () => {
             ) : activeOptionsTab === 'VOLATILITY_SKEW' ? (
               /* 25-Delta Volatility Skew & Term Structure Radar */
               <VolatilitySkewRadar skewData={volatilitySkewData} />
-            ) : activeOptionsTab === 'EXPIRATION_CADENCE' ? (
-              /* Expiration Cadence view: Focus on weekly vs monthly metadata */
-              <PrimaryScreenerTable
-                tickers={filteredTickers}
-                watchlist={currentWatchlistSymbols}
-                onToggleWatchlist={handleToggleWatchlist}
-                sortBy={filters.sortBy}
-                sortOrder={filters.sortOrder}
-                onSort={handleSort}
-                onSelectTicker={(ticker) => setSelectedTicker(ticker)}
-              />
+            ) : activeOptionsTab === 'BACKTEST_MARGIN' ? (
+              /* Multi-Year Systematic Backtester & FINRA 4210 Margin Stress Test */
+              <OptionsBacktestView availableSymbols={universeTickers.map((t) => t.symbol)} />
             ) : (
               /* Options Opportunities Table (CSPs & CCs) */
-              <ScreenerTable
-                opportunities={filteredOpportunities}
-                sortBy={filters.sortBy}
-                sortOrder={filters.sortOrder}
-                onSort={handleSort}
-                onSelectOpportunity={(opp) => setSelectedOpportunity(opp)}
-                onOpenCalculator={(opp) => setCalculatorOpportunity(opp)}
-              />
+              <div className="space-y-4">
+                {activeOptionsTab === 'DELTA_GREEKS' && (
+                  <div className="glass-panel p-3 rounded-xl border border-emerald-500/30 bg-emerald-950/20 text-xs flex items-center justify-between text-emerald-300">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span><strong>0.15–0.20 Delta Sweet Spot:</strong> Options positioned outside 2 SD Bollinger Bands with 80%–85% Probability of Expiring OTM.</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-400">Sweet Spot Active</span>
+                  </div>
+                )}
+                {activeOptionsTab === 'EXPIRATION_CADENCE' && (
+                  <div className="glass-panel p-3 rounded-xl border border-teal-500/30 bg-teal-950/20 text-xs flex items-center justify-between text-teal-300">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2 h-2 rounded-full bg-teal-400" />
+                      <span><strong>Expiration Cadence &amp; CBOE Registry:</strong> Distinguishing weekly-optionable tickers (3–5 DTE) from standard monthly-only contracts.</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-400">CBOE Directory Validated</span>
+                  </div>
+                )}
+
+                <ScreenerTable
+                  opportunities={filteredOpportunities}
+                  sortBy={filters.sortBy}
+                  sortOrder={filters.sortOrder}
+                  onSort={handleSort}
+                  onSelectOpportunity={(opp) => setSelectedOpportunity(opp)}
+                  onOpenCalculator={(opp) => setCalculatorOpportunity(opp)}
+                />
+              </div>
             )}
           </div>
         )}
