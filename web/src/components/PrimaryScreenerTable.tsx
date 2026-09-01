@@ -215,11 +215,10 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                           title={watchlist.includes(t.symbol) ? "Remove from My Watchlist" : "Add to My Watchlist"}
                         >
                           <Star
-                            className={`w-3.5 h-3.5 ${
-                              watchlist.includes(t.symbol)
+                            className={`w-3.5 h-3.5 ${watchlist.includes(t.symbol)
                                 ? 'text-amber-400'
                                 : 'text-slate-600 group-hover:text-slate-400'
-                            }`}
+                              }`}
                             filled={watchlist.includes(t.symbol)}
                           />
                         </button>
@@ -228,11 +227,10 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                         </span>
                         {t.options_cadence && (
                           <span
-                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
-                              t.has_weeklys === false
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${t.has_weeklys === false
                                 ? 'bg-slate-800 text-slate-400 border border-slate-700'
                                 : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                            }`}
+                              }`}
                             title={t.has_weeklys === false ? "Monthly options only" : "CBOE-registered active weekly options"}
                           >
                             {t.has_weeklys === false ? 'Monthly' : 'Weekly'}
@@ -268,18 +266,16 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                       <div className="flex items-center space-x-2">
                         <div className="w-14 bg-slate-800 h-2 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all ${
-                              isHighIVR ? 'bg-emerald-400' : 'bg-amber-400'
-                            }`}
+                            className={`h-full rounded-full transition-all ${isHighIVR ? 'bg-emerald-400' : 'bg-amber-400'
+                              }`}
                             style={{ width: `${Math.min(100, Math.max(8, t.iv_rank))}%` }}
                           />
                         </div>
                         <span
-                          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-                            isHighIVR
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${isHighIVR
                               ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                               : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                          }`}
+                            }`}
                         >
                           {t.iv_rank}% {isHighIVR ? 'High' : 'Low'}
                         </span>
@@ -293,13 +289,12 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                     <td className="py-3.5 px-3">
                       <div className="flex items-center space-x-1.5">
                         <span
-                          className={`font-mono font-bold ${
-                            t.rsi_14 < 30
+                          className={`font-mono font-bold ${t.rsi_14 < 30
                               ? 'text-emerald-400'
                               : t.rsi_14 > 70
-                              ? 'text-rose-400'
-                              : 'text-slate-200'
-                          }`}
+                                ? 'text-rose-400'
+                                : 'text-slate-200'
+                            }`}
                         >
                           {t.rsi_14}
                         </span>
@@ -342,11 +337,10 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                     {/* Put Safety Cushion % */}
                     <td className="py-3.5 px-3">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-md font-mono font-bold text-xs ${
-                          putCushion >= 5.0
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md font-mono font-bold text-xs ${putCushion >= 5.0
                             ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                             : 'bg-slate-800 text-slate-300'
-                        }`}
+                          }`}
                       >
                         +{putCushion.toFixed(1)}%
                       </span>
@@ -355,13 +349,12 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                     {/* Liquidity Tier */}
                     <td className="py-3.5 px-3">
                       <span
-                        className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
-                          isTier1
+                        className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${isTier1
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                             : isTier4
-                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                            : 'bg-slate-800 text-slate-300 border-slate-700'
-                        }`}
+                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                              : 'bg-slate-800 text-slate-300 border-slate-700'
+                          }`}
                       >
                         {isTier4 ? (
                           <ShieldAlert className="w-3 h-3" />
@@ -397,13 +390,12 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                     <td className="py-3.5 px-3 text-center">
                       <div className="flex flex-col items-center gap-0.5">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${
-                            intel.compositeScore >= 85
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${intel.compositeScore >= 85
                               ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                               : intel.compositeScore >= 75
-                              ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
-                              : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                          }`}
+                                ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                            }`}
                           title={`Consensus: ${intel.analystConsensus} • Target: $${intel.targetPrice.toFixed(2)} (+${intel.upsidePct}%)`}
                         >
                           {intel.compositeScore}/100
@@ -411,11 +403,10 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                         <div className="flex items-center gap-1">
                           {intel.socialSentiment?.stocktwits_bullish_pct && (
                             <span
-                              className={`text-[9px] font-mono px-1 py-0.2 rounded ${
-                                intel.socialSentiment.stocktwits_bullish_pct >= 60
+                              className={`text-[9px] font-mono px-1 py-0.2 rounded ${intel.socialSentiment.stocktwits_bullish_pct >= 60
                                   ? 'text-emerald-400 bg-emerald-500/10'
                                   : 'text-slate-400 bg-slate-800'
-                              }`}
+                                }`}
                               title={`StockTwits: ${intel.socialSentiment.stocktwits_bullish_pct}% Bullish`}
                             >
                               {intel.socialSentiment.stocktwits_bullish_pct}% Bull

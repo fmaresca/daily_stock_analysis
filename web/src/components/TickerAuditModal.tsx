@@ -539,7 +539,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
               {/* Wall Street Price Target Visualizer */}
               {analystTargets && (
                 <AnalystPriceTargetBar
-                  currentPrice={ticker.spot_price}
+                  currentPrice={spotPrice}
                   targets={analystTargets}
                   currencySymbol="$"
                 />
@@ -630,12 +630,12 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                     <span>Recent News Stories &amp; Volatility Drivers</span>
                   </h3>
                   <span className="text-[10px] text-slate-400 font-mono">
-                    {intel.recentNews.length} verified news items
+                    {(intel.recentNews || []).length} verified news items
                   </span>
                 </div>
 
                 <div className="space-y-3">
-                  {intel.recentNews.map((item) => (
+                  {(intel.recentNews || []).map((item) => (
                     <div
                       key={item.id}
                       className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700 transition-colors space-y-2"
@@ -705,7 +705,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                       <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">
                         Top 13F Asset Managers:
                       </span>
-                      {intel.topHolders.map((holder, idx) => (
+                      {(intel.topHolders || []).map((holder, idx) => (
                         <div key={idx} className="flex items-center justify-between text-[11px] py-0.5">
                           <span className="text-slate-300 truncate max-w-[200px]">{holder.name}</span>
                           <span className="font-mono text-slate-400">{holder.stakePct}</span>
