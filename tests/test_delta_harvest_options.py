@@ -100,5 +100,27 @@ class TestContextualIntelligence(unittest.TestCase):
         self.assertIn("social_sentiment", data)
 
 
+class TestBarchartOpinionEngine(unittest.TestCase):
+    def test_barchart_signals_evaluation(self):
+        import pandas as pd
+        import numpy as np
+        from src.services.barchart_opinion_service import evaluate_barchart_signals
+
+        # Construct synthetic uptrend dataframe with 220 bars
+        dates = pd.date_range("2025-01-01", periods=220, freq="D")
+        trend_prices = [100.0 + i * 0.5 for i in range(220)]
+        df = pd.DataFrame({"Close": trend_prices}, index=dates)
+
+        res = evaluate_barchart_signals("TEST_UP", df)
+        self.assertEqual(res["symbol"], "TEST_UP")
+        self.assertEqual(res["opinion_pct"], 100)
+        self.assertEqual(res["buy_votes"], "13/13")
+        self.assertEqual(res["sell_votes"], "0/13")
+        self.assertTrue(res["is_top_1_pct"])
+        self.assertEqual(res["signal_strength"], "Maximum (Top 1%)")
+        self.assertIn("votes_breakdown", res)
+        self.assertEqual(len(res["votes_breakdown"]), 13)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -4,6 +4,7 @@ import {
   OptionsDataPayload,
   ScreenerSummary,
 } from '../types/options';
+import { calculateBarchartOpinion } from './barchartEngine';
 
 /**
  * Standard Normal Cumulative Distribution Function (CDF)
@@ -213,6 +214,8 @@ export async function fetchClientSideLiveMarketData(
           ? (sym === 'CLM' ? 'Cornerstone Strategic Value Fund' : 'Cornerstone Total Return Fund')
           : existing?.name || `${sym} Equity`;
 
+        const barchartOpinion = calculateBarchartOpinion(sym, prices, spotPrice);
+
         const meta: TickerMeta = {
           symbol: sym,
           name,
@@ -237,6 +240,7 @@ export async function fetchClientSideLiveMarketData(
           corporate_actions: existing?.corporate_actions,
           prediction_markets: existing?.prediction_markets,
           social_sentiment: existing?.social_sentiment,
+          barchart_opinion: barchartOpinion,
         };
 
         return meta;

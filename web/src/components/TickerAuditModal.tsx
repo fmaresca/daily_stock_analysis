@@ -26,6 +26,8 @@ import { getSecurityIntelligence } from '../utils/securityIntelligence';
 import { AnalystPriceTargetBar } from './AnalystPriceTargetBar';
 import { PredictionMarketCards } from './PredictionMarketCards';
 import { SocialSentimentGauge } from './SocialSentimentGauge';
+import { BarchartOpinionCard } from './BarchartOpinionCard';
+import { calculateBarchartOpinion } from '../utils/barchartEngine';
 
 type TickerDetailTab = 'OPTIONS_TECH' | 'NEWS_ANALYST' | 'PREDICTION_MARKETS' | 'SOCIAL_SENTIMENT';
 
@@ -42,6 +44,14 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TickerDetailTab>('OPTIONS_TECH');
   const intel = useMemo(() => getSecurityIntelligence(ticker?.symbol || 'ASSET', ticker || undefined), [ticker]);
+
+  const barchartOpinion = useMemo(() => {
+    if (!ticker) return null;
+    if (ticker.barchart_opinion) return ticker.barchart_opinion;
+    const spot = ticker.spot_price || 100;
+    const sma = ticker.sma_20 || spot;
+    return calculateBarchartOpinion(ticker.symbol, [sma * 0.96, sma * 0.98, sma, spot], spot);
+  }, [ticker]);
 
   if (!ticker) return null;
 
@@ -388,6 +398,11 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* SECTION 4: Barchart 13-Indicator Opinion & Top 1% Signal Strength */}
+              {barchartOpinion && (
+                <BarchartOpinionCard opinion={barchartOpinion} />
+              )}
 
               {/* SECTION 7: Proposed Strategy */}
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">

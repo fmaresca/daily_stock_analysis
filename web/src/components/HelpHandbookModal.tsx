@@ -345,6 +345,78 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </div>
               </div>
 
+              {/* Barchart 13-Indicator Opinion & Top 1% Signal Strength Matrix */}
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-amber-500/40 space-y-3">
+                <div className="font-bold text-amber-300 text-xs uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-amber-400" />
+                    <span>Barchart 13-Indicator Opinion &amp; Top 1% Signal Strength Engine</span>
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    13-Study Multi-Timeframe Matrix
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  DeltaHarvest replicates Barchart&apos;s proprietary multi-timeframe analytics, evaluating 13 technical moving averages and MACD oscillators across three distinct time horizons to provide a unified mathematical consensus (-100% to +100%):
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-cyan-300 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                      <span>Short-Term (4 Indicators)</span>
+                    </div>
+                    <ul className="text-[11px] text-slate-400 space-y-1 font-mono">
+                      <li>• 20-Day SMA vs Price</li>
+                      <li>• 20-50 MACD Oscillator</li>
+                      <li>• 20-100 MACD Oscillator</li>
+                      <li>• 20-200 MACD Oscillator</li>
+                    </ul>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-indigo-300 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                      <span>Medium-Term (4 Indicators)</span>
+                    </div>
+                    <ul className="text-[11px] text-slate-400 space-y-1 font-mono">
+                      <li>• 50-Day SMA vs Price</li>
+                      <li>• 50-100 MACD Oscillator</li>
+                      <li>• 50-150 MACD Oscillator</li>
+                      <li>• 50-200 MACD Oscillator</li>
+                    </ul>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-purple-300 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-400" />
+                      <span>Long-Term (5 Indicators)</span>
+                    </div>
+                    <ul className="text-[11px] text-slate-400 space-y-1 font-mono">
+                      <li>• 100-Day SMA vs Price</li>
+                      <li>• 150-Day SMA vs Price</li>
+                      <li>• 200-Day SMA vs Price</li>
+                      <li>• 100-200 MACD Oscillator</li>
+                      <li>• 200 SMA 20-Day Slope</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-amber-950/30 border border-amber-500/30 text-xs text-amber-200 space-y-1.5">
+                  <div className="font-bold flex items-center gap-1 text-amber-300">
+                    <Flame className="w-4 h-4 text-amber-400" />
+                    <span>Top 1% Signal Strength Qualification Criteria:</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    A security qualifies for the glowing <strong className="text-amber-300">🔥 Top 1% Buy</strong> badge when it satisfies two strict mathematical criteria:
+                    <br />
+                    1. <strong>Unanimous 100% Buy (13/13 votes)</strong> across all short, medium, and long-term indicators.
+                    <br />
+                    2. <strong>Maximum Historical Trend Consistency</strong>: Closing price held above the 50-Day SMA for &ge;90% of the preceding 60 trading days with <em>Strongest</em> momentum direction.
+                  </p>
+                </div>
+              </div>
+
               {/* Confluence Checklist */}
               <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
                 <div className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
