@@ -181,6 +181,18 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                         <span className="font-bold font-mono text-white text-sm group-hover:text-emerald-400 transition-colors">
                           {t.symbol}
                         </span>
+                        {t.options_cadence && (
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
+                              t.has_weeklys === false
+                                ? 'bg-slate-800 text-slate-400 border border-slate-700'
+                                : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                            }`}
+                            title={t.has_weeklys === false ? "Monthly options only" : "CBOE-registered active weekly options"}
+                          >
+                            {t.has_weeklys === false ? 'Monthly' : 'Weekly'}
+                          </span>
+                        )}
                         {t.earnings_within_7d && (
                           <span
                             className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse"
