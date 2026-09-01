@@ -3,7 +3,8 @@ import { Header } from './components/Header';
 import { KPICards } from './components/KPICards';
 import { PrimaryScreenerTable } from './components/PrimaryScreenerTable';
 import { TickerAuditModal } from './components/TickerAuditModal';
-import { Search, RotateCcw, ShieldCheck, Flame, AlertTriangle } from './components/icons';
+import { WatchlistModal } from './components/WatchlistModal';
+import { Search, RotateCcw, ShieldCheck, Flame, AlertTriangle, Star, Plus } from './components/icons';
 import {
   OptionsDataPayload,
   TickerMeta,
@@ -13,11 +14,42 @@ import {
 const GITHUB_RAW_DATA_URL =
   'https://raw.githubusercontent.com/fmaresca/daily_stock_analysis/main/web/public/data/options_data.json';
 
+const DEFAULT_UNIVERSE_SYMBOLS = [
+  'SPY', 'QQQ', 'IWM', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'TSLA',
+  'PLTR', 'IONQ', 'NET', 'RTX', 'JEPI', 'SCHD', 'SPCX', 'ZETA', 'BLZE', 'AXTI'
+];
+
 export const App: React.FC = () => {
   const [dataPayload, setDataPayload] = useState<OptionsDataPayload | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [dataSource, setDataSource] = useState<string>('Local JSON');
   const [selectedTicker, setSelectedTicker] = useState<TickerMeta | null>(null);
+  const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState<boolean>(false);
+  const [showWatchlistOnly, setShowWatchlistOnly] = useState<boolean>(false);
+
+  // Watchlist persistent state
+  const [watchlist, setWatchlist] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('delta_harvest_watchlist');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to load watchlist from localStorage:', e);
+    }
+    return DEFAULT_UNIVERSE_SYMBOLS;
+  });
+
+  const [customTickers, setCustomTickers] = useState<TickerMeta[]>([]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('delta_harvest_watchlist', JSON.stringify(watchlist));
+    } catch (e) {
+      console.warn('Failed to save watchlist to localStorage:', e);
+    }
+  }, [watchlist]);
 
   // Quick filter state
   const [activeKpiFilter, setActiveKpiFilter] = useState<'ALL' | 'IVR' | 'OVERSOLD' | 'EARNINGS'>('ALL');
@@ -92,6 +124,59 @@ export const App: React.FC = () => {
     fetchData();
   }, []);
 
+  // Watchlist handlers
+  const handleToggleWatchlist = (symbol: string) => {
+    setWatchlist((prev) =>
+      prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]
+    );
+  };
+
+  const handleAddCustomTicker = (symbol: string) => {
+    const sym = symbol.toUpperCase().trim();
+    if (!watchlist.includes(sym)) {
+      setWatchlist((prev) => [...prev, sym]);
+    }
+    if (!tickers.some((t) => t.symbol === sym) && !customTickers.some((t) => t.symbol === sym)) {
+      setCustomTickers((prev) => [
+        ...prev,
+        {
+          symbol: sym,
+          name: `${sym} (User Added)`,
+          sector: 'Custom Watchlist',
+          liquidity_tier: 'Custom Ticker',
+          spot_price: 0,
+          avg_volume_30: 0,
+          sma_20: 0,
+          upper_bb: 0,
+          lower_bb: 0,
+          bb_width_pct: 0,
+          rsi_14: 50,
+          rsi_flag: 'NORMAL',
+          hv_30: 0,
+          iv_current: 0,
+          iv_rank: 0,
+          earnings_within_7d: false,
+          next_earnings_date: 'N/A',
+        },
+      ]);
+    }
+  };
+
+  const handleRemoveTicker = (symbol: string) => {
+    setWatchlist((prev) => prev.filter((s) => s !== symbol));
+    setCustomTickers((prev) => prev.filter((t) => t.symbol !== symbol));
+  };
+
+  const handleResetWatchlist = () => {
+    setWatchlist(DEFAULT_UNIVERSE_SYMBOLS);
+    setCustomTickers([]);
+  };
+
+  const handleSelectAllUniverse = () => {
+    const all = Array.from(new Set([...watchlist, ...DEFAULT_UNIVERSE_SYMBOLS]));
+    setWatchlist(all);
+  };
+
   // Sync active KPI filter to state
   const handleKpiToggle = (type: 'IVR' | 'OVERSOLD' | 'EARNINGS') => {
     if (activeKpiFilter === type) {
@@ -115,6 +200,7 @@ export const App: React.FC = () => {
 
   const handleResetFilters = () => {
     setActiveKpiFilter('ALL');
+    setShowWatchlistOnly(false);
     setFilters({
       search: '',
       onlyHighIvr: false,
@@ -128,43 +214,53 @@ export const App: React.FC = () => {
 
   // Process and extract ticker items
   const tickers: TickerMeta[] = useMemo(() => {
-    if (!dataPayload) return [];
-    if (dataPayload.tickers && dataPayload.tickers.length > 0) {
-      return dataPayload.tickers;
+    let baseList: TickerMeta[] = [];
+    if (dataPayload?.tickers && dataPayload.tickers.length > 0) {
+      baseList = dataPayload.tickers;
+    } else if (dataPayload?.opportunities) {
+      const map = new Map<string, TickerMeta>();
+      dataPayload.opportunities.forEach((o) => {
+        if (!map.has(o.symbol)) {
+          map.set(o.symbol, {
+            symbol: o.symbol,
+            name: o.name,
+            sector: o.sector,
+            liquidity_tier: o.liquidity_tier || 'Tier 2/3 (Moderate)',
+            liquidity_warning: o.liquidity_warning,
+            spot_price: o.current_price,
+            avg_volume_30: 5000000,
+            sma_20: o.sma_20 || o.current_price,
+            upper_bb: o.upper_bb || o.current_price * 1.05,
+            lower_bb: o.lower_bb || o.current_price * 0.95,
+            bb_width_pct: o.bb_width_pct || 10.0,
+            rsi_14: o.rsi || o.rsi_14 || 50,
+            rsi_flag: o.rsi_flag || 'NORMAL',
+            hv_30: o.hv_30 || 25,
+            iv_current: o.iv,
+            iv_rank: o.iv_rank,
+            earnings_within_7d: !!o.earnings_within_7d,
+            next_earnings_date: o.next_earnings_date || 'N/A',
+          });
+        }
+      });
+      baseList = Array.from(map.values());
     }
-    // If tickers array missing, reconstruct from opportunities
-    const map = new Map<string, TickerMeta>();
-    dataPayload.opportunities.forEach((o) => {
-      if (!map.has(o.symbol)) {
-        map.set(o.symbol, {
-          symbol: o.symbol,
-          name: o.name,
-          sector: o.sector,
-          liquidity_tier: o.liquidity_tier || 'Tier 2/3 (Moderate)',
-          liquidity_warning: o.liquidity_warning,
-          spot_price: o.current_price,
-          avg_volume_30: 5000000,
-          sma_20: o.sma_20 || o.current_price,
-          upper_bb: o.upper_bb || o.current_price * 1.05,
-          lower_bb: o.lower_bb || o.current_price * 0.95,
-          bb_width_pct: o.bb_width_pct || 10.0,
-          rsi_14: o.rsi || o.rsi_14 || 50,
-          rsi_flag: o.rsi_flag || 'NORMAL',
-          hv_30: o.hv_30 || 25,
-          iv_current: o.iv,
-          iv_rank: o.iv_rank,
-          earnings_within_7d: !!o.earnings_within_7d,
-          next_earnings_date: o.next_earnings_date || 'N/A',
-        });
-      }
-    });
-    return Array.from(map.values());
-  }, [dataPayload]);
+
+    // Merge any custom user tickers that aren't in base list
+    const knownSymbols = new Set(baseList.map((t) => t.symbol));
+    const extra = customTickers.filter((ct) => !knownSymbols.has(ct.symbol));
+    return [...baseList, ...extra];
+  }, [dataPayload, customTickers]);
 
   // Filtered and Sorted Tickers
   const filteredTickers = useMemo(() => {
     return tickers
       .filter((t) => {
+        // Watchlist filter
+        if (showWatchlistOnly && !watchlist.includes(t.symbol)) {
+          return false;
+        }
+
         // Search filter
         if (filters.search.trim()) {
           const q = filters.search.toLowerCase().trim();
@@ -204,8 +300,8 @@ export const App: React.FC = () => {
         let valB: any;
 
         if (field === 'cushion_pct') {
-          valA = ((a.spot_price - a.lower_bb) / a.spot_price) * 100;
-          valB = ((b.spot_price - b.lower_bb) / b.spot_price) * 100;
+          valA = a.spot_price > 0 ? ((a.spot_price - a.lower_bb) / a.spot_price) * 100 : 0;
+          valB = b.spot_price > 0 ? ((b.spot_price - b.lower_bb) / b.spot_price) * 100 : 0;
         } else {
           valA = a[field as keyof TickerMeta];
           valB = b[field as keyof TickerMeta];
@@ -220,7 +316,7 @@ export const App: React.FC = () => {
         if (valA! > valB!) return filters.sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [tickers, filters]);
+  }, [tickers, filters, showWatchlistOnly, watchlist]);
 
   const handleSort = (column: keyof TickerMeta | 'cushion_pct') => {
     if (filters.sortBy === column) {
@@ -237,13 +333,17 @@ export const App: React.FC = () => {
     }
   };
 
+  const universeTickersOnly = useMemo(() => {
+    return tickers.filter((t) => DEFAULT_UNIVERSE_SYMBOLS.includes(t.symbol));
+  }, [tickers]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
       {/* Top Header */}
       <Header
         summary={dataPayload?.summary || null}
         lastUpdated={dataPayload?.metadata.last_updated || ''}
-        totalTickers={tickers.length}
+        totalTickers={universeTickersOnly.length}
         onRefresh={fetchData}
         isLoading={isLoading}
         dataSource={dataSource}
@@ -253,14 +353,14 @@ export const App: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
         {/* KPI Cards Strip */}
         <KPICards
-          tickers={tickers}
+          tickers={universeTickersOnly}
           onFilterHighIvr={() => handleKpiToggle('IVR')}
           onFilterOversold={() => handleKpiToggle('OVERSOLD')}
           onFilterEarnings={() => handleKpiToggle('EARNINGS')}
           activeFilter={activeKpiFilter}
         />
 
-        {/* Filter Toolbar */}
+        {/* Filter & Watchlist Toolbar */}
         <div className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-3 flex-1 min-w-[260px] max-w-md">
             <div className="relative w-full">
@@ -276,7 +376,32 @@ export const App: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-            {/* Filter buttons */}
+            {/* Watchlist Filter Toggle */}
+            <button
+              onClick={() => setShowWatchlistOnly(!showWatchlistOnly)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                showWatchlistOnly
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+            >
+              <Star className="w-3.5 h-3.5" filled={showWatchlistOnly} />
+              <span>My Watchlist ({watchlist.length})</span>
+            </button>
+
+            {/* Manage Watchlist Modal Opener */}
+            <button
+              onClick={() => setIsWatchlistModalOpen(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/30 hover:border-amber-500 transition-all"
+              title="Add or remove tickers from your watchlist"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Manage</span>
+            </button>
+
+            <div className="w-px h-4 bg-slate-800 hidden sm:block" />
+
+            {/* Quick Strategy Filters */}
             <button
               onClick={() => handleKpiToggle('IVR')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
@@ -325,11 +450,11 @@ export const App: React.FC = () => {
               <option value="Tier 4">Tier 4 (Small-Cap Warning)</option>
             </select>
 
-            {(filters.search || filters.onlyHighIvr || filters.onlyOversold || filters.onlyEarningsAlert || filters.liquidityTier !== 'ALL') && (
+            {(filters.search || filters.onlyHighIvr || filters.onlyOversold || filters.onlyEarningsAlert || filters.liquidityTier !== 'ALL' || showWatchlistOnly) && (
               <button
                 onClick={handleResetFilters}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                title="Reset filters"
+                title="Reset all filters"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
@@ -337,9 +462,11 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Primary Screener Table */}
+        {/* Primary Screener Table with interactive Star buttons */}
         <PrimaryScreenerTable
           tickers={filteredTickers}
+          watchlist={watchlist}
+          onToggleWatchlist={handleToggleWatchlist}
           sortBy={filters.sortBy}
           sortOrder={filters.sortOrder}
           onSort={handleSort}
@@ -352,6 +479,19 @@ export const App: React.FC = () => {
         ticker={selectedTicker}
         opportunities={dataPayload?.opportunities || []}
         onClose={() => setSelectedTicker(null)}
+      />
+
+      {/* Watchlist Management Modal */}
+      <WatchlistModal
+        isOpen={isWatchlistModalOpen}
+        onClose={() => setIsWatchlistModalOpen(false)}
+        universeTickers={universeTickersOnly}
+        watchlist={watchlist}
+        onToggleWatchlist={handleToggleWatchlist}
+        onAddCustomTicker={handleAddCustomTicker}
+        onRemoveTicker={handleRemoveTicker}
+        onResetWatchlist={handleResetWatchlist}
+        onSelectAllUniverse={handleSelectAllUniverse}
       />
 
       {/* Footer */}

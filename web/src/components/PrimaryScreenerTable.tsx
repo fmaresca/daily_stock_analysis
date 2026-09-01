@@ -1,9 +1,11 @@
 import React from 'react';
-import { ArrowUpDown, AlertTriangle, ChevronRight, ShieldAlert, ShieldCheck } from './icons';
+import { ArrowUpDown, AlertTriangle, ChevronRight, ShieldAlert, ShieldCheck, Star } from './icons';
 import { TickerMeta } from '../types/options';
 
 interface PrimaryScreenerTableProps {
   tickers: TickerMeta[];
+  watchlist: string[];
+  onToggleWatchlist: (symbol: string) => void;
   sortBy: keyof TickerMeta | 'cushion_pct';
   sortOrder: 'asc' | 'desc';
   onSort: (column: keyof TickerMeta | 'cushion_pct') => void;
@@ -12,6 +14,8 @@ interface PrimaryScreenerTableProps {
 
 export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
   tickers,
+  watchlist,
+  onToggleWatchlist,
   sortBy,
   sortOrder,
   onSort,
@@ -157,6 +161,23 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                     {/* Ticker & Name */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleWatchlist(t.symbol);
+                          }}
+                          className="p-1 -ml-1 text-slate-500 hover:text-amber-400 transition-colors focus:outline-none"
+                          title={watchlist.includes(t.symbol) ? "Remove from My Watchlist" : "Add to My Watchlist"}
+                        >
+                          <Star
+                            className={`w-3.5 h-3.5 ${
+                              watchlist.includes(t.symbol)
+                                ? 'text-amber-400'
+                                : 'text-slate-600 group-hover:text-slate-400'
+                            }`}
+                            filled={watchlist.includes(t.symbol)}
+                          />
+                        </button>
                         <span className="font-bold font-mono text-white text-sm group-hover:text-emerald-400 transition-colors">
                           {t.symbol}
                         </span>
