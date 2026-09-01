@@ -297,34 +297,58 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
     except Exception as e:
         print(f"    [!] Options retrieval error for {sym}: {e}")
 
-    # Select target weekly expiration: 3 to 7 DTE (targeting 3-5 days nearest weekly)
     today = datetime.date.today()
     target_exp = None
     target_dte = None
+    is_monthly_adjusted = False
+    has_weeklys = weekly_info.get("has_weeklys", True)
 
-    for exp_str in available_expirations:
-        try:
-            exp_date = datetime.datetime.strptime(exp_str, "%Y-%m-%d").date()
-            dte = (exp_date - today).days
-            if 3 <= dte <= 8:
-                target_exp = exp_str
-                target_dte = dte
-                break
-        except Exception:
-            continue
-
-    # Fallback to earliest available expiration >= 2 days if no 3-8d found
-    if not target_exp and available_expirations:
+    if has_weeklys:
+        # Tickers with active weeklys: Standard 3 to 8 DTE (targeting 3-5 days nearest weekly)
         for exp_str in available_expirations:
             try:
                 exp_date = datetime.datetime.strptime(exp_str, "%Y-%m-%d").date()
                 dte = (exp_date - today).days
-                if dte >= 2:
+                if 3 <= dte <= 8:
                     target_exp = exp_str
                     target_dte = dte
                     break
             except Exception:
                 continue
+
+        # Fallback to earliest available expiration >= 2 days if no 3-8d found
+        if not target_exp and available_expirations:
+            for exp_str in available_expirations:
+                try:
+                    exp_date = datetime.datetime.strptime(exp_str, "%Y-%m-%d").date()
+                    dte = (exp_date - today).days
+                    if dte >= 2:
+                        target_exp = exp_str
+                        target_dte = dte
+                        break
+                except Exception:
+                    continue
+    else:
+        # Tickers with Monthly Only: target nearest monthly expiration (12 to 50 DTE)
+        is_monthly_adjusted = True
+        for exp_str in available_expirations:
+            try:
+                exp_date = datetime.datetime.strptime(exp_str, "%Y-%m-%d").date()
+                dte = (exp_date - today).days
+                if 12 <= dte <= 50:
+                    target_exp = exp_str
+                    target_dte = dte
+                    break
+            except Exception:
+                continue
+
+        if not target_exp and available_expirations:
+            target_exp = available_expirations[0]
+            try:
+                exp_date = datetime.datetime.strptime(target_exp, "%Y-%m-%d").date()
+                target_dte = (exp_date - today).days
+            except Exception:
+                target_dte = 20
 
     # Base implied volatility estimate
     iv_current = max(hv_30 / 100.0, 0.20)
@@ -395,7 +419,9 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
 
                         # Tag Lower BB alignment
                         at_lower_bb = strike <= lower_bb
-                        tags = ["Cash-Secured Put", f"{target_dte}d Weekly"]
+                        tags = ["Cash-Secured Put", f"{target_dte}d Weekly" if not is_monthly_adjusted else f"{target_dte}d Monthly"]
+                        if is_monthly_adjusted:
+                            tags.append("Monthly Expiration Only - Adjusted DTE")
                         if at_lower_bb:
                             tags.append("Strike ≤ Lower BB")
                         if rsi_flag != "NORMAL":
@@ -447,7 +473,7 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
                             "safety_tier": "Conservative (≤ Lower BB)" if at_lower_bb else "Moderate Put",
                             "tier_color": "emerald" if at_lower_bb else "blue",
                             "tags": tags,
-                            "rating": round(min(9.9, max(6.0, 7.5 + (cushion_pct / 4.0) + (iv_rank / 60.0) - (delta * 4.0))), 1),
+                            "rating": round(min(9.9, max(6.0, 7.5 + (iv_rank / 50.0) + (roc_pct / 2.0))), 1),
                         })
 
             # -------------------------------------------------------------
@@ -490,7 +516,9 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
                         breakeven = round(spot_price - mid, 2)
 
                         at_upper_bb = strike >= upper_bb
-                        tags = ["Covered Call", f"{target_dte}d Weekly"]
+                        tags = ["Covered Call", f"{target_dte}d Weekly" if not is_monthly_adjusted else f"{target_dte}d Monthly"]
+                        if is_monthly_adjusted:
+                            tags.append("Monthly Expiration Only - Adjusted DTE")
                         if at_upper_bb:
                             tags.append("Strike ≥ Upper BB")
                         if rsi_flag != "NORMAL":
@@ -551,7 +579,7 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
 
     # If no live options chain retrieved (e.g. illiquid or API limitation on specialty ETF), construct synthetic BB-hedged contracts
     if not opportunities:
-        target_dte = target_dte or 5
+        target_dte = target_dte or (20 if is_monthly_adjusted else 5)
         target_exp = target_exp or (today + datetime.timedelta(days=target_dte)).isoformat()
 
         # Synthetic Put at Lower BB
@@ -560,6 +588,12 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
         put_mid = max(0.15, round(spot_price * iv_current * math.sqrt(target_dte / 365.0) * abs(g_put["delta"]), 2))
         cushion_put = round(((spot_price - put_strike) / spot_price) * 100, 2)
         roc_put = round((put_mid / put_strike) * 100, 2)
+
+        syn_put_tags = ["Cash-Secured Put", "Strike ≤ Lower BB", f"{target_dte}d Weekly" if not is_monthly_adjusted else f"{target_dte}d Monthly"]
+        if is_monthly_adjusted:
+            syn_put_tags.append("Monthly Expiration Only - Adjusted DTE")
+        if "Tier 4" in tier_name:
+            syn_put_tags.append(tier_name)
 
         opportunities.append({
             "id": f"CSP-{sym}-{target_exp}-{put_strike}",
@@ -602,7 +636,7 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
             "next_earnings_date": next_earnings_date,
             "safety_tier": "Conservative (≤ Lower BB)",
             "tier_color": "emerald",
-            "tags": ["Cash-Secured Put", "Strike ≤ Lower BB", f"{target_dte}d Weekly"] + ([tier_name] if "Tier 4" in tier_name else []),
+            "tags": syn_put_tags,
             "rating": 8.0,
         })
 
@@ -612,6 +646,12 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
         call_mid = max(0.15, round(spot_price * iv_current * math.sqrt(target_dte / 365.0) * g_call["delta"], 2))
         upside_call = round(((call_strike - spot_price) / spot_price) * 100, 2)
         roc_call = round((call_mid / spot_price) * 100, 2)
+
+        syn_call_tags = ["Covered Call", "Strike ≥ Upper BB", f"{target_dte}d Weekly" if not is_monthly_adjusted else f"{target_dte}d Monthly"]
+        if is_monthly_adjusted:
+            syn_call_tags.append("Monthly Expiration Only - Adjusted DTE")
+        if "Tier 4" in tier_name:
+            syn_call_tags.append(tier_name)
 
         opportunities.append({
             "id": f"CC-{sym}-{target_exp}-{call_strike}",
@@ -656,9 +696,12 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
             "next_earnings_date": next_earnings_date,
             "safety_tier": "Conservative (≥ Upper BB)",
             "tier_color": "emerald",
-            "tags": ["Covered Call", "Strike ≥ Upper BB", f"{target_dte}d Weekly"] + ([tier_name] if "Tier 4" in tier_name else []),
+            "tags": syn_call_tags,
             "rating": 7.8,
         })
+
+    nearest_exp = weekly_info.get("nearest_expiration_date") or target_exp or "N/A"
+    days_to_nearest = weekly_info.get("days_to_nearest_expiration") if weekly_info.get("days_to_nearest_expiration") is not None else target_dte
 
     ticker_meta = {
         "symbol": sym,
@@ -678,11 +721,16 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
         "iv_rank": iv_rank,
         "earnings_within_7d": earnings_within_7d,
         "next_earnings_date": next_earnings_date,
-        "has_weeklys": weekly_info.get("has_weeklys", True),
-        "options_cadence": weekly_info.get("cadence", "Weekly"),
+        "has_weeklys": has_weeklys,
+        "expiration_cadence": weekly_info.get("expiration_cadence", "Weekly"),
+        "nearest_expiration_date": nearest_exp,
+        "days_to_nearest_expiration": days_to_nearest,
+        "is_monthly_adjusted": is_monthly_adjusted,
+        # backwards-compatible aliases
+        "options_cadence": weekly_info.get("expiration_cadence", "Weekly"),
         "in_cboe_registry": weekly_info.get("in_cboe_registry", False),
-        "next_options_expiration": weekly_info.get("next_expiration", "N/A"),
-        "next_options_dte": weekly_info.get("next_expiration_days"),
+        "next_options_expiration": nearest_exp,
+        "next_options_dte": days_to_nearest,
         "target_exp": target_exp,
         "target_dte": target_dte,
     }

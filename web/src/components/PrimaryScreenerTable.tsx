@@ -128,6 +128,16 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                 </div>
               </th>
 
+              <th
+                onClick={() => onSort('has_weeklys')}
+                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Weekly Options</span>
+                  {renderSortArrow('has_weeklys')}
+                </div>
+              </th>
+
               <th className="py-3 px-4 text-center">Audit</th>
             </tr>
           </thead>
@@ -135,7 +145,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
           <tbody className="divide-y divide-slate-800/60 text-xs">
             {tickers.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-12 text-center text-slate-400">
+                <td colSpan={11} className="py-12 text-center text-slate-400">
                   <p className="text-sm font-medium text-slate-300">
                     No tickers match the active filter criteria.
                   </p>
@@ -325,6 +335,27 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                         )}
                         <span>{t.liquidity_tier.split(' ')[0]} {t.liquidity_tier.split(' ')[1]}</span>
                       </span>
+                    </td>
+
+                    {/* Weekly Options Badge */}
+                    <td className="py-3.5 px-3">
+                      {t.has_weeklys === false ? (
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 shadow-sm"
+                          title={`Monthly Only: Nearest expiration is ${t.nearest_expiration_date || t.target_exp || 'Monthly'} (${t.days_to_nearest_expiration ?? t.target_dte ?? '?'} DTE)`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mr-1.5" />
+                          Monthly
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-sm"
+                          title={`Active Weeklys: ${t.expiration_cadence || 'Weekly'}`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse" />
+                          Weekly
+                        </span>
+                      )}
                     </td>
 
                     {/* Action Button */}
