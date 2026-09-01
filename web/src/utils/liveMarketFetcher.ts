@@ -57,22 +57,34 @@ function calculateGreeks(
 }
 
 /**
- * Calculate 14-day RSI from a series of close prices
+ * Calculate Blended 14-day RSI from a series of close prices.
+ * Combines 50% Welles Wilder Exponential RMA with 50% Cutler Simple Moving Average (SMA).
  */
 function calculateRsi(closes: number[], period: number = 14): number {
   if (closes.length < period + 1) return 50.0;
 
-  let gains = 0;
-  let losses = 0;
+  // 1. Cutler's SMA RSI (last `period` closing diffs)
+  const recentCloses = closes.slice(-(period + 1));
+  let smaGains = 0;
+  let smaLosses = 0;
+  for (let i = 1; i < recentCloses.length; i++) {
+    const diff = recentCloses[i] - recentCloses[i - 1];
+    if (diff >= 0) smaGains += diff;
+    else smaLosses += Math.abs(diff);
+  }
+  const cutlerRsi = smaLosses === 0 ? 100.0 : 100.0 - (100.0 / (1.0 + (smaGains / smaLosses)));
 
+  // 2. Welles Wilder's RMA RSI (recursive EMA smoothing across full history)
+  let wilderGains = 0;
+  let wilderLosses = 0;
   for (let i = 1; i <= period; i++) {
     const diff = closes[i] - closes[i - 1];
-    if (diff >= 0) gains += diff;
-    else losses += Math.abs(diff);
+    if (diff >= 0) wilderGains += diff;
+    else wilderLosses += Math.abs(diff);
   }
 
-  let avgGain = gains / period;
-  let avgLoss = losses / period;
+  let avgGain = wilderGains / period;
+  let avgLoss = wilderLosses / period;
 
   for (let i = period + 1; i < closes.length; i++) {
     const diff = closes[i] - closes[i - 1];
@@ -82,9 +94,11 @@ function calculateRsi(closes: number[], period: number = 14): number {
     avgLoss = (avgLoss * (period - 1) + loss) / period;
   }
 
-  if (avgLoss === 0) return 100.0;
-  const rs = avgGain / avgLoss;
-  return Math.round((100.0 - (100.0 / (1.0 + rs))) * 10) / 10;
+  const wilderRsi = avgLoss === 0 ? 100.0 : 100.0 - (100.0 / (1.0 + (avgGain / avgLoss)));
+
+  // 3. 50/50 Blended Result
+  const blended = (cutlerRsi + wilderRsi) / 2.0;
+  return Math.round(blended * 10) / 10;
 }
 
 /**

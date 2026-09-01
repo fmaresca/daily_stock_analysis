@@ -429,8 +429,10 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <p className="text-slate-400 text-[11px]">Look for long bottom wicks or hammer candles piercing and rejecting the Lower Bollinger Band.</p>
                   </div>
                   <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
-                    <div className="font-bold text-emerald-400">Step 2: 14-Day RSI Oversold Check</div>
-                    <p className="text-slate-400 text-[11px]">RSI &le; 35 indicates selling exhaustion, reducing the likelihood of sustained immediate breakdown.</p>
+                    <div className="font-bold text-emerald-400">Step 2: 14-Day Blended RSI Oversold Check</div>
+                    <p className="text-slate-400 text-[11px]">
+                      Uses 50/50 Blended RSI (50% Wilder RMA + 50% Cutler SMA). RSI &le; 35 indicates selling exhaustion, reducing the likelihood of sustained immediate breakdown.
+                    </p>
                   </div>
                   <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
                     <div className="font-bold text-emerald-400">Step 3: Elevated IV Rank (&ge; 45%)</div>

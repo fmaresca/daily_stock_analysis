@@ -88,7 +88,7 @@ def calculate_black_scholes_greeks(
 
 
 def calculate_rsi(prices: List[float], period: int = 14) -> float:
-    """Calculate Relative Strength Index (RSI) using Welles Wilder's RMA/EMA."""
+    """Calculate Blended 14-day Relative Strength Index (RSI) (50% Wilder RMA + 50% Cutler SMA)."""
     if len(prices) < period + 1:
         return 50.0
 
@@ -96,24 +96,29 @@ def calculate_rsi(prices: List[float], period: int = 14) -> float:
     if not changes:
         return 50.0
 
-    # Initial seed: simple average of first `period` changes
-    gains = [max(c, 0.0) for c in changes[:period]]
-    losses = [max(-c, 0.0) for c in changes[:period]]
-    avg_gain = sum(gains) / period if period > 0 else 0.0
-    avg_loss = sum(losses) / period if period > 0 else 0.0
+    # 1. Cutler's SMA RSI (rolling period)
+    recent_changes = changes[-period:]
+    s_gain = sum(max(c, 0.0) for c in recent_changes) / period
+    s_loss = sum(max(-c, 0.0) for c in recent_changes) / period
+    s_rsi = 100.0 - (100.0 / (1.0 + (s_gain / s_loss))) if s_loss > 0 else (100.0 if s_gain > 0 else 50.0)
 
-    # Wilder's Exponential Smoothing over subsequent periods
+    # 2. Wilder's Exponential Smoothing over subsequent periods
+    w_gains = [max(c, 0.0) for c in changes[:period]]
+    w_losses = [max(-c, 0.0) for c in changes[:period]]
+    avg_gain = sum(w_gains) / period if period > 0 else 0.0
+    avg_loss = sum(w_losses) / period if period > 0 else 0.0
+
     for c in changes[period:]:
         gain = max(c, 0.0)
         loss = max(-c, 0.0)
         avg_gain = (avg_gain * (period - 1) + gain) / period
         avg_loss = (avg_loss * (period - 1) + loss) / period
 
-    if avg_loss == 0.0:
-        return 100.0 if avg_gain > 0.0 else 50.0
+    w_rsi = 100.0 - (100.0 / (1.0 + (avg_gain / avg_loss))) if avg_loss > 0 else (100.0 if avg_gain > 0 else 50.0)
 
-    rs = avg_gain / avg_loss
-    return round(100.0 - (100.0 / (1.0 + rs)), 1)
+    # 3. 50/50 Blended RSI
+    blended = (w_rsi + s_rsi) / 2.0
+    return round(blended, 1)
 
 
 # Quality conservative tickers ideal for Cash-Secured Puts and Covered Calls
