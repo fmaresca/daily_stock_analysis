@@ -137,3 +137,40 @@ export interface FilterState {
   sortBy: any;
   sortOrder: 'asc' | 'desc';
 }
+
+export type MenuTreeType = 'EQUITIES' | 'OPTIONS';
+
+export type EquitiesTabType =
+  | 'TECHNICAL_SCREENER'
+  | 'TREND_SUPPORT'
+  | 'VOLATILITY_RISK'
+  | 'EARNINGS_CALENDAR'
+  | 'SECTOR_OVERVIEW';
+
+export type OptionsTabType =
+  | 'INCOME_SCREENER'
+  | 'EXPIRATION_CADENCE'
+  | 'DELTA_GREEKS'
+  | 'TICKER_AUDIT'
+  | 'INCOME_CALCULATOR';
+
+export interface WatchlistGroup {
+  id: string;
+  name: string;
+  description?: string;
+  tickers: string[];
+  isDefault?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ReportQueryConfig {
+  title: string;
+  strategy: 'ALL' | 'CSP' | 'CC';
+  cadence: 'ALL' | 'WEEKLY_ONLY' | 'MONTHLY_ONLY';
+  minIvr: number;
+  minYield: number;
+  maxDte: number;
+  liquidityTier: 'ALL' | 'Tier 1' | 'Tier 2/3' | 'Tier 4';
+  includeEarningsAlerts: boolean;
+}
