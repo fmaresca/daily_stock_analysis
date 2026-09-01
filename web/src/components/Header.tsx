@@ -125,41 +125,41 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Schwab API Settings */}
           <button
             onClick={onOpenSchwab}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-blue-300 hover:border-blue-500/50 transition-all cursor-pointer"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-blue-300 hover:border-blue-500/50 transition-all cursor-pointer whitespace-nowrap"
             title="Configure Charles Schwab Retail Trader API keys"
           >
             <span className="w-2 h-2 rounded-full bg-blue-400" />
-            <span className="hidden sm:inline">Schwab API</span>
+            <span>Schwab API</span>
           </button>
 
           {/* Watchlists Button */}
           <button
             onClick={onOpenWatchlists}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-amber-300 hover:border-amber-500/50 transition-all"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-amber-300 hover:border-amber-500/50 transition-all cursor-pointer whitespace-nowrap"
             title="Manage custom watchlists & bulk upload (W)"
           >
             <Star className="w-3.5 h-3.5" filled />
-            <span className="hidden sm:inline">Watchlists</span>
+            <span>Watchlists</span>
           </button>
 
           {/* Reports & Query Builder Button */}
           <button
             onClick={onOpenReports}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-indigo-300 hover:border-indigo-500/50 transition-all"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-indigo-300 hover:border-indigo-500/50 transition-all cursor-pointer whitespace-nowrap"
             title="Custom report queries & exports to CSV/Excel/PDF (R)"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden sm:inline">Reports &amp; Export</span>
+            <span>Reports</span>
           </button>
 
           {/* Help Handbook Button */}
           <button
             onClick={onOpenHelp}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-cyan-300 hover:border-cyan-500/50 transition-all cursor-pointer"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-cyan-300 hover:border-cyan-500/50 transition-all cursor-pointer whitespace-nowrap"
             title="Open Strategy Handbook and FAQs (?)"
           >
             <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Help</span>
+            <span>Help</span>
           </button>
 
           {/* Live Recalculate Button */}
@@ -167,11 +167,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onLiveRecalculate}
               disabled={isLoading || isRecalculating}
-              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/50 text-emerald-300 hover:border-emerald-400 transition-all disabled:opacity-50 shadow-sm shadow-emerald-500/10 cursor-pointer"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/50 text-emerald-300 hover:border-emerald-400 transition-all disabled:opacity-50 shadow-sm shadow-emerald-500/10 cursor-pointer whitespace-nowrap"
               title="Compute real market prices, Bollinger Bands, and options for all active tickers on demand"
             >
               <Activity className={`w-3.5 h-3.5 text-emerald-400 ${isRecalculating ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{isRecalculating ? 'Calculating...' : '⚡ Live Fetch'}</span>
+              <span>{isRecalculating ? 'Calculating...' : 'Live Fetch'}</span>
             </button>
           )}
 

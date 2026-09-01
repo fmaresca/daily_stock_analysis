@@ -165,24 +165,27 @@ export async function fetchClientSideLiveMarketData(
   activeSymbols: string[]
 ): Promise<OptionsDataPayload> {
   const symbols = Array.from(new Set(activeSymbols.map((s) => s.toUpperCase().trim())));
-  const updatedTickers: TickerMeta[] = [];
-  const updatedOpportunities: OptionOpportunity[] = [];
 
-  const existingMap = new Map<string, TickerMeta>();
-  (existingPayload?.tickers || []).forEach((t) => existingMap.set(t.symbol, t));
+  // Seed with all existing tickers so no asset ever disappears
+  const tickerMap = new Map<string, TickerMeta>();
+  (existingPayload?.tickers || []).forEach((t) => tickerMap.set(t.symbol, t));
 
-  // Process in parallel batches of 5
+  // Process target symbols in parallel batches of 5
   const batchSize = 5;
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
-    const results = await Promise.all(
+    await Promise.all(
       batch.map(async (sym) => {
-        const chartData = await fetchTickerChartData(sym);
-        const existing = existingMap.get(sym);
+        const existing = tickerMap.get(sym);
+        let chartData = await fetchTickerChartData(sym);
+
+        if (!chartData && existing) {
+          // If live fetch fails/rate-limits, retain existing without error
+          return;
+        }
 
         if (!chartData) {
-          // Keep existing or return fallback
-          return existing || null;
+          return;
         }
 
         const { spotPrice, closes, avgVolume } = chartData;
@@ -202,7 +205,7 @@ export async function fetchClientSideLiveMarketData(
         const lowerBb = Math.max(0.5, Math.round((sma20 - 2.0 * std20) * 100) / 100);
         const bbWidthPct = Math.round((((upperBb - lowerBb) / sma20) * 100) * 10) / 10;
 
-        // 14 RSI
+        // 14 RSI (50/50 Blended)
         const rsi14 = calculateRsi(closes);
         const rsiFlag = rsi14 > 70 ? 'OVERBOUGHT (>70)' : rsi14 < 30 ? 'OVERSOLD (<30)' : 'NORMAL';
 
@@ -229,7 +232,8 @@ export async function fetchClientSideLiveMarketData(
           ? (sym === 'CLM' ? 'Cornerstone Strategic Value Fund' : 'Cornerstone Total Return Fund')
           : existing?.name || `${sym} Equity`;
 
-        const barchartOpinion = calculateBarchartOpinion(sym, prices, spotPrice);
+        // Fixed closes variable passed to barchart opinion engine
+        const barchartOpinion = calculateBarchartOpinion(sym, closes, spotPrice);
 
         const meta: TickerMeta = {
           symbol: sym,
@@ -258,20 +262,46 @@ export async function fetchClientSideLiveMarketData(
           barchart_opinion: barchartOpinion,
         };
 
-        return meta;
+        tickerMap.set(sym, meta);
       })
     );
-
-    results.forEach((m) => {
-      if (m) updatedTickers.push(m);
-    });
   }
+
+  const updatedTickers = Array.from(tickerMap.values());
+  const updatedOpportunities: OptionOpportunity[] = [];
+
+  // Update existing opportunities with live spot prices and indicators
+  const processedSymbols = new Set<string>();
+  (existingPayload?.opportunities || []).forEach((opp) => {
+    const meta = tickerMap.get(opp.symbol);
+    if (meta) {
+      processedSymbols.add(meta.symbol);
+      const spot = meta.spot_price;
+      const cushionPct = Math.round((Math.abs(spot - opp.strike) / spot) * 1000) / 10;
+      updatedOpportunities.push({
+        ...opp,
+        current_price: spot,
+        cushion_pct: cushionPct,
+        sma_20: meta.sma_20,
+        upper_bb: meta.upper_bb,
+        lower_bb: meta.lower_bb,
+        rsi_14: meta.rsi_14,
+        rsi: meta.rsi_14,
+        rsi_flag: meta.rsi_flag,
+        hv_30: meta.hv_30,
+        iv_rank: meta.iv_rank,
+      });
+    } else {
+      updatedOpportunities.push(opp);
+    }
+  });
 
   // Synthesize conservative Cash-Secured Put (CSP <= Lower BB) and Covered Call (CC >= Upper BB)
   const dte = 5;
   const expDate = new Date(Date.now() + dte * 86400000).toISOString().split('T')[0];
 
   updatedTickers.forEach((meta) => {
+    if (processedSymbols.has(meta.symbol)) return;
     const spot = meta.spot_price;
     const iv = meta.iv_current;
 
