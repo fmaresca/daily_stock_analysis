@@ -15,6 +15,7 @@ import { InteractiveChart } from './components/InteractiveChart';
 import { MultiLegSpreadTable } from './components/MultiLegSpreadTable';
 import { VolatilitySkewRadar } from './components/VolatilitySkewRadar';
 import { SchwabSettingsModal } from './components/SchwabSettingsModal';
+import { ApiDiagnosticsModal } from './components/ApiDiagnosticsModal';
 import { FundamentalHealthTable } from './components/FundamentalHealthTable';
 import { OptionsBacktestView } from './components/OptionsBacktestView';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
@@ -118,6 +119,7 @@ export const App: React.FC = () => {
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState<boolean>(false);
   const [isReportQueryModalOpen, setIsReportQueryModalOpen] = useState<boolean>(false);
   const [isSchwabModalOpen, setIsSchwabModalOpen] = useState<boolean>(false);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState<boolean>(false);
   const [stagedOrder, setStagedOrder] = useState<StagedBracketOrder | null>(null);
   const [isStagedModalOpen, setIsStagedModalOpen] = useState<boolean>(false);
   const [activeStagedOpportunity, setActiveStagedOpportunity] = useState<OptionOpportunity | null>(null);
@@ -790,6 +792,7 @@ export const App: React.FC = () => {
         onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
+        onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -1297,6 +1300,17 @@ export const App: React.FC = () => {
         isOpen={isSchwabModalOpen}
         onClose={() => setIsSchwabModalOpen(false)}
       />
+
+      {/* 3.1. API Health & Automated Diagnostics Suite Modal */}
+      {isDiagnosticsOpen && (
+        <ErrorBoundary fallbackTitle="API Diagnostics Suite Recovered" onReset={() => setIsDiagnosticsOpen(false)}>
+          <ApiDiagnosticsModal
+            isOpen={isDiagnosticsOpen}
+            onClose={() => setIsDiagnosticsOpen(false)}
+            onOpenSchwabSettings={() => setIsSchwabModalOpen(true)}
+          />
+        </ErrorBoundary>
+      )}
 
       {/* 4. Multi-Watchlist Manager with Bulk & CSV/Excel Ingestion (W) */}
       <WatchlistManagerModal

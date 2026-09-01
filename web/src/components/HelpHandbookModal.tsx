@@ -899,6 +899,35 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              {/* Automated API Self-Test Diagnostic Suite */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/40 space-y-3">
+                <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
+                  <Activity className="w-4 h-4" />
+                  <span>Interactive API Self-Test &amp; Health Suite (Header → API Self-Test)</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  DeltaHarvest includes an integrated, zero-script <strong>Automated Self-Test Engine</strong> accessible anytime from the top navigation bar. In a single click, it sends live probe requests across all 4 system feeds:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="font-bold text-blue-400">1. Charles Schwab Trader API:</span>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Validates OAuth credentials, token expiration, and probes live NBBO quotes &amp; Greeks with millisecond latency measurement.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="font-bold text-emerald-400">2. Market Data &amp; Bollinger Engine:</span>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Pings live tick streams, validating 20 SMA, 2-SD Bollinger Bands, and Blended 14-RSI calculations.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="font-bold text-cyan-400">3. Prediction Markets Oracle:</span>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Probes Polymarket &amp; Manifold decentralized contract order books and verifies real-time probability resolution.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="font-bold text-amber-400">4. Social Sentiment NLP Pipeline:</span>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Tests StockTwits message streams and Reddit WSB sentiment parsers, extracting live crowd volume rankings.</p>
+                  </div>
+                </div>
+              </div>
+
               {/* QuantLib Greeks */}
               <div className="bg-slate-950/70 p-4 rounded-xl border border-purple-500/30 space-y-3">
                 <div className="flex items-center space-x-2 text-purple-400 font-bold text-xs">
