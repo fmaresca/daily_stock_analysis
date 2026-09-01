@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [新功能] Charles Schwab API Diagnostics & Live Testing: 交付 Charles Schwab 零售交易员 API 实时连通性诊断工具（CLI 脚本 `scripts/test_schwab_connection.py` 及 FastAPI 端点 `/api/v1/options/schwab/auth` 与 `/schwab/status`），在前端设置模态框中支持一键 OAuth Code 换取 Token、实时 NBBO 报价测速与期权链探活。
 - [改进] DeltaHarvest 50/50 Blended 14-RSI Engine: 落地 50/50 融合 14 日 RSI 引擎，综合 Welles Wilder 指数平滑（RMA）与 Cutler 简单移动平均（SMA）双重算法，有效消除纯 Wilder 的过度滞后与纯 SMA 的短期跳变，将 TSLA 等核心标的的 RSI 精准调谐至 ~57-58 主流财经平台黄金区间。
 - [修复] DeltaHarvest 14-Day Wilder RSI Standard Calibration: 将全栈 14 日 RSI 指标计算升级为 J. Welles Wilder 标准指数平滑（RMA / EWM $\alpha = 1/14$），并在前端实时行情抓取中扩展至 1 年历史深度，彻底解决由于简单算术平均与短期回溯不足引起的 TSLA 及其他标的 RSI 偏高问题（~53 与 TradingView、Barchart 等主流财经平台完全一致）。
 - [新功能] DeltaHarvest Barchart 13-Indicator Opinion Engine & Top 1% Screener: 完整集成 Barchart 多周期 13 项技术指标体系（短期 4 项、中期 4 项、长期 5 项），计算综合 Opinion %、信号强度与 5 日动量斜率；新增“🔥 Top 1% Signal Strength”顶级信号专属标识与快速筛选切换栏；在个股审计模态框技术面中交付 13 项指标全景矩阵卡片。
