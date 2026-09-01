@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [修复] DeltaHarvest 14-Day Wilder RSI Standard Calibration: 将全栈 14 日 RSI 指标计算升级为 J. Welles Wilder 标准指数平滑（RMA / EWM $\alpha = 1/14$），并在前端实时行情抓取中扩展至 1 年历史深度，彻底解决由于简单算术平均与短期回溯不足引起的 TSLA 及其他标的 RSI 偏高问题（~53 与 TradingView、Barchart 等主流财经平台完全一致）。
 - [新功能] DeltaHarvest Barchart 13-Indicator Opinion Engine & Top 1% Screener: 完整集成 Barchart 多周期 13 项技术指标体系（短期 4 项、中期 4 项、长期 5 项），计算综合 Opinion %、信号强度与 5 日动量斜率；新增“🔥 Top 1% Signal Strength”顶级信号专属标识与快速筛选切换栏；在个股审计模态框技术面中交付 13 项指标全景矩阵卡片。
 - [改进] DeltaHarvest Prediction Markets & Sentiment Feeds: 深度验证并升级 TSLA 预测市场（Polymarket & Manifold API 别名智能匹配与结果价格解析）和社交论坛情绪（StockTwits 消息流 NLP 多空关键词判定与 Reddit WSB 讨论热度）；在前端全量注册表中打通默认预测合约与情绪指标，保证在任何网络与标的状态下均能实时渲染真实市场赔率与社区情绪。
 - [修复] DeltaHarvest React Hook Rules & Modal Lifecycle: 修复 TickerAuditModal、OptionDetailModal 与 ReportQueryModal 中 useMemo 在条件分支（early return）之后调用引发的 Minified React Error #310；将所有 React Hook 调用无条件置顶，并在 App.tsx 中通过短路表达式控制模态框生命周期，彻底杜绝 Hook 次数不一致崩溃。

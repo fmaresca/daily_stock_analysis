@@ -225,14 +225,18 @@ def calculate_black_scholes_greeks(
 
 
 def calculate_rsi(series: pd.Series, period: int = 14) -> float:
-    """Calculate 14-day Relative Strength Index (RSI)."""
+    """
+    Calculate 14-day Relative Strength Index (RSI) using Welles Wilder's
+    standard Exponential Smoothing (RMA / EWM with alpha=1/period).
+    Matches TradingView, Barchart, Yahoo Finance, and Bloomberg.
+    """
     if len(series) < period + 1:
         return 50.0
     delta = series.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
-    avg_gain = gain.rolling(window=period).mean().iloc[-1]
-    avg_loss = loss.rolling(window=period).mean().iloc[-1]
+    avg_gain = gain.ewm(alpha=1.0 / period, adjust=False).mean().iloc[-1]
+    avg_loss = loss.ewm(alpha=1.0 / period, adjust=False).mean().iloc[-1]
     if pd.isna(avg_gain) or pd.isna(avg_loss) or avg_loss == 0:
         return 100.0 if avg_gain and avg_gain > 0 else 50.0
     rs = avg_gain / avg_loss
