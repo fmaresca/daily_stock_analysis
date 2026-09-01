@@ -815,18 +815,16 @@ export const App: React.FC = () => {
             <span className="text-slate-500 font-semibold">📍 Location:</span>
             <button
               onClick={() => setActiveTree('EQUITIES')}
-              className={`hover:underline font-semibold ${
-                activeTree === 'EQUITIES' ? 'text-blue-400 font-bold' : 'text-slate-400'
-              }`}
+              className={`hover:underline font-semibold ${activeTree === 'EQUITIES' ? 'text-blue-400 font-bold' : 'text-slate-400'
+                }`}
             >
               US Equities
             </button>
             <span>/</span>
             <button
               onClick={() => setActiveTree('OPTIONS')}
-              className={`hover:underline font-semibold ${
-                activeTree === 'OPTIONS' ? 'text-emerald-400 font-bold' : 'text-slate-400'
-              }`}
+              className={`hover:underline font-semibold ${activeTree === 'OPTIONS' ? 'text-emerald-400 font-bold' : 'text-slate-400'
+                }`}
             >
               Options Yield
             </button>
@@ -886,10 +884,10 @@ export const App: React.FC = () => {
             filters.onlyHighIvr
               ? 'IVR'
               : filters.onlyOversold
-              ? 'OVERSOLD'
-              : filters.onlyEarningsAlert
-              ? 'EARNINGS'
-              : 'ALL'
+                ? 'OVERSOLD'
+                : filters.onlyEarningsAlert
+                  ? 'EARNINGS'
+                  : 'ALL'
           }
           onFilterHighIvr={() =>
             setFilters((prev) => ({
@@ -944,11 +942,10 @@ export const App: React.FC = () => {
             {/* Active Watchlist Toggle */}
             <button
               onClick={() => setShowWatchlistOnly(!showWatchlistOnly)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
-                showWatchlistOnly
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${showWatchlistOnly
                   ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
-              }`}
+                }`}
             >
               <Star className="w-3.5 h-3.5" filled={showWatchlistOnly} />
               <span>
@@ -961,11 +958,10 @@ export const App: React.FC = () => {
               onClick={() =>
                 setFilters((prev) => ({ ...prev, onlyHighIvr: !prev.onlyHighIvr }))
               }
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
-                filters.onlyHighIvr
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${filters.onlyHighIvr
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
-              }`}
+                }`}
             >
               <Flame className="w-3.5 h-3.5 text-amber-400" />
               <span>IVR ≥ 45%</span>
@@ -975,11 +971,10 @@ export const App: React.FC = () => {
               onClick={() =>
                 setFilters((prev) => ({ ...prev, onlyOversold: !prev.onlyOversold }))
               }
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
-                filters.onlyOversold
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${filters.onlyOversold
                   ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
-              }`}
+                }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Oversold Dips</span>
@@ -989,11 +984,10 @@ export const App: React.FC = () => {
               onClick={() =>
                 setFilters((prev) => ({ ...prev, onlyEarningsAlert: !prev.onlyEarningsAlert }))
               }
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
-                filters.onlyEarningsAlert
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${filters.onlyEarningsAlert
                   ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
-              }`}
+                }`}
             >
               <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
               <span>Earnings &le; 7d</span>
@@ -1042,14 +1036,14 @@ export const App: React.FC = () => {
               filters.onlyEarningsAlert ||
               filters.liquidityTier !== 'ALL' ||
               showWatchlistOnly) && (
-              <button
-                onClick={handleResetFilters}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                title="Reset all filters"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            )}
+                <button
+                  onClick={handleResetFilters}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  title="Reset all filters"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              )}
           </div>
         </div>
 
@@ -1062,32 +1056,29 @@ export const App: React.FC = () => {
             <div className="inline-flex p-1 bg-slate-900/90 rounded-xl border border-slate-800 shadow-inner">
               <button
                 onClick={() => setFilters((prev) => ({ ...prev, weeklyCadence: 'ALL' }))}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  !filters.weeklyCadence || filters.weeklyCadence === 'ALL'
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${!filters.weeklyCadence || filters.weeklyCadence === 'ALL'
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                     : 'text-slate-400 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 All Cycles ({weeklyCadenceCounts.all})
               </button>
               <button
                 onClick={() => setFilters((prev) => ({ ...prev, weeklyCadence: 'WEEKLY_ONLY' }))}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
-                  filters.weeklyCadence === 'WEEKLY_ONLY'
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${filters.weeklyCadence === 'WEEKLY_ONLY'
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                     : 'text-slate-400 hover:text-emerald-400'
-                }`}
+                  }`}
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 <span>Weekly Only ({weeklyCadenceCounts.weekly})</span>
               </button>
               <button
                 onClick={() => setFilters((prev) => ({ ...prev, weeklyCadence: 'MONTHLY_ONLY' }))}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
-                  filters.weeklyCadence === 'MONTHLY_ONLY'
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${filters.weeklyCadence === 'MONTHLY_ONLY'
                     ? 'bg-slate-700 text-white shadow-md shadow-slate-700/30'
                     : 'text-slate-400 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <span className="w-2 h-2 rounded-full bg-slate-400" />
                 <span>Monthly Only ({weeklyCadenceCounts.monthly})</span>
@@ -1127,11 +1118,10 @@ export const App: React.FC = () => {
                   <button
                     key={t.symbol}
                     onClick={() => setActiveChartSymbol(t.symbol)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all shrink-0 flex items-center space-x-1.5 ${
-                      activeChartSymbol === t.symbol
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all shrink-0 flex items-center space-x-1.5 ${activeChartSymbol === t.symbol
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-400'
                         : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
-                    }`}
+                      }`}
                   >
                     <span>{t.symbol}</span>
                     <span className="text-[10px] text-slate-300 font-sans font-normal">

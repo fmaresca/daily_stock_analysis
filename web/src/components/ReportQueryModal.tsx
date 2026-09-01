@@ -362,30 +362,42 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {filteredOpps.map((o) => (
-                    <tr key={o.id} className="hover:bg-slate-800/40 transition-colors">
+                  {filteredOpps.map((o, idx) => (
+                    <tr key={o?.id || `${o?.symbol}-${idx}`} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-2 px-3">
                         <span
                           className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                            o.strategy === 'CSP'
+                            o?.strategy === 'CSP'
                               ? 'bg-emerald-500/20 text-emerald-300'
                               : 'bg-cyan-500/20 text-cyan-300'
                           }`}
                         >
-                          {o.strategy}
+                          {o?.strategy || 'OPT'}
                         </span>
                       </td>
-                      <td className="py-2 px-3 font-bold text-white">{o.symbol}</td>
-                      <td className="py-2 px-3 font-bold text-white">${o.strike.toFixed(1)}</td>
-                      <td className="py-2 px-3 text-slate-300">${o.current_price.toFixed(2)}</td>
-                      <td className="py-2 px-3 text-emerald-400">+{o.cushion_pct.toFixed(1)}%</td>
-                      <td className="py-2 px-3 text-slate-400">
-                        {o.expiration} ({o.dte}d)
+                      <td className="py-2 px-3 font-bold text-white">{o?.symbol || 'N/A'}</td>
+                      <td className="py-2 px-3 font-bold text-white">
+                        ${typeof o?.strike === 'number' ? o.strike.toFixed(1) : (o?.strike || '0.0')}
                       </td>
-                      <td className="py-2 px-3 text-emerald-400">+${o.premium_total.toFixed(0)}</td>
-                      <td className="py-2 px-3 text-slate-300">{Math.abs(o.delta).toFixed(3)}</td>
-                      <td className="py-2 px-3 text-slate-300">{o.pop_pct}%</td>
-                      <td className="py-2 px-3 font-bold text-emerald-400">{o.annualized_roc.toFixed(1)}%</td>
+                      <td className="py-2 px-3 text-slate-300">
+                        ${typeof o?.current_price === 'number' ? o.current_price.toFixed(2) : (o?.current_price || '0.00')}
+                      </td>
+                      <td className="py-2 px-3 text-emerald-400">
+                        +{typeof o?.cushion_pct === 'number' ? o.cushion_pct.toFixed(1) : (o?.cushion_pct || '0.0')}%
+                      </td>
+                      <td className="py-2 px-3 text-slate-400">
+                        {o?.expiration || 'N/A'} ({o?.dte ?? '?'}d)
+                      </td>
+                      <td className="py-2 px-3 text-emerald-400">
+                        +${typeof o?.premium_total === 'number' ? o.premium_total.toFixed(0) : (o?.premium_total || '0')}
+                      </td>
+                      <td className="py-2 px-3 text-slate-300">
+                        {typeof o?.delta === 'number' ? Math.abs(o.delta).toFixed(3) : '0.000'}
+                      </td>
+                      <td className="py-2 px-3 text-slate-300">{o?.pop_pct ?? 80}%</td>
+                      <td className="py-2 px-3 font-bold text-emerald-400">
+                        {typeof o?.annualized_roc === 'number' ? o.annualized_roc.toFixed(1) : (o?.annualized_roc || '0.0')}%
+                      </td>
                     </tr>
                   ))}
                 </tbody>
