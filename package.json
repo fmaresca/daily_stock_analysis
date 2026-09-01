@@ -1,0 +1,22 @@
+{
+  "name": "daily-stock-options-screener",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Options & Technical Volatility Screener for conservative weekly income (CSPs and Covered Calls)",
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm run sync-data && npm --prefix web run build && node -e \"const fs=require('fs'); fs.cpSync('web/dist', 'dist', {recursive:true}); console.log('✓ Synced web/dist -> dist');\"",
+    "preview": "npm --prefix web run preview",
+    "sync-data": "node -e \"const fs=require('fs'); if(fs.existsSync('data/options_data.json')){ fs.mkdirSync('web/public/data', {recursive:true}); fs.copyFileSync('data/options_data.json', 'web/public/data/options_data.json'); console.log('✓ Synced data/options_data.json -> web/public/data/options_data.json'); } else { console.log('ℹ data/options_data.json not found yet, will use web default'); }\""
+  },
+  "keywords": [
+    "options",
+    "volatility",
+    "screener",
+    "cash-secured-puts",
+    "covered-calls",
+    "income"
+  ],
+  "author": "",
+  "license": "MIT"
+}
