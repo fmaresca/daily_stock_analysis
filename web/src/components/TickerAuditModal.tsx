@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   X,
   ShieldCheck,
@@ -12,9 +12,15 @@ import {
   Flame,
   Layers,
   ArrowRight,
+  Award,
+  Newspaper,
+  Building,
+  ExternalLink,
+  Target,
 } from './icons';
 import { TickerMeta, OptionOpportunity } from '../types/options';
 import { InteractiveChart } from './InteractiveChart';
+import { getSecurityIntelligence } from '../utils/securityIntelligence';
 
 interface TickerAuditModalProps {
   ticker: TickerMeta | null;
@@ -40,6 +46,9 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   const tickerOpps = opportunities.filter((o) => o.symbol === ticker.symbol);
   const bestCSP = tickerOpps.find((o) => o.strategy === 'CSP') || null;
   const bestCC = tickerOpps.find((o) => o.strategy === 'CC') || null;
+
+  // Security Intelligence (Scores, News, 13F Institutional Backing)
+  const intel = useMemo(() => getSecurityIntelligence(ticker.symbol, ticker), [ticker]);
 
   // Assignment collateral for 1 put contract at Lower BB
   const putStrikeTarget = bestCSP ? bestCSP.strike : Math.floor(ticker.lower_bb);
@@ -92,20 +101,40 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                {ticker.name} • {ticker.sector} • Comprehensive 5-Part Options & Volatility Audit
+                {ticker.name} • {ticker.sector} • Comprehensive AI Intelligence &amp; Options Audit
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-3">
+            {/* AI Composite Score Ribbon */}
+            <div className="hidden sm:flex items-center space-x-3 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
+              <div className="text-right">
+                <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">AI Composite Score</div>
+                <div className="text-xs font-bold text-slate-200">{intel.sentimentLabel}</div>
+              </div>
+              <div className={`px-2.5 py-1 rounded-lg font-black font-mono text-sm border flex items-center gap-1 ${
+                intel.compositeScore >= 85
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : intel.compositeScore >= 75
+                  ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              }`}>
+                <Award className="w-4 h-4" />
+                <span>{intel.compositeScore}/100</span>
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Modal Scrollable Body: The 5-Part Audit */}
+        {/* Modal Scrollable Body: Comprehensive Audit */}
         <div className="p-6 overflow-y-auto space-y-6 text-xs">
           {/* SECTION 1: Volatility Profile */}
           <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
@@ -294,12 +323,193 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
             </div>
           </div>
 
-          {/* SECTION 4: Proposed Weekly Strategy */}
+          {/* SECTION 4: AI Decision Scorecard & Multi-Factor Rating Dashboard */}
+          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-400" />
+                <span>Part 4: AI Decision Scorecard &amp; Multi-Factor Rating</span>
+              </h3>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                Consensus: <strong className="text-emerald-400">{intel.analystConsensus}</strong> ({intel.analystCoverageCount} analysts)
+              </span>
+            </div>
+
+            {/* Factor Scores Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                <div className="text-[11px] text-slate-400">Technical Momentum</div>
+                <div className="text-xl font-black font-mono text-blue-400 mt-1">
+                  {intel.technicalScore} / 100
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">RSI, SMA &amp; BB breakout</div>
+              </div>
+
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                <div className="text-[11px] text-slate-400">Fundamental Solvency</div>
+                <div className="text-xl font-black font-mono text-emerald-400 mt-1">
+                  {intel.fundamentalScore} / 100
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Altman Z &amp; Piotroski F</div>
+              </div>
+
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                <div className="text-[11px] text-slate-400">Liquidity &amp; Execution</div>
+                <div className="text-xl font-black font-mono text-cyan-400 mt-1">
+                  {intel.liquidityScore} / 100
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Tight bid/ask &amp; volume</div>
+              </div>
+
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                <div className="text-[11px] text-slate-400">Volatility Edge</div>
+                <div className="text-xl font-black font-mono text-amber-400 mt-1">
+                  {intel.volatilityEdgeScore} / 100
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">IV vs Realized swing edge</div>
+              </div>
+            </div>
+
+            {/* Price Targets & Key Boundaries */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80 text-xs">
+              <div>
+                <span className="text-slate-500 text-[10px] block">Consensus Target</span>
+                <span className="text-white font-mono font-bold text-sm">${intel.targetPrice.toFixed(2)}</span>
+                <span className="text-[10px] text-emerald-400 font-mono ml-1.5">+{intel.upsidePct}% upside</span>
+              </div>
+              <div>
+                <span className="text-slate-500 text-[10px] block">Key Support Floor</span>
+                <span className="text-emerald-400 font-mono font-bold text-sm">${intel.keySupportPrice.toFixed(2)}</span>
+                <span className="text-[10px] text-slate-400 ml-1">Put boundary</span>
+              </div>
+              <div>
+                <span className="text-slate-500 text-[10px] block">Key Resistance Ceiling</span>
+                <span className="text-cyan-400 font-mono font-bold text-sm">${intel.keyResistancePrice.toFixed(2)}</span>
+                <span className="text-[10px] text-slate-400 ml-1">Call boundary</span>
+              </div>
+              <div>
+                <span className="text-slate-500 text-[10px] block">Institutional Stance</span>
+                <span className="text-emerald-300 font-semibold text-xs block truncate mt-0.5">{intel.decisionLabel}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 5: Recent News Stories, Catalysts & Volatility Drivers */}
+          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <Newspaper className="w-4 h-4 text-blue-400" />
+                <span>Part 5: Recent News Stories, Catalysts &amp; Volatility Drivers</span>
+              </h3>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {intel.recentNews.length} verified news items
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {intel.recentNews.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700 transition-colors space-y-2"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                        {item.category}
+                      </span>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
+                          item.sentiment === 'Bullish' || item.sentiment === 'Strong Bullish'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            : item.sentiment === 'Neutral'
+                            ? 'bg-slate-800 text-slate-300 border-slate-700'
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                        }`}
+                      >
+                        {item.sentiment}
+                      </span>
+                      <span className="text-slate-500 text-[11px] font-mono">{item.source}</span>
+                    </div>
+                    <span className="text-slate-500 text-[11px] font-mono">{item.timeAgo} ({item.date})</span>
+                  </div>
+
+                  <h4 className="text-xs font-bold text-white leading-snug">{item.headline}</h4>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">{item.summary}</p>
+
+                  {/* Options Catalyst Impact Box */}
+                  <div className="p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-500/30 text-[11px] text-indigo-200 flex items-start gap-2">
+                    <Flame className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
+                    <span>
+                      <strong className="text-indigo-300">Options Volatility Catalyst:</strong> {item.optionsImplication}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* SECTION 6: Institutional 13F Ownership & SEC EDGAR Filings */}
+          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <Building className="w-4 h-4 text-emerald-400" />
+                <span>Part 6: Institutional 13F Ownership &amp; SEC EDGAR Disclosures</span>
+              </h3>
+              <a
+                href={intel.secEdgarUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition-colors"
+                title="Open verified SEC EDGAR company filings"
+              >
+                <span>SEC EDGAR Filings</span>
+                <ExternalLink className="w-3 h-3 text-slate-400" />
+              </a>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Institutional Holders */}
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                  <span>Total Institutional Float:</span>
+                  <span className="font-bold font-mono text-emerald-400 text-sm">
+                    {intel.institutionalOwnershipPct}%
+                  </span>
+                </div>
+                <div className="border-t border-slate-800/80 pt-1.5 space-y-1">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">
+                    Top 13F Asset Managers:
+                  </span>
+                  {intel.topHolders.map((holder, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-[11px] py-0.5">
+                      <span className="text-slate-300 truncate max-w-[200px]">{holder.name}</span>
+                      <span className="font-mono text-slate-400">{holder.stakePct}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* SEC EDGAR Filing Summary */}
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="text-slate-400 text-[11px]">Latest Regulatory Disclosure:</div>
+                <div className="flex items-center justify-between bg-slate-900 p-2 rounded-lg border border-slate-800 font-mono text-xs">
+                  <span className="font-bold text-white">Form {intel.latestFilingType}</span>
+                  <span className="text-slate-400">Filed: {intel.latestFilingDate}</span>
+                </div>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  Verified financial statements and disclosures submitted to the U.S. Securities and Exchange Commission (SEC). 
+                  Used to cross-audit Altman Z-Score solvency ratios and balance sheet debt covenants.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 7: Proposed Weekly Strategy */}
           <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
               <span>
-                Part 4: Proposed {ticker.has_weeklys === false ? 'Monthly-Adjusted' : 'Weekly'} Strategy (
+                Part 7: Proposed {ticker.has_weeklys === false ? 'Monthly-Adjusted' : 'Weekly'} Strategy (
                 {ticker.has_weeklys === false
                   ? `${ticker.days_to_nearest_expiration ?? ticker.target_dte ?? 20}d Monthly Target`
                   : '3–7 DTE Targeting ~0.15–0.20 Delta'}
@@ -394,11 +604,11 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
             </div>
           </div>
 
-          {/* SECTION 5: Risk Mitigation & Assignment Plan */}
+          {/* SECTION 8: Risk Mitigation & Assignment Plan */}
           <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Part 5: Institutional Risk Mitigation &amp; Assignment Plan</span>
+              <span>Part 8: Institutional Risk Mitigation &amp; Assignment Plan</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

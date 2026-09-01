@@ -405,9 +405,6 @@ export const App: React.FC = () => {
         if (activeEquitiesTab === 'VOLATILITY_RISK' && filters.onlyHighIvr === false && t.iv_rank < 30) {
           // Keep focus on volatile symbols when on Volatility tab
         }
-        if (activeEquitiesTab === 'EARNINGS_CALENDAR' && filters.onlyEarningsAlert) {
-          if (!t.earnings_within_7d) return false;
-        }
       }
 
       // Quick KPI flags
@@ -610,17 +607,21 @@ export const App: React.FC = () => {
   // Quick Exports from Active View
   const handleExportCSV = () => {
     if (activeTree === 'EQUITIES') {
-      exportTickersToCSV(filteredTickers, `deltaharvest_equities_${Date.now()}.csv`);
+      const exportList = filteredTickers.length > 0 ? filteredTickers : universeTickers;
+      exportTickersToCSV(exportList, `deltaharvest_equities_${Date.now()}.csv`);
     } else {
-      exportOpportunitiesToCSV(filteredOpportunities, `deltaharvest_options_${Date.now()}.csv`);
+      const exportList = filteredOpportunities.length > 0 ? filteredOpportunities : (dataPayload?.opportunities || []);
+      exportOpportunitiesToCSV(exportList, `deltaharvest_options_${Date.now()}.csv`);
     }
   };
 
   const handleExportExcel = () => {
+    const tickersToExport = filteredTickers.length > 0 ? filteredTickers : universeTickers;
+    const oppsToExport = filteredOpportunities.length > 0 ? filteredOpportunities : (dataPayload?.opportunities || []);
     exportToExcel(
       {
-        tickers: filteredTickers,
-        opportunities: filteredOpportunities,
+        tickers: tickersToExport,
+        opportunities: oppsToExport,
         summary: dataPayload?.summary || null,
       },
       `deltaharvest_complete_${Date.now()}.xlsx`
@@ -629,19 +630,27 @@ export const App: React.FC = () => {
 
   const handleSelectEquitiesTab = (tab: EquitiesTabType) => {
     setActiveEquitiesTab(tab);
-    if (tab === 'TREND_SUPPORT') {
-      setFilters((prev) => ({ ...prev, sortBy: 'dist_to_support', sortOrder: 'asc' }));
+    // Reset view-contaminating filters so switching views never leaves the table empty
+    if (tab === 'TECHNICAL_SCREENER') {
+      setFilters((prev) => ({ ...prev, sortBy: 'symbol', sortOrder: 'asc', onlyHighIvr: false, onlyEarningsAlert: false, onlyOversold: false }));
+    } else if (tab === 'TREND_SUPPORT') {
+      setFilters((prev) => ({ ...prev, sortBy: 'dist_to_support' as any, sortOrder: 'asc', onlyHighIvr: false, onlyEarningsAlert: false, onlyOversold: false }));
     } else if (tab === 'VOLATILITY_RISK') {
-      setFilters((prev) => ({ ...prev, sortBy: 'hv_30', sortOrder: 'desc', onlyHighIvr: true }));
+      setFilters((prev) => ({ ...prev, sortBy: 'hv_30', sortOrder: 'desc', onlyHighIvr: false, onlyEarningsAlert: false, onlyOversold: false }));
     } else if (tab === 'EARNINGS_CALENDAR') {
-      setFilters((prev) => ({ ...prev, onlyEarningsAlert: true }));
+      // In Earnings Calendar, sort by next_earnings_date chronologically rather than hiding non-7d tickers
+      setFilters((prev) => ({ ...prev, sortBy: 'next_earnings_date' as any, sortOrder: 'asc', onlyHighIvr: false, onlyEarningsAlert: false, onlyOversold: false }));
     } else if (tab === 'SECTOR_OVERVIEW') {
-      setFilters((prev) => ({ ...prev, sortBy: 'sector', sortOrder: 'asc' }));
+      setFilters((prev) => ({ ...prev, sortBy: 'sector', sortOrder: 'asc', onlyHighIvr: false, onlyEarningsAlert: false, onlyOversold: false }));
+    } else {
+      setFilters((prev) => ({ ...prev, onlyHighIvr: false, onlyEarningsAlert: false, onlyOversold: false }));
     }
   };
 
   const handleSelectOptionsTab = (tab: OptionsTabType) => {
     setActiveOptionsTab(tab);
+    // Clean up filters on Options tree switch
+    setFilters((prev) => ({ ...prev, onlyHighIvr: false, onlyEarningsAlert: false }));
     if (tab === 'TICKER_AUDIT') {
       const target = selectedTicker || filteredTickers[0] || universeTickers[0];
       if (target) setSelectedTicker(target);

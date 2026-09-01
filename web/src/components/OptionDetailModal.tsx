@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   X,
   ShieldCheck,
@@ -10,8 +10,12 @@ import {
   CheckCircle,
   HelpCircle,
   Zap,
+  Award,
+  Newspaper,
+  Flame,
 } from './icons';
 import { OptionOpportunity } from '../types/options';
+import { getSecurityIntelligence } from '../utils/securityIntelligence';
 
 interface OptionDetailModalProps {
   opportunity: OptionOpportunity | null;
@@ -29,6 +33,7 @@ export const OptionDetailModal: React.FC<OptionDetailModalProps> = ({
   if (!opportunity) return null;
 
   const isCSP = opportunity.strategy === 'CSP';
+  const intel = useMemo(() => getSecurityIntelligence(opportunity.symbol), [opportunity.symbol]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
@@ -135,6 +140,52 @@ export const OptionDetailModal: React.FC<OptionDetailModalProps> = ({
                 Breakeven: ${opportunity.breakeven}
               </div>
             </div>
+          </div>
+
+          {/* Underlying AI Health & News Catalyst Banner */}
+          <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      Underlying AI Health &amp; Solvency Score
+                    </span>
+                    <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      {intel.compositeScore} / 100 ({intel.sentimentLabel})
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">
+                    Wall St Consensus: <strong className="text-slate-200">{intel.analystConsensus}</strong> • Target: <strong className="text-emerald-400 font-mono">${intel.targetPrice.toFixed(2)} (+{intel.upsidePct}%)</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 font-mono text-[11px]">
+                <span className="text-slate-400">Support Floor: <strong className="text-emerald-400">${intel.keySupportPrice.toFixed(2)}</strong></span>
+                <span className="text-slate-600">•</span>
+                <span className="text-slate-400">Resistance: <strong className="text-cyan-400">${intel.keyResistancePrice.toFixed(2)}</strong></span>
+              </div>
+            </div>
+
+            {intel.recentNews[0] && (
+              <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 text-[11px] flex items-start gap-2">
+                <Newspaper className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
+                      {intel.recentNews[0].category}
+                    </span>
+                    <strong className="text-white">{intel.recentNews[0].headline}</strong>
+                    <span className="text-[10px] text-slate-500 font-mono">({intel.recentNews[0].source})</span>
+                  </div>
+                  <p className="text-slate-400 leading-snug">{intel.recentNews[0].optionsImplication}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Trade Economics & Greeks Breakdown */}
