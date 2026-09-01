@@ -9,6 +9,7 @@ import {
   BarChart2,
   CheckCircle,
   HelpCircle,
+  Zap,
 } from './icons';
 import { OptionOpportunity } from '../types/options';
 
@@ -16,12 +17,14 @@ interface OptionDetailModalProps {
   opportunity: OptionOpportunity | null;
   onClose: () => void;
   onOpenCalculator: (opportunity: OptionOpportunity) => void;
+  onStageOrder?: (opportunity: OptionOpportunity) => void;
 }
 
 export const OptionDetailModal: React.FC<OptionDetailModalProps> = ({
   opportunity,
   onClose,
   onOpenCalculator,
+  onStageOrder,
 }) => {
   if (!opportunity) return null;
 
@@ -294,6 +297,18 @@ export const OptionDetailModal: React.FC<OptionDetailModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-3">
+            {onStageOrder && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onStageOrder(opportunity);
+                }}
+                className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 border border-slate-700 transition-all flex items-center space-x-1.5 shadow-sm"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Stage Broker Order</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 onClose();

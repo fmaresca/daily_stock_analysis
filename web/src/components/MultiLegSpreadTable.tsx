@@ -12,17 +12,20 @@ import {
   FileSpreadsheet,
   FileText,
   Printer,
+  Zap,
 } from './icons';
 import { MultiLegSpread } from '../types/options';
 
 interface MultiLegSpreadTableProps {
   spreads: MultiLegSpread[];
   onOpenSpreadCalculator?: (spread: MultiLegSpread) => void;
+  onStageSpreadOrder?: (spread: MultiLegSpread) => void;
 }
 
 export const MultiLegSpreadTable: React.FC<MultiLegSpreadTableProps> = ({
   spreads,
   onOpenSpreadCalculator,
+  onStageSpreadOrder,
 }) => {
   const [strategyFilter, setStrategyFilter] = useState<'ALL' | 'BULL_PUT_SPREAD' | 'BEAR_CALL_SPREAD' | 'IRON_CONDOR'>('ALL');
   const [sortBy, setSortBy] = useState<keyof MultiLegSpread>('annualized_roc');
@@ -230,6 +233,7 @@ export const MultiLegSpreadTable: React.FC<MultiLegSpreadTableProps> = ({
                   POP %
                 </th>
                 <th className="py-3 px-3 text-center">Cadence</th>
+                <th className="py-3 px-3 text-center">Stage</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -354,6 +358,19 @@ export const MultiLegSpreadTable: React.FC<MultiLegSpreadTableProps> = ({
                       >
                         {spread.has_weeklys ? 'Weekly' : 'Monthly'}
                       </span>
+                    </td>
+
+                    {/* Stage Broker Order Button */}
+                    <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      {onStageSpreadOrder && (
+                        <button
+                          onClick={() => onStageSpreadOrder(spread)}
+                          title="Stage Defined-Risk Spread Order (Schwab / IBKR / ToS)"
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 transition-colors border border-slate-700/60"
+                        >
+                          <Zap className="w-3.5 h-3.5 text-amber-400" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

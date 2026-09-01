@@ -29,21 +29,34 @@
   transform: translateY(-1px);
 }
 
-/* Custom Scrollbar for Dense Financial Tables */
+/* Custom Vertical & Horizontal Scrollbar */
+html {
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
   background: #090d16;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 9999px;
+  background: #334155;
+  border-radius: 6px;
+  border: 2px solid #090d16;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #10b981;
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #090d16;
 }
