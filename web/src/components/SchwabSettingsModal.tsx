@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldCheck, Key, CheckCircle2, AlertTriangle, ExternalLink, RefreshCw } from './icons';
+import { X, ShieldCheck, Key, CheckCircle2, AlertTriangle, ExternalLink, RefreshCw, Lock } from './icons';
 
 interface SchwabSettingsModalProps {
   isOpen: boolean;
@@ -13,6 +13,9 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
   const [authCode, setAuthCode] = useState<string>('');
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const [showKey, setShowKey] = useState<boolean>(false);
+  const [showSecret, setShowSecret] = useState<boolean>(false);
+  const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false);
 
   useEffect(() => {
     try {
@@ -46,11 +49,27 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
     }
   };
 
+  const handleClearCredentials = () => {
+    localStorage.removeItem('schwab_app_key');
+    localStorage.removeItem('schwab_app_secret');
+    localStorage.removeItem('schwab_callback_url');
+    localStorage.removeItem('schwab_enabled');
+    setAppKey('');
+    setAppSecret('');
+    setCallbackUrl('https://127.0.0.1');
+    setIsEnabled(false);
+    setAuthCode('');
+    setShowClearConfirm(false);
+  };
+
   const schwabAuthUrl = appKey.trim()
     ? `https://api.schwabapi.com/v1/oauth/authorize?client_id=${encodeURIComponent(
         appKey.trim()
       )}&redirect_uri=${encodeURIComponent(callbackUrl.trim())}`
     : '';
+
+  const maskValue = (val: string) =>
+    val.length > 8 ? val.slice(0, 4) + '•'.repeat(val.length - 8) + val.slice(-4) : '•'.repeat(val.length);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
@@ -87,6 +106,24 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5 text-xs">
+
+          {/* Security Isolation Notice */}
+          <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-start gap-3">
+            <Lock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-emerald-200 leading-relaxed space-y-1">
+              <div className="font-bold text-emerald-300 text-xs">Credentials stored locally only — never sent to GitHub</div>
+              <p>
+                Your App Key and App Secret are saved exclusively in your <strong>browser's localStorage</strong>, 
+                which is private to this machine and browser profile. They are <strong>never written to any file</strong> 
+                in the project directory and cannot be committed or pushed to the public repository.
+              </p>
+              <p className="text-emerald-300/70">
+                To keep credentials off disk entirely, you can also set them in a local <code className="text-emerald-300 bg-emerald-950/60 px-1 rounded">.env</code> file 
+                (already in <code className="text-emerald-300 bg-emerald-950/60 px-1 rounded">.gitignore</code>) for the backend Python fetcher.
+              </p>
+            </div>
+          </div>
+
           {/* Status Banner */}
           <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
@@ -133,25 +170,58 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
-              <input
-                type="text"
-                value={appKey}
-                onChange={(e) => setAppKey(e.target.value)}
-                placeholder="e.g. 32-character Schwab App Key"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
-              />
+              <div className="relative">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={appKey}
+                  onChange={(e) => setAppKey(e.target.value)}
+                  placeholder="e.g. 32-character Schwab App Key"
+                  className="w-full px-3 py-2 pr-16 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded bg-slate-800 font-semibold"
+                >
+                  {showKey ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
 
             <div>
               <label className="font-semibold text-slate-300 block mb-1">App Secret:</label>
-              <input
-                type="password"
-                value={appSecret}
-                onChange={(e) => setAppSecret(e.target.value)}
-                placeholder="e.g. Schwab App Secret"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
-              />
+              <div className="relative">
+                <input
+                  type={showSecret ? 'text' : 'password'}
+                  value={appSecret}
+                  onChange={(e) => setAppSecret(e.target.value)}
+                  placeholder="e.g. Schwab App Secret"
+                  className="w-full px-3 py-2 pr-16 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecret(!showSecret)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded bg-slate-800 font-semibold"
+                >
+                  {showSecret ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
+
+            {/* Stored credential preview (masked) */}
+            {(appKey || appSecret) && (
+              <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 text-[10px] font-mono text-slate-500 space-y-0.5">
+                <div>Key stored: <span className="text-slate-300">{appKey ? maskValue(appKey) : '—'}</span></div>
+                <div>Secret stored: <span className="text-slate-300">{appSecret ? maskValue(appSecret) : '—'}</span></div>
+                <div className="text-[9px] text-slate-600 pt-0.5">Values above are obfuscated — toggle Show to reveal for editing</div>
+              </div>
+            )}
 
             <div>
               <label className="font-semibold text-slate-300 block mb-1">OAuth Callback URL (Redirect URI):</label>
@@ -209,16 +279,62 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
               />
             </div>
           </div>
+
+          {/* Backend .env guidance */}
+          <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-700/60 space-y-2">
+            <div className="font-bold text-slate-300 text-xs uppercase tracking-wider">
+              Backend Python Fetcher (.env — optional)
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              If you use the Python backend (<code className="text-cyan-400">main.py</code> / <code className="text-cyan-400">server.py</code>), 
+              create a <code className="text-cyan-400">.env</code> file in the project root (it is already in <code className="text-cyan-400">.gitignore</code> — never committed):
+            </p>
+            <pre className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-[10px] font-mono text-emerald-300 whitespace-pre overflow-x-auto">
+{`SCHWAB_APP_KEY=your_app_key_here
+SCHWAB_APP_SECRET=your_app_secret_here
+SCHWAB_CALLBACK_URL=https://127.0.0.1
+SCHWAB_ENABLED=true`}
+            </pre>
+            <p className="text-[10px] text-slate-500">
+              ⚠️ Never paste credentials directly into any <code>.py</code> or <code>.ts</code> source file. Always use <code>.env</code> or browser localStorage.
+            </p>
+          </div>
         </div>
 
         {/* Modal Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
-          <div className="text-xs">
+          <div className="flex items-center gap-3 text-xs">
             {savedSuccess && (
               <span className="text-emerald-400 font-bold flex items-center gap-1.5 animate-fade-in">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Schwab API credentials saved!</span>
+                <span>Credentials saved to localStorage (local only)!</span>
               </span>
+            )}
+            {!savedSuccess && (
+              showClearConfirm ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-rose-400 font-semibold">Clear all saved credentials?</span>
+                  <button
+                    onClick={handleClearCredentials}
+                    className="px-2 py-1 rounded bg-rose-700 hover:bg-rose-600 text-white text-[10px] font-bold transition-colors"
+                  >
+                    Yes, Clear
+                  </button>
+                  <button
+                    onClick={() => setShowClearConfirm(false)}
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowClearConfirm(true)}
+                  className="text-[11px] text-slate-500 hover:text-rose-400 font-semibold transition-colors underline"
+                >
+                  Clear saved credentials
+                </button>
+              )
             )}
           </div>
 
