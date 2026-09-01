@@ -25,6 +25,7 @@ interface HeaderProps {
   onOpenWatchlists: () => void;
   onOpenReports: () => void;
   onOpenSchwab: () => void;
+  onOpenDiagnostics?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -41,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenWatchlists,
   onOpenReports,
   onOpenSchwab,
+  onOpenDiagnostics,
 }) => {
   const formattedTime = lastUpdated
     ? new Date(lastUpdated).toLocaleDateString('en-US', {
@@ -98,10 +100,22 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls & Navigation Shortcuts */}
         <div className="flex items-center space-x-2">
+          {/* API Health & Diagnostics Self-Test Button */}
+          {onOpenDiagnostics && (
+            <button
+              onClick={onOpenDiagnostics}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer shadow-sm"
+              title="Open Automated API Self-Test & Diagnostic Health Suite"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="hidden sm:inline">API Self-Test</span>
+            </button>
+          )}
+
           {/* Schwab API Settings */}
           <button
             onClick={onOpenSchwab}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-blue-300 hover:border-blue-500/50 transition-all"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-blue-300 hover:border-blue-500/50 transition-all cursor-pointer"
             title="Configure Charles Schwab Retail Trader API keys"
           >
             <span className="w-2 h-2 rounded-full bg-blue-400" />
