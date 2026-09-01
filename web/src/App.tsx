@@ -17,6 +17,16 @@ import { VolatilitySkewRadar } from './components/VolatilitySkewRadar';
 import { SchwabSettingsModal } from './components/SchwabSettingsModal';
 import { FundamentalHealthTable } from './components/FundamentalHealthTable';
 import { OptionsBacktestView } from './components/OptionsBacktestView';
+import { ScrollToTopButton } from './components/ScrollToTopButton';
+import { BrokerOrderStagingModal } from './components/BrokerOrderStagingModal';
+import { BrokerStagingWorkbench } from './components/BrokerStagingWorkbench';
+import {
+  stageSingleLegOrder,
+  stageMultiLegSpreadOrder,
+  StagedBracketOrder,
+  AccountType,
+  PriceExecutionType,
+} from './utils/brokerOrderStaging';
 import { generateMultiLegSpreads, generateVolatilitySkew } from './utils/optionsMultiLeg';
 import { generateFundamentalHealthData } from './utils/fundamentalSolvency';
 import {
@@ -39,6 +49,7 @@ import {
   OptionsDataPayload,
   TickerMeta,
   OptionOpportunity,
+  MultiLegSpread,
   FilterState,
   MenuTreeType,
   EquitiesTabType,
@@ -104,6 +115,10 @@ export const App: React.FC = () => {
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState<boolean>(false);
   const [isReportQueryModalOpen, setIsReportQueryModalOpen] = useState<boolean>(false);
   const [isSchwabModalOpen, setIsSchwabModalOpen] = useState<boolean>(false);
+  const [stagedOrder, setStagedOrder] = useState<StagedBracketOrder | null>(null);
+  const [isStagedModalOpen, setIsStagedModalOpen] = useState<boolean>(false);
+  const [activeStagedOpportunity, setActiveStagedOpportunity] = useState<OptionOpportunity | null>(null);
+  const [activeStagedSpread, setActiveStagedSpread] = useState<MultiLegSpread | null>(null);
 
   // Multi-Watchlist persistent state
   const [watchlistGroups, setWatchlistGroups] = useState<WatchlistGroup[]>(() => {
@@ -258,6 +273,96 @@ export const App: React.FC = () => {
 
     return Array.from(tickerMap.values());
   }, [dataPayload, customTickers]);
+
+  // Staged Order Handlers
+  const handleStageOpportunity = (opp: OptionOpportunity) => {
+    const meta = universeTickers.find((t) => t.symbol === opp.symbol);
+    const staged = stageSingleLegOrder(opp, meta, 1, 'SCHWAB', 'REG_T_MARGIN', 'MIDPOINT');
+    setActiveStagedOpportunity(opp);
+    setActiveStagedSpread(null);
+    setStagedOrder(staged);
+    setIsStagedModalOpen(true);
+  };
+
+  const handleStageSpread = (spread: MultiLegSpread) => {
+    const staged = stageMultiLegSpreadOrder(spread, 1, 'SCHWAB', 'REG_T_MARGIN', 'MIDPOINT');
+    setActiveStagedSpread(spread);
+    setActiveStagedOpportunity(null);
+    setStagedOrder(staged);
+    setIsStagedModalOpen(true);
+  };
+
+  const handleUpdateStagedQuantity = (qty: number) => {
+    if (activeStagedOpportunity) {
+      const meta = universeTickers.find((t) => t.symbol === activeStagedOpportunity.symbol);
+      const updated = stageSingleLegOrder(
+        activeStagedOpportunity,
+        meta,
+        qty,
+        stagedOrder?.broker || 'SCHWAB',
+        stagedOrder?.accountType || 'REG_T_MARGIN',
+        stagedOrder?.pricingType || 'MIDPOINT'
+      );
+      setStagedOrder(updated);
+    } else if (activeStagedSpread) {
+      const updated = stageMultiLegSpreadOrder(
+        activeStagedSpread,
+        qty,
+        stagedOrder?.broker || 'SCHWAB',
+        stagedOrder?.accountType || 'REG_T_MARGIN',
+        stagedOrder?.pricingType || 'MIDPOINT'
+      );
+      setStagedOrder(updated);
+    }
+  };
+
+  const handleUpdateStagedAccountType = (acc: AccountType) => {
+    if (activeStagedOpportunity) {
+      const meta = universeTickers.find((t) => t.symbol === activeStagedOpportunity.symbol);
+      const updated = stageSingleLegOrder(
+        activeStagedOpportunity,
+        meta,
+        stagedOrder?.quantity || 1,
+        stagedOrder?.broker || 'SCHWAB',
+        acc,
+        stagedOrder?.pricingType || 'MIDPOINT'
+      );
+      setStagedOrder(updated);
+    } else if (activeStagedSpread) {
+      const updated = stageMultiLegSpreadOrder(
+        activeStagedSpread,
+        stagedOrder?.quantity || 1,
+        stagedOrder?.broker || 'SCHWAB',
+        acc,
+        stagedOrder?.pricingType || 'MIDPOINT'
+      );
+      setStagedOrder(updated);
+    }
+  };
+
+  const handleUpdateStagedPricingType = (pricing: PriceExecutionType) => {
+    if (activeStagedOpportunity) {
+      const meta = universeTickers.find((t) => t.symbol === activeStagedOpportunity.symbol);
+      const updated = stageSingleLegOrder(
+        activeStagedOpportunity,
+        meta,
+        stagedOrder?.quantity || 1,
+        stagedOrder?.broker || 'SCHWAB',
+        stagedOrder?.accountType || 'REG_T_MARGIN',
+        pricing
+      );
+      setStagedOrder(updated);
+    } else if (activeStagedSpread) {
+      const updated = stageMultiLegSpreadOrder(
+        activeStagedSpread,
+        stagedOrder?.quantity || 1,
+        stagedOrder?.broker || 'SCHWAB',
+        stagedOrder?.accountType || 'REG_T_MARGIN',
+        pricing
+      );
+      setStagedOrder(updated);
+    }
+  };
 
   // Derived counts for tabs
   const weeklyCadenceCounts = useMemo(() => {
@@ -990,13 +1095,25 @@ export const App: React.FC = () => {
           <div className="space-y-4">
             {activeOptionsTab === 'MULTI_LEG_SPREADS' ? (
               /* Defined-Risk Vertical Spreads & Iron Condors (anchored in 0.15 - 0.20 Delta) */
-              <MultiLegSpreadTable spreads={multiLegSpreads} />
+              <MultiLegSpreadTable
+                spreads={multiLegSpreads}
+                onStageSpreadOrder={handleStageSpread}
+              />
             ) : activeOptionsTab === 'VOLATILITY_SKEW' ? (
               /* 25-Delta Volatility Skew & Term Structure Radar */
               <VolatilitySkewRadar skewData={volatilitySkewData} />
             ) : activeOptionsTab === 'BACKTEST_MARGIN' ? (
               /* Multi-Year Systematic Backtester & FINRA 4210 Margin Stress Test */
               <OptionsBacktestView availableSymbols={universeTickers.map((t) => t.symbol)} />
+            ) : activeOptionsTab === 'BROKER_STAGING' ? (
+              /* Broker Order Staging & 1-Click Execution Workbench */
+              <BrokerStagingWorkbench
+                opportunities={filteredOpportunities}
+                spreads={multiLegSpreads}
+                onStageOpportunity={handleStageOpportunity}
+                onStageSpread={handleStageSpread}
+                onOpenSchwabSettings={() => setIsSchwabModalOpen(true)}
+              />
             ) : (
               /* Options Opportunities Table (CSPs & CCs) */
               <div className="space-y-4">
@@ -1026,6 +1143,7 @@ export const App: React.FC = () => {
                   onSort={handleSort}
                   onSelectOpportunity={(opp) => setSelectedOpportunity(opp)}
                   onOpenCalculator={(opp) => setCalculatorOpportunity(opp)}
+                  onStageOrder={handleStageOpportunity}
                 />
               </div>
             )}
@@ -1106,12 +1224,26 @@ export const App: React.FC = () => {
           setSelectedOpportunity(null);
           setCalculatorOpportunity(opp);
         }}
+        onStageOrder={(opp) => {
+          setSelectedOpportunity(null);
+          handleStageOpportunity(opp);
+        }}
       />
 
       {/* 7. Cash Income Calculator Modal */}
       <IncomeCalculatorModal
         opportunity={calculatorOpportunity}
         onClose={() => setCalculatorOpportunity(null)}
+      />
+
+      {/* 8. Broker Order Staging & 1-Click Execution Payloads Modal */}
+      <BrokerOrderStagingModal
+        isOpen={isStagedModalOpen}
+        onClose={() => setIsStagedModalOpen(false)}
+        stagedOrder={stagedOrder}
+        onQuantityChange={handleUpdateStagedQuantity}
+        onAccountTypeChange={handleUpdateStagedAccountType}
+        onPricingTypeChange={handleUpdateStagedPricingType}
       />
 
       {/* Footer */}
@@ -1125,6 +1257,9 @@ export const App: React.FC = () => {
           </p>
         </div>
       </footer>
+
+      {/* Floating Back to Top Button */}
+      <ScrollToTopButton />
     </div>
   );
 };

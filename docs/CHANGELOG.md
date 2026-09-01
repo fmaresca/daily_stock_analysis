@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [新功能] DeltaHarvest Broker Staging: 交付 Phase 5 券商订单暂存与一键执行载荷系统，支持 Charles Schwab Retail Trader API、Interactive Brokers (IBKR TWS BasketTrader CSV 及 Client Portal Web API) 与 Thinkorswim (ToS) 标准化指令格式，自动注入 80% 利润平仓 (GTC Limit) 与 0.50 Delta / 200% 权利金防守展期止损括号单 (Bracket Order)，并提供单票 10% 风险熔断限额、Reg-T 对比 TIMS 保证金测算及一键复制、下载工单与打印执行单。
+- [改进] DeltaHarvest Navigation: 新增全局垂直高对比度滚动条美化（10px 宽度、Slate/Emerald 色彩反馈）与平滑滚动支持，并在页面向下滚动时提供一键平滑返回顶部悬浮按钮 (ScrollToTopButton)。
 - [改进] DeltaHarvest Navigation & Charts: 升级网页导航交互最佳实践（面包屑实时路径定位、快速跳转导航栏、键盘全局快捷键 1/2/W/R/?/P 支持、各视图上下文策略横幅），修复 Lightweight Charts v5 序列渲染并为所有新功能视图（交互式K线、基本面健康、多腿价差、波动率偏度、回测与压力测试）补齐 1-Click Excel (.xlsx)、CSV 及打印/保存 PDF 多格式导出支持。
 - [新功能] DeltaHarvest Backtester: 交付 Phase 4 策略历史多周期回测引擎与 FINRA 4210 保证金压力测试系统，支持 0.15~0.20 Delta 现金担保看跌(CSP)、周度期权及看跌信用价差历史收益/胜率/夏普/回撤曲线对比，并提供基准、-5%回调、-10%剧烈修正及-20%黑天鹅双重波动率冲击下的标准 Reg-T 对比组合保证金(TIMS)资本释放测算。
 - [新功能] DeltaHarvest Fundamentals: 交付 Phase 3 基本面财务健康与 CEF 分析引擎，新增奥特曼 Altman Z-Score 破产风险评估、皮尔托斯基 Piotroski F-Score 经营质量评分、SEC EDGAR 10-K/10-Q 披露直链、机构持仓比重，并支持闭式基金(CEF)与期权收益基金的净值折溢价与资本返还(RoC)健康审计。

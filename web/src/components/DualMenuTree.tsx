@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Sliders,
   Calculator,
+  Zap,
 } from './icons';
 import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 
@@ -247,6 +248,18 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             >
               <BarChart2 className="w-3.5 h-3.5 text-purple-400" />
               <span>Backtester &amp; Margin Stress-Test</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('BROKER_STAGING')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                activeOptionsTab === 'BROKER_STAGING'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Broker Staging &amp; Order Payloads</span>
             </button>
 
             <button
