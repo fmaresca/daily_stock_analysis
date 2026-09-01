@@ -23,15 +23,29 @@ from api.v1.endpoints import (
     health,
     history,
     intelligence,
+    options,
     portfolio,
     stocks,
     system_config,
     usage,
+    ws_stream,
 )
 
 # 创建 v1 版本主路由。
 # /api/v1 前缀在 api.app 挂载，避免新版 FastAPI 误判子路由 "" 为 empty path。
 router = APIRouter()
+
+router.include_router(
+    options.router,
+    prefix="/options",
+    tags=["Options"]
+)
+
+router.include_router(
+    ws_stream.router,
+    prefix="/ws",
+    tags=["WebSocket"]
+)
 
 router.include_router(
     auth.router,

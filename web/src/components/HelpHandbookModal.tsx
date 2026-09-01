@@ -28,6 +28,8 @@ type HandbookTab =
   | 'SOLVENCY_CEF'
   | 'BACKTEST_MARGIN'
   | 'BROKER_EXECUTION'
+  | 'CONTEXT_SENTIMENT'
+  | 'LIVE_STREAMING_RISK'
   | 'CADENCE_GUIDE'
   | 'GREEKS_FORMULAS'
   | 'LIQUIDITY_TIERS'
@@ -54,11 +56,11 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>DeltaHarvest Strategy Handbook &amp; Educational Center</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  v3.0
+                  v3.2
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Systematic Rules, Technicals, Spreads, Altman Z-Score Solvency &amp; CEF Anatomy
+                Systematic Rules, Technicals, Spreads, Prediction Markets, Sentiment &amp; Risk Circuit-Breakers
               </p>
             </div>
           </div>
@@ -146,6 +148,30 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
           </button>
 
           <button
+            onClick={() => setActiveTab('CONTEXT_SENTIMENT')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'CONTEXT_SENTIMENT'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Flame className="w-4 h-4 text-cyan-400" />
+            <span>7. Prediction Markets &amp; Sentiment</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('LIVE_STREAMING_RISK')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'LIVE_STREAMING_RISK'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4 text-rose-400" />
+            <span>8. Live Streaming &amp; Risk Circuit-Breakers</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('CADENCE_GUIDE')}
             className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
               activeTab === 'CADENCE_GUIDE'
@@ -154,7 +180,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>7. Expiration Cadence</span>
+            <span>9. Expiration Cadence</span>
           </button>
 
           <button
@@ -166,7 +192,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <Activity className="w-4 h-4" />
-            <span>5. Greeks &amp; Yield Math</span>
+            <span>10. Greeks &amp; Yield Math</span>
           </button>
 
           <button
@@ -178,7 +204,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <Flame className="w-4 h-4 text-amber-400" />
-            <span>4. Liquidity Tiers &amp; Slippage</span>
+            <span>11. Liquidity Tiers &amp; Slippage</span>
           </button>
 
           <button
@@ -190,7 +216,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <Command className="w-4 h-4" />
-            <span>5. Shortcuts &amp; FAQ</span>
+            <span>12. Shortcuts &amp; FAQ</span>
           </button>
         </div>
 
@@ -669,7 +695,192 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             </div>
           )}
 
-          {/* TAB 7: Expiration Cadence Guide */}
+          {/* TAB 7: Prediction Markets & Contextual Sentiment */}
+          {activeTab === 'CONTEXT_SENTIMENT' && (
+            <div className="space-y-6">
+              <div className="border-l-2 border-cyan-500 pl-4 py-1">
+                <h3 className="text-base font-bold text-white">Contextual Intelligence: Prediction Markets &amp; Retail Sentiment</h3>
+                <p className="text-slate-400 mt-1">
+                  Layered multi-source signals surfaced inside each ticker's Audit tab — enriching options decisions with crowd wisdom, professional consensus, and social heat.
+                </p>
+              </div>
+
+              {/* Analyst Price Target Bar */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-3">
+                <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Analyst Price Target Bar (Audit Tab → News &amp; Analyst)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-white">How to Read It</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      A horizontal track displays the Wall Street <strong>Low / Mean / High</strong> price targets from all covering analysts. A needle marks the current spot price. The consensus upside % callout tells you how far below mean the stock is trading.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-emerald-400">Why It Matters for CSP Writers</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      If spot price is at or below the analyst low target, the market is already pricing in extreme pessimism. This context reduces assignment risk for a conservative OTM put writer near the Lower Bollinger Band.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prediction Market Cards */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-purple-500/30 space-y-3">
+                <div className="flex items-center space-x-2 text-purple-400 font-bold text-xs">
+                  <BarChart2 className="w-4 h-4" />
+                  <span>Prediction Market Cards (Audit Tab → Prediction Markets)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-white">Polymarket Gamma API</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      Polymarket is the world's largest decentralized prediction market. Contracts shown here are binary (Yes / No) events linked to a specific ticker — for example, "Will NVDA close above $150 by Dec 31?" The <strong>Yes % probability</strong> represents real money bet on an outcome, not just sentiment.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-blue-400">Manifold Markets</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      A complementary prediction market where traders stake virtual currency on event outcomes. Manifold often surfaces early signals on earnings surprises, regulatory decisions, and sector-specific catalysts. Use as a contrarian indicator when Manifold and Polymarket diverge significantly.
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-amber-950/30 p-3 rounded-lg border border-amber-500/30 text-xs text-amber-300">
+                  <strong>Usage Rule:</strong> Prediction market probabilities above 70% for a bullish event (e.g. "Beats earnings") support writing a Cash-Secured Put. Probabilities below 30% are a caution flag — consider widening strike distance or skipping that expiration.
+                </div>
+              </div>
+
+              {/* Social Sentiment Gauge */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-cyan-500/30 space-y-3">
+                <div className="flex items-center space-x-2 text-cyan-400 font-bold text-xs">
+                  <Activity className="w-4 h-4" />
+                  <span>Social Sentiment Gauge (Audit Tab → Social &amp; Forum Sentiment)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-emerald-400">StockTwits Bull/Bear %</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      Live ratio of Bullish vs. Bearish message tags from retail traders. A Bull% ≥ 60% indicates bullish retail bias; ≤ 35% signals fear or short-bias in the crowd. Use as a contrarian indicator for extreme readings.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-cyan-400">Reddit /r/WallStreetBets Rank</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      Real-time 24-hour trending rank from the WSB subreddit. Top 10 tickers carry meme-driven gamma squeeze risk. A stock ranked #1–5 on WSB with high IV may see outsized option premium — but also elevated tail risk.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-amber-300">Screener Sentiment Chips</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      The main screener table shows compact chips (e.g. "74% Bull" or "WSB #3") directly in the AI Score column so you can filter high-sentiment tickers at a glance without opening each audit detail.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 8: Live Streaming & Risk Circuit-Breakers */}
+          {activeTab === 'LIVE_STREAMING_RISK' && (
+            <div className="space-y-6">
+              <div className="border-l-2 border-rose-500 pl-4 py-1">
+                <h3 className="text-base font-bold text-white">Live API Streaming, FastAPI Backend &amp; Quantitative Risk Circuit-Breakers</h3>
+                <p className="text-slate-400 mt-1">
+                  How the system fetches real-time data, calculates high-precision Greeks, and enforces portfolio-level safety gates before you place any order.
+                </p>
+              </div>
+
+              {/* Live Data Architecture */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-blue-500/30 space-y-3">
+                <div className="flex items-center space-x-2 text-blue-400 font-bold text-xs">
+                  <Zap className="w-4 h-4" />
+                  <span>FastAPI Live Snapshot &amp; WebSocket Stream</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-white">REST Snapshot: <code className="text-slate-400">/api/v1/options/snapshot</code></div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      When the FastAPI backend is running (<code>python main.py --serve</code>), the Web UI fetches a live enriched options snapshot via REST. This includes real IV rank, current Greeks, and latest news context directly from market data providers.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-cyan-400">WebSocket Stream: <code className="text-slate-400">/api/v1/ws/stream</code></div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      A persistent WebSocket connection pushes real-time option chain updates to the UI. When disconnected (backend offline), the UI automatically falls back to the last cached local JSON snapshot — no hard crash.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tradier Fallback */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-teal-500/30 space-y-2">
+                <div className="flex items-center space-x-2 text-teal-400 font-bold text-xs">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Tradier API — Secondary Data Source Fallback</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  If your Charles Schwab OAuth session is not yet authenticated or is offline, the system automatically falls back to <strong>Tradier</strong> for live options chains and US equity quotes. Configure your Tradier API token in <code className="text-slate-400">.env</code> as <code className="text-slate-400">TRADIER_TOKEN</code>. This ensures zero data gap during Schwab re-authorization cycles.
+                </p>
+              </div>
+
+              {/* QuantLib Greeks */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-purple-500/30 space-y-3">
+                <div className="flex items-center space-x-2 text-purple-400 font-bold text-xs">
+                  <Activity className="w-4 h-4" />
+                  <span>High-Precision Greeks Engine (BSM/BAW Analytical)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-white">Black-Scholes-Merton (European)</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      Used for index options (SPX, XSP) and European-style contracts. Delivers exact closed-form Delta, Gamma, Theta, Vega, and Rho. IV is solved by bisection on market price.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-amber-300">Barone-Adesi-Whaley (American)</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      Used for all equity options (SPY, NVDA, AAPL, etc.) that carry <strong>early exercise risk</strong>. The BAW model calculates an early exercise premium above BSM value. Deep in-the-money puts near ex-dividend dates are flagged with an early assignment probability score.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risk Circuit-Breakers */}
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-rose-500/40 space-y-3">
+                <div className="font-bold text-rose-300 text-xs uppercase tracking-wider flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-rose-400" />
+                  <span>Portfolio Risk Circuit-Breakers — Automatic Order Gates</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-rose-500/30 space-y-1">
+                    <div className="font-bold text-rose-300">Max Drawdown Halt</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      If the portfolio's unrealized mark-to-market drawdown exceeds a configurable threshold (default: 15%), the circuit-breaker blocks all new order staging and raises a visible red alert. No new positions until drawdown recovers.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-amber-500/30 space-y-1">
+                    <div className="font-bold text-amber-300">Delta Neutrality Bounds</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      Tracks aggregate portfolio net Delta. If the portfolio drifts too directional (e.g. aggregate Delta below -0.30 or above +0.30), new orders in the same direction are blocked to maintain near-neutral risk posture.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-700 space-y-1">
+                    <div className="font-bold text-slate-200">Single-Underlying Concentration Cap</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      No single ticker may represent more than <strong>10% of total portfolio equity at risk</strong>. The staging engine calculates required collateral against account size and warns (yellow) or blocks (red) the order if the concentration limit would be breached.
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-rose-950/30 p-3 rounded-lg border border-rose-500/30 text-xs text-rose-300">
+                  <strong>Rule:</strong> Circuit-breaker thresholds are set in <code className="text-rose-200">.env</code> via <code className="text-rose-200">RISK_MAX_DRAWDOWN_PCT</code>, <code className="text-rose-200">RISK_MAX_DELTA_EXPOSURE</code>, and <code className="text-rose-200">RISK_MAX_SINGLE_UNDERLYING_PCT</code>. All default to conservative values — tighten them, never loosen beyond your personal risk tolerance.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 9: Expiration Cadence Guide */}
           {activeTab === 'CADENCE_GUIDE' && (
             <div className="space-y-6">
               <div className="border-l-2 border-teal-500 pl-4 py-1">

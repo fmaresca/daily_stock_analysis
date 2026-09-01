@@ -202,27 +202,44 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Data Fetching
+  // Data Fetching & Real-Time Sync
   const fetchData = async () => {
     setIsLoading(true);
     let loaded = false;
 
-    // 1. Attempt local public JSON path
+    // 0. Primary: Attempt live FastAPI backend endpoint
     try {
-      const res = await fetch('./data/options_data.json?t=' + Date.now());
+      const res = await fetch('/api/v1/options/snapshot');
       if (res.ok) {
         const json: OptionsDataPayload = await res.json();
         if (json.tickers && json.tickers.length > 0) {
           setDataPayload(json);
-          setDataSource('Local JSON');
+          setDataSource('FastAPI Live Engine');
           loaded = true;
         }
       }
     } catch (e) {
-      console.warn('Local ./data/options_data.json failed:', e);
+      console.warn('Live API /api/v1/options/snapshot failed, attempting local fallback:', e);
     }
 
-    // 2. Attempt absolute public root /data/options_data.json
+    // 1. Fallback: Attempt local public JSON path
+    if (!loaded) {
+      try {
+        const res = await fetch('./data/options_data.json?t=' + Date.now());
+        if (res.ok) {
+          const json: OptionsDataPayload = await res.json();
+          if (json.tickers && json.tickers.length > 0) {
+            setDataPayload(json);
+            setDataSource('Local JSON');
+            loaded = true;
+          }
+        }
+      } catch (e) {
+        console.warn('Local ./data/options_data.json failed:', e);
+      }
+    }
+
+    // 2. Fallback: Attempt absolute public root /data/options_data.json
     if (!loaded) {
       try {
         const res = await fetch('/data/options_data.json');
@@ -256,6 +273,44 @@ export const App: React.FC = () => {
     }
     setIsLoading(false);
   };
+
+  // Real-time WebSocket streaming listener
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/api/v1/ws/stream`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.info('[WebSocket] Connected to DeltaHarvest Live Stream');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'SNAPSHOT_UPDATE' && msg.payload) {
+            setDataPayload(msg.payload);
+            setDataSource('WebSocket Stream');
+          }
+        } catch (err) {
+          console.warn('[WebSocket] Error parsing stream message:', err);
+        }
+      };
+
+      ws.onerror = () => {
+        // Silent fallback - WebSocket is optional enhancement
+      };
+    } catch (e) {
+      // Ignore if WebSocket connection is not supported in current environment
+    }
+
+    return () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     fetchData();
