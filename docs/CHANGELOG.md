@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [改进] DeltaHarvest Navigation & Charts: 升级网页导航交互最佳实践（面包屑实时路径定位、快速跳转导航栏、键盘全局快捷键 1/2/W/R/?/P 支持、各视图上下文策略横幅），修复 Lightweight Charts v5 序列渲染并为所有新功能视图（交互式K线、基本面健康、多腿价差、波动率偏度、回测与压力测试）补齐 1-Click Excel (.xlsx)、CSV 及打印/保存 PDF 多格式导出支持。
+- [新功能] DeltaHarvest Backtester: 交付 Phase 4 策略历史多周期回测引擎与 FINRA 4210 保证金压力测试系统，支持 0.15~0.20 Delta 现金担保看跌(CSP)、周度期权及看跌信用价差历史收益/胜率/夏普/回撤曲线对比，并提供基准、-5%回调、-10%剧烈修正及-20%黑天鹅双重波动率冲击下的标准 Reg-T 对比组合保证金(TIMS)资本释放测算。
 - [新功能] DeltaHarvest Fundamentals: 交付 Phase 3 基本面财务健康与 CEF 分析引擎，新增奥特曼 Altman Z-Score 破产风险评估、皮尔托斯基 Piotroski F-Score 经营质量评分、SEC EDGAR 10-K/10-Q 披露直链、机构持仓比重，并支持闭式基金(CEF)与期权收益基金的净值折溢价与资本返还(RoC)健康审计。
 - [新功能] Charles Schwab API 支持: 新增 Charles Schwab Retail Trader API 数据源与凭据接入模块(data_provider/schwab_fetcher.py)，支持实时美股 NBBO 行情、全量期权链与实时 Greeks 计算，并在 Web UI 交付专用的 Schwab API 接入与 OAuth 设置面板。
 - [新功能] DeltaHarvest Options Engine: 交付 Phase 2 波动率偏度与多腿期权引擎，严格保留 0.15~0.20 Delta 保守卖方核心法则，新增牛市看跌垂直信用价差(Bull Put Spread)、熊市看涨垂直信用价差(Bear Call Spread)、双翼铁鹰(Iron Condor)、25-Delta 波动率偏度与期限结构雷达，并扩充期权策略帮助手册。

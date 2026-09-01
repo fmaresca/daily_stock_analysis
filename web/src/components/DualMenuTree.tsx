@@ -238,6 +238,18 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             </button>
 
             <button
+              onClick={() => onSelectOptionsTab('BACKTEST_MARGIN')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                activeOptionsTab === 'BACKTEST_MARGIN'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <BarChart2 className="w-3.5 h-3.5 text-purple-400" />
+              <span>Backtester &amp; Margin Stress-Test</span>
+            </button>
+
+            <button
               onClick={() => onSelectOptionsTab('EXPIRATION_CADENCE')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
                 activeOptionsTab === 'EXPIRATION_CADENCE'

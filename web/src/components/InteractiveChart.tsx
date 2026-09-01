@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   createChart,
+  CandlestickSeries,
+  LineSeries,
+  HistogramSeries,
   ColorType,
   LineStyle,
   IChartApi,
@@ -10,8 +13,18 @@ import {
   HistogramData,
   Time,
 } from 'lightweight-charts';
+import * as XLSX from 'xlsx';
 import { TickerMeta, OptionOpportunity } from '../types/options';
-import { Activity, ShieldCheck, TrendingUp, Flame, Sliders } from './icons';
+import {
+  Activity,
+  ShieldCheck,
+  TrendingUp,
+  Flame,
+  Sliders,
+  FileSpreadsheet,
+  FileText,
+  Printer,
+} from './icons';
 
 interface InteractiveChartProps {
   ticker: TickerMeta;
@@ -179,7 +192,7 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = ({
     chartRef.current = chart;
 
     // 1. Candlestick Series
-    const candleSeries = (chart as any).addCandlestickSeries({
+    const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#10b981',
       downColor: '#f43f5e',
       borderVisible: false,
@@ -190,7 +203,7 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = ({
 
     // 2. Volume Series
     if (showVolume) {
-      const volumeSeries = (chart as any).addHistogramSeries({
+      const volumeSeries = chart.addSeries(HistogramSeries, {
         color: '#64748b',
         priceFormat: { type: 'volume' },
         priceScaleId: '', // overlay
@@ -206,7 +219,7 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = ({
 
     // 3. 20D SMA
     if (showSma) {
-      const smaSeries = (chart as any).addLineSeries({
+      const smaSeries = chart.addSeries(LineSeries, {
         color: '#38bdf8',
         lineWidth: 2,
         title: '20D SMA',
@@ -216,17 +229,17 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = ({
 
     // 4. Bollinger Bands (Upper & Lower)
     if (showBollinger) {
-      const upperBbSeries = (chart as any).addLineSeries({
+      const upperBbSeries = chart.addSeries(LineSeries, {
         color: '#f472b6',
-        lineWidth: 1.5,
+        lineWidth: 1,
         lineStyle: LineStyle.Dashed,
         title: 'Upper BB (2 SD)',
       });
       upperBbSeries.setData(chartData.upperBb);
 
-      const lowerBbSeries = (chart as any).addLineSeries({
+      const lowerBbSeries = chart.addSeries(LineSeries, {
         color: '#34d399',
-        lineWidth: 1.5,
+        lineWidth: 1,
         lineStyle: LineStyle.Dashed,
         title: 'Lower BB (2 SD)',
       });
@@ -379,6 +392,73 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = ({
             }`}
           >
             Volume
+          </button>
+
+          {/* Export & Print actions */}
+          <div className="h-4 w-px bg-slate-800 mx-1 hidden sm:block" />
+          <button
+            onClick={() => {
+              const sheetData = chartData.candles.map((c, i) => ({
+                Date: String(c.time),
+                Open: c.open,
+                High: c.high,
+                Low: c.low,
+                Close: c.close,
+                Volume: chartData.volume[i]?.value || 0,
+                '20D SMA': chartData.sma[i]?.value || 0,
+                'Upper BB': chartData.upperBb[i]?.value || 0,
+                'Lower BB': chartData.lowerBb[i]?.value || 0,
+              }));
+              const ws = XLSX.utils.json_to_sheet(sheetData);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, `${ticker.symbol} Daily`);
+              XLSX.writeFile(wb, `${ticker.symbol}_candlestick_data_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            }}
+            className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-slate-800 text-[11px] font-semibold flex items-center space-x-1 transition-colors"
+            title="Export Daily OHLCV to Excel"
+          >
+            <FileSpreadsheet className="w-3 h-3" />
+            <span>Excel</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const headers = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume', '20D SMA', 'Upper BB', 'Lower BB'];
+              const rows = chartData.candles.map((c, i) => [
+                String(c.time),
+                c.open,
+                c.high,
+                c.low,
+                c.close,
+                chartData.volume[i]?.value || 0,
+                chartData.sma[i]?.value || 0,
+                chartData.upperBb[i]?.value || 0,
+                chartData.lowerBb[i]?.value || 0,
+              ]);
+              const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.setAttribute('download', `${ticker.symbol}_candlestick_data_${new Date().toISOString().slice(0, 10)}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-[11px] font-semibold flex items-center space-x-1 transition-colors"
+            title="Export Daily OHLCV to CSV"
+          >
+            <FileText className="w-3 h-3" />
+            <span>CSV</span>
+          </button>
+
+          <button
+            onClick={() => window.print()}
+            className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 border border-slate-800 text-[11px] font-semibold flex items-center space-x-1 transition-colors"
+            title="Print Technical Chart"
+          >
+            <Printer className="w-3 h-3" />
+            <span>Print</span>
           </button>
         </div>
       </div>

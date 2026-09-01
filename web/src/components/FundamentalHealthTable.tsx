@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { FundamentalHealthData } from '../types/options';
-import { ShieldCheck, ShieldAlert, AlertTriangle, ExternalLink, Activity, TrendingUp } from './icons';
+import {
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
+  ExternalLink,
+  Activity,
+  TrendingUp,
+  FileSpreadsheet,
+  FileText,
+  Printer,
+} from './icons';
 
 interface FundamentalHealthTableProps {
   data: FundamentalHealthData[];
@@ -31,6 +42,79 @@ export const FundamentalHealthTable: React.FC<FundamentalHealthTableProps> = ({ 
       setSortBy(col);
       setSortOrder('desc');
     }
+  };
+
+  const exportToCSV = () => {
+    const headers = [
+      'Symbol',
+      'Name',
+      'Sector',
+      'Spot Price',
+      'Market Cap',
+      'Altman Z-Score',
+      'Solvency Zone',
+      'Piotroski F-Score',
+      'Trailing PE',
+      'Forward PE',
+      'YoY Rev Growth %',
+      'Free Cash Flow',
+      'Current Ratio',
+      'Institutional 13F %',
+      'Latest 10-K',
+      'Latest 10-Q',
+    ];
+    const rows = filteredData.map((d) => [
+      d.symbol,
+      `"${d.name}"`,
+      d.sector,
+      d.spot_price,
+      d.market_cap,
+      d.altman_z_score,
+      d.altman_zone,
+      d.piotroski_f_score,
+      d.pe_ratio ?? 'N/A',
+      d.forward_pe ?? 'N/A',
+      d.revenue_growth_yoy,
+      d.free_cash_flow,
+      d.current_ratio,
+      d.institutional_ownership_pct,
+      d.latest_10k_date,
+      d.latest_10q_date,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `fundamental_solvency_report_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToExcel = () => {
+    const sheetData = filteredData.map((d) => ({
+      Symbol: d.symbol,
+      Name: d.name,
+      Sector: d.sector,
+      'Spot Price': d.spot_price,
+      'Market Cap': d.market_cap,
+      'Altman Z-Score': d.altman_z_score,
+      'Solvency Zone': d.altman_zone,
+      'Piotroski F-Score': d.piotroski_f_score,
+      'Trailing P/E': d.pe_ratio ?? 'N/A',
+      'Forward P/E': d.forward_pe ?? 'N/A',
+      'YoY Rev Growth %': d.revenue_growth_yoy,
+      'Free Cash Flow': d.free_cash_flow,
+      'Current Ratio': d.current_ratio,
+      '13F Ownership %': d.institutional_ownership_pct,
+      'Latest 10-K': d.latest_10k_date,
+      'Latest 10-Q': d.latest_10q_date,
+    }));
+    const ws = XLSX.utils.json_to_sheet(sheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Fundamental Solvency');
+    XLSX.writeFile(wb, `fundamental_solvency_report_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   return (
@@ -88,8 +172,31 @@ export const FundamentalHealthTable: React.FC<FundamentalHealthTableProps> = ({ 
           </div>
         </div>
 
-        <div className="text-xs text-slate-400 font-mono">
-          <span>Piotroski F-Score (0–9) • 10-K/10-Q SEC EDGAR Integrations</span>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={exportToExcel}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+            title="Export Solvency Data to Excel"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Excel (.xlsx)</span>
+          </button>
+          <button
+            onClick={exportToCSV}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+            title="Export Solvency Data to CSV"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>CSV</span>
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 border border-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+            title="Print or Save PDF"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print PDF</span>
+          </button>
         </div>
       </div>
 

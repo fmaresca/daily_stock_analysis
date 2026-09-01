@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { VolatilitySkewData } from '../types/options';
-import { Flame, Activity, AlertTriangle, ShieldCheck, TrendingUp } from './icons';
+import {
+  Flame,
+  Activity,
+  AlertTriangle,
+  ShieldCheck,
+  TrendingUp,
+  FileSpreadsheet,
+  FileText,
+  Printer,
+} from './icons';
 
 interface VolatilitySkewRadarProps {
   skewData: VolatilitySkewData[];
@@ -10,6 +20,64 @@ export const VolatilitySkewRadar: React.FC<VolatilitySkewRadarProps> = ({ skewDa
   const [selectedSymbol, setSelectedSymbol] = useState<string>(skewData[0]?.symbol || 'SPY');
 
   const activeSkew = skewData.find((s) => s.symbol === selectedSymbol) || skewData[0];
+
+  const exportSkewToCSV = () => {
+    const headers = [
+      'Symbol',
+      'Spot Price',
+      '25Δ Put IV %',
+      '25Δ Call IV %',
+      'Skew Spread (Put-Call) %',
+      'Sentiment Bias',
+      'Term Inverted (Backwardation)',
+      '7D IV %',
+      '30D IV %',
+      '60D IV %',
+      '90D IV %',
+    ];
+    const rows = skewData.map((s) => [
+      s.symbol,
+      s.spot_price,
+      s.put_iv_25d,
+      s.call_iv_25d,
+      s.iv_skew_spread,
+      s.skew_sentiment,
+      s.term_structure.some((t) => t.isInverted) ? 'YES' : 'NO',
+      s.term_structure[0]?.iv ?? 'N/A',
+      s.term_structure[1]?.iv ?? 'N/A',
+      s.term_structure[2]?.iv ?? 'N/A',
+      s.term_structure[3]?.iv ?? 'N/A',
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `volatility_skew_radar_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportSkewToExcel = () => {
+    const sheetData = skewData.map((s) => ({
+      Symbol: s.symbol,
+      'Spot Price': s.spot_price,
+      '25Δ Put IV %': s.put_iv_25d,
+      '25Δ Call IV %': s.call_iv_25d,
+      'Skew Spread %': s.iv_skew_spread,
+      'Sentiment Bias': s.skew_sentiment,
+      'Term Inversion': s.term_structure.some((t) => t.isInverted) ? 'YES' : 'NO',
+      '7D Weekly IV': s.term_structure[0]?.iv ?? 'N/A',
+      '30D IV': s.term_structure[1]?.iv ?? 'N/A',
+      '60D IV': s.term_structure[2]?.iv ?? 'N/A',
+      '90D IV': s.term_structure[3]?.iv ?? 'N/A',
+    }));
+    const ws = XLSX.utils.json_to_sheet(sheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '25-Delta Volatility Skew');
+    XLSX.writeFile(wb, `volatility_skew_radar_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
 
   return (
     <div className="space-y-4">
@@ -25,10 +93,31 @@ export const VolatilitySkewRadar: React.FC<VolatilitySkewRadarProps> = ({ skewDa
           </p>
         </div>
 
-        <div className="flex items-center space-x-2 text-xs font-mono">
-          <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-            Put Premium Edge: Put IV &gt; Call IV
-          </span>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={exportSkewToExcel}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+            title="Export Skew to Excel"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Excel</span>
+          </button>
+          <button
+            onClick={exportSkewToCSV}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+            title="Export Skew to CSV"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>CSV</span>
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 border border-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+            title="Print or Save PDF"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print PDF</span>
+          </button>
         </div>
       </div>
 
