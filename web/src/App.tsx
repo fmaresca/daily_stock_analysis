@@ -120,6 +120,9 @@ export const App: React.FC = () => {
   const [isReportQueryModalOpen, setIsReportQueryModalOpen] = useState<boolean>(false);
   const [isSchwabModalOpen, setIsSchwabModalOpen] = useState<boolean>(false);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState<boolean>(false);
+  const [lastLiveFetchTime, setLastLiveFetchTime] = useState<string>(() => {
+    return localStorage.getItem('deltaharvest_last_live_fetch') || '';
+  });
   const [stagedOrder, setStagedOrder] = useState<StagedBracketOrder | null>(null);
   const [isStagedModalOpen, setIsStagedModalOpen] = useState<boolean>(false);
   const [activeStagedOpportunity, setActiveStagedOpportunity] = useState<OptionOpportunity | null>(null);
@@ -326,6 +329,16 @@ export const App: React.FC = () => {
       } catch (clientErr) {
         console.warn('Client-side live fetch exception, falling back to cached snapshot:', clientErr);
         await fetchData();
+      }
+    }
+
+    if (success) {
+      const nowIso = new Date().toISOString();
+      setLastLiveFetchTime(nowIso);
+      try {
+        localStorage.setItem('deltaharvest_last_live_fetch', nowIso);
+      } catch (e) {
+        console.warn('Failed to save last live fetch time', e);
       }
     }
 
@@ -780,7 +793,7 @@ export const App: React.FC = () => {
       {/* Header with Search, Watchlists, Reports, and Help triggers */}
       <Header
         summary={dataPayload?.summary || null}
-        lastUpdated={dataPayload?.metadata.last_updated || ''}
+        lastUpdated={lastLiveFetchTime || dataPayload?.metadata.last_updated || ''}
         totalTickers={universeTickers.length}
         onRefresh={fetchData}
         onLiveRecalculate={() => handleLiveRecalculate(currentWatchlistSymbols)}
@@ -1284,6 +1297,7 @@ export const App: React.FC = () => {
         onOpenWatchlist={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
+        onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
         onExportCSV={handleExportCSV}
         onExportExcel={handleExportExcel}
         onTriggerPrint={triggerPrintReport}

@@ -30,6 +30,7 @@ interface CommandPaletteProps {
   onOpenWatchlist: () => void;
   onOpenReports: () => void;
   onOpenSchwab?: () => void;
+  onOpenDiagnostics?: () => void;
   onExportCSV: () => void;
   onExportExcel: () => void;
   onTriggerPrint: () => void;
@@ -45,6 +46,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenWatchlist,
   onOpenReports,
   onOpenSchwab,
+  onOpenDiagnostics,
   onExportCSV,
   onExportExcel,
   onTriggerPrint,
@@ -208,6 +210,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: <FileText className="w-4 h-4 text-indigo-400" />,
       action: () => {
         onOpenReports();
+        onClose();
+      },
+    },
+    {
+      id: 'action-diagnostics',
+      title: '⚡ Automated API Self-Test & Diagnostics Suite',
+      subtitle: 'Probe live endpoints for Schwab API, Yahoo tick stream, Polymarket, and StockTwits',
+      icon: <Zap className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        if (onOpenDiagnostics) onOpenDiagnostics();
         onClose();
       },
     },

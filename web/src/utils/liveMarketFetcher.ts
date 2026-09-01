@@ -174,7 +174,7 @@ export async function fetchClientSideLiveMarketData(
   // Process in parallel batches of 5
   const batchSize = 5;
   for (let i = 0; i < symbols.length; i += batchSize) {
-    const batch = symbols.slice(i, i += batchSize);
+    const batch = symbols.slice(i, i + batchSize);
     const results = await Promise.all(
       batch.map(async (sym) => {
         const chartData = await fetchTickerChartData(sym);
