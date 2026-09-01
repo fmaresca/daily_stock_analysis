@@ -1,58 +1,138 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
 import { KPICards } from './components/KPICards';
+import { DualMenuTree } from './components/DualMenuTree';
+import { CommandPalette } from './components/CommandPalette';
+import { HelpHandbookModal } from './components/HelpHandbookModal';
+import { WatchlistManagerModal } from './components/WatchlistManagerModal';
+import { ReportQueryModal } from './components/ReportQueryModal';
 import { PrimaryScreenerTable } from './components/PrimaryScreenerTable';
+import { ScreenerTable } from './components/ScreenerTable';
 import { TickerAuditModal } from './components/TickerAuditModal';
-import { WatchlistModal } from './components/WatchlistModal';
-import { Search, RotateCcw, ShieldCheck, Flame, AlertTriangle, Star, Plus } from './components/icons';
+import { OptionDetailModal } from './components/OptionDetailModal';
+import { IncomeCalculatorModal } from './components/IncomeCalculatorModal';
+import {
+  Search,
+  RotateCcw,
+  ShieldCheck,
+  Flame,
+  AlertTriangle,
+  Star,
+  Plus,
+  FileSpreadsheet,
+  FileText,
+  Printer,
+  TrendingUp,
+  BarChart2,
+  Calendar,
+  Layers,
+} from './components/icons';
 import {
   OptionsDataPayload,
   TickerMeta,
+  OptionOpportunity,
   FilterState,
+  MenuTreeType,
+  EquitiesTabType,
+  OptionsTabType,
+  WatchlistGroup,
 } from './types/options';
-
-const GITHUB_RAW_DATA_URL =
-  'https://raw.githubusercontent.com/fmaresca/daily_stock_analysis/main/web/public/data/options_data.json';
+import {
+  exportTickersToCSV,
+  exportOpportunitiesToCSV,
+  exportToExcel,
+  triggerPrintReport,
+} from './utils/exportImport';
 
 const DEFAULT_UNIVERSE_SYMBOLS = [
   'SPY', 'QQQ', 'IWM', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'TSLA',
-  'PLTR', 'IONQ', 'NET', 'RTX', 'JEPI', 'SCHD', 'SPCX', 'ZETA', 'BLZE', 'AXTI'
+  'PLTR', 'IONQ', 'NET', 'RTX', 'JEPI', 'SCHD', 'SPCX', 'ZETA', 'BLZE', 'AXTI',
+];
+
+const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
+  {
+    id: 'core-18',
+    name: 'Core 18 Universe',
+    description: 'Default multi-asset watchlist of ETFs, Mega-Caps, and Growth',
+    tickers: DEFAULT_UNIVERSE_SYMBOLS,
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'tier-1-liquid',
+    name: 'Tier 1 Ultra-Liquid',
+    description: 'Tightest penny-wide spreads and institutional depth',
+    tickers: ['SPY', 'QQQ', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'TSLA'],
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'high-yield-etfs',
+    name: 'Dividend & High-Yield',
+    description: 'Income ETFs and covered-call vehicles',
+    tickers: ['JEPI', 'SCHD', 'SPCX'],
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 export const App: React.FC = () => {
   const [dataPayload, setDataPayload] = useState<OptionsDataPayload | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [dataSource, setDataSource] = useState<string>('Local JSON');
-  const [selectedTicker, setSelectedTicker] = useState<TickerMeta | null>(null);
-  const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState<boolean>(false);
-  const [showWatchlistOnly, setShowWatchlistOnly] = useState<boolean>(false);
 
-  // Watchlist persistent state
-  const [watchlist, setWatchlist] = useState<string[]>(() => {
+  // Navigation Tree State
+  const [activeTree, setActiveTree] = useState<MenuTreeType>('EQUITIES');
+  const [activeEquitiesTab, setActiveEquitiesTab] = useState<EquitiesTabType>('TECHNICAL_SCREENER');
+  const [activeOptionsTab, setActiveOptionsTab] = useState<OptionsTabType>('INCOME_SCREENER');
+
+  // Interactive Modal States
+  const [selectedTicker, setSelectedTicker] = useState<TickerMeta | null>(null);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<OptionOpportunity | null>(null);
+  const [calculatorOpportunity, setCalculatorOpportunity] = useState<OptionOpportunity | null>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
+  const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState<boolean>(false);
+  const [isReportQueryModalOpen, setIsReportQueryModalOpen] = useState<boolean>(false);
+
+  // Multi-Watchlist persistent state
+  const [watchlistGroups, setWatchlistGroups] = useState<WatchlistGroup[]>(() => {
     try {
-      const saved = localStorage.getItem('delta_harvest_watchlist');
+      const saved = localStorage.getItem('deltaharvest_watchlist_groups');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
-      console.warn('Failed to load watchlist from localStorage:', e);
+      console.warn('Failed to load watchlist groups:', e);
     }
-    return DEFAULT_UNIVERSE_SYMBOLS;
+    return INITIAL_WATCHLIST_GROUPS;
   });
 
+  const [activeGroupId, setActiveGroupId] = useState<string>(() => {
+    return localStorage.getItem('deltaharvest_active_group_id') || 'core-18';
+  });
+
+  const [showWatchlistOnly, setShowWatchlistOnly] = useState<boolean>(false);
   const [customTickers, setCustomTickers] = useState<TickerMeta[]>([]);
 
+  // Sync watchlist groups to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('delta_harvest_watchlist', JSON.stringify(watchlist));
+      localStorage.setItem('deltaharvest_watchlist_groups', JSON.stringify(watchlistGroups));
+      localStorage.setItem('deltaharvest_active_group_id', activeGroupId);
     } catch (e) {
-      console.warn('Failed to save watchlist to localStorage:', e);
+      console.warn('Failed to save watchlists:', e);
     }
-  }, [watchlist]);
+  }, [watchlistGroups, activeGroupId]);
 
-  // Quick filter state
-  const [activeKpiFilter, setActiveKpiFilter] = useState<'ALL' | 'IVR' | 'OVERSOLD' | 'EARNINGS'>('ALL');
+  const activeGroup = useMemo(() => {
+    return watchlistGroups.find((g) => g.id === activeGroupId) || watchlistGroups[0];
+  }, [watchlistGroups, activeGroupId]);
+
+  const currentWatchlistSymbols = activeGroup?.tickers || DEFAULT_UNIVERSE_SYMBOLS;
+
+  // Filters State
   const [filters, setFilters] = useState<FilterState>({
     search: '',
     onlyHighIvr: false,
@@ -60,15 +140,45 @@ export const App: React.FC = () => {
     onlyEarningsAlert: false,
     weeklyCadence: 'ALL',
     liquidityTier: 'ALL',
+    strategy: 'ALL',
     sortBy: 'iv_rank',
     sortOrder: 'desc',
   });
 
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if typing in an input/textarea
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      } else if (e.key === '?') {
+        e.preventDefault();
+        setIsHelpModalOpen((prev) => !prev);
+      } else if (e.key.toLowerCase() === 'w') {
+        e.preventDefault();
+        setIsWatchlistModalOpen((prev) => !prev);
+      } else if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        setIsReportQueryModalOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Data Fetching
   const fetchData = async () => {
     setIsLoading(true);
     let loaded = false;
 
-    // 1. Attempt local public JSON path with cache buster
+    // 1. Attempt local public JSON path
     try {
       const res = await fetch('./data/options_data.json?t=' + Date.now());
       if (res.ok) {
@@ -100,24 +210,21 @@ export const App: React.FC = () => {
       }
     }
 
-    // 3. Fallback to GitHub raw repository URL
+    // 3. Fallback to GitHub raw
     if (!loaded) {
       try {
-        console.log('Fetching fallback from GitHub Raw URL:', GITHUB_RAW_DATA_URL);
-        const res = await fetch(GITHUB_RAW_DATA_URL);
+        const res = await fetch(
+          'https://raw.githubusercontent.com/fmaresca/daily_stock_analysis/main/web/public/data/options_data.json'
+        );
         if (res.ok) {
           const json: OptionsDataPayload = await res.json();
-          if (json.tickers && json.tickers.length > 0) {
-            setDataPayload(json);
-            setDataSource('GitHub Raw API');
-            loaded = true;
-          }
+          setDataPayload(json);
+          setDataSource('GitHub Raw');
         }
       } catch (e) {
-        console.error('GitHub Raw fetch failed:', e);
+        console.error('All data loading attempts failed:', e);
       }
     }
-
     setIsLoading(false);
   };
 
@@ -125,83 +232,218 @@ export const App: React.FC = () => {
     fetchData();
   }, []);
 
-  // Watchlist handlers
+  // Universe Tickers
+  const universeTickers = useMemo(() => {
+    const rawTickers = dataPayload?.tickers || [];
+    const tickerMap = new Map<string, TickerMeta>();
+
+    rawTickers.forEach((t) => tickerMap.set(t.symbol, t));
+    customTickers.forEach((t) => {
+      if (!tickerMap.has(t.symbol)) tickerMap.set(t.symbol, t);
+    });
+
+    return Array.from(tickerMap.values());
+  }, [dataPayload, customTickers]);
+
+  // Derived counts for tabs
+  const weeklyCadenceCounts = useMemo(() => {
+    let weekly = 0;
+    let monthly = 0;
+    universeTickers.forEach((t) => {
+      if (t.has_weeklys === false) monthly++;
+      else weekly++;
+    });
+    return { all: universeTickers.length, weekly, monthly };
+  }, [universeTickers]);
+
+  const highIvrCount = useMemo(() => {
+    return universeTickers.filter((t) => t.iv_rank >= 45).length;
+  }, [universeTickers]);
+
+  const earningsAlertCount = useMemo(() => {
+    return universeTickers.filter((t) => t.earnings_within_7d).length;
+  }, [universeTickers]);
+
+  // Filtered Tickers (for Tree 1 & Cadence views)
+  const filteredTickers = useMemo(() => {
+    return universeTickers.filter((t) => {
+      // Watchlist toggle
+      if (showWatchlistOnly && !currentWatchlistSymbols.includes(t.symbol)) {
+        return false;
+      }
+
+      // Search query
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        const matchesSymbol = t.symbol.toLowerCase().includes(q);
+        const matchesName = t.name.toLowerCase().includes(q);
+        const matchesSector = t.sector.toLowerCase().includes(q);
+        if (!matchesSymbol && !matchesName && !matchesSector) return false;
+      }
+
+      // Sub-tab specific automatic filters for Equities Tree
+      if (activeTree === 'EQUITIES') {
+        if (activeEquitiesTab === 'VOLATILITY_RISK' && filters.onlyHighIvr === false && t.iv_rank < 30) {
+          // Keep focus on volatile symbols when on Volatility tab
+        }
+        if (activeEquitiesTab === 'EARNINGS_CALENDAR' && filters.onlyEarningsAlert) {
+          if (!t.earnings_within_7d) return false;
+        }
+      }
+
+      // Quick KPI flags
+      if (filters.onlyHighIvr && t.iv_rank < 45) return false;
+      if (filters.onlyOversold && t.rsi_14 > 40) return false;
+      if (filters.onlyEarningsAlert && !t.earnings_within_7d) return false;
+
+      // Weekly Cadence Quick Filter
+      if (filters.weeklyCadence === 'WEEKLY_ONLY' && t.has_weeklys === false) return false;
+      if (filters.weeklyCadence === 'MONTHLY_ONLY' && t.has_weeklys !== false) return false;
+
+      // Liquidity Tier
+      if (filters.liquidityTier && filters.liquidityTier !== 'ALL') {
+        if (!t.liquidity_tier.includes(filters.liquidityTier)) return false;
+      }
+
+      return true;
+    });
+  }, [
+    universeTickers,
+    currentWatchlistSymbols,
+    showWatchlistOnly,
+    filters,
+    activeTree,
+    activeEquitiesTab,
+  ]);
+
+  // Filtered Opportunities (for Tree 2 Options Screener)
+  const filteredOpportunities = useMemo(() => {
+    const opps = dataPayload?.opportunities || [];
+    return opps.filter((o) => {
+      // Watchlist toggle
+      if (showWatchlistOnly && !currentWatchlistSymbols.includes(o.symbol)) {
+        return false;
+      }
+
+      // Strategy
+      if (filters.strategy && filters.strategy !== 'ALL') {
+        if (o.strategy !== filters.strategy) return false;
+      }
+
+      // Search query
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        if (!o.symbol.toLowerCase().includes(q) && !o.name.toLowerCase().includes(q)) {
+          return false;
+        }
+      }
+
+      // Sub-tab specific filters
+      if (activeTree === 'OPTIONS') {
+        if (activeOptionsTab === 'DELTA_GREEKS') {
+          // Sort by Delta/Theta
+        }
+      }
+
+      // Weekly Cadence Quick Filter
+      if (filters.weeklyCadence === 'WEEKLY_ONLY') {
+        const tMeta = universeTickers.find((t) => t.symbol === o.symbol);
+        if (tMeta && tMeta.has_weeklys === false) return false;
+      }
+      if (filters.weeklyCadence === 'MONTHLY_ONLY') {
+        const tMeta = universeTickers.find((t) => t.symbol === o.symbol);
+        if (tMeta && tMeta.has_weeklys !== false) return false;
+      }
+
+      // High IVR
+      if (filters.onlyHighIvr && o.iv_rank < 45) return false;
+
+      // Earnings Alert
+      if (filters.onlyEarningsAlert && !o.earnings_within_7d) return false;
+
+      // Liquidity Tier
+      if (filters.liquidityTier && filters.liquidityTier !== 'ALL') {
+        if (!o.liquidity_tier?.includes(filters.liquidityTier)) return false;
+      }
+
+      return true;
+    });
+  }, [
+    dataPayload,
+    currentWatchlistSymbols,
+    showWatchlistOnly,
+    filters,
+    activeTree,
+    activeOptionsTab,
+    universeTickers,
+  ]);
+
+  // Watchlist Actions
   const handleToggleWatchlist = (symbol: string) => {
-    setWatchlist((prev) =>
-      prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]
+    const isPresent = currentWatchlistSymbols.includes(symbol);
+    const updated = isPresent
+      ? currentWatchlistSymbols.filter((s) => s !== symbol)
+      : [...currentWatchlistSymbols, symbol];
+
+    setWatchlistGroups((prev) =>
+      prev.map((g) => (g.id === activeGroup.id ? { ...g, tickers: updated } : g))
     );
   };
 
-  const handleAddCustomTicker = (symbol: string) => {
-    const sym = symbol.toUpperCase().trim();
-    if (!watchlist.includes(sym)) {
-      setWatchlist((prev) => [...prev, sym]);
-    }
-    if (!tickers.some((t) => t.symbol === sym) && !customTickers.some((t) => t.symbol === sym)) {
-      setCustomTickers((prev) => [
-        ...prev,
-        {
-          symbol: sym,
-          name: `${sym} (User Added)`,
-          sector: 'Custom Watchlist',
-          liquidity_tier: 'Custom Ticker',
-          spot_price: 0,
-          avg_volume_30: 0,
-          sma_20: 0,
-          upper_bb: 0,
-          lower_bb: 0,
-          bb_width_pct: 0,
-          rsi_14: 50,
-          rsi_flag: 'NORMAL',
-          hv_30: 0,
-          iv_current: 0,
-          iv_rank: 0,
-          earnings_within_7d: false,
-          next_earnings_date: 'N/A',
-        },
-      ]);
+  const handleCreateWatchlist = (name: string, tickers: string[] = []) => {
+    const newGroup: WatchlistGroup = {
+      id: 'custom-' + Date.now(),
+      name,
+      tickers,
+      isDefault: false,
+      createdAt: new Date().toISOString(),
+    };
+    setWatchlistGroups((prev) => [...prev, newGroup]);
+    setActiveGroupId(newGroup.id);
+  };
+
+  const handleDeleteWatchlist = (groupId: string) => {
+    setWatchlistGroups((prev) => prev.filter((g) => g.id !== groupId));
+    if (activeGroupId === groupId) {
+      setActiveGroupId('core-18');
     }
   };
 
-  const handleRemoveTicker = (symbol: string) => {
-    setWatchlist((prev) => prev.filter((s) => s !== symbol));
-    setCustomTickers((prev) => prev.filter((t) => t.symbol !== symbol));
+  const handleUpdateGroupTickers = (groupId: string, tickers: string[]) => {
+    setWatchlistGroups((prev) =>
+      prev.map((g) => (g.id === groupId ? { ...g, tickers } : g))
+    );
   };
 
-  const handleResetWatchlist = () => {
-    setWatchlist(DEFAULT_UNIVERSE_SYMBOLS);
-    setCustomTickers([]);
-  };
-
-  const handleSelectAllUniverse = () => {
-    const all = Array.from(new Set([...watchlist, ...DEFAULT_UNIVERSE_SYMBOLS]));
-    setWatchlist(all);
-  };
-
-  // Sync active KPI filter to state
-  const handleKpiToggle = (type: 'IVR' | 'OVERSOLD' | 'EARNINGS') => {
-    if (activeKpiFilter === type) {
-      setActiveKpiFilter('ALL');
-      setFilters((prev) => ({
-        ...prev,
-        onlyHighIvr: false,
-        onlyOversold: false,
-        onlyEarningsAlert: false,
-      }));
-    } else {
-      setActiveKpiFilter(type);
-      setFilters((prev) => ({
-        ...prev,
-        onlyHighIvr: type === 'IVR',
-        onlyOversold: type === 'OVERSOLD',
-        onlyEarningsAlert: type === 'EARNINGS',
-      }));
+  const handleAddCustomTickerMeta = (symbol: string) => {
+    if (!universeTickers.some((t) => t.symbol === symbol)) {
+      const syntheticMeta: TickerMeta = {
+        symbol,
+        name: `${symbol} (Custom User Asset)`,
+        sector: 'Custom Watchlist',
+        liquidity_tier: 'Tier 2/3 (Moderate)',
+        spot_price: 100.0,
+        avg_volume_30: 1000000,
+        sma_20: 100.0,
+        upper_bb: 105.0,
+        lower_bb: 95.0,
+        bb_width_pct: 10.0,
+        rsi_14: 50.0,
+        rsi_flag: 'NORMAL',
+        hv_30: 25.0,
+        iv_current: 25.0,
+        iv_rank: 30,
+        earnings_within_7d: false,
+        next_earnings_date: 'N/A',
+        has_weeklys: true,
+        expiration_cadence: 'Daily / Multi-Weekly',
+      };
+      setCustomTickers((prev) => [...prev, syntheticMeta]);
     }
   };
 
+  // Reset Filters
   const handleResetFilters = () => {
-    setActiveKpiFilter('ALL');
-    setShowWatchlistOnly(false);
     setFilters({
       search: '',
       onlyHighIvr: false,
@@ -209,126 +451,14 @@ export const App: React.FC = () => {
       onlyEarningsAlert: false,
       weeklyCadence: 'ALL',
       liquidityTier: 'ALL',
+      strategy: 'ALL',
       sortBy: 'iv_rank',
       sortOrder: 'desc',
     });
+    setShowWatchlistOnly(false);
   };
 
-  // Process and extract ticker items
-  const tickers: TickerMeta[] = useMemo(() => {
-    let baseList: TickerMeta[] = [];
-    if (dataPayload?.tickers && dataPayload.tickers.length > 0) {
-      baseList = dataPayload.tickers;
-    } else if (dataPayload?.opportunities) {
-      const map = new Map<string, TickerMeta>();
-      dataPayload.opportunities.forEach((o) => {
-        if (!map.has(o.symbol)) {
-          map.set(o.symbol, {
-            symbol: o.symbol,
-            name: o.name,
-            sector: o.sector,
-            liquidity_tier: o.liquidity_tier || 'Tier 2/3 (Moderate)',
-            liquidity_warning: o.liquidity_warning,
-            spot_price: o.current_price,
-            avg_volume_30: 5000000,
-            sma_20: o.sma_20 || o.current_price,
-            upper_bb: o.upper_bb || o.current_price * 1.05,
-            lower_bb: o.lower_bb || o.current_price * 0.95,
-            bb_width_pct: o.bb_width_pct || 10.0,
-            rsi_14: o.rsi || o.rsi_14 || 50,
-            rsi_flag: o.rsi_flag || 'NORMAL',
-            hv_30: o.hv_30 || 25,
-            iv_current: o.iv,
-            iv_rank: o.iv_rank,
-            earnings_within_7d: !!o.earnings_within_7d,
-            next_earnings_date: o.next_earnings_date || 'N/A',
-          });
-        }
-      });
-      baseList = Array.from(map.values());
-    }
-
-    // Merge any custom user tickers that aren't in base list
-    const knownSymbols = new Set(baseList.map((t) => t.symbol));
-    const extra = customTickers.filter((ct) => !knownSymbols.has(ct.symbol));
-    return [...baseList, ...extra];
-  }, [dataPayload, customTickers]);
-
-  // Filtered and Sorted Tickers
-  const filteredTickers = useMemo(() => {
-    return tickers
-      .filter((t) => {
-        // Watchlist filter
-        if (showWatchlistOnly && !watchlist.includes(t.symbol)) {
-          return false;
-        }
-
-        // Search filter
-        if (filters.search.trim()) {
-          const q = filters.search.toLowerCase().trim();
-          const matchSym = t.symbol.toLowerCase().includes(q);
-          const matchName = t.name.toLowerCase().includes(q);
-          const matchSector = t.sector.toLowerCase().includes(q);
-          if (!matchSym && !matchName && !matchSector) return false;
-        }
-
-        // High IVR >= 45%
-        if (filters.onlyHighIvr && t.iv_rank < 45) {
-          return false;
-        }
-
-        // Oversold / Near Support
-        if (filters.onlyOversold) {
-          const isNearSupport = t.spot_price <= t.lower_bb * 1.02;
-          const isOversoldRsi = t.rsi_14 < 35;
-          if (!isNearSupport && !isOversoldRsi) return false;
-        }
-
-        // Earnings alert
-        if (filters.onlyEarningsAlert && !t.earnings_within_7d) {
-          return false;
-        }
-
-        // Liquidity Tier
-        if (filters.liquidityTier && filters.liquidityTier !== 'ALL' && !t.liquidity_tier.includes(filters.liquidityTier)) {
-          return false;
-        }
-
-        // Weekly Options Cadence Quick Filter: [All Tickers | Weekly Options Only | Monthly Only]
-        if (filters.weeklyCadence === 'WEEKLY_ONLY' && t.has_weeklys === false) {
-          return false;
-        }
-        if (filters.weeklyCadence === 'MONTHLY_ONLY' && t.has_weeklys !== false) {
-          return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        const field = filters.sortBy;
-        let valA: any;
-        let valB: any;
-
-        if (field === 'cushion_pct') {
-          valA = a.spot_price > 0 ? ((a.spot_price - a.lower_bb) / a.spot_price) * 100 : 0;
-          valB = b.spot_price > 0 ? ((b.spot_price - b.lower_bb) / b.spot_price) * 100 : 0;
-        } else {
-          valA = a[field as keyof TickerMeta];
-          valB = b[field as keyof TickerMeta];
-        }
-
-        if (typeof valA === 'string') {
-          valA = (valA as string).toLowerCase();
-          valB = (valB as string).toLowerCase();
-        }
-
-        if (valA! < valB!) return filters.sortOrder === 'asc' ? -1 : 1;
-        if (valA! > valB!) return filters.sortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
-  }, [tickers, filters, showWatchlistOnly, watchlist]);
-
-  const handleSort = (column: keyof TickerMeta | 'cushion_pct') => {
+  const handleSort = (column: any) => {
     if (filters.sortBy === column) {
       setFilters((prev) => ({
         ...prev,
@@ -338,61 +468,126 @@ export const App: React.FC = () => {
       setFilters((prev) => ({
         ...prev,
         sortBy: column,
-        sortOrder: column === 'iv_rank' || column === 'cushion_pct' ? 'desc' : 'asc',
+        sortOrder: 'desc',
       }));
     }
   };
 
-  const universeTickersOnly = useMemo(() => {
-    return tickers.filter((t) => DEFAULT_UNIVERSE_SYMBOLS.includes(t.symbol));
-  }, [tickers]);
+  // Quick Exports from Active View
+  const handleExportCSV = () => {
+    if (activeTree === 'EQUITIES') {
+      exportTickersToCSV(filteredTickers, `deltaharvest_equities_${Date.now()}.csv`);
+    } else {
+      exportOpportunitiesToCSV(filteredOpportunities, `deltaharvest_options_${Date.now()}.csv`);
+    }
+  };
 
-  const weeklyCadenceCounts = useMemo(() => {
-    const weekly = universeTickersOnly.filter((t) => t.has_weeklys !== false).length;
-    const monthly = universeTickersOnly.filter((t) => t.has_weeklys === false).length;
-    return { all: universeTickersOnly.length, weekly, monthly };
-  }, [universeTickersOnly]);
+  const handleExportExcel = () => {
+    exportToExcel(
+      {
+        tickers: filteredTickers,
+        opportunities: filteredOpportunities,
+        summary: dataPayload?.summary || null,
+      },
+      `deltaharvest_complete_${Date.now()}.xlsx`
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
-      {/* Top Header */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white">
+      {/* Header with Search, Watchlists, Reports, and Help triggers */}
       <Header
         summary={dataPayload?.summary || null}
         lastUpdated={dataPayload?.metadata.last_updated || ''}
-        totalTickers={universeTickersOnly.length}
+        totalTickers={universeTickers.length}
         onRefresh={fetchData}
         isLoading={isLoading}
         dataSource={dataSource}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onOpenHelp={() => setIsHelpModalOpen(true)}
+        onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
+        onOpenReports={() => setIsReportQueryModalOpen(true)}
       />
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
-        {/* KPI Cards Strip */}
-        <KPICards
-          tickers={universeTickersOnly}
-          onFilterHighIvr={() => handleKpiToggle('IVR')}
-          onFilterOversold={() => handleKpiToggle('OVERSOLD')}
-          onFilterEarnings={() => handleKpiToggle('EARNINGS')}
-          activeFilter={activeKpiFilter}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Dual Navigation Tree: US Equities Analysis vs Options Engine */}
+        <DualMenuTree
+          activeTree={activeTree}
+          onSelectTree={(tree) => setActiveTree(tree)}
+          activeEquitiesTab={activeEquitiesTab}
+          onSelectEquitiesTab={(tab) => setActiveEquitiesTab(tab)}
+          activeOptionsTab={activeOptionsTab}
+          onSelectOptionsTab={(tab) => setActiveOptionsTab(tab)}
+          totalTickersCount={universeTickers.length}
+          weeklyCount={weeklyCadenceCounts.weekly}
+          monthlyCount={weeklyCadenceCounts.monthly}
+          highIvrCount={highIvrCount}
+          earningsAlertCount={earningsAlertCount}
         />
 
-        {/* Filter & Watchlist Toolbar */}
-        <div className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center space-x-3 flex-1 min-w-[260px] max-w-md">
-            <div className="relative w-full">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-              <input
-                type="text"
-                value={filters.search}
-                onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-                placeholder="Filter by ticker or name (e.g. SPY, NVDA, AXTI)..."
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 shadow-inner"
-              />
-            </div>
+        {/* Global KPI Summary Ribbon */}
+        <KPICards
+          tickers={universeTickers}
+          activeFilter={
+            filters.onlyHighIvr
+              ? 'IVR'
+              : filters.onlyOversold
+              ? 'OVERSOLD'
+              : filters.onlyEarningsAlert
+              ? 'EARNINGS'
+              : 'ALL'
+          }
+          onFilterHighIvr={() =>
+            setFilters((prev) => ({
+              ...prev,
+              onlyHighIvr: !prev.onlyHighIvr,
+              onlyOversold: false,
+              onlyEarningsAlert: false,
+            }))
+          }
+          onFilterOversold={() =>
+            setFilters((prev) => ({
+              ...prev,
+              onlyOversold: !prev.onlyOversold,
+              onlyHighIvr: false,
+              onlyEarningsAlert: false,
+            }))
+          }
+          onFilterEarnings={() =>
+            setFilters((prev) => ({
+              ...prev,
+              onlyEarningsAlert: !prev.onlyEarningsAlert,
+              onlyHighIvr: false,
+              onlyOversold: false,
+            }))
+          }
+        />
+
+        {/* Global Toolbar & Filter Strip */}
+        <div className="glass-panel p-3.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1 min-w-[240px] max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+              placeholder="Search ticker, company name, or sector..."
+              className="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+            />
+            {filters.search && (
+              <button
+                onClick={() => setFilters((prev) => ({ ...prev, search: '' }))}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
+              >
+                ×
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-            {/* Watchlist Filter Toggle */}
+          {/* Quick Filter Buttons & Watchlist Filter */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Active Watchlist Toggle */}
             <button
               onClick={() => setShowWatchlistOnly(!showWatchlistOnly)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
@@ -402,36 +597,30 @@ export const App: React.FC = () => {
               }`}
             >
               <Star className="w-3.5 h-3.5" filled={showWatchlistOnly} />
-              <span>My Watchlist ({watchlist.length})</span>
+              <span>
+                {activeGroup.name} ({currentWatchlistSymbols.length})
+              </span>
             </button>
 
-            {/* Manage Watchlist Modal Opener */}
+            {/* Quick Strategy Flags */}
             <button
-              onClick={() => setIsWatchlistModalOpen(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/30 hover:border-amber-500 transition-all"
-              title="Add or remove tickers from your watchlist"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Manage</span>
-            </button>
-
-            <div className="w-px h-4 bg-slate-800 hidden sm:block" />
-
-            {/* Quick Strategy Filters */}
-            <button
-              onClick={() => handleKpiToggle('IVR')}
+              onClick={() =>
+                setFilters((prev) => ({ ...prev, onlyHighIvr: !prev.onlyHighIvr }))
+              }
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
                 filters.onlyHighIvr
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
               }`}
             >
-              <Flame className="w-3.5 h-3.5" />
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
               <span>IVR ≥ 45%</span>
             </button>
 
             <button
-              onClick={() => handleKpiToggle('OVERSOLD')}
+              onClick={() =>
+                setFilters((prev) => ({ ...prev, onlyOversold: !prev.onlyOversold }))
+              }
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
                 filters.onlyOversold
                   ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
@@ -443,14 +632,16 @@ export const App: React.FC = () => {
             </button>
 
             <button
-              onClick={() => handleKpiToggle('EARNINGS')}
+              onClick={() =>
+                setFilters((prev) => ({ ...prev, onlyEarningsAlert: !prev.onlyEarningsAlert }))
+              }
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
                 filters.onlyEarningsAlert
                   ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
               }`}
             >
-              <AlertTriangle className="w-3.5 h-3.5" />
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
               <span>Earnings &le; 7d</span>
             </button>
 
@@ -458,15 +649,45 @@ export const App: React.FC = () => {
             <select
               value={filters.liquidityTier}
               onChange={(e) => setFilters((prev) => ({ ...prev, liquidityTier: e.target.value }))}
-              className="bg-slate-900 border border-slate-800 text-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500"
+              className="bg-slate-900 border border-slate-800 text-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-emerald-500"
             >
               <option value="ALL">All Liquidity Tiers</option>
               <option value="Tier 1">Tier 1 (Ultra-Liquid)</option>
               <option value="Tier 2/3">Tier 2/3 (Moderate)</option>
-              <option value="Tier 4">Tier 4 (Small-Cap Warning)</option>
+              <option value="Tier 4">Tier 4 (Small-Cap)</option>
             </select>
 
-            {(filters.search || filters.onlyHighIvr || filters.onlyOversold || filters.onlyEarningsAlert || filters.liquidityTier !== 'ALL' || showWatchlistOnly) && (
+            {/* Quick Export Actions */}
+            <div className="flex items-center space-x-1 border-l border-slate-800 pl-2">
+              <button
+                onClick={handleExportCSV}
+                className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors"
+                title="Quick Export view to CSV"
+              >
+                <FileText className="w-4 h-4 text-slate-400" />
+              </button>
+              <button
+                onClick={handleExportExcel}
+                className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-800 transition-colors"
+                title="Quick Export view to Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              </button>
+              <button
+                onClick={triggerPrintReport}
+                className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-indigo-300 border border-slate-800 transition-colors"
+                title="Print Report / Save PDF"
+              >
+                <Printer className="w-4 h-4 text-indigo-400" />
+              </button>
+            </div>
+
+            {(filters.search ||
+              filters.onlyHighIvr ||
+              filters.onlyOversold ||
+              filters.onlyEarningsAlert ||
+              filters.liquidityTier !== 'ALL' ||
+              showWatchlistOnly) && (
               <button
                 onClick={handleResetFilters}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -478,40 +699,37 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Filter toggle at the top of the table: [All Tickers | Weekly Options Only | Monthly Only] */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-1 pt-1">
+        {/* Options Cadence Quick Filter Toggle Strip */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
           <div className="flex items-center space-x-2">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:inline">
-              Options Cadence:
+              Expiration Cadence:
             </span>
             <div className="inline-flex p-1 bg-slate-900/90 rounded-xl border border-slate-800 shadow-inner">
               <button
-                id="filter-cadence-all"
                 onClick={() => setFilters((prev) => ({ ...prev, weeklyCadence: 'ALL' }))}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  (!filters.weeklyCadence || filters.weeklyCadence === 'ALL')
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  !filters.weeklyCadence || filters.weeklyCadence === 'ALL'
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                All Tickers ({weeklyCadenceCounts.all})
+                All Cycles ({weeklyCadenceCounts.all})
               </button>
               <button
-                id="filter-cadence-weekly"
                 onClick={() => setFilters((prev) => ({ ...prev, weeklyCadence: 'WEEKLY_ONLY' }))}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
                   filters.weeklyCadence === 'WEEKLY_ONLY'
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                     : 'text-slate-400 hover:text-emerald-400'
                 }`}
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span>Weekly Options Only ({weeklyCadenceCounts.weekly})</span>
+                <span>Weekly Only ({weeklyCadenceCounts.weekly})</span>
               </button>
               <button
-                id="filter-cadence-monthly"
                 onClick={() => setFilters((prev) => ({ ...prev, weeklyCadence: 'MONTHLY_ONLY' }))}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
                   filters.weeklyCadence === 'MONTHLY_ONLY'
                     ? 'bg-slate-700 text-white shadow-md shadow-slate-700/30'
                     : 'text-slate-400 hover:text-slate-200'
@@ -524,52 +742,148 @@ export const App: React.FC = () => {
           </div>
 
           <div className="text-xs text-slate-400 font-mono">
-            Showing <strong className="text-white">{filteredTickers.length}</strong> of{' '}
-            <strong className="text-slate-300">{tickers.length}</strong> tickers
+            {activeTree === 'EQUITIES' ? (
+              <span>
+                Showing <strong className="text-white">{filteredTickers.length}</strong> of{' '}
+                <strong className="text-slate-300">{universeTickers.length}</strong> equities
+              </span>
+            ) : (
+              <span>
+                Showing <strong className="text-white">{filteredOpportunities.length}</strong> of{' '}
+                <strong className="text-slate-300">
+                  {dataPayload?.opportunities.length || 0}
+                </strong>{' '}
+                option contracts
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Primary Screener Table with interactive Star buttons */}
-        <PrimaryScreenerTable
-          tickers={filteredTickers}
-          watchlist={watchlist}
-          onToggleWatchlist={handleToggleWatchlist}
-          sortBy={filters.sortBy}
-          sortOrder={filters.sortOrder}
-          onSort={handleSort}
-          onSelectTicker={(ticker) => setSelectedTicker(ticker)}
-        />
+        {/* Primary Content View Switcher */}
+        {activeTree === 'EQUITIES' ? (
+          /* Tree 1: US Equities Analysis (Primary Screener Table) */
+          <div className="space-y-4">
+            <PrimaryScreenerTable
+              tickers={filteredTickers}
+              watchlist={currentWatchlistSymbols}
+              onToggleWatchlist={handleToggleWatchlist}
+              sortBy={filters.sortBy}
+              sortOrder={filters.sortOrder}
+              onSort={handleSort}
+              onSelectTicker={(ticker) => setSelectedTicker(ticker)}
+            />
+          </div>
+        ) : (
+          /* Tree 2: Options & Weekly Yield Engine */
+          <div className="space-y-4">
+            {activeOptionsTab === 'EXPIRATION_CADENCE' ? (
+              /* Expiration Cadence view: Focus on weekly vs monthly metadata */
+              <PrimaryScreenerTable
+                tickers={filteredTickers}
+                watchlist={currentWatchlistSymbols}
+                onToggleWatchlist={handleToggleWatchlist}
+                sortBy={filters.sortBy}
+                sortOrder={filters.sortOrder}
+                onSort={handleSort}
+                onSelectTicker={(ticker) => setSelectedTicker(ticker)}
+              />
+            ) : (
+              /* Options Opportunities Table (CSPs & CCs) */
+              <ScreenerTable
+                opportunities={filteredOpportunities}
+                sortBy={filters.sortBy}
+                sortOrder={filters.sortOrder}
+                onSort={handleSort}
+                onSelectOpportunity={(opp) => setSelectedOpportunity(opp)}
+                onOpenCalculator={(opp) => setCalculatorOpportunity(opp)}
+              />
+            )}
+          </div>
+        )}
       </main>
 
-      {/* Interactive 5-Part Audit Detail Modal */}
+      {/* Modals Suite */}
+      {/* 1. Global Command Palette (Ctrl+K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        tickers={universeTickers}
+        onSelectTicker={(t) => {
+          setSelectedTicker(t);
+        }}
+        onNavigateTree={(tree, tab) => {
+          setActiveTree(tree);
+          if (tree === 'EQUITIES' && tab) setActiveEquitiesTab(tab as EquitiesTabType);
+          if (tree === 'OPTIONS' && tab) setActiveOptionsTab(tab as OptionsTabType);
+        }}
+        onOpenHelp={() => setIsHelpModalOpen(true)}
+        onOpenWatchlist={() => setIsWatchlistModalOpen(true)}
+        onOpenReports={() => setIsReportQueryModalOpen(true)}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onTriggerPrint={triggerPrintReport}
+      />
+
+      {/* 2. Strategy & Help Handbook (?) */}
+      <HelpHandbookModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+      />
+
+      {/* 3. Multi-Watchlist Manager with Bulk & CSV/Excel Ingestion (W) */}
+      <WatchlistManagerModal
+        isOpen={isWatchlistModalOpen}
+        onClose={() => setIsWatchlistModalOpen(false)}
+        watchlistGroups={watchlistGroups}
+        activeGroupId={activeGroupId}
+        onSelectGroup={(id) => setActiveGroupId(id)}
+        onCreateGroup={handleCreateWatchlist}
+        onDeleteGroup={handleDeleteWatchlist}
+        onUpdateGroupTickers={handleUpdateGroupTickers}
+        availableUniverse={universeTickers}
+        onAddCustomTickerMeta={handleAddCustomTickerMeta}
+      />
+
+      {/* 4. Report Queries & Multi-Format Exports (R) */}
+      <ReportQueryModal
+        isOpen={isReportQueryModalOpen}
+        onClose={() => setIsReportQueryModalOpen(false)}
+        tickers={universeTickers}
+        opportunities={dataPayload?.opportunities || []}
+        summary={dataPayload?.summary || null}
+      />
+
+      {/* 5. Ticker Detail 5-Part Audit Modal */}
       <TickerAuditModal
         ticker={selectedTicker}
         opportunities={dataPayload?.opportunities || []}
         onClose={() => setSelectedTicker(null)}
       />
 
-      {/* Watchlist Management Modal */}
-      <WatchlistModal
-        isOpen={isWatchlistModalOpen}
-        onClose={() => setIsWatchlistModalOpen(false)}
-        universeTickers={universeTickersOnly}
-        watchlist={watchlist}
-        onToggleWatchlist={handleToggleWatchlist}
-        onAddCustomTicker={handleAddCustomTicker}
-        onRemoveTicker={handleRemoveTicker}
-        onResetWatchlist={handleResetWatchlist}
-        onSelectAllUniverse={handleSelectAllUniverse}
+      {/* 6. Option Opportunity Detail Modal */}
+      <OptionDetailModal
+        opportunity={selectedOpportunity}
+        onClose={() => setSelectedOpportunity(null)}
+        onOpenCalculator={(opp) => {
+          setSelectedOpportunity(null);
+          setCalculatorOpportunity(opp);
+        }}
+      />
+
+      {/* 7. Cash Income Calculator Modal */}
+      <IncomeCalculatorModal
+        opportunity={calculatorOpportunity}
+        onClose={() => setCalculatorOpportunity(null)}
       />
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           <p className="font-semibold text-slate-300">
-            DeltaHarvest • Weekly Options Income &amp; Volatility Screener
+            DeltaHarvest Institutional • Systematic US Equities Analysis &amp; Options Income
           </p>
-          <p className="text-[11px] text-slate-400 max-w-2xl mx-auto">
-            Rules: Cash-Secured Put strikes positioned $\le$ Lower Bollinger Band (2 SD); Covered Call strikes $\ge$ Upper Bollinger Band (2 SD). 
-            Always observe the 80% Profit Buy-to-Close trigger and 0.50 Delta roll trigger.
+          <p className="text-[11px] text-slate-500 max-w-2xl mx-auto">
+            Rules: Cash-Secured Put strikes $\le$ Lower Bollinger Band (2 SD); Covered Call strikes $\ge$ Upper Bollinger Band (2 SD). Always observe the 80% Profit Buy-to-Close trigger and 0.50 Delta roll trigger.
           </p>
         </div>
       </footer>
