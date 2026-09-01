@@ -215,19 +215,38 @@ export const App: React.FC = () => {
     setIsLoading(true);
     let loaded = false;
 
-    // 0. Primary: Attempt live FastAPI backend endpoint
+    // 0. Priority: Restore locally cached live market snapshot if present
     try {
-      const res = await fetch('/api/v1/options/snapshot');
-      if (res.ok) {
-        const json: OptionsDataPayload = await res.json();
-        if (json.tickers && json.tickers.length > 0) {
-          setDataPayload(json);
-          setDataSource('FastAPI Live Engine');
+      const savedPayloadStr = localStorage.getItem('deltaharvest_live_payload');
+      if (savedPayloadStr) {
+        const savedPayload: OptionsDataPayload = JSON.parse(savedPayloadStr);
+        if (savedPayload && Array.isArray(savedPayload.tickers) && savedPayload.tickers.length > 0) {
+          setDataPayload(savedPayload);
+          setDataSource('Live Market Feed');
+          const savedTime = localStorage.getItem('deltaharvest_last_live_fetch');
+          if (savedTime) setLastLiveFetchTime(savedTime);
           loaded = true;
         }
       }
     } catch (e) {
-      console.warn('Live API /api/v1/options/snapshot failed, attempting local fallback:', e);
+      console.warn('Failed to parse cached live payload from storage', e);
+    }
+
+    // 1. Primary: Attempt live FastAPI backend endpoint
+    if (!loaded) {
+      try {
+        const res = await fetch('/api/v1/options/snapshot');
+        if (res.ok) {
+          const json: OptionsDataPayload = await res.json();
+          if (json.tickers && json.tickers.length > 0) {
+            setDataPayload(json);
+            setDataSource('FastAPI Live Engine');
+            loaded = true;
+          }
+        }
+      } catch (e) {
+        console.warn('Live API /api/v1/options/snapshot failed, attempting local fallback:', e);
+      }
     }
 
     // 1. Fallback: Attempt local public JSON path
@@ -324,6 +343,11 @@ export const App: React.FC = () => {
           setCustomTickers((prev) =>
             prev.filter((c) => !livePayload.tickers?.some((t) => t.symbol === c.symbol))
           );
+          try {
+            localStorage.setItem('deltaharvest_live_payload', JSON.stringify(livePayload));
+          } catch (storageErr) {
+            console.warn('Failed to persist live payload', storageErr);
+          }
           success = true;
         }
       } catch (clientErr) {
