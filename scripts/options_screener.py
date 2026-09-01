@@ -88,19 +88,30 @@ def calculate_black_scholes_greeks(
 
 
 def calculate_rsi(prices: List[float], period: int = 14) -> float:
-    """Calculate Relative Strength Index (RSI)."""
+    """Calculate Relative Strength Index (RSI) using Welles Wilder's RMA/EMA."""
     if len(prices) < period + 1:
         return 50.0
 
     changes = [prices[i] - prices[i - 1] for i in range(1, len(prices))]
-    gains = [max(c, 0.0) for c in changes[-period:]]
-    losses = [max(-c, 0.0) for c in changes[-period:]]
+    if not changes:
+        return 50.0
 
-    avg_gain = sum(gains) / period
-    avg_loss = sum(losses) / period
+    # Initial seed: simple average of first `period` changes
+    gains = [max(c, 0.0) for c in changes[:period]]
+    losses = [max(-c, 0.0) for c in changes[:period]]
+    avg_gain = sum(gains) / period if period > 0 else 0.0
+    avg_loss = sum(losses) / period if period > 0 else 0.0
 
-    if avg_loss == 0:
-        return 100.0
+    # Wilder's Exponential Smoothing over subsequent periods
+    for c in changes[period:]:
+        gain = max(c, 0.0)
+        loss = max(-c, 0.0)
+        avg_gain = (avg_gain * (period - 1) + gain) / period
+        avg_loss = (avg_loss * (period - 1) + loss) / period
+
+    if avg_loss == 0.0:
+        return 100.0 if avg_gain > 0.0 else 50.0
+
     rs = avg_gain / avg_loss
     return round(100.0 - (100.0 / (1.0 + rs)), 1)
 

@@ -88,7 +88,8 @@ function calculateRsi(closes: number[], period: number = 14): number {
 }
 
 /**
- * Fetches real-time price & 1-month daily history for a single ticker via Yahoo Finance chart API.
+ * Fetches real-time price & 1-year daily history for a single ticker via Yahoo Finance chart API.
+ * Uses 1-year lookback to allow Wilder's 14-day RSI and 200 SMA indicators to fully converge.
  * Uses direct fetch with fallback to open proxy if CORS blocked.
  */
 async function fetchTickerChartData(symbol: string): Promise<{
@@ -98,7 +99,7 @@ async function fetchTickerChartData(symbol: string): Promise<{
   avgVolume: number;
 } | null> {
   const sym = symbol.toUpperCase().trim();
-  const directUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1mo`;
+  const directUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`;
   const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
 
   const urls = [directUrl, proxyUrl];
