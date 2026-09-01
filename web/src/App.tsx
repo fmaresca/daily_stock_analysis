@@ -15,7 +15,9 @@ import { InteractiveChart } from './components/InteractiveChart';
 import { MultiLegSpreadTable } from './components/MultiLegSpreadTable';
 import { VolatilitySkewRadar } from './components/VolatilitySkewRadar';
 import { SchwabSettingsModal } from './components/SchwabSettingsModal';
+import { FundamentalHealthTable } from './components/FundamentalHealthTable';
 import { generateMultiLegSpreads, generateVolatilitySkew } from './utils/optionsMultiLeg';
+import { generateFundamentalHealthData } from './utils/fundamentalSolvency';
 import {
   Search,
   RotateCcw,
@@ -393,6 +395,11 @@ export const App: React.FC = () => {
   // 25-Delta Volatility Skew & Term Structure
   const volatilitySkewData = useMemo(() => {
     return generateVolatilitySkew(filteredTickers);
+  }, [filteredTickers]);
+
+  // Fundamental Health, Solvency & SEC Filings Data
+  const fundamentalHealthData = useMemo(() => {
+    return generateFundamentalHealthData(filteredTickers);
   }, [filteredTickers]);
 
   // Watchlist Actions
@@ -819,6 +826,11 @@ export const App: React.FC = () => {
                   />
                 ) : null;
               })()}
+            </div>
+          ) : activeEquitiesTab === 'FUNDAMENTAL_HEALTH' ? (
+            /* Fundamental Solvency, Altman Z-Score & SEC EDGAR Filings */
+            <div className="space-y-4">
+              <FundamentalHealthTable data={fundamentalHealthData} />
             </div>
           ) : (
             /* Tree 1: US Equities Analysis (Primary Screener Table) */

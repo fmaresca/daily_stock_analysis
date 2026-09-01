@@ -129,6 +129,18 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             </button>
 
             <button
+              onClick={() => onSelectEquitiesTab('FUNDAMENTAL_HEALTH')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                activeEquitiesTab === 'FUNDAMENTAL_HEALTH'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Fundamental Health &amp; SEC EDGAR</span>
+            </button>
+
+            <button
               onClick={() => onSelectEquitiesTab('TREND_SUPPORT')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
                 activeEquitiesTab === 'TREND_SUPPORT'

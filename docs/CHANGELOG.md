@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [新功能] DeltaHarvest Fundamentals: 交付 Phase 3 基本面财务健康与 CEF 分析引擎，新增奥特曼 Altman Z-Score 破产风险评估、皮尔托斯基 Piotroski F-Score 经营质量评分、SEC EDGAR 10-K/10-Q 披露直链、机构持仓比重，并支持闭式基金(CEF)与期权收益基金的净值折溢价与资本返还(RoC)健康审计。
 - [新功能] Charles Schwab API 支持: 新增 Charles Schwab Retail Trader API 数据源与凭据接入模块(data_provider/schwab_fetcher.py)，支持实时美股 NBBO 行情、全量期权链与实时 Greeks 计算，并在 Web UI 交付专用的 Schwab API 接入与 OAuth 设置面板。
 - [新功能] DeltaHarvest Options Engine: 交付 Phase 2 波动率偏度与多腿期权引擎，严格保留 0.15~0.20 Delta 保守卖方核心法则，新增牛市看跌垂直信用价差(Bull Put Spread)、熊市看涨垂直信用价差(Bear Call Spread)、双翼铁鹰(Iron Condor)、25-Delta 波动率偏度与期限结构雷达，并扩充期权策略帮助手册。
 - [新功能] DeltaHarvest Web UI: 集成 TradingView Lightweight Charts 交互式 K 线图、20日均线、2倍标准差布林带通道、期权目标行权价动态标线、图表切换工作区及技术形态图表帮助手册。
