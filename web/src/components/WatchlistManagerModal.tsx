@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   FolderPlus,
   Copy,
+  RefreshCw,
+  Activity,
 } from './icons';
 import { WatchlistGroup, TickerMeta } from '../types/options';
 import { parseUploadedFile, downloadSampleTemplate } from '../utils/exportImport';
@@ -27,6 +29,8 @@ interface WatchlistManagerModalProps {
   onUpdateGroupTickers: (groupId: string, tickers: string[]) => void;
   availableUniverse: TickerMeta[];
   onAddCustomTickerMeta: (symbol: string) => void;
+  onRecalculateTickers?: (tickers: string[]) => Promise<void>;
+  isRecalculating?: boolean;
 }
 
 export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
@@ -40,6 +44,8 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
   onUpdateGroupTickers,
   availableUniverse,
   onAddCustomTickerMeta,
+  onRecalculateTickers,
+  isRecalculating = false,
 }) => {
   const [singleTickerInput, setSingleTickerInput] = useState('');
   const [bulkInput, setBulkInput] = useState('');
@@ -439,14 +445,31 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <div>Changes save automatically to browser storage</div>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold transition-colors"
-          >
-            Done
-          </button>
+        <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+          <div className="flex items-center space-x-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Changes save automatically to browser storage</span>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {onRecalculateTickers && (
+              <button
+                onClick={() => onRecalculateTickers(currentTickers)}
+                disabled={isRecalculating || currentTickers.length === 0}
+                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold flex items-center space-x-1.5 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+                title="Fetch live quotes, Bollinger Bands, historical volatility, and options chains for these tickers"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRecalculating ? 'animate-spin' : ''}`} />
+                <span>{isRecalculating ? 'Processing Live Market Data...' : '⚡ Fetch Real Market Data & Options'}</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold transition-colors cursor-pointer"
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>

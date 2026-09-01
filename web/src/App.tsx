@@ -65,14 +65,14 @@ import {
 
 const DEFAULT_UNIVERSE_SYMBOLS = [
   'SPY', 'QQQ', 'IWM', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'TSLA',
-  'PLTR', 'IONQ', 'NET', 'RTX', 'JEPI', 'SCHD', 'SPCX', 'ZETA', 'BLZE', 'AXTI',
+  'PLTR', 'IONQ', 'NET', 'RTX', 'JEPI', 'SCHD', 'SPCX', 'CLM', 'CRF', 'ZETA', 'BLZE', 'AXTI',
 ];
 
 const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
   {
-    id: 'core-18',
-    name: 'Core 18 Universe',
-    description: 'Default multi-asset watchlist of ETFs, Mega-Caps, and Growth',
+    id: 'core-universe',
+    name: 'Core Universe',
+    description: 'Default multi-asset watchlist of ETFs, Mega-Caps, CEFs, and Growth',
     tickers: DEFAULT_UNIVERSE_SYMBOLS,
     isDefault: true,
     createdAt: new Date().toISOString(),
@@ -87,9 +87,9 @@ const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
   },
   {
     id: 'high-yield-etfs',
-    name: 'Dividend & High-Yield',
-    description: 'Income ETFs and covered-call vehicles',
-    tickers: ['JEPI', 'SCHD', 'SPCX'],
+    name: 'Dividend, CEFs & High-Yield',
+    description: 'Income ETFs, Closed-End Funds (CEFs), and covered-call vehicles',
+    tickers: ['JEPI', 'SCHD', 'SPCX', 'CLM', 'CRF'],
     isDefault: true,
     createdAt: new Date().toISOString(),
   },
@@ -98,6 +98,7 @@ const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
 export const App: React.FC = () => {
   const [dataPayload, setDataPayload] = useState<OptionsDataPayload | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRecalculating, setIsRecalculating] = useState<boolean>(false);
   const [dataSource, setDataSource] = useState<string>('Local JSON');
 
   // Navigation Tree State
@@ -272,6 +273,42 @@ export const App: React.FC = () => {
       }
     }
     setIsLoading(false);
+  };
+
+  // Live on-demand recalculate for tickers via FastAPI backend
+  const handleLiveRecalculate = async (tickersToRecalc?: string[]) => {
+    setIsRecalculating(true);
+    const targetTickers = tickersToRecalc && tickersToRecalc.length > 0
+      ? tickersToRecalc
+      : currentWatchlistSymbols;
+
+    try {
+      const res = await fetch('/api/v1/options/recalculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tickers: targetTickers, enrich: false }),
+      });
+
+      if (res.ok) {
+        const json: OptionsDataPayload = await res.json();
+        if (json.tickers && json.tickers.length > 0) {
+          setDataPayload(json);
+          setDataSource('FastAPI Live Engine');
+          // Clear any custom synthetic tickers that now have real computed data
+          setCustomTickers((prev) =>
+            prev.filter((c) => !json.tickers?.some((t) => t.symbol === c.symbol))
+          );
+        }
+      } else {
+        console.warn('POST /api/v1/options/recalculate failed, falling back to cached snapshot:', res.statusText);
+        await fetchData();
+      }
+    } catch (e) {
+      console.warn('Live recalculate network exception, falling back to fetchData:', e);
+      await fetchData();
+    } finally {
+      setIsRecalculating(false);
+    }
   };
 
   // Real-time WebSocket streaming listener
@@ -725,7 +762,9 @@ export const App: React.FC = () => {
         lastUpdated={dataPayload?.metadata.last_updated || ''}
         totalTickers={universeTickers.length}
         onRefresh={fetchData}
+        onLiveRecalculate={() => handleLiveRecalculate(currentWatchlistSymbols)}
         isLoading={isLoading}
+        isRecalculating={isRecalculating}
         dataSource={dataSource}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onOpenHelp={() => setIsHelpModalOpen(true)}
@@ -1262,6 +1301,8 @@ export const App: React.FC = () => {
         onUpdateGroupTickers={handleUpdateGroupTickers}
         availableUniverse={universeTickers}
         onAddCustomTickerMeta={handleAddCustomTickerMeta}
+        onRecalculateTickers={handleLiveRecalculate}
+        isRecalculating={isRecalculating}
       />
 
       {/* 5. Report Queries & Multi-Format Exports (R) */}

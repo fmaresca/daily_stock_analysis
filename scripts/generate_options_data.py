@@ -47,13 +47,22 @@ except ImportError:
         def check_ticker_weekly_options(s, c=None):
             return {"has_weeklys": True, "cadence": "Weekly", "in_cboe_registry": False, "next_expiration": "N/A", "next_expiration_days": None}
 
+try:
+    from scripts.contextual_enricher import enrich_ticker_payload
+except ImportError:
+    try:
+        from contextual_enricher import enrich_ticker_payload
+    except ImportError:
+        def enrich_ticker_payload(symbol: str):  # type: ignore[misc]
+            return {}
+
 # -----------------------------------------------------------------------------
 # 1. WATCHLIST DEFINITION & PERSISTENCE
 # -----------------------------------------------------------------------------
 
 DEFAULT_WATCHLIST = [
     "SPY", "QQQ", "IWM", "NVDA", "AAPL", "MSFT", "AMZN", "TSLA",
-    "PLTR", "IONQ", "NET", "RTX", "JEPI", "SCHD", "SPCX", "ZETA", "BLZE", "AXTI"
+    "PLTR", "IONQ", "NET", "RTX", "JEPI", "SCHD", "SPCX", "CLM", "CRF", "ZETA", "BLZE", "AXTI"
 ]
 
 WATCHLIST_FILE = Path("data/watchlist.json")
@@ -78,6 +87,8 @@ TICKER_SECTORS = {
     "JEPI": ("JPMorgan Equity Premium Income ETF", "High Yield / Covered Call ETF", "Income ETF"),
     "SCHD": ("Schwab US Dividend Equity ETF", "Dividend ETF", "Dividend ETF"),
     "SPCX": ("CrossingBridge Pre-Merger SPAC ETF", "Fixed Income / SPAC ETF", "Specialty ETF"),
+    "CLM": ("Cornerstone Strategic Value Fund", "Closed-End Fund / High Yield", "CEF"),
+    "CRF": ("Cornerstone Total Return Fund", "Closed-End Fund / High Yield", "CEF"),
     "ZETA": ("Zeta Global Holdings", "Marketing Tech", "Small-Mid Cap"),
     "BLZE": ("Backblaze, Inc.", "Cloud Storage", "Small Cap"),
     "AXTI": ("AXT, Inc.", "Semiconductor Substrates", "Small Cap"),
@@ -843,6 +854,7 @@ def main():
     parser.add_argument("--show-watchlist", action="store_true", help="Print current active watchlist and exit")
     parser.add_argument("--output-json", type=str, default="web/public/data/options_data.json", help="Path to output JSON")
     parser.add_argument("--output-audit", type=str, default="reports/latest_options_audit.md", help="Path to audit Markdown")
+    parser.add_argument("--no-enrich", action="store_true", help="Skip contextual intelligence enrichment (faster; no external API calls)")
 
     args = parser.parse_args()
 
@@ -878,6 +890,16 @@ def main():
             print(f"  {idx:2d}. {t:<6} ({tier})")
         sys.exit(0)
 
+def generate_options_dataset(
+    tickers: Optional[List[str]] = None,
+    output_json_web: Optional[str] = "web/public/data/options_data.json",
+    output_json_root: Optional[str] = "data/options_data.json",
+    output_audit: Optional[str] = "reports/latest_options_audit.md",
+    enrich: bool = True,
+) -> Dict[str, Any]:
+    """Generates the full options screener dataset for a given list of tickers."""
+    watchlist = tickers if tickers is not None else load_watchlist()
+
     print(f"\n====================================================================")
     print(f" DeltaHarvest: Processing {len(watchlist)} Tickers for Options Data")
     print(f"====================================================================\n")
@@ -893,7 +915,17 @@ def main():
     for sym in watchlist:
         res = process_ticker(sym, cboe_weeklys)
         if res:
-            all_meta.append(res["meta"])
+            meta_record = res["meta"]
+            # Contextual Intelligence enrichment (analyst, news, prediction markets, social sentiment)
+            if enrich:
+                try:
+                    print(f"    [~] Enriching {sym} with contextual intelligence...")
+                    enrichment = enrich_ticker_payload(sym)
+                    meta_record.update(enrichment)
+                    print(f"    [OK] Enrichment complete for {sym}.")
+                except Exception as enrich_err:
+                    print(f"    [!] Enrichment failed for {sym}: {enrich_err}")
+            all_meta.append(meta_record)
             all_opportunities.extend(res["opportunities"])
 
     # Sort opportunities initially by rating
@@ -944,25 +976,82 @@ def main():
         "opportunities": all_opportunities,
     }
 
-    # Save to primary web path
-    out_json_web = Path(args.output_json)
-    out_json_web.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_json_web, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
-    print(f"\n[OK] Saved options data to {out_json_web}")
+    # Save to primary web path if specified
+    if output_json_web:
+        out_json_web = Path(output_json_web)
+        out_json_web.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_json_web, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        print(f"\n[OK] Saved options data to {out_json_web}")
 
-    # Also mirror to root data/options_data.json
-    out_json_root = Path("data/options_data.json")
-    out_json_root.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_json_root, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
-    print(f"[OK] Mirrored options data to {out_json_root}")
+    # Also mirror to root data/options_data.json if specified
+    if output_json_root:
+        out_json_root = Path(output_json_root)
+        out_json_root.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_json_root, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        print(f"[OK] Mirrored options data to {out_json_root}")
 
-    # Generate Markdown Audit Report
-    out_audit = Path(args.output_audit)
-    generate_audit_markdown(all_meta, all_opportunities, out_audit)
+    # Generate Markdown Audit Report if specified
+    if output_audit:
+        out_audit = Path(output_audit)
+        generate_audit_markdown(all_meta, all_opportunities, out_audit)
 
     print(f"\n[ALL DONE] Successfully processed {len(all_meta)} tickers and {len(all_opportunities)} options contracts.\n")
+    return payload
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Options & Volatility Data Generator")
+    parser.add_argument("--add", type=str, help="Add comma-separated tickers to watchlist (e.g. --add COIN,HOOD)")
+    parser.add_argument("--remove", type=str, help="Remove comma-separated tickers from watchlist (e.g. --remove AXTI,BLZE)")
+    parser.add_argument("--tickers", type=str, help="Override active watchlist with specific tickers")
+    parser.add_argument("--show-watchlist", action="store_true", help="Print current active watchlist and exit")
+    parser.add_argument("--output-json", type=str, default="web/public/data/options_data.json", help="Path to output JSON")
+    parser.add_argument("--output-audit", type=str, default="reports/latest_options_audit.md", help="Path to audit Markdown")
+    parser.add_argument("--no-enrich", action="store_true", help="Skip contextual intelligence enrichment (faster; no external API calls)")
+
+    args = parser.parse_args()
+
+    # Load watchlist
+    watchlist = load_watchlist()
+
+    # Handle additions
+    if args.add:
+        new_items = [t.strip().upper() for t in args.add.split(",") if t.strip()]
+        for item in new_items:
+            if item not in watchlist:
+                watchlist.append(item)
+                print(f"[+] Added {item} to watchlist")
+        save_watchlist(watchlist)
+
+    # Handle deletions
+    if args.remove:
+        rem_items = [t.strip().upper() for t in args.remove.split(",") if t.strip()]
+        watchlist = [t for t in watchlist if t not in rem_items]
+        for item in rem_items:
+            print(f"[-] Removed {item} from watchlist")
+        save_watchlist(watchlist)
+
+    # Handle full override
+    if args.tickers:
+        watchlist = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
+        print(f"[*] Set custom watchlist: {watchlist}")
+
+    if args.show_watchlist:
+        print("\nActive Watchlist:")
+        for idx, t in enumerate(watchlist, 1):
+            tier, _ = get_liquidity_tier(t)
+            print(f"  {idx:2d}. {t:<6} ({tier})")
+        sys.exit(0)
+
+    generate_options_dataset(
+        tickers=watchlist,
+        output_json_web=args.output_json,
+        output_json_root="data/options_data.json",
+        output_audit=args.output_audit,
+        enrich=not args.no_enrich,
+    )
 
 
 if __name__ == "__main__":
