@@ -36,6 +36,17 @@ try:
 except ImportError as e:
     print(f"[!] Warning: Missing dependency {e}. Make sure yfinance, numpy, and pandas are installed.")
 
+try:
+    from scripts.validate_weekly_options import fetch_cboe_weekly_directory, check_ticker_weekly_options
+except ImportError:
+    try:
+        from validate_weekly_options import fetch_cboe_weekly_directory, check_ticker_weekly_options
+    except ImportError:
+        def fetch_cboe_weekly_directory():
+            return set()
+        def check_ticker_weekly_options(s, c=None):
+            return {"has_weeklys": True, "cadence": "Weekly", "in_cboe_registry": False, "next_expiration": "N/A", "next_expiration_days": None}
+
 # -----------------------------------------------------------------------------
 # 1. WATCHLIST DEFINITION & PERSISTENCE
 # -----------------------------------------------------------------------------
@@ -196,13 +207,15 @@ def calculate_rsi(series: pd.Series, period: int = 14) -> float:
 # 3. YFINANCE TECHNICALS & OPTIONS HARVESTING
 # -----------------------------------------------------------------------------
 
-def process_ticker(symbol: str) -> Optional[Dict[str, Any]]:
+def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional[Dict[str, Any]]:
     """Process a single ticker: technicals, volatility, earnings, options contracts."""
     sym = symbol.upper().strip()
     tier_name, tier_warning = get_liquidity_tier(sym)
     name, sector, category = TICKER_SECTORS.get(sym, (f"{sym} Equity", "Equity", "Stock"))
 
-    print(f"[*] Processing {sym} ({tier_name})...")
+    weekly_info = check_ticker_weekly_options(sym, cboe_set)
+    cadence_str = weekly_info.get("cadence", "Weekly")
+    print(f"[*] Processing {sym} ({tier_name} | {cadence_str})...")
     ticker = yf.Ticker(sym)
 
     # 1. Fetch historical pricing (1 year for 52w range and technicals)
@@ -665,6 +678,11 @@ def process_ticker(symbol: str) -> Optional[Dict[str, Any]]:
         "iv_rank": iv_rank,
         "earnings_within_7d": earnings_within_7d,
         "next_earnings_date": next_earnings_date,
+        "has_weeklys": weekly_info.get("has_weeklys", True),
+        "options_cadence": weekly_info.get("cadence", "Weekly"),
+        "in_cboe_registry": weekly_info.get("in_cboe_registry", False),
+        "next_options_expiration": weekly_info.get("next_expiration", "N/A"),
+        "next_options_dte": weekly_info.get("next_expiration_days"),
         "target_exp": target_exp,
         "target_dte": target_dte,
     }
@@ -816,11 +834,16 @@ def main():
     print(f" DeltaHarvest: Processing {len(watchlist)} Tickers for Options Data")
     print(f"====================================================================\n")
 
+    print("[*] Fetching official CBOE Weeklys directory...")
+    cboe_weeklys = fetch_cboe_weekly_directory()
+    if cboe_weeklys:
+        print(f"[OK] Loaded {len(cboe_weeklys)} tickers from CBOE registry.\n")
+
     all_meta = []
     all_opportunities = []
 
     for sym in watchlist:
-        res = process_ticker(sym)
+        res = process_ticker(sym, cboe_weeklys)
         if res:
             all_meta.append(res["meta"])
             all_opportunities.extend(res["opportunities"])

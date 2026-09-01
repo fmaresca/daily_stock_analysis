@@ -181,7 +181,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
               <span>Part 2: Liquidity &amp; Slippage Audit</span>
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
                 <div className="text-[11px] text-slate-400">Liquidity Tier Rating</div>
                 <div className="text-sm font-bold font-mono text-white mt-1">
@@ -189,20 +189,34 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
                   {isTier1
-                    ? 'Penny-wide bid/ask spreads. Frictionless entries and exits.'
+                    ? 'Penny-wide bid/ask spreads. Frictionless entries.'
                     : isTier4
-                    ? 'Wide spreads ($0.10–$0.50). High risk of slippage on market orders.'
-                    : 'Standard retail liquidity with moderate open interest.'}
+                    ? 'Wide spreads ($0.10–$0.50). High slippage risk.'
+                    : 'Standard retail options liquidity.'}
+                </p>
+              </div>
+
+              <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
+                <div className="text-[11px] text-slate-400">Options Cadence (CBOE)</div>
+                <div className={`text-sm font-bold font-mono mt-1 ${ticker.has_weeklys === false ? 'text-amber-300' : 'text-emerald-400'}`}>
+                  {ticker.options_cadence || (ticker.has_weeklys === false ? 'Monthly Only' : 'Weekly')}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {ticker.in_cboe_registry
+                    ? '✓ Official CBOE Weeklys directory listing.'
+                    : ticker.has_weeklys === false
+                    ? 'Standard 3rd-Friday monthly expirations only.'
+                    : 'Active weekly cycle.'}
                 </p>
               </div>
 
               <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
                 <div className="text-[11px] text-slate-400">30-Day Average Volume</div>
                 <div className="text-base font-bold font-mono text-slate-200 mt-1">
-                  {ticker.avg_volume_30.toLocaleString()} shares/day
+                  {ticker.avg_volume_30.toLocaleString()} shares
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Healthy equity volume ensures reliable underlying market making.
+                  Ensures underlying market-making activity.
                 </p>
               </div>
 
@@ -213,8 +227,8 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
                   {isTier4
-                    ? '🚨 Always enter limit orders at midpoint. NEVER use market orders.'
-                    : 'Place limit orders at mid to capture favorable pricing.'}
+                    ? '🚨 Always enter at mid price. Never use market orders.'
+                    : 'Place limit orders at mid for optimal fills.'}
                 </p>
               </div>
             </div>

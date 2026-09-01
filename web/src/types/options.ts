@@ -19,6 +19,11 @@ export interface TickerMeta {
   iv_rank: number;
   earnings_within_7d: boolean;
   next_earnings_date: string;
+  has_weeklys?: boolean;
+  options_cadence?: string;
+  in_cboe_registry?: boolean;
+  next_options_expiration?: string;
+  next_options_dte?: number;
   target_exp?: string;
   target_dte?: number;
 }
