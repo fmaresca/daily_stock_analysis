@@ -62,6 +62,7 @@ import {
   exportToExcel,
   triggerPrintReport,
 } from './utils/exportImport';
+import { fetchClientSideLiveMarketData } from './utils/liveMarketFetcher';
 
 const DEFAULT_UNIVERSE_SYMBOLS = [
   'SPY', 'QQQ', 'IWM', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'TSLA',
@@ -275,13 +276,16 @@ export const App: React.FC = () => {
     setIsLoading(false);
   };
 
-  // Live on-demand recalculate for tickers via FastAPI backend
+  // Live on-demand recalculate for tickers via FastAPI backend or Client-Side Engine
   const handleLiveRecalculate = async (tickersToRecalc?: string[]) => {
     setIsRecalculating(true);
     const targetTickers = tickersToRecalc && tickersToRecalc.length > 0
       ? tickersToRecalc
       : currentWatchlistSymbols;
 
+    let success = false;
+
+    // 1. Primary: Attempt FastAPI backend calculation
     try {
       const res = await fetch('/api/v1/options/recalculate', {
         method: 'POST',
@@ -294,21 +298,35 @@ export const App: React.FC = () => {
         if (json.tickers && json.tickers.length > 0) {
           setDataPayload(json);
           setDataSource('FastAPI Live Engine');
-          // Clear any custom synthetic tickers that now have real computed data
           setCustomTickers((prev) =>
             prev.filter((c) => !json.tickers?.some((t) => t.symbol === c.symbol))
           );
+          success = true;
         }
-      } else {
-        console.warn('POST /api/v1/options/recalculate failed, falling back to cached snapshot:', res.statusText);
-        await fetchData();
       }
     } catch (e) {
-      console.warn('Live recalculate network exception, falling back to fetchData:', e);
-      await fetchData();
-    } finally {
-      setIsRecalculating(false);
+      console.info('FastAPI backend not detected, executing Client-Side Real-Time Market Engine');
     }
+
+    // 2. Fallback: Client-Side Real-Time Market Engine (for Cloudflare Pages / static hosting)
+    if (!success) {
+      try {
+        const livePayload = await fetchClientSideLiveMarketData(dataPayload, targetTickers);
+        if (livePayload.tickers && livePayload.tickers.length > 0) {
+          setDataPayload(livePayload);
+          setDataSource('Live Market Feed');
+          setCustomTickers((prev) =>
+            prev.filter((c) => !livePayload.tickers?.some((t) => t.symbol === c.symbol))
+          );
+          success = true;
+        }
+      } catch (clientErr) {
+        console.warn('Client-side live fetch exception, falling back to cached snapshot:', clientErr);
+        await fetchData();
+      }
+    }
+
+    setIsRecalculating(false);
   };
 
   // Real-time WebSocket streaming listener

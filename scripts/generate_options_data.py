@@ -218,6 +218,33 @@ def calculate_rsi(series: pd.Series, period: int = 14) -> float:
 # 3. YFINANCE TECHNICALS & OPTIONS HARVESTING
 # -----------------------------------------------------------------------------
 
+def fetch_ticker_history_fallback(sym: str) -> Tuple[pd.DataFrame, Optional[float]]:
+    """Direct HTTP fallback to Yahoo Finance chart API if yfinance is rate-limited or empty."""
+    try:
+        import requests
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval=1d&range=1y"
+        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=6)
+        if r.status_code == 200:
+            data = r.json()
+            res = data.get("chart", {}).get("result", [])
+            if res:
+                result = res[0]
+                meta = result.get("meta", {})
+                live_price = meta.get("regularMarketPrice")
+                timestamps = result.get("timestamp", [])
+                quotes = result.get("indicators", {}).get("quote", [{}])[0]
+                closes = quotes.get("close", [])
+                volumes = quotes.get("volume", [])
+                df = pd.DataFrame({
+                    "Close": closes,
+                    "Volume": volumes
+                }, index=pd.to_datetime(timestamps, unit="s")).dropna()
+                return df, live_price
+    except Exception as e:
+        print(f"    [!] Fallback chart fetch failed for {sym}: {e}")
+    return pd.DataFrame(), None
+
+
 def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional[Dict[str, Any]]:
     """Process a single ticker: technicals, volatility, earnings, options contracts."""
     sym = symbol.upper().strip()
@@ -230,11 +257,21 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
     ticker = yf.Ticker(sym)
 
     # 1. Fetch historical pricing (1 year for 52w range and technicals)
+    hist = pd.DataFrame()
+    live_price = None
     try:
         hist = ticker.history(period="1y")
+        if hasattr(ticker, "fast_info") and ticker.fast_info:
+            live_price = ticker.fast_info.get("lastPrice") or ticker.fast_info.get("regularMarketPrice")
+        if not live_price and hasattr(ticker, "info") and ticker.info:
+            live_price = ticker.info.get("regularMarketPrice") or ticker.info.get("currentPrice")
     except Exception as e:
         print(f"    [!] Error fetching history for {sym}: {e}")
-        hist = pd.DataFrame()
+
+    if hist.empty or len(hist) < 20:
+        hist, fallback_price = fetch_ticker_history_fallback(sym)
+        if fallback_price and not live_price:
+            live_price = fallback_price
 
     if hist.empty or len(hist) < 20:
         print(f"    [!] Insufficient history for {sym}, skipping.")
@@ -243,7 +280,7 @@ def process_ticker(symbol: str, cboe_set: Optional[Set[str]] = None) -> Optional
     close = hist["Close"]
     volume = hist["Volume"]
 
-    spot_price = round(float(close.iloc[-1]), 2)
+    spot_price = round(float(live_price), 2) if live_price and float(live_price) > 0 else round(float(close.iloc[-1]), 2)
     avg_volume_30 = int(volume.tail(30).mean()) if len(volume) >= 30 else int(volume.mean())
 
     # 20-day Simple Moving Average

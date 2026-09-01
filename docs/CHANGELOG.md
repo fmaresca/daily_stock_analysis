@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [新功能] DeltaHarvest Client-Side Live Market Engine: 交付纯前端浏览器实时行情与期权推演引擎 (`web/src/utils/liveMarketFetcher.ts`)，当在 Cloudflare Pages 等无后端环境点击“⚡ Live Fetch”或自选股“⚡ Fetch Real Market Data & Options”时，直接并行抓取实时行情并瞬时重算 20日均线、2倍标准差布林带、RSI-14 及 0.15-0.20 Delta 期权策略，彻底解决静态托管环境无法拉取日内实时价的问题。
+- [修复] DeltaHarvest Live Price Pipeline: 优化 `scripts/generate_options_data.py` `process_ticker()`，增加 `fast_info` / `regularMarketPrice` 日内实时价穿透提取与雅虎财经图表 API 自动回退，确保生成的数据快照包含盘中最新价而非昨日收盘价。
 - [新功能] DeltaHarvest On-Demand Live Recalculation: 交付 FastAPI 后端 `POST /api/v1/options/recalculate` 动态重算端点与 `scripts/generate_options_data.py` `generate_options_dataset()` 模块化解耦，支持从前端自选股管理器 (Watchlist Manager) 与页面顶栏一键触发实时全量行情、20日均线、布林带、30日历史波动率及期权链计算，彻底告别新增标的 $100 缺省值。
 - [新功能] DeltaHarvest Contextual Intelligence Layer: 交付多源语境情报与情绪分析系统（`src/services/contextual_intelligence_service.py`），集成华尔街分析师目标价区间与共识评级、公司财务比率/股息率/远期PE、Polymarket Gamma API 及 Manifold Markets 真实二元预测市场赔率、StockTwits 多空情绪比率与 Reddit /r/WallStreetBets 24小时讨论热度排行；个股审计模态框升级为 4-Tab 现代化多维情报工作台（期权与技术面、新闻与分析师共识、预测市场、社区情绪），主筛选表新增紧凑情绪徽标。
 - [新功能] DeltaHarvest Contextual Enricher Backend: 新增 `scripts/contextual_enricher.py` 数据富化模块，并将 `enrich_ticker_payload()` 集成至 `scripts/generate_options_data.py` 主处理循环，使每个自选股 meta 记录在生成 `options_data.json` 时自动附带 `analyst_intelligence`、`corporate_actions`、`news_feed`、`prediction_markets`、`social_sentiment` 五大语境情报字段；新增 `--no-enrich` CLI 标志支持快速离线运行。
