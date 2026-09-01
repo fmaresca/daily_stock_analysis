@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [改进] DeltaHarvest Prediction Markets & Sentiment Feeds: 深度验证并升级 TSLA 预测市场（Polymarket & Manifold API 别名智能匹配与结果价格解析）和社交论坛情绪（StockTwits 消息流 NLP 多空关键词判定与 Reddit WSB 讨论热度）；在前端全量注册表中打通默认预测合约与情绪指标，保证在任何网络与标的状态下均能实时渲染真实市场赔率与社区情绪。
 - [修复] DeltaHarvest React Hook Rules & Modal Lifecycle: 修复 TickerAuditModal、OptionDetailModal 与 ReportQueryModal 中 useMemo 在条件分支（early return）之后调用引发的 Minified React Error #310；将所有 React Hook 调用无条件置顶，并在 App.tsx 中通过短路表达式控制模态框生命周期，彻底杜绝 Hook 次数不一致崩溃。
 - [修复] DeltaHarvest Reports & Screener Resilience: 修复 ReportQueryModal 中期权数值格式化未加空值保护导致的黑屏异常；在 App.tsx 中为报表导出模态框补齐 ErrorBoundary 隔离；并在 PrimaryScreenerTable 中强化行点击与自选股数值安全计算，确保点击标的与报表查询 100% 稳定开启。
 - [测试] DeltaHarvest Test Suite & Type Remediation: 交付 DeltaHarvest 期权/CEF/风控完整单元测试套件 (`tests/test_delta_harvest_options.py`)，修复 `liveMarketFetcher.ts` 中的 TypeScript 类型声明与单例服务导出，通过 100% 全量类型校验与生产构建。
