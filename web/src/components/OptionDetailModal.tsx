@@ -30,10 +30,14 @@ export const OptionDetailModal: React.FC<OptionDetailModalProps> = ({
   onOpenCalculator,
   onStageOrder,
 }) => {
+  const intel = useMemo(
+    () => getSecurityIntelligence(opportunity?.symbol || 'ASSET'),
+    [opportunity?.symbol]
+  );
+
   if (!opportunity) return null;
 
   const isCSP = opportunity.strategy === 'CSP';
-  const intel = useMemo(() => getSecurityIntelligence(opportunity.symbol), [opportunity.symbol]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
