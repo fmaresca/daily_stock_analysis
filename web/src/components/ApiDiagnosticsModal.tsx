@@ -96,7 +96,8 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
       let statusData: any = null;
       try {
         const resp = await fetch('/api/v1/options/schwab/status');
-        if (resp.ok) {
+        const cType = resp.headers.get('content-type') || '';
+        if (resp.ok && cType.includes('application/json')) {
           statusData = await resp.json();
         }
       } catch {
