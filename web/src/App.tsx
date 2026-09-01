@@ -232,11 +232,12 @@ export const App: React.FC = () => {
       console.warn('Failed to parse cached live payload from storage', e);
     }
 
-    // 1. Primary: Attempt live FastAPI backend endpoint
+    // 1. Primary: Attempt live FastAPI backend endpoint (if available)
     if (!loaded) {
       try {
         const res = await fetch('/api/v1/options/snapshot');
-        if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
           const json: OptionsDataPayload = await res.json();
           if (json.tickers && json.tickers.length > 0) {
             setDataPayload(json);
@@ -244,8 +245,8 @@ export const App: React.FC = () => {
             loaded = true;
           }
         }
-      } catch (e) {
-        console.warn('Live API /api/v1/options/snapshot failed, attempting local fallback:', e);
+      } catch {
+        // Backend not running / static host - continue to local data fallback
       }
     }
 
@@ -253,7 +254,8 @@ export const App: React.FC = () => {
     if (!loaded) {
       try {
         const res = await fetch('./data/options_data.json?t=' + Date.now());
-        if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
           const json: OptionsDataPayload = await res.json();
           if (json.tickers && json.tickers.length > 0) {
             setDataPayload(json);
@@ -270,7 +272,8 @@ export const App: React.FC = () => {
     if (!loaded) {
       try {
         const res = await fetch('/data/options_data.json');
-        if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
           const json: OptionsDataPayload = await res.json();
           if (json.tickers && json.tickers.length > 0) {
             setDataPayload(json);
@@ -318,7 +321,8 @@ export const App: React.FC = () => {
         body: JSON.stringify({ tickers: targetTickers, enrich: false }),
       });
 
-      if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
         const json: OptionsDataPayload = await res.json();
         if (json.tickers && json.tickers.length > 0) {
           setDataPayload(json);
@@ -329,8 +333,8 @@ export const App: React.FC = () => {
           success = true;
         }
       }
-    } catch (e) {
-      console.info('FastAPI backend not detected, executing Client-Side Real-Time Market Engine');
+    } catch {
+      // Backend not running, execute client-side engine
     }
 
     // 2. Fallback: Client-Side Real-Time Market Engine (for Cloudflare Pages / static hosting)
@@ -369,8 +373,20 @@ export const App: React.FC = () => {
     setIsRecalculating(false);
   };
 
-  // Real-time WebSocket streaming listener
+  // Real-time WebSocket streaming listener (Active only in backend environments)
   useEffect(() => {
+    const hostname = window.location.hostname;
+    const isStaticCDN =
+      hostname.endsWith('pages.dev') ||
+      hostname.endsWith('github.io') ||
+      hostname.endsWith('netlify.app') ||
+      hostname.endsWith('vercel.app');
+
+    if (isStaticCDN) {
+      // Skip WebSocket handshake on static CDN hosting
+      return;
+    }
+
     let ws: WebSocket | null = null;
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -396,7 +412,7 @@ export const App: React.FC = () => {
       ws.onerror = () => {
         // Silent fallback - WebSocket is optional enhancement
       };
-    } catch (e) {
+    } catch {
       // Ignore if WebSocket connection is not supported in current environment
     }
 

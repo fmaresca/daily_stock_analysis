@@ -85,7 +85,8 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
 
       // 2. Test status and fetch sample quote
       const statusResp = await fetch('/api/v1/options/schwab/status');
-      if (statusResp.ok) {
+      const statusCType = statusResp.headers.get('content-type') || '';
+      if (statusResp.ok && statusCType.includes('application/json')) {
         const data = await statusResp.json();
         if (data.status === 'CONNECTED') {
           setTestStatus('CONNECTED');
