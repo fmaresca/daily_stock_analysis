@@ -90,7 +90,7 @@ function calculateRsi(closes: number[], period: number = 14): number {
  * Fetches real-time price & 1-month daily history for a single ticker via Yahoo Finance chart API.
  * Uses direct fetch with fallback to open proxy if CORS blocked.
  */
-async function fetchTickerChartData(symbol: str): Promise<{
+async function fetchTickerChartData(symbol: string): Promise<{
   spotPrice: number;
   closes: number[];
   volumes: number[];

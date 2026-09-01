@@ -155,3 +155,6 @@ class QuantLibGreeksEngine:
             intrinsic_value=round(intrinsic, 2),
             time_value=round(time_value, 2),
         )
+
+
+quantlib_greeks_engine = QuantLibGreeksEngine()

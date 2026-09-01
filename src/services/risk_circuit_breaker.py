@@ -131,3 +131,6 @@ class RiskCircuitBreakerService:
             concentrations=concentrations,
             breached_limits=breached_limits,
         )
+
+
+risk_circuit_breaker = RiskCircuitBreakerService()
