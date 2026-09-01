@@ -39,20 +39,30 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
   const [cadence, setCadence] = useState<'ALL' | 'WEEKLY_ONLY' | 'MONTHLY_ONLY'>('ALL');
   const [minIvr, setMinIvr] = useState<number>(0);
   const [minYield, setMinYield] = useState<number>(0);
-  const [maxDte, setMaxDte] = useState<number>(45);
+  const [maxDte, setMaxDte] = useState<number>(999);
   const [liquidityTier, setLiquidityTier] = useState<string>('ALL');
   const [hideEarningsRisk, setHideEarningsRisk] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
+  const handleResetFilters = () => {
+    setStrategy('ALL');
+    setCadence('ALL');
+    setMinIvr(0);
+    setMinYield(0);
+    setMaxDte(999);
+    setLiquidityTier('ALL');
+    setHideEarningsRisk(false);
+  };
+
   // Filtered Opportunities based on query configuration
   const filteredOpps = useMemo(() => {
     return opportunities.filter((o) => {
       if (strategy !== 'ALL' && o.strategy !== strategy) return false;
-      if (o.iv_rank < minIvr) return false;
-      if (o.annualized_roc < minYield) return false;
-      if (o.dte > maxDte) return false;
-      if (liquidityTier !== 'ALL' && !o.liquidity_tier?.includes(liquidityTier)) return false;
+      if ((o.iv_rank ?? 0) < minIvr) return false;
+      if ((o.annualized_roc ?? 0) < minYield) return false;
+      if (maxDte !== 999 && (o.dte ?? 0) > maxDte) return false;
+      if (liquidityTier !== 'ALL' && !(o.liquidity_tier || '').includes(liquidityTier)) return false;
       if (hideEarningsRisk && o.earnings_within_7d) return false;
 
       if (cadence !== 'ALL') {
@@ -68,16 +78,16 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
 
   // Aggregate Metrics
   const totalCollateral = useMemo(() => {
-    return filteredOpps.reduce((sum, o) => sum + o.collateral_required, 0);
+    return filteredOpps.reduce((sum, o) => sum + (o.collateral_required || 0), 0);
   }, [filteredOpps]);
 
   const totalPremium = useMemo(() => {
-    return filteredOpps.reduce((sum, o) => sum + o.premium_total, 0);
+    return filteredOpps.reduce((sum, o) => sum + (o.premium_total || 0), 0);
   }, [filteredOpps]);
 
   const avgAnnualizedYield = useMemo(() => {
     if (filteredOpps.length === 0) return 0;
-    const sum = filteredOpps.reduce((acc, o) => acc + o.annualized_roc, 0);
+    const sum = filteredOpps.reduce((acc, o) => acc + (o.annualized_roc || 0), 0);
     return Math.round((sum / filteredOpps.length) * 10) / 10;
   }, [filteredOpps]);
 
@@ -97,6 +107,17 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
         summary,
       },
       `deltaharvest_executive_report_${Date.now()}.xlsx`
+    );
+  };
+
+  const handleExportFullExcel = () => {
+    exportToExcel(
+      {
+        tickers,
+        opportunities,
+        summary,
+      },
+      `deltaharvest_full_database_${Date.now()}.xlsx`
     );
   };
 
@@ -221,14 +242,24 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
 
           {/* Max DTE */}
           <div>
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Max DTE: {maxDte}d
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                Max DTE: {maxDte === 999 ? 'All' : `${maxDte}d`}
+              </label>
+              <button
+                onClick={handleResetFilters}
+                className="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold underline"
+                title="Reset all query filters to defaults"
+              >
+                Reset
+              </button>
+            </div>
             <select
               value={maxDte}
               onChange={(e) => setMaxDte(Number(e.target.value))}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-indigo-500"
             >
+              <option value={999}>Any DTE (All Expirations)</option>
               <option value={7}>&le; 7 Days (Ultra-Short)</option>
               <option value={14}>&le; 14 Days (Bi-Weekly)</option>
               <option value={35}>&le; 35 Days (Weekly / Monthly)</option>
@@ -280,10 +311,19 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
               onClick={handleExportExcel}
               disabled={filteredOpps.length === 0}
               className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white font-semibold flex items-center space-x-1.5 shadow-md shadow-emerald-700/30 transition-all text-xs"
-              title="Download complete multi-sheet Excel spreadsheet"
+              title="Download filtered query spreadsheet"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
-              <span>Export Excel (.xlsx)</span>
+              <span>Export Query (.xlsx)</span>
+            </button>
+
+            <button
+              onClick={handleExportFullExcel}
+              className="px-3 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white font-semibold flex items-center space-x-1.5 shadow-md shadow-indigo-700/30 transition-all text-xs"
+              title="Download complete database with all 132 trades and 18 equities"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-indigo-200" />
+              <span>Full Database (.xlsx)</span>
             </button>
 
             <button

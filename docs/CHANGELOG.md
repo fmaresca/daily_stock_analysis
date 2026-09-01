@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [修复] DeltaHarvest Reports & Exports: 修复全局过滤器状态残留污染导致的报表与导出返回空数据问题；重置 EARNINGS_CALENDAR 视图为按财报日期升序全量排序而不剔除标的；在快速导出中增加数据安全回退保护；并在报表查询模态框提供过滤器一键重置与 1-Click 全量数据库导出 (.xlsx)。
+- [新功能] DeltaHarvest Security Intelligence & News: 全面暴露后端深度分析能力，在个股审计详情、期权详情、命令面板及主筛选表中深度集成 AI 综合决策评分（0–100分量化、技术面/基本面/流动性/波动率边际四大因子卡）、华尔街分析师共识目标价与潜在上涨空间、真实近期新闻资讯与期权波动率催化剂剖析、13F 机构顶级持仓机构比重及 SEC EDGAR 官方披露直链。
+- [改进] DeltaHarvest Primary Screener: 主筛选表新增 AI 评分与新闻催化剂展示列，并修复列头点击排序（布林带安全垫、支撑位距离、IVR、RSI）在表格行的实时响应与动态排序。
 - [新功能] DeltaHarvest Broker Staging: 交付 Phase 5 券商订单暂存与一键执行载荷系统，支持 Charles Schwab Retail Trader API、Interactive Brokers (IBKR TWS BasketTrader CSV 及 Client Portal Web API) 与 Thinkorswim (ToS) 标准化指令格式，自动注入 80% 利润平仓 (GTC Limit) 与 0.50 Delta / 200% 权利金防守展期止损括号单 (Bracket Order)，并提供单票 10% 风险熔断限额、Reg-T 对比 TIMS 保证金测算及一键复制、下载工单与打印执行单。
 - [改进] DeltaHarvest Navigation: 新增全局垂直高对比度滚动条美化（10px 宽度、Slate/Emerald 色彩反馈）与平滑滚动支持，并在页面向下滚动时提供一键平滑返回顶部悬浮按钮 (ScrollToTopButton)。
 - [改进] DeltaHarvest Navigation & Charts: 升级网页导航交互最佳实践（面包屑实时路径定位、快速跳转导航栏、键盘全局快捷键 1/2/W/R/?/P 支持、各视图上下文策略横幅），修复 Lightweight Charts v5 序列渲染并为所有新功能视图（交互式K线、基本面健康、多腿价差、波动率偏度、回测与压力测试）补齐 1-Click Excel (.xlsx)、CSV 及打印/保存 PDF 多格式导出支持。

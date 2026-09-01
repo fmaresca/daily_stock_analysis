@@ -17,6 +17,7 @@ import {
   Key,
 } from './icons';
 import { TickerMeta, MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
+import { getSecurityIntelligence } from '../utils/securityIntelligence';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -293,6 +294,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                           </div>
                           <div className="text-[10px] text-slate-400">IVR: {t.iv_rank}%</div>
                         </div>
+                        <span
+                          className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                            getSecurityIntelligence(t.symbol, t).compositeScore >= 80
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                              : 'bg-slate-800 text-slate-300 border-slate-700'
+                          }`}
+                        >
+                          {getSecurityIntelligence(t.symbol, t).compositeScore}/100
+                        </span>
                         <span
                           className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
                             t.has_weeklys === false

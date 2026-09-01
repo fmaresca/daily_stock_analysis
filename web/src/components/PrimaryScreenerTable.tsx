@@ -1,6 +1,7 @@
-import React from 'react';
-import { ArrowUpDown, AlertTriangle, ChevronRight, ShieldAlert, ShieldCheck, Star } from './icons';
+import React, { useMemo } from 'react';
+import { ArrowUpDown, AlertTriangle, ChevronRight, ShieldAlert, ShieldCheck, Star, Award } from './icons';
 import { TickerMeta } from '../types/options';
+import { getSecurityIntelligence } from '../utils/securityIntelligence';
 
 interface PrimaryScreenerTableProps {
   tickers: TickerMeta[];
@@ -21,6 +22,35 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
   onSort,
   onSelectTicker,
 }) => {
+  const sortedTickers = useMemo(() => {
+    const list = [...tickers];
+    list.sort((a, b) => {
+      let valA: any = (a as any)[sortBy];
+      let valB: any = (b as any)[sortBy];
+
+      if (sortBy === 'cushion_pct') {
+        valA = ((a.spot_price - a.lower_bb) / a.spot_price) * 100;
+        valB = ((b.spot_price - b.lower_bb) / b.spot_price) * 100;
+      } else if (sortBy === 'dist_to_support' as any) {
+        valA = Math.abs(a.spot_price - a.lower_bb);
+        valB = Math.abs(b.spot_price - b.lower_bb);
+      }
+
+      if (valA === valB) return 0;
+      if (valA === undefined || valA === null) return 1;
+      if (valB === undefined || valB === null) return -1;
+
+      if (typeof valA === 'string') {
+        return sortOrder === 'asc'
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      }
+
+      return sortOrder === 'asc' ? valA - valB : valB - valA;
+    });
+    return list;
+  }, [tickers, sortBy, sortOrder]);
+
   const renderSortArrow = (column: keyof TickerMeta | 'cushion_pct') => {
     if (sortBy !== column) {
       return <ArrowUpDown className="w-3 h-3 text-slate-500 opacity-40" />;
@@ -138,14 +168,18 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                 </div>
               </th>
 
+              <th className="py-3 px-3 text-center">
+                <span>AI Score &amp; News</span>
+              </th>
+
               <th className="py-3 px-4 text-center">Audit</th>
             </tr>
           </thead>
 
           <tbody className="divide-y divide-slate-800/60 text-xs">
-            {tickers.length === 0 ? (
+            {sortedTickers.length === 0 ? (
               <tr>
-                <td colSpan={11} className="py-12 text-center text-slate-400">
+                <td colSpan={12} className="py-12 text-center text-slate-400">
                   <p className="text-sm font-medium text-slate-300">
                     No tickers match the active filter criteria.
                   </p>
@@ -155,12 +189,13 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                 </td>
               </tr>
             ) : (
-              tickers.map((t) => {
+              sortedTickers.map((t) => {
                 const putCushion = ((t.spot_price - t.lower_bb) / t.spot_price) * 100;
                 const isHighIVR = t.iv_rank >= 45;
                 const isRsiExtreme = t.rsi_14 > 70 || t.rsi_14 < 30;
                 const isTier1 = t.liquidity_tier.includes('Tier 1');
                 const isTier4 = t.liquidity_tier.includes('Tier 4');
+                const intel = getSecurityIntelligence(t.symbol, t);
 
                 return (
                   <tr
@@ -356,6 +391,30 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                           Weekly
                         </span>
                       )}
+                    </td>
+
+                    {/* AI Score & News Badge */}
+                    <td className="py-3.5 px-3 text-center">
+                      <div className="flex flex-col items-center">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${
+                            intel.compositeScore >= 85
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                              : intel.compositeScore >= 75
+                              ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                              : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                          }`}
+                          title={`Consensus: ${intel.analystConsensus} • Target: $${intel.targetPrice.toFixed(2)} (+${intel.upsidePct}%)`}
+                        >
+                          {intel.compositeScore}/100
+                        </span>
+                        <span
+                          className="text-[9px] text-slate-400 truncate max-w-[100px] mt-0.5"
+                          title={intel.recentNews[0]?.headline || intel.sentimentLabel}
+                        >
+                          {intel.recentNews[0] ? `📰 ${intel.recentNews[0].category}` : intel.sentimentLabel}
+                        </span>
+                      </div>
                     </td>
 
                     {/* Action Button */}
