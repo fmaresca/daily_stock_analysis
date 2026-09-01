@@ -95,6 +95,18 @@ export interface SocialSentiment {
   social_volume_flag?: string;
 }
 
+export interface BarchartOpinion {
+  symbol?: string;
+  opinion_pct: number;
+  opinion_label: string;
+  buy_votes: string;
+  sell_votes: string;
+  signal_strength: 'Maximum (Top 1%)' | 'Strong' | 'Average' | 'Weak' | string;
+  signal_direction: 'Strongest' | 'Strengthening' | 'Weakening' | 'Neutral' | string;
+  is_top_1_pct: boolean;
+  votes_breakdown: Record<string, number>;
+}
+
 export interface TickerMeta {
   symbol: string;
   name: string;
@@ -130,6 +142,7 @@ export interface TickerMeta {
   corporate_actions?: CorporateActions;
   prediction_markets?: PredictionMarketEvent[];
   social_sentiment?: SocialSentiment;
+  barchart_opinion?: BarchartOpinion;
 }
 
 export interface OptionOpportunity {
@@ -181,12 +194,35 @@ export interface OptionOpportunity {
   tier_color: string;
   tags: string[];
   rating: number;
+  has_weeklys?: boolean;
+  expiration_cadence?: string;
+  nearest_expiration_date?: string;
+  days_to_nearest_expiration?: number;
+  is_monthly_adjusted?: boolean;
+  options_cadence?: string;
+  in_cboe_registry?: boolean;
+  next_options_expiration?: string;
+  next_options_dte?: number;
+  target_exp?: string;
+  target_dte?: number;
+  barchart_opinion?: BarchartOpinion;
 }
 
 export interface ScreenerSummary {
   generated_at: string;
   total_screened_tickers: number;
   total_opportunities: number;
+  avg_annualized_yield: number;
+  avg_cushion_pct: number;
+  high_ivr_count: number;
+  oversold_rsi_count: number;
+  breakdown: {
+    csp_count: number;
+    cc_count: number;
+    tier_1_count: number;
+    tier_4_count: number;
+    earnings_warning_count: number;
+  };
   csp_count: number;
   cc_count: number;
   avg_annualized_yield_csp: number;
@@ -224,6 +260,7 @@ export interface FilterState {
   onlyOversold?: boolean;
   onlyEarningsAlert?: boolean;
   weeklyCadence?: 'ALL' | 'WEEKLY_ONLY' | 'MONTHLY_ONLY';
+  opinionFilter?: 'ALL' | 'TOP_1_PCT' | 'BUY_ONLY' | 'WEEKLY_ONLY';
   liquidityTier?: string;
   strategy?: 'ALL' | 'CSP' | 'CC';
   maxDelta?: number;

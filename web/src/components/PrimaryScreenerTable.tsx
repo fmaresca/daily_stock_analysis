@@ -1,15 +1,27 @@
-import React, { useMemo } from 'react';
-import { ArrowUpDown, AlertTriangle, ChevronRight, ShieldAlert, ShieldCheck, Star, Award } from './icons';
+import React, { useState, useMemo } from 'react';
+import {
+  ArrowUpDown,
+  AlertTriangle,
+  ChevronRight,
+  ShieldAlert,
+  ShieldCheck,
+  Star,
+  Award,
+  Flame,
+  Zap,
+  CheckCircle2,
+} from './icons';
 import { TickerMeta } from '../types/options';
 import { getSecurityIntelligence } from '../utils/securityIntelligence';
+import { calculateBarchartOpinion } from '../utils/barchartEngine';
 
 interface PrimaryScreenerTableProps {
   tickers: TickerMeta[];
   watchlist: string[];
   onToggleWatchlist: (symbol: string) => void;
-  sortBy: keyof TickerMeta | 'cushion_pct';
+  sortBy: keyof TickerMeta | 'cushion_pct' | 'opinion_pct';
   sortOrder: 'asc' | 'desc';
-  onSort: (column: keyof TickerMeta | 'cushion_pct') => void;
+  onSort: (column: keyof TickerMeta | 'cushion_pct' | 'opinion_pct') => void;
   onSelectTicker: (ticker: TickerMeta) => void;
 }
 
@@ -22,8 +34,36 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
   onSort,
   onSelectTicker,
 }) => {
+  const [opinionFilter, setOpinionFilter] = useState<'ALL' | 'TOP_1_PCT' | 'BUY_ONLY' | 'WEEKLY_ONLY'>('ALL');
+
+  // Ensure each ticker has a populated barchart_opinion
+  const enrichedTickers = useMemo(() => {
+    return tickers.map((t) => {
+      if (t.barchart_opinion) return t;
+      const spot = t.spot_price || 100;
+      const sma = t.sma_20 || spot;
+      return {
+        ...t,
+        barchart_opinion: calculateBarchartOpinion(t.symbol, [sma * 0.96, sma * 0.98, sma, spot], spot),
+      };
+    });
+  }, [tickers]);
+
+  const filteredTickers = useMemo(() => {
+    if (opinionFilter === 'TOP_1_PCT') {
+      return enrichedTickers.filter((t) => t.barchart_opinion?.is_top_1_pct);
+    }
+    if (opinionFilter === 'BUY_ONLY') {
+      return enrichedTickers.filter((t) => (t.barchart_opinion?.opinion_pct || 0) >= 80);
+    }
+    if (opinionFilter === 'WEEKLY_ONLY') {
+      return enrichedTickers.filter((t) => t.has_weeklys !== false);
+    }
+    return enrichedTickers;
+  }, [enrichedTickers, opinionFilter]);
+
   const sortedTickers = useMemo(() => {
-    const list = [...tickers];
+    const list = [...filteredTickers];
     list.sort((a, b) => {
       let valA: any = (a as any)[sortBy];
       let valB: any = (b as any)[sortBy];
@@ -31,7 +71,10 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
       if (sortBy === 'cushion_pct') {
         valA = ((a.spot_price - a.lower_bb) / a.spot_price) * 100;
         valB = ((b.spot_price - b.lower_bb) / b.spot_price) * 100;
-      } else if (sortBy === 'dist_to_support' as any) {
+      } else if (sortBy === 'opinion_pct') {
+        valA = a.barchart_opinion?.opinion_pct ?? 0;
+        valB = b.barchart_opinion?.opinion_pct ?? 0;
+      } else if (sortBy === ('dist_to_support' as any)) {
         valA = Math.abs(a.spot_price - a.lower_bb);
         valB = Math.abs(b.spot_price - b.lower_bb);
       }
@@ -49,9 +92,13 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
       return sortOrder === 'asc' ? valA - valB : valB - valA;
     });
     return list;
-  }, [tickers, sortBy, sortOrder]);
+  }, [filteredTickers, sortBy, sortOrder]);
 
-  const renderSortArrow = (column: keyof TickerMeta | 'cushion_pct') => {
+  const top1Count = useMemo(() => enrichedTickers.filter((t) => t.barchart_opinion?.is_top_1_pct).length, [enrichedTickers]);
+  const buyCount = useMemo(() => enrichedTickers.filter((t) => (t.barchart_opinion?.opinion_pct || 0) >= 80).length, [enrichedTickers]);
+  const weeklyCount = useMemo(() => enrichedTickers.filter((t) => t.has_weeklys !== false).length, [enrichedTickers]);
+
+  const renderSortArrow = (column: keyof TickerMeta | 'cushion_pct' | 'opinion_pct') => {
     if (sortBy !== column) {
       return <ArrowUpDown className="w-3 h-3 text-slate-500 opacity-40" />;
     }
@@ -63,7 +110,71 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
   };
 
   return (
-    <div className="glass-panel rounded-xl border border-slate-800/80 overflow-hidden shadow-2xl">
+    <div className="glass-panel rounded-xl border border-slate-800/80 overflow-hidden shadow-2xl space-y-0">
+      {/* Quick Filter Bar */}
+      <div className="bg-slate-900/95 px-4 py-2.5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center space-x-1.5 overflow-x-auto">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 hidden sm:inline">
+            Signal Screener:
+          </span>
+
+          <button
+            onClick={() => setOpinionFilter('ALL')}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+              opinionFilter === 'ALL'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
+            }`}
+          >
+            All Symbols ({enrichedTickers.length})
+          </button>
+
+          <button
+            onClick={() => setOpinionFilter('TOP_1_PCT')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
+              opinionFilter === 'TOP_1_PCT'
+                ? 'bg-gradient-to-r from-amber-500/30 to-emerald-500/30 text-amber-300 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+                : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>Top 1% Signals</span>
+            <span className="text-[10px] font-mono bg-amber-950/80 px-1.5 py-0.2 rounded border border-amber-500/30 text-amber-200">
+              {top1Count}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setOpinionFilter('BUY_ONLY')}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1 ${
+              opinionFilter === 'BUY_ONLY'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
+            }`}
+          >
+            <span>Strong Buy (≥80%)</span>
+            <span className="text-[10px] font-mono text-slate-500">({buyCount})</span>
+          </button>
+
+          <button
+            onClick={() => setOpinionFilter('WEEKLY_ONLY')}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1 ${
+              opinionFilter === 'WEEKLY_ONLY'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
+            }`}
+          >
+            <span>Weekly Options Only</span>
+            <span className="text-[10px] font-mono text-slate-500">({weeklyCount})</span>
+          </button>
+        </div>
+
+        <div className="text-[11px] text-slate-400 font-mono hidden md:block">
+          Showing <span className="font-bold text-white">{sortedTickers.length}</span> of{' '}
+          <span className="text-slate-300">{enrichedTickers.length}</span> securities
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -168,6 +279,16 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                 </div>
               </th>
 
+              <th
+                onClick={() => onSort('opinion_pct')}
+                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Signal Strength</span>
+                  {renderSortArrow('opinion_pct')}
+                </div>
+              </th>
+
               <th className="py-3 px-3 text-center">
                 <span>AI Score &amp; News</span>
               </th>
@@ -179,7 +300,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
           <tbody className="divide-y divide-slate-800/60 text-xs">
             {sortedTickers.length === 0 ? (
               <tr>
-                <td colSpan={12} className="py-12 text-center text-slate-400">
+                <td colSpan={13} className="py-12 text-center text-slate-400">
                   <p className="text-sm font-medium text-slate-300">
                     No tickers match the active filter criteria.
                   </p>
@@ -383,6 +504,44 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse" />
                           Weekly
                         </span>
+                      )}
+                    </td>
+
+                    {/* Barchart Opinion & Signal Strength */}
+                    <td className="py-3.5 px-3">
+                      {t.barchart_opinion?.is_top_1_pct ? (
+                        <div className="flex flex-col items-start gap-0.5">
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-black font-mono bg-gradient-to-r from-amber-500/25 to-emerald-500/25 text-amber-300 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse">
+                            <Flame className="w-3 h-3 text-amber-400" />
+                            <span>Top 1% Buy</span>
+                            <span className="text-[9px] text-emerald-300 bg-emerald-950/80 px-1 py-0.2 rounded font-mono font-bold">13/13</span>
+                          </span>
+                          <span className="text-[9px] text-emerald-400/90 font-mono font-semibold">
+                            Strongest • Max
+                          </span>
+                        </div>
+                      ) : t.barchart_opinion ? (
+                        <div className="flex flex-col items-start gap-0.5">
+                          <span
+                            className={`inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ${
+                              t.barchart_opinion.opinion_pct >= 80
+                                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                : t.barchart_opinion.opinion_pct > 0
+                                ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                                : t.barchart_opinion.opinion_pct < 0
+                                ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                                : 'bg-slate-800 text-slate-400 border border-slate-700'
+                            }`}
+                          >
+                            <span>{t.barchart_opinion.opinion_label}</span>
+                            <span className="text-[9px] opacity-75 font-mono">({t.barchart_opinion.buy_votes})</span>
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-mono">
+                            {t.barchart_opinion.signal_strength} • {t.barchart_opinion.signal_direction}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-500 text-[10px] font-mono">N/A</span>
                       )}
                     </td>
 
