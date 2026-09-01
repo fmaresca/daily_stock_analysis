@@ -14,6 +14,7 @@ import {
   Calendar,
   Layers,
   Printer,
+  Key,
 } from './icons';
 import { TickerMeta, MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 
@@ -26,6 +27,7 @@ interface CommandPaletteProps {
   onOpenHelp: () => void;
   onOpenWatchlist: () => void;
   onOpenReports: () => void;
+  onOpenSchwab?: () => void;
   onExportCSV: () => void;
   onExportExcel: () => void;
   onTriggerPrint: () => void;
@@ -40,6 +42,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenHelp,
   onOpenWatchlist,
   onOpenReports,
+  onOpenSchwab,
   onExportCSV,
   onExportExcel,
   onTriggerPrint,
@@ -133,6 +136,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: <FileText className="w-4 h-4 text-indigo-400" />,
       action: () => {
         onOpenReports();
+        onClose();
+      },
+    },
+    {
+      id: 'action-schwab',
+      title: 'Charles Schwab API Provisioning & Settings',
+      subtitle: 'Configure retail developer App Key, Secret, and OAuth tokens',
+      icon: <Key className="w-4 h-4 text-blue-400" />,
+      action: () => {
+        if (onOpenSchwab) onOpenSchwab();
         onClose();
       },
     },

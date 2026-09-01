@@ -22,6 +22,7 @@ interface HeaderProps {
   onOpenHelp: () => void;
   onOpenWatchlists: () => void;
   onOpenReports: () => void;
+  onOpenSchwab: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenHelp,
   onOpenWatchlists,
   onOpenReports,
+  onOpenSchwab,
 }) => {
   const formattedTime = lastUpdated
     ? new Date(lastUpdated).toLocaleDateString('en-US', {
@@ -58,23 +60,27 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center space-x-2">
               <h1 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
                 <span>DeltaHarvest</span>
-                <span className="text-xs font-semibold text-slate-400">Institutional</span>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  v2.0
+                </span>
               </h1>
-              <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                Weekly Income
+              <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono hidden md:inline">
+                {totalTickers} Equities Tracked
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">
-              Equities Technicals • Conservative CSPs (Lower BB) &amp; Covered Calls (Upper BB)
-            </p>
+            <div className="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
+              <span>Updated: {formattedTime}</span>
+              <span>•</span>
+              <span className="text-emerald-400/90 font-mono">Conservative Income Engine</span>
+            </div>
           </div>
         </div>
 
-        {/* Global Search Bar (Trigger for Command Palette) */}
-        <div className="flex-1 max-w-xs hidden md:block">
+        {/* Global Search Trigger (Ctrl+K) */}
+        <div className="flex-1 max-w-xs mx-2 hidden md:block">
           <button
             onClick={onOpenCommandPalette}
-            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all text-xs group"
+            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 text-slate-400 hover:text-white transition-all text-xs group"
           >
             <div className="flex items-center space-x-2">
               <Search className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
@@ -88,6 +94,16 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls & Navigation Shortcuts */}
         <div className="flex items-center space-x-2">
+          {/* Schwab API Settings */}
+          <button
+            onClick={onOpenSchwab}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-blue-300 hover:border-blue-500/50 transition-all"
+            title="Configure Charles Schwab Retail Trader API keys"
+          >
+            <span className="w-2 h-2 rounded-full bg-blue-400" />
+            <span className="hidden sm:inline">Schwab API</span>
+          </button>
+
           {/* Watchlists Button */}
           <button
             onClick={onOpenWatchlists}
