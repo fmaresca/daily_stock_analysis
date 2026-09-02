@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import * as XLSX from 'xlsx';
 import {
   X,
   ShieldCheck,
@@ -27,12 +26,13 @@ import {
 } from './icons';
 import { TickerMeta, OptionOpportunity } from '../types/options';
 import { InteractiveChart } from './InteractiveChart';
-import { getSecurityIntelligence } from '../utils/securityIntelligence';
+import { getSecurityIntelligence, calculateMarketChameleonPattern } from '../utils/securityIntelligence';
 import { AnalystPriceTargetBar } from './AnalystPriceTargetBar';
 import { PredictionMarketCards } from './PredictionMarketCards';
 import { SocialSentimentGauge } from './SocialSentimentGauge';
 import { BarchartOpinionCard } from './BarchartOpinionCard';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
+import { exportToExcel } from '../utils/exportImport';
 
 type TickerDetailTab = 'OPTIONS_TECH' | 'NEWS_ANALYST' | 'PREDICTION_MARKETS' | 'SOCIAL_SENTIMENT';
 
@@ -193,30 +193,13 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
       { Parameter: 'Best CC Annualized ROC %', Value: bestCC?.annualized_roc ?? 'N/A' },
     ];
 
-    const oppsData = tickerOpps.map((o) => ({
-      Strategy: o.strategy,
-      Expiration: o.expiration,
-      DTE: o.dte,
-      Strike: o.strike,
-      Delta: o.delta,
-      Premium: o.premium_total,
-      Collateral: o.collateral_required,
-      'Annualized ROC %': o.annualized_roc,
-      'Cushion %': o.cushion_pct,
-      'POP %': o.pop_pct,
-      'Safety Tier': o.safety_tier,
-    }));
-
-    const wb = XLSX.utils.book_new();
-    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, wsSummary, 'Security Intelligence');
-
-    if (oppsData.length > 0) {
-      const wsOpps = XLSX.utils.json_to_sheet(oppsData);
-      XLSX.utils.book_append_sheet(wb, wsOpps, 'Option Opportunities');
-    }
-
-    XLSX.writeFile(wb, `${ticker.symbol}_full_audit_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    exportToExcel(
+      {
+        tickers: [ticker],
+        opportunities: tickerOpps,
+      },
+      `${ticker.symbol}_full_audit_${new Date().toISOString().slice(0, 10)}.xls`
+    );
   };
 
   // Identify if security is an Equity vs. ETF / Closed-End / Income Fund
@@ -594,6 +577,91 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
               {barchartOpinion && (
                 <BarchartOpinionCard opinion={barchartOpinion} />
               )}
+
+              {/* SECTION 4.1: MarketChameleon Quantitative Pattern & Stock Ideas */}
+              {(() => {
+                const mc = intel.marketChameleon || calculateMarketChameleonPattern(ticker);
+                return (
+                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">🦎</span>
+                        <div>
+                          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>MarketChameleon Quantitative Pattern &amp; Stock Ideas</span>
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                              MA Rule Engine
+                            </span>
+                          </h3>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            Moving Average Engine (SMA 20/50/250) • Momentum &amp; Reversal Classifications
+                          </div>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                        {mc.stock_ideas_category}
+                      </span>
+                    </div>
+
+                    {/* Active Technical Pattern Badges */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {mc.technical_flags.map((flag, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950 border border-emerald-500/40 text-emerald-300 font-mono shadow-sm flex items-center gap-1.5"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>{flag}</span>
+                        </span>
+                      ))}
+                      {mc.is_momentum_stock && (
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-950/60 border border-amber-500/40 text-amber-300 font-mono flex items-center gap-1">
+                          <span>🔥 Momentum Stock</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Moving Average Gaps Grid */}
+                    <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                      <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
+                        <div className="text-[10px] text-slate-400 uppercase font-mono">Price vs SMA 20</div>
+                        <div className={`text-sm font-bold font-mono mt-0.5 ${mc.moving_average_gaps.price_vs_sma20 >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {mc.moving_average_gaps.price_vs_sma20 >= 0 ? '+' : ''}{mc.moving_average_gaps.price_vs_sma20}%
+                        </div>
+                        <div className="text-[9px] text-slate-500 font-mono">SMA 20: ${mc.sma_20.toFixed(2)}</div>
+                      </div>
+
+                      <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
+                        <div className="text-[10px] text-slate-400 uppercase font-mono">SMA 20 vs SMA 50</div>
+                        <div className={`text-sm font-bold font-mono mt-0.5 ${mc.moving_average_gaps.sma20_vs_sma50 >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {mc.moving_average_gaps.sma20_vs_sma50 >= 0 ? '+' : ''}{mc.moving_average_gaps.sma20_vs_sma50}%
+                        </div>
+                        <div className="text-[9px] text-slate-500 font-mono">SMA 50: ${mc.sma_50.toFixed(2)}</div>
+                      </div>
+
+                      <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
+                        <div className="text-[10px] text-slate-400 uppercase font-mono">SMA 50 vs SMA 250</div>
+                        <div className={`text-sm font-bold font-mono mt-0.5 ${mc.moving_average_gaps.sma50_vs_sma250 >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {mc.moving_average_gaps.sma50_vs_sma250 >= 0 ? '+' : ''}{mc.moving_average_gaps.sma50_vs_sma250}%
+                        </div>
+                        <div className="text-[9px] text-slate-500 font-mono">SMA 250: ${mc.sma_250.toFixed(2)}</div>
+                      </div>
+                    </div>
+
+                    {/* Aligned Options Strategy Allocation */}
+                    <div className="p-2.5 bg-slate-950/60 rounded-lg border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-400 font-medium">MarketChameleon Strategy Alignment:</span>
+                      <div className="flex flex-wrap gap-1.5 font-mono text-[11px]">
+                        {mc.aligned_strategies.map((strat, sIdx) => (
+                          <span key={sIdx} className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                            {strat}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* SECTION 7: Proposed Strategy */}
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">

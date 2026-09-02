@@ -112,7 +112,24 @@ export interface BarchartOpinion {
   signal_strength: 'Maximum (Top 1%)' | 'Strong' | 'Average' | 'Weak' | string;
   signal_direction: 'Strongest' | 'Strengthening' | 'Weakening' | 'Neutral' | string;
   is_top_1_pct: boolean;
-  votes_breakdown: Record<string, number>;
+  votes_breakdown?: Record<string, number>;
+}
+
+export interface MarketChameleonPattern {
+  symbol?: string;
+  technical_flags: string[];
+  primary_trend: 'Uptrend' | 'Downtrend' | 'Neutral / Consolidation';
+  stock_ideas_category: string;
+  is_momentum_stock: boolean;
+  moving_average_gaps: {
+    price_vs_sma20: number;
+    sma20_vs_sma50: number;
+    sma50_vs_sma250: number;
+  };
+  sma_20: number;
+  sma_50: number;
+  sma_250: number;
+  aligned_strategies: string[];
 }
 
 export interface TickerMeta {
@@ -151,6 +168,7 @@ export interface TickerMeta {
   prediction_markets?: PredictionMarketEvent[];
   social_sentiment?: SocialSentiment;
   barchart_opinion?: BarchartOpinion;
+  market_chameleon?: MarketChameleonPattern;
 }
 
 export interface OptionOpportunity {

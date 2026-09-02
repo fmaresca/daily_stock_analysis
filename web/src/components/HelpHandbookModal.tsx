@@ -22,7 +22,9 @@ interface HelpHandbookModalProps {
 }
 
 type HandbookTab =
+  | 'LAYPERSON_PRIMER'
   | 'STRATEGY_RULES'
+  | 'MARKET_CHAMELEON'
   | 'CHART_READING'
   | 'SPREADS_SKEW'
   | 'SOLVENCY_CEF'
@@ -36,7 +38,7 @@ type HandbookTab =
   | 'SHORTCUTS_FAQ';
 
 export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<HandbookTab>('STRATEGY_RULES');
+  const [activeTab, setActiveTab] = useState<HandbookTab>('LAYPERSON_PRIMER');
 
   if (!isOpen) return null;
 
@@ -76,6 +78,18 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
         {/* Tab Navigation */}
         <div className="flex items-center space-x-1 p-2 bg-slate-950/40 border-b border-slate-800 overflow-x-auto text-xs">
           <button
+            onClick={() => setActiveTab('LAYPERSON_PRIMER')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'LAYPERSON_PRIMER'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-amber-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <span>🌟</span>
+            <span>Plain-English Primer (Non-Traders)</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('STRATEGY_RULES')}
             className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
               activeTab === 'STRATEGY_RULES'
@@ -88,6 +102,18 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
           </button>
 
           <button
+            onClick={() => setActiveTab('MARKET_CHAMELEON')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'MARKET_CHAMELEON'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <span>🦎</span>
+            <span>2. MarketChameleon Patterns &amp; Ideas</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('CHART_READING')}
             className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
               activeTab === 'CHART_READING'
@@ -96,7 +122,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <Activity className="w-4 h-4 text-cyan-400" />
-            <span>2. Visual Charting &amp; Strike Positioning</span>
+            <span>3. Visual Charting &amp; Strike Positioning</span>
           </button>
 
           <button
@@ -108,7 +134,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>3. Multi-Leg Spreads &amp; Volatility Skew</span>
+            <span>4. Multi-Leg Spreads &amp; Volatility Skew</span>
           </button>
 
           <button
@@ -120,7 +146,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <ShieldCheck className="w-4 h-4 text-indigo-400" />
-            <span>4. Altman Z-Score &amp; CEF Anatomy</span>
+            <span>5. Altman Z-Score &amp; CEF Anatomy</span>
           </button>
 
           <button
@@ -132,7 +158,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <BarChart2 className="w-4 h-4 text-purple-400" />
-            <span>5. Backtesting &amp; Margin Stress</span>
+            <span>6. Backtesting &amp; Margin Stress</span>
           </button>
 
           <button
@@ -144,7 +170,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <Zap className="w-4 h-4 text-amber-400" />
-            <span>6. Broker Staging &amp; Execution</span>
+            <span>7. Broker Staging &amp; Execution</span>
           </button>
 
           <button
@@ -155,8 +181,8 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Flame className="w-4 h-4 text-cyan-400" />
-            <span>7. Prediction Markets &amp; Sentiment</span>
+            <MessageSquare className="w-4 h-4 text-blue-400" />
+            <span>8. Sentiment &amp; Predictions</span>
           </button>
 
           <button
@@ -168,7 +194,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <ShieldAlert className="w-4 h-4 text-rose-400" />
-            <span>8. Live Streaming &amp; Risk Circuit-Breakers</span>
+            <span>9. Live Risk Circuit-Breakers</span>
           </button>
 
           <button
@@ -179,8 +205,8 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Layers className="w-4 h-4" />
-            <span>9. Expiration Cadence</span>
+            <Layers className="w-4 h-4 text-cyan-400" />
+            <span>10. Weekly vs Monthly Expirations</span>
           </button>
 
           <button
@@ -191,8 +217,8 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Activity className="w-4 h-4" />
-            <span>10. Greeks &amp; Yield Math</span>
+            <Activity className="w-4 h-4 text-emerald-400" />
+            <span>11. Greeks &amp; Formulas</span>
           </button>
 
           <button
@@ -204,7 +230,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <Flame className="w-4 h-4 text-amber-400" />
-            <span>11. Liquidity Tiers &amp; Slippage</span>
+            <span>12. Liquidity Tiers</span>
           </button>
 
           <button
@@ -216,12 +242,167 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <Command className="w-4 h-4" />
-            <span>12. Shortcuts &amp; FAQ</span>
+            <span>13. Shortcuts &amp; FAQ</span>
           </button>
         </div>
 
         {/* Tab Content Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm text-slate-300 leading-relaxed">
+          {/* TAB 0: Plain-English Layperson Primer */}
+          {activeTab === 'LAYPERSON_PRIMER' && (
+            <div className="space-y-6">
+              <div className="border-l-2 border-emerald-400 pl-4 py-1">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>🌟 Welcome to DeltaHarvest: Plain-English Guide for Everyday Investors</span>
+                </h3>
+                <p className="text-slate-300 mt-1">
+                  You don&apos;t need to be a Wall Street day-trader to use this platform. DeltaHarvest is an automated conservative income system that lets you collect recurring cash flow from high-quality stocks with high statistical odds of success.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Concept 1: What is an Option? */}
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+                  <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <span className="text-emerald-400">1.</span> What is an Option Contract?
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Think of an option like an <strong>insurance contract</strong> or an <strong>earnest money deposit on real estate</strong>. When you sell an option, someone pays you cash today in exchange for a promise that expires in a few days or weeks.
+                  </p>
+                </div>
+
+                {/* Concept 2: Cash-Secured Put (CSP) */}
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-2">
+                  <div className="font-bold text-emerald-300 text-xs flex items-center gap-1.5">
+                    <span className="text-emerald-400">2.</span> Cash-Secured Put (CSP) = Getting Paid to Buy on Sale
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    You set aside cash to buy 100 shares of a great company (like Apple or Microsoft) at a <strong>steep discount price you choose</strong>. You get paid real cash upfront today. If the stock never drops to your discount price, you keep 100% of the cash for free!
+                  </p>
+                </div>
+
+                {/* Concept 3: Covered Call (CC) */}
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-cyan-500/30 space-y-2">
+                  <div className="font-bold text-cyan-300 text-xs flex items-center gap-1.5">
+                    <span className="text-cyan-400">3.</span> Covered Call (CC) = Collecting Rental Income
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    If you own 100 shares of a stock, selling a Covered Call is like collecting monthly rental income on your house while agreeing that if someone offers you a massive jackpot price, you&apos;ll sell it for huge profits.
+                  </p>
+                </div>
+
+                {/* Concept 4: Delta and Probabilities */}
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-indigo-500/30 space-y-2">
+                  <div className="font-bold text-indigo-300 text-xs flex items-center gap-1.5">
+                    <span className="text-indigo-400">4.</span> Delta (&Delta;) = The Statistical Odds
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Delta measures the probability of a stock reaching your strike price. When we target <strong>0.15 Delta</strong>, math says there is an <strong>~85% statistical probability</strong> that the trade will finish fully profitable with zero stock purchase required.
+                  </p>
+                </div>
+
+                {/* Concept 5: Bollinger Bands */}
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-amber-500/30 space-y-2">
+                  <div className="font-bold text-amber-300 text-xs flex items-center gap-1.5">
+                    <span className="text-amber-400">5.</span> Bollinger Bands = Price Highway Guardrails
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Bollinger Bands show the statistical normal price boundaries of a stock (2 Standard Deviations = 95% of all price action). We sell puts <strong>below the Lower Band floor</strong> and calls <strong>above the Upper Band ceiling</strong> for maximum safety margin.
+                  </p>
+                </div>
+
+                {/* Concept 6: IV Rank */}
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-purple-500/30 space-y-2">
+                  <div className="font-bold text-purple-300 text-xs flex items-center gap-1.5">
+                    <span className="text-purple-400">6.</span> IV Rank (IVR %) = Volatility Thermometer
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Implied Volatility (IV) measures market panic or excitement. When IV Rank is high (&ge; 45%), option buyers overpay for insurance, allowing conservative option sellers to harvest unusually high cash yields.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: MarketChameleon Quantitative Patterns */}
+          {activeTab === 'MARKET_CHAMELEON' && (
+            <div className="space-y-6">
+              <div className="border-l-2 border-amber-400 pl-4 py-1">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>🦎 MarketChameleon Quantitative Patterns &amp; Stock Ideas</span>
+                </h3>
+                <p className="text-slate-400 mt-1">
+                  MarketChameleon uses a triple Simple Moving Average (SMA 20/50/250) engine and 6-month price range dynamics to classify equities into actionable technical patterns and institutional Stock Ideas.
+                </p>
+              </div>
+
+              {/* 3 Moving Averages */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-400 uppercase font-mono">Short-Term (1 Month)</div>
+                  <div className="text-base font-bold text-emerald-400 font-mono mt-0.5">20-Day SMA</div>
+                  <div className="text-[11px] text-slate-400 mt-1">Fast baseline and immediate dynamic support/resistance level.</div>
+                </div>
+
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-400 uppercase font-mono">Medium-Term (10 Weeks)</div>
+                  <div className="text-base font-bold text-cyan-400 font-mono mt-0.5">50-Day SMA</div>
+                  <div className="text-[11px] text-slate-400 mt-1">Intermediate institutional trend filter and pullback cushion.</div>
+                </div>
+
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-400 uppercase font-mono">Long-Term (1 Year)</div>
+                  <div className="text-base font-bold text-indigo-400 font-mono mt-0.5">250-Day SMA</div>
+                  <div className="text-[11px] text-slate-400 mt-1">Macro secular trend anchor distinguishing bull from bear regimes.</div>
+                </div>
+              </div>
+
+              {/* 9 Technical Patterns */}
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+                  9 Technical Pattern Classifications
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+                    <div className="font-bold text-emerald-300">📈 Uptrend (Bullish Stack)</div>
+                    <div className="text-slate-300 font-mono text-[11px]">Price &gt; SMA 20 &gt; SMA 50 &gt; SMA 250</div>
+                    <div className="text-slate-400 text-[11px]">Strong upward momentum across all timeframes. Ideal for Bull Put Spreads and Covered Calls.</div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-rose-500/30 space-y-1">
+                    <div className="font-bold text-rose-300">📉 Downtrend (Bearish Stack)</div>
+                    <div className="text-slate-300 font-mono text-[11px]">Price &lt; SMA 20 &lt; SMA 50 &lt; SMA 250</div>
+                    <div className="text-slate-400 text-[11px]">Sustained downward drift. Avoid naked puts; hedge with Bear Call Spreads or Collars.</div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-cyan-500/30 space-y-1">
+                    <div className="font-bold text-cyan-300">⚡ Bottom Bounce (Reversal Candidate)</div>
+                    <div className="text-slate-300 font-mono text-[11px]">Prevailing downtrend (SMA 20 &lt; 50), Price[t] crosses above SMA 20[t]</div>
+                    <div className="text-slate-400 text-[11px]">Signals oversold exhaustion and potential mean-reversion rally. Prime for conservative CSPs.</div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-amber-500/30 space-y-1">
+                    <div className="font-bold text-amber-300">🛡️ Top Pullback (Dip in Uptrend)</div>
+                    <div className="text-slate-300 font-mono text-[11px]">Uptrend stack, but Price dips below SMA 20 while holding above SMA 50</div>
+                    <div className="text-slate-400 text-[11px]">Healthy institutional consolidation inside a strong bull market. Excellent entry for dip buyers.</div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-purple-500/30 space-y-1">
+                    <div className="font-bold text-purple-300">💀 Dead Cat Bounce Warning</div>
+                    <div className="text-slate-300 font-mono text-[11px]">SMA 50 &lt; 250, breached SMA 20 recently but closed down lower</div>
+                    <div className="text-slate-400 text-[11px]">Fakeout recovery trap that failed to hold. Signals continued weakness.</div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-3 rounded-xl border border-teal-500/30 space-y-1">
+                    <div className="font-bold text-teal-300">🔥 Momentum Stocks (Stock Ideas)</div>
+                    <div className="text-slate-300 font-mono text-[11px]">(Price - Low 6M) / (High 6M - Low 6M) strictly increasing across 3M, 2M, 1M</div>
+                    <div className="text-slate-400 text-[11px]">Stocks consistently gaining relative strength near 6-month highs. High momentum leaders.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: Core Strategy Rules */}
           {activeTab === 'STRATEGY_RULES' && (
             <div className="space-y-6">
