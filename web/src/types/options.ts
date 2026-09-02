@@ -97,6 +97,37 @@ export interface PredictionMarketEvent {
   url?: string;
   category?: 'EQUITY_EARNINGS' | 'CORP_CATALYST' | 'SECTOR_MACRO' | 'FED_RATES' | string;
   relevance_note?: string;
+  horizon_year?: string; // e.g. '2025', '2026', '2027', '2028+'
+  target_date?: string;
+  term_structure_group?: string; // e.g. 'SPCX / TSLA Combination', 'Robotaxi Regulatory Approval'
+  volume_usd?: number;
+  liquidity_depth?: string;
+  cross_platform_consensus?: {
+    kalshi?: string;
+    polymarket?: string;
+    manifold?: string;
+    predictit?: string;
+  };
+  historical_7d_change_pct?: number;
+  catalyst_impact_rating?: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+export interface PredictionMarketTermStructurePoint {
+  horizon_year: string;
+  cumulative_probability_pct: number;
+  marginal_probability_pct: number;
+  implied_hazard_rate_annual: number;
+  primary_driver: string;
+  cross_market_spread_pct?: number;
+  consensus_label: 'Low Likelihood' | 'Emerging Catalyst' | 'High Probability' | 'Consensus Outcome';
+}
+
+export interface PredictionMarketTermStructure {
+  group_name: string;
+  catalyst_description: string;
+  timeline: PredictionMarketTermStructurePoint[];
+  peak_inflection_year: string;
+  options_implication: string;
 }
 
 export interface SocialSentiment {
@@ -111,6 +142,14 @@ export interface SocialSentiment {
   seeking_alpha_sentiment?: string;
   seeking_alpha_quant_rating?: number;
   tradingview_technical_rating?: string;
+  volume_z_score?: number;
+  sentiment_momentum?: 'Accelerating' | 'Steady' | 'Fading';
+  retail_vs_institutional_divergence?: string;
+  fomo_risk_flag?: string;
+  ssvs_composite_score?: number; // 0 - 100 Social Sentiment Velocity Score
+  pmci_composite_score?: number; // 0 - 100 Prediction Market Composite Index
+  icrrs_composite_score?: number; // 0 - 100 Integrated Catalyst Risk-Reward Score
+  icrrs_decision_action?: 'HIGH_CONVICTION_HARVEST' | 'BUY_CSP_STEADY' | 'NEUTRAL_WHEEL' | 'HOLD_DEFENSIVE';
 }
 
 export interface BarchartOpinion {
