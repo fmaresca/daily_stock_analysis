@@ -734,6 +734,9 @@ export const App: React.FC = () => {
           earnings_within_7d: t.earnings_within_7d,
           next_earnings_date: t.next_earnings_date,
           safety_tier: t.iv_rank >= 45 ? 'Optimal Volatility (IVR >= 45)' : 'Standard Volatility',
+          tier_color: t.iv_rank >= 45 ? 'emerald' : 'blue',
+          tags: ['CUSTOM_TICKER', 'LIVE_SYNTHESIS', 'CSP_HARVEST'],
+          rating: Math.min(99, Math.max(60, Math.round(83.5 + (putAnnualized / 2)))),
         };
 
         const cc: OptionOpportunity = {
@@ -775,6 +778,9 @@ export const App: React.FC = () => {
           earnings_within_7d: t.earnings_within_7d,
           next_earnings_date: t.next_earnings_date,
           safety_tier: t.iv_rank >= 45 ? 'Optimal Volatility (IVR >= 45)' : 'Standard Volatility',
+          tier_color: t.iv_rank >= 45 ? 'emerald' : 'blue',
+          tags: ['CUSTOM_TICKER', 'LIVE_SYNTHESIS', 'CC_HARVEST'],
+          rating: Math.min(99, Math.max(60, Math.round(82.0 + (callAnnualized / 2)))),
         };
 
         oppMap.set(csp.id, csp);
