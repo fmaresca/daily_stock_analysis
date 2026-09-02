@@ -92,14 +92,19 @@ def recalculate_options_data(
 
     try:
         try:
-            from scripts.generate_options_data import generate_options_dataset
+            from scripts.generate_options_data import generate_options_dataset, load_watchlist
         except ImportError:
             import sys
             sys.path.insert(0, str(Path(".").resolve()))
-            from scripts.generate_options_data import generate_options_dataset
+            from scripts.generate_options_data import generate_options_dataset, load_watchlist
+
+        target_tickers = None
+        if tickers:
+            base_list = load_watchlist()
+            target_tickers = list(dict.fromkeys(list(base_list) + [t.upper().strip() for t in tickers]))
 
         payload = generate_options_dataset(
-            tickers=tickers,
+            tickers=target_tickers,
             output_json_web="web/public/data/options_data.json",
             output_json_root="data/options_data.json",
             output_audit="reports/latest_options_audit.md",

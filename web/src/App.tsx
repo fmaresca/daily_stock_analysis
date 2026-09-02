@@ -65,9 +65,10 @@ import {
   triggerPrintReport,
 } from './utils/exportImport';
 import { fetchClientSideLiveMarketData } from './utils/liveMarketFetcher';
+import { SECURITY_INTELLIGENCE_REGISTRY } from './utils/securityIntelligence';
 
 const DEFAULT_UNIVERSE_SYMBOLS = [
-  'SPY', 'QQQ', 'IWM', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'TSLA',
+  'SPY', 'QQQ', 'IWM', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'TSLA',
   'PLTR', 'IONQ', 'NET', 'RTX', 'JEPI', 'SCHD', 'SPCX', 'CLM', 'CRF', 'ZETA', 'BLZE', 'AXTI',
 ];
 
@@ -84,7 +85,7 @@ const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
     id: 'tier-1-liquid',
     name: 'Tier 1 Ultra-Liquid',
     description: 'Tightest penny-wide spreads and institutional depth',
-    tickers: ['SPY', 'QQQ', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'TSLA'],
+    tickers: ['SPY', 'QQQ', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'TSLA'],
     isDefault: true,
     createdAt: new Date().toISOString(),
   },
@@ -254,11 +255,22 @@ export const App: React.FC = () => {
       if (savedPayloadStr) {
         const savedPayload: OptionsDataPayload = JSON.parse(savedPayloadStr);
         if (savedPayload && Array.isArray(savedPayload.tickers) && savedPayload.tickers.length > 0) {
-          setDataPayload(savedPayload);
-          setDataSource('Live Market Feed');
-          const savedTime = localStorage.getItem('deltaharvest_last_live_fetch');
-          if (savedTime) setLastLiveFetchTime(savedTime);
-          loaded = true;
+          // Check if any ticker contains defaulted placeholder values ($100 spot, 1M vol, $100 sma)
+          const hasStaleDefaults = savedPayload.tickers.some(
+            (t) => t.spot_price === 100 && t.avg_volume_30 === 1000000 && t.sma_20 === 100
+          );
+          if (!hasStaleDefaults) {
+            setDataPayload(savedPayload);
+            setDataSource('Live Market Feed');
+            const savedTime = localStorage.getItem('deltaharvest_last_live_fetch');
+            if (savedTime) setLastLiveFetchTime(savedTime);
+            loaded = true;
+          } else {
+            console.warn('[DeltaHarvest] Purged stale cached payload containing defaulted placeholder values');
+            try {
+              localStorage.removeItem('deltaharvest_live_payload');
+            } catch {}
+          }
         }
       }
     } catch (e) {
@@ -358,7 +370,28 @@ export const App: React.FC = () => {
       if (res.ok && contentType.includes('application/json')) {
         const json: OptionsDataPayload = await res.json();
         if (json.tickers && json.tickers.length > 0) {
-          setDataPayload(json);
+          setDataPayload((prev) => {
+            if (!prev || !prev.tickers) return json;
+            const tickerMap = new Map<string, TickerMeta>();
+            prev.tickers.forEach((t) => tickerMap.set(t.symbol, t));
+            json.tickers.forEach((t) => tickerMap.set(t.symbol, t));
+
+            const oppMap = new Map<string, OptionOpportunity>();
+            (prev.opportunities || []).forEach((o) => {
+              const k = o.id || `${o.strategy}_${o.symbol}_${o.strike}`;
+              oppMap.set(k, o);
+            });
+            (json.opportunities || []).forEach((o) => {
+              const k = o.id || `${o.strategy}_${o.symbol}_${o.strike}`;
+              oppMap.set(k, o);
+            });
+
+            return {
+              ...json,
+              tickers: Array.from(tickerMap.values()),
+              opportunities: Array.from(oppMap.values()),
+            };
+          });
           setDataSource('FastAPI Live Engine');
           setCustomTickers((prev) =>
             prev.filter((c) => !json.tickers?.some((t) => t.symbol === c.symbol))
@@ -381,7 +414,13 @@ export const App: React.FC = () => {
             prev.filter((c) => !livePayload.tickers?.some((t) => t.symbol === c.symbol))
           );
           try {
-            localStorage.setItem('deltaharvest_live_payload', JSON.stringify(livePayload));
+            // Only persist if all tickers have valid non-defaulted prices
+            const hasDefaulted = livePayload.tickers.some(
+              (t) => t.spot_price === 100 && t.avg_volume_30 === 1000000 && t.sma_20 === 100
+            );
+            if (!hasDefaulted) {
+              localStorage.setItem('deltaharvest_live_payload', JSON.stringify(livePayload));
+            }
           } catch (storageErr) {
             console.warn('Failed to persist live payload', storageErr);
           }
@@ -909,16 +948,25 @@ export const App: React.FC = () => {
     if (!cleanSym) return;
 
     if (!universeTickers.some((t) => t.symbol === cleanSym)) {
+      const intel = SECURITY_INTELLIGENCE_REGISTRY[cleanSym];
+      const initialSpot = intel?.keySupportPrice && intel?.keyResistancePrice
+        ? Math.round(((intel.keySupportPrice + intel.keyResistancePrice) / 2) * 100) / 100
+        : intel?.targetPrice ? Math.round(intel.targetPrice * 0.9 * 100) / 100 : 100.0;
+      const initialVol = intel?.liquidityScore && intel.liquidityScore >= 95 ? 25000000 : 1000000;
+      const initialName = intel?.name || `${cleanSym} Equity`;
+      const initialSector = intel?.sector || 'Custom Watchlist';
+      const initialTier = intel?.liquidityScore && intel.liquidityScore >= 95 ? 'Tier 1 (Ultra-Liquid)' : 'Tier 2/3 (Moderate)';
+
       const syntheticMeta: TickerMeta = {
         symbol: cleanSym,
-        name: `${cleanSym} (Custom Ingested Asset)`,
-        sector: 'Custom Watchlist',
-        liquidity_tier: 'Tier 2/3 (Moderate)',
-        spot_price: 100.0,
-        avg_volume_30: 1000000,
-        sma_20: 100.0,
-        upper_bb: 105.0,
-        lower_bb: 95.0,
+        name: initialName,
+        sector: initialSector,
+        liquidity_tier: initialTier,
+        spot_price: initialSpot,
+        avg_volume_30: initialVol,
+        sma_20: initialSpot,
+        upper_bb: Math.round(initialSpot * 1.05 * 100) / 100,
+        lower_bb: Math.round(initialSpot * 0.95 * 100) / 100,
         bb_width_pct: 10.0,
         rsi_14: 50.0,
         rsi_flag: 'NORMAL',
