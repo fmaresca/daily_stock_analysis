@@ -175,13 +175,13 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[72vh] overflow-y-auto">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-slate-800 bg-slate-900/90 text-[11px] font-semibold text-slate-400 uppercase tracking-wider select-none">
+          <thead className="sticky top-0 z-20 bg-slate-950 border-b border-slate-800 shadow-md">
+            <tr className="border-b border-slate-800 bg-slate-950 text-[11px] font-semibold text-slate-400 uppercase tracking-wider select-none">
               <th
                 onClick={() => onSort('symbol')}
-                className="py-3 px-4 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-4 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>Ticker</span>
@@ -191,7 +191,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('spot_price')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>Price ($)</span>
@@ -201,7 +201,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('iv_rank')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>IV Rank (IVR)</span>
@@ -211,7 +211,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('rsi_14')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>14D RSI</span>
@@ -221,7 +221,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('sma_20')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>20D SMA</span>
@@ -231,7 +231,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('lower_bb')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>Lower BB (Put Strike)</span>
@@ -241,7 +241,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('upper_bb')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>Upper BB (Call Strike)</span>
@@ -251,7 +251,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('cushion_pct')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>Put Cushion %</span>
@@ -261,7 +261,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('liquidity_tier')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>Liquidity Tier</span>
@@ -271,7 +271,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('has_weeklys')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>Weekly Options</span>
@@ -281,7 +281,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
 
               <th
                 onClick={() => onSort('opinion_pct')}
-                className="py-3 px-3 cursor-pointer hover:text-slate-200 transition-colors"
+                className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-slate-200 transition-colors z-20"
               >
                 <div className="flex items-center space-x-1">
                   <span>Signal Strength</span>
@@ -289,11 +289,11 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                 </div>
               </th>
 
-              <th className="py-3 px-3 text-center">
+              <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 text-center z-20">
                 <span>AI Score &amp; News</span>
               </th>
 
-              <th className="py-3 px-4 text-center">Audit</th>
+              <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-4 text-center z-20">Audit</th>
             </tr>
           </thead>
 

@@ -203,39 +203,39 @@ export const FundamentalHealthTable: React.FC<FundamentalHealthTableProps> = ({ 
 
       {/* Fundamental & Solvency Table */}
       <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[72vh] overflow-y-auto">
           <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
-                <th onClick={() => handleSort('symbol')} className="py-3 px-3.5 cursor-pointer hover:text-white">
+            <thead className="sticky top-0 z-20 bg-slate-950 border-b border-slate-800 shadow-md">
+              <tr className="border-b border-slate-800 bg-slate-950 text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
+                <th onClick={() => handleSort('symbol')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3.5 cursor-pointer hover:text-white z-20">
                   Symbol
                 </th>
-                <th onClick={() => handleSort('altman_z_score')} className="py-3 px-3 cursor-pointer hover:text-white text-center">
+                <th onClick={() => handleSort('altman_z_score')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-center z-20">
                   Altman Z-Score
                 </th>
-                <th onClick={() => handleSort('piotroski_f_score')} className="py-3 px-3 cursor-pointer hover:text-white text-center">
+                <th onClick={() => handleSort('piotroski_f_score')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-center z-20">
                   Piotroski F
                 </th>
-                <th onClick={() => handleSort('pe_ratio')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('pe_ratio')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   Trailing P/E
                 </th>
-                <th onClick={() => handleSort('forward_pe')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('forward_pe')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   Forward P/E
                 </th>
-                <th onClick={() => handleSort('revenue_growth_yoy')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('revenue_growth_yoy')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   Rev. Growth
                 </th>
-                <th onClick={() => handleSort('free_cash_flow')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('free_cash_flow')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   FCF
                 </th>
-                <th onClick={() => handleSort('current_ratio')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('current_ratio')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   Current Ratio
                 </th>
-                <th onClick={() => handleSort('institutional_ownership_pct')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('institutional_ownership_pct')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   Inst. 13F %
                 </th>
-                <th className="py-3 px-3 text-center">Latest 10-K / 10-Q</th>
-                <th className="py-3 px-3 text-center">SEC EDGAR</th>
+                <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 text-center z-20">Latest 10-K / 10-Q</th>
+                <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 text-center z-20">SEC EDGAR</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono">
