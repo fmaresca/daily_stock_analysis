@@ -327,13 +327,13 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
         </div>
 
         {/* Tab Navigation Selector */}
-        <div className="flex border-b border-slate-800 bg-slate-950/60 px-6 overflow-x-auto gap-2">
+        <div className="flex items-center min-h-[58px] border-b border-slate-800 bg-slate-950/90 px-4 sm:px-6 overflow-x-auto gap-2.5 py-2.5 shadow-inner">
           <button
             onClick={() => setActiveTab('OPTIONS_TECH')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
               activeTab === 'OPTIONS_TECH'
-                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'bg-emerald-600 text-white border-emerald-400/80 shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/80 shadow-sm'
             }`}
           >
             <span>🎯 Options &amp; Technicals</span>
@@ -341,10 +341,10 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 
           <button
             onClick={() => setActiveTab('NEWS_ANALYST')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
               activeTab === 'NEWS_ANALYST'
-                ? 'border-blue-500 text-blue-400 bg-blue-500/5'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'bg-blue-600 text-white border-blue-400/80 shadow-lg shadow-blue-600/30 ring-1 ring-blue-400/50'
+                : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/80 shadow-sm'
             }`}
           >
             <span>📰 News &amp; Analyst Consensus</span>
@@ -352,15 +352,21 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 
           <button
             onClick={() => setActiveTab('PREDICTION_MARKETS')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
               activeTab === 'PREDICTION_MARKETS'
-                ? 'border-cyan-500 text-cyan-400 bg-cyan-500/5'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'bg-cyan-600 text-white border-cyan-400/80 shadow-lg shadow-cyan-600/30 ring-1 ring-cyan-400/50'
+                : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/80 shadow-sm'
             }`}
           >
             <span>🎲 Prediction Markets</span>
             {predictionMarkets.length > 0 && (
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300">
+              <span
+                className={`text-[11px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                  activeTab === 'PREDICTION_MARKETS'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                }`}
+              >
                 {predictionMarkets.length}
               </span>
             )}
@@ -368,10 +374,10 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 
           <button
             onClick={() => setActiveTab('SOCIAL_SENTIMENT')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
               activeTab === 'SOCIAL_SENTIMENT'
-                ? 'border-amber-500 text-amber-400 bg-amber-500/5'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'bg-amber-600 text-white border-amber-400/80 shadow-lg shadow-amber-600/30 ring-1 ring-amber-400/50'
+                : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/80 shadow-sm'
             }`}
           >
             <span>💬 Social &amp; Forum Sentiment</span>
