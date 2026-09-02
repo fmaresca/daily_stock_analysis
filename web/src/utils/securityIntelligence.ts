@@ -1031,6 +1031,8 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
     },
   ];
 
+  const rsi = meta?.rsi_14 ?? 50;
+
   const defaultSocialSentiment = {
     stocktwits_sentiment: (ivr >= 45 ? 'Bullish' : 'Neutral') as 'Bullish' | 'Neutral' | 'Bearish',
     stocktwits_bullish_pct: ivr >= 45 ? 74.5 : 58.0,
@@ -1055,8 +1057,6 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
   }
 
   // Dynamic Intelligence Profile Generator for custom / unlisted tickers
-  const rsi = meta?.rsi_14 ?? 50;
-
   // Calibrate score based on technical factors
   let composite = 70;
   if (rsi < 35) composite += 12; // Oversold bonus

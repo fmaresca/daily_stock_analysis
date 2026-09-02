@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [修复] DeltaHarvest TypeScript Strict Mode & Icons Remediation: 清理 `icons.tsx` 中的重复符号导出并将 `securityIntelligence.ts` 中 `rsi` 变量声明前置，彻底解决 Cloudflare Pages 生产构建 `tsc -b` 阶段的 TS2451 / TS2448 编译错误。
 - [新功能] DeltaHarvest Multi-Channel Intelligence & UI Polish Suite: 落地 8 项全维度能力升级——(1) 严格校准 Oversold（RSI < 35）与 Near Lower Support（≤ Lower BB + 2%）独立双筛选维度；(2) 纠正 API 诊断中 Schwab 未授权时的假阳性状态，精准对齐 TOKEN_REQUIRED 真实状态；(3) 增强自定义观察列表持久化与导出 `options_tickers.json` 一键同步 GitHub 仓库机制；(4) 引入 `@media print` 专用白底高对比度极速 PDF/打印样式表；(5) 在个股详情卡中新增一键打印与导出 CSV/Excel（.xlsx）功能，并将二级子菜单容器高度调高以彻底消除字符截断；(6) 扩充社交论坛情绪矩阵至 6 大渠道（StockTwits、Reddit、X/Twitter Cashtags、Yahoo Finance、Seeking Alpha、TradingView）；(7) 严格锚定 Kalshi（CFTC 监管）、PredictIt、Polymarket 及 Manifold 等美国预测市场及标的/板块专属合约；(8) 修复 Fundamental Health 表格中点击股票代码打开个股详情卡联动的交互缺陷。
-- [修复] DeltaHarvest TypeScript Strict Mode & Icons Remediation: 补齐 `icons.tsx` 中 `XCircle` 导出声明并完整实现 `liveMarketFetcher.ts` 中 `ScreenerSummary` 契约结构字段，彻底解决 `tsc -b` 生产编译阶段的类型校验错误。
 - [修复] DeltaHarvest Cloudflare Pages Build & Python 3.13 Longbridge Dependency: 为 requirements.txt 中 Linux longbridge 依赖补充 `python_version < "3.13"` 环境标记，彻底消除 Cloudflare Pages CI/CD 镜像在 Python 3.13 环境下因缺失预编译 wheel 尝试调用 Rust/Cargo 导致的构建终止问题。
 - [修复] DeltaHarvest Static CDN Content-Type Check & WebSocket Guard: 针对 Cloudflare Pages 等静态 SPA 托管环境增加响应 Content-Type 校验，防止将 SPA 路由回退的 HTML 文档误作 JSON 解析导致的语法错误提示；并在静态 CDN 域名下自动旁路 WebSocket 探针，彻底清除浏览器控制台红字报错。
 - [修复] DeltaHarvest Header API Self-Test Visibility & Live Fetch Timestamp Persistence: 将顶部导航栏“⚡ API Self-Test”按钮重构为高对比度渐变常驻展示并支持通过全局命令面板（Ctrl+K）快速触发；修复实时重新计算中的批次切片索引递增缺陷与时间戳重置问题，保证在执行 Live Fetch 后时间精确更新为当前本地时刻并持久化保存。
