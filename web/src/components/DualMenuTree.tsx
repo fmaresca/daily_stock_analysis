@@ -101,16 +101,16 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
       </div>
 
       {/* Sub-Navigation Level for Active Tree */}
-      <div className="glass-panel py-2.5 px-3 rounded-xl border border-slate-800/90 overflow-x-auto min-h-[52px] flex items-center shadow-lg">
+      <div className="glass-panel py-2.5 px-3 rounded-xl border border-slate-800/90 overflow-x-auto min-h-[58px] flex items-center shadow-lg">
         {activeTree === 'EQUITIES' ? (
           /* Tree 1: US Equities Sub-Navigation */
-          <div className="flex items-center space-x-1.5 min-w-max">
+          <div className="flex items-center space-x-2 min-w-max">
             <button
               onClick={() => onSelectEquitiesTab('TECHNICAL_SCREENER')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeEquitiesTab === 'TECHNICAL_SCREENER'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <Activity className="w-4 h-4" />
@@ -119,10 +119,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectEquitiesTab('INTERACTIVE_CHARTS')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeEquitiesTab === 'INTERACTIVE_CHARTS'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <BarChart2 className="w-4 h-4 text-cyan-400" />
@@ -131,10 +131,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectEquitiesTab('FUNDAMENTAL_HEALTH')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeEquitiesTab === 'FUNDAMENTAL_HEALTH'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -143,10 +143,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectEquitiesTab('TREND_SUPPORT')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeEquitiesTab === 'TREND_SUPPORT'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <Compass className="w-4 h-4" />
@@ -155,10 +155,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectEquitiesTab('VOLATILITY_RISK')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeEquitiesTab === 'VOLATILITY_RISK'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <Flame className="w-4 h-4 text-amber-400" />
@@ -172,10 +172,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectEquitiesTab('EARNINGS_CALENDAR')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeEquitiesTab === 'EARNINGS_CALENDAR'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <Calendar className="w-4 h-4 text-rose-400" />
@@ -189,10 +189,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectEquitiesTab('SECTOR_OVERVIEW')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeEquitiesTab === 'SECTOR_OVERVIEW'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <PieChart className="w-4 h-4" />
@@ -201,13 +201,13 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
           </div>
         ) : (
           /* Tree 2: Options & Weekly Engine Sub-Navigation */
-          <div className="flex items-center space-x-1.5 min-w-max">
+          <div className="flex items-center space-x-2 min-w-max">
             <button
               onClick={() => onSelectOptionsTab('INCOME_SCREENER')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'INCOME_SCREENER'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <TrendingUp className="w-4 h-4" />
@@ -216,10 +216,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectOptionsTab('MULTI_LEG_SPREADS')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'MULTI_LEG_SPREADS'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -228,10 +228,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectOptionsTab('VOLATILITY_SKEW')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'VOLATILITY_SKEW'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <Activity className="w-4 h-4 text-cyan-400" />
@@ -240,10 +240,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectOptionsTab('BACKTEST_MARGIN')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'BACKTEST_MARGIN'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <BarChart2 className="w-4 h-4 text-purple-400" />
@@ -252,10 +252,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectOptionsTab('BROKER_STAGING')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'BROKER_STAGING'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <Zap className="w-4 h-4 text-amber-400" />
@@ -264,10 +264,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectOptionsTab('EXPIRATION_CADENCE')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'EXPIRATION_CADENCE'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <Layers className="w-4 h-4" />
@@ -276,10 +276,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectOptionsTab('DELTA_GREEKS')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'DELTA_GREEKS'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <Sliders className="w-4 h-4" />
@@ -288,10 +288,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectOptionsTab('TICKER_AUDIT')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'TICKER_AUDIT'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -300,10 +300,10 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectOptionsTab('INCOME_CALCULATOR')}
-              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'INCOME_CALCULATOR'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
               }`}
             >
               <Calculator className="w-4 h-4 text-cyan-400" />
