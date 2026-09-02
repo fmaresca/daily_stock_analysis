@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [修复] DeltaHarvest SheetJS (xlsx) High Severity Vulnerability Remediation: 移除存在原型污染漏洞（CVE-2023-30533）的 `xlsx@0.18.5` 外部依赖，使用纯 TypeScript 原生重构多工作表 XML Spreadsheet 导出、RFC 4180 CSV 解析与无风险文件导入引擎，将 `npm audit` 漏洞数彻底清零（0 vulnerabilities）。
 - [新功能] MarketChameleon Quantitative Replication Service: 新增 `src/services/market_chameleon_service.py` 模块，落地 MarketChameleon 经典量化指标与技术评级体系——包含 SMA 20/50/250 均线引擎、9 大技术形态分类（Uptrend、Downtrend、Bullish/Bearish Crossover、Fast Crossovers、Bottom Bounce、Top Pullback、Dead Cat Bounce）、标的 Ideas 分类（S&P 500 Leaders & Laggers 指数贡献度归因、6 个月滚动区间 Momentum 动量股判定）、均线差值百分比（Gaps %）以及期权策略对齐与 Google Antigravity Agent 协同接口。
 - [新功能] DeltaHarvest Watchlist Auto-Processing, Dynamic Master Universe, Day/Night Mode & Security Hardening Suite: (1) 升级观察列表管理器（`WatchlistManagerModal` & `WatchlistModal`），在添加或删除标的时自动触发真实行情计算与本地状态持久化，并精简移除手动导出按钮；(2) 动态主宇宙同步机制——当用户输入新代码（如 `GOOGL`）时，自动注册至核心主资产列表并立即抓取实时行情、布林带、RSI及期权策略；(3) 顶部导航栏新增无障碍无缝切换的日间/夜间模式（`☀️ Day Mode` / `🌙 Night Mode`），具备 100% 移动端响应与 WCAG 2.1 AA 高对比度样式；(4) 严格对齐 Mozilla Observatory 安全规范，配置包括 `Content-Security-Policy`、`HSTS`、`X-Frame-Options`、`Permissions-Policy` 等全套 HTTP 生产级安全防护头与输入校验防线。
 - [修复] DeltaHarvest TickerAuditModal TypeScript Syntax & Cloudflare Pages Build: 补全 `handleExportExcel` 闭包括号，消除 Cloudflare Pages CI/CD 构建阶段中 `tsc -b` 报出的 `TS1005: '}' expected` 编译异常。
