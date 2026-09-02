@@ -217,6 +217,8 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
     }
 
     XLSX.writeFile(wb, `${ticker.symbol}_full_audit_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   // Identify if security is an Equity vs. ETF / Closed-End / Income Fund
   const isFundOrETF =
     ticker.sector?.toLowerCase().includes('etf') ||
