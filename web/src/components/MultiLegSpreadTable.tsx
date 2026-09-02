@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import * as XLSX from 'xlsx';
 import {
   ShieldCheck,
   TrendingUp,
@@ -15,6 +14,7 @@ import {
   Zap,
 } from './icons';
 import { MultiLegSpread } from '../types/options';
+import { exportCustomDataToExcel } from '../utils/exportImport';
 
 interface MultiLegSpreadTableProps {
   spreads: MultiLegSpread[];
@@ -114,10 +114,10 @@ export const MultiLegSpreadTable: React.FC<MultiLegSpreadTableProps> = ({
       'POP %': s.pop_pct,
       'Short Delta': s.short_delta,
     }));
-    const ws = XLSX.utils.json_to_sheet(sheetData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Defined Risk Spreads');
-    XLSX.writeFile(wb, `defined_risk_spreads_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    exportCustomDataToExcel(
+      [{ name: 'Defined Risk Spreads', data: sheetData }],
+      `defined_risk_spreads_${new Date().toISOString().slice(0, 10)}.xls`
+    );
   };
 
   return (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import * as XLSX from 'xlsx';
 import { FundamentalHealthData } from '../types/options';
+import { exportCustomDataToExcel } from '../utils/exportImport';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -112,10 +112,10 @@ export const FundamentalHealthTable: React.FC<FundamentalHealthTableProps> = ({ 
       'Latest 10-K': d.latest_10k_date,
       'Latest 10-Q': d.latest_10q_date,
     }));
-    const ws = XLSX.utils.json_to_sheet(sheetData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Fundamental Solvency');
-    XLSX.writeFile(wb, `fundamental_solvency_report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    exportCustomDataToExcel(
+      [{ name: 'Fundamental Solvency', data: sheetData }],
+      `fundamental_solvency_report_${new Date().toISOString().slice(0, 10)}.xls`
+    );
   };
 
   return (

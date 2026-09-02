@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import * as XLSX from 'xlsx';
 import { VolatilitySkewData } from '../types/options';
+import { exportCustomDataToExcel } from '../utils/exportImport';
 import {
   Flame,
   Activity,
@@ -73,10 +73,10 @@ export const VolatilitySkewRadar: React.FC<VolatilitySkewRadarProps> = ({ skewDa
       '60D IV': s.term_structure[2]?.iv ?? 'N/A',
       '90D IV': s.term_structure[3]?.iv ?? 'N/A',
     }));
-    const ws = XLSX.utils.json_to_sheet(sheetData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '25-Delta Volatility Skew');
-    XLSX.writeFile(wb, `volatility_skew_radar_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    exportCustomDataToExcel(
+      [{ name: '25-Delta Volatility Skew', data: sheetData }],
+      `volatility_skew_radar_${new Date().toISOString().slice(0, 10)}.xls`
+    );
   };
 
   return (
