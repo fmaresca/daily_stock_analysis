@@ -202,38 +202,38 @@ export const MultiLegSpreadTable: React.FC<MultiLegSpreadTableProps> = ({
 
       {/* Spreads Table */}
       <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[72vh] overflow-y-auto">
           <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
-                <th onClick={() => handleSort('symbol')} className="py-3 px-3.5 cursor-pointer hover:text-white">
+            <thead className="sticky top-0 z-20 bg-slate-950 border-b border-slate-800 shadow-md">
+              <tr className="border-b border-slate-800 bg-slate-950 text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
+                <th onClick={() => handleSort('symbol')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3.5 cursor-pointer hover:text-white z-20">
                   Symbol
                 </th>
-                <th className="py-3 px-3">Strategy</th>
-                <th className="py-3 px-3">
+                <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 z-20">Strategy</th>
+                <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 z-20">
                   Short Leg <span className="text-emerald-400 font-mono">(0.15–0.20 Δ)</span>
                 </th>
-                <th className="py-3 px-3">Long Protection Leg</th>
-                <th onClick={() => handleSort('net_credit')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 z-20">Long Protection Leg</th>
+                <th onClick={() => handleSort('net_credit')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   Net Credit ($)
                 </th>
-                <th onClick={() => handleSort('max_loss')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('max_loss')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   Max Risk / Collateral
                 </th>
-                <th onClick={() => handleSort('cushion_pct')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('cushion_pct')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   Safety Cushion
                 </th>
-                <th onClick={() => handleSort('roc_pct')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('roc_pct')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   ROC %
                 </th>
-                <th onClick={() => handleSort('annualized_roc')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('annualized_roc')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   Ann. Yield %
                 </th>
-                <th onClick={() => handleSort('pop_pct')} className="py-3 px-3 cursor-pointer hover:text-white text-right">
+                <th onClick={() => handleSort('pop_pct')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 cursor-pointer hover:text-white text-right z-20">
                   POP %
                 </th>
-                <th className="py-3 px-3 text-center">Cadence</th>
-                <th className="py-3 px-3 text-center">Stage</th>
+                <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 text-center z-20">Cadence</th>
+                <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 text-center z-20">Stage</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono">

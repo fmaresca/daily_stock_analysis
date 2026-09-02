@@ -217,19 +217,33 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
     }
 
     XLSX.writeFile(wb, `${ticker.symbol}_full_audit_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  };
+  // Identify if security is an Equity vs. ETF / Closed-End / Income Fund
+  const isFundOrETF =
+    ticker.sector?.toLowerCase().includes('etf') ||
+    ticker.sector?.toLowerCase().includes('fund') ||
+    ticker.sector?.toLowerCase().includes('trust') ||
+    [
+      'SPY', 'QQQ', 'IWM', 'DIA', 'TLT', 'HYG', 'LQD', 'ARKK', 'JEPI', 'JEPQ',
+      'SVOL', 'XLF', 'XLK', 'XLE', 'XBI', 'SMH', 'GDX', 'FXI', 'KWEB', 'GLD',
+      'SLV', 'USO', 'UNG', 'EEM', 'EFA', 'VXX', 'UVXY', 'TQQQ', 'SQQQ', 'SOXL',
+      'SOXS', 'BITO', 'IBIT', 'ETHE', 'VNQ', 'SCHD', 'VOO', 'VTI', 'BND',
+    ].includes(ticker.symbol.toUpperCase());
+
+  const primaryFilingLabel = isFundOrETF ? 'N-CSR / N-CSRS' : '10-K / 10-Q';
+  const secEdgarUrl = `https://www.sec.gov/edgar/browse/?CIK=${encodeURIComponent(ticker.symbol)}`;
+  const secSearchUrl = `https://www.sec.gov/edgar/searchedgar/companysearch?companyName=${encodeURIComponent(ticker.symbol)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="glass-panel w-full max-w-4xl rounded-2xl border border-slate-700/80 shadow-2xl overflow-hidden text-slate-200 flex flex-col max-h-[92vh]"
+        className="glass-panel w-full max-w-4xl rounded-2xl border border-slate-700/80 shadow-2xl overflow-hidden text-slate-200 flex flex-col h-[90vh] max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="p-5 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-3.5">
             <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white shadow-md ${
+              className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white shadow-md shrink-0 ${
                 isTier4
                   ? 'bg-rose-600 shadow-rose-600/30'
                   : isTier1
@@ -240,7 +254,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
               {isTier4 ? <ShieldAlert className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
             </div>
             <div>
-              <div className="flex items-center space-x-2.5">
+              <div className="flex items-center space-x-2.5 flex-wrap gap-y-1">
                 <span className="text-2xl font-black font-mono text-white tracking-tight">
                   {ticker.symbol}
                 </span>
@@ -270,12 +284,23 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {/* Action Buttons: Print, CSV, Excel */}
-            <div className="hidden sm:flex items-center gap-1.5 mr-2">
+          <div className="flex items-center space-x-2 shrink-0">
+            {/* Action Buttons: Print, CSV, Excel, SEC EDGAR */}
+            <div className="hidden sm:flex items-center gap-1.5 mr-1">
+              <a
+                href={secEdgarUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-purple-950/50 hover:bg-purple-900/70 text-purple-300 hover:text-white border border-purple-500/40 transition-colors flex items-center gap-1 cursor-pointer"
+                title={`Open SEC EDGAR Filings (${primaryFilingLabel}) for ${ticker.symbol}`}
+              >
+                <FileText className="w-3.5 h-3.5 text-purple-400" />
+                <span>SEC {isFundOrETF ? 'N-CSR' : '10-Q/K'}</span>
+                <ExternalLink className="w-3 h-3 text-purple-400/80" />
+              </a>
               <button
                 onClick={handlePrint}
-                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
                 title="Print Ticker Intelligence Report"
               >
                 <Printer className="w-3.5 h-3.5" />
@@ -283,7 +308,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
               </button>
               <button
                 onClick={handleExportCSV}
-                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
                 title="Export Selected Ticker Data to CSV"
               >
                 <FileText className="w-3.5 h-3.5 text-blue-400" />
@@ -291,7 +316,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
               </button>
               <button
                 onClick={handleExportExcel}
-                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
                 title="Export Formatted Multi-Sheet Excel Workbook (.xlsx)"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
@@ -319,20 +344,20 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Tab Navigation Selector */}
-        <div className="flex items-center min-h-[58px] border-b border-slate-800 bg-slate-950/90 px-4 sm:px-6 overflow-x-auto gap-2.5 py-2.5 shadow-inner">
+        {/* Tab Navigation Selector - Locked Full-Height Bar */}
+        <div className="flex items-center min-h-[64px] border-b border-slate-800 bg-slate-950 px-4 sm:px-6 overflow-x-auto gap-3 py-3 shrink-0 z-10 shadow-inner">
           <button
             onClick={() => setActiveTab('OPTIONS_TECH')}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
+            className={`h-[44px] shrink-0 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
               activeTab === 'OPTIONS_TECH'
-                ? 'bg-emerald-600 text-white border-emerald-400/80 shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                ? 'bg-emerald-600 text-white border-emerald-400 shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-400/50'
                 : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/80 shadow-sm'
             }`}
           >
@@ -341,20 +366,20 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 
           <button
             onClick={() => setActiveTab('NEWS_ANALYST')}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
+            className={`h-[44px] shrink-0 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
               activeTab === 'NEWS_ANALYST'
-                ? 'bg-blue-600 text-white border-blue-400/80 shadow-lg shadow-blue-600/30 ring-1 ring-blue-400/50'
+                ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-600/30 ring-1 ring-blue-400/50'
                 : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/80 shadow-sm'
             }`}
           >
-            <span>📰 News &amp; Analyst Consensus</span>
+            <span>📰 News, Filings &amp; Consensus</span>
           </button>
 
           <button
             onClick={() => setActiveTab('PREDICTION_MARKETS')}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
+            className={`h-[44px] shrink-0 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
               activeTab === 'PREDICTION_MARKETS'
-                ? 'bg-cyan-600 text-white border-cyan-400/80 shadow-lg shadow-cyan-600/30 ring-1 ring-cyan-400/50'
+                ? 'bg-cyan-600 text-white border-cyan-400 shadow-lg shadow-cyan-600/30 ring-1 ring-cyan-400/50'
                 : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/80 shadow-sm'
             }`}
           >
@@ -374,9 +399,9 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 
           <button
             onClick={() => setActiveTab('SOCIAL_SENTIMENT')}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
+            className={`h-[44px] shrink-0 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap border cursor-pointer ${
               activeTab === 'SOCIAL_SENTIMENT'
-                ? 'bg-amber-600 text-white border-amber-400/80 shadow-lg shadow-amber-600/30 ring-1 ring-amber-400/50'
+                ? 'bg-amber-600 text-white border-amber-400 shadow-lg shadow-amber-600/30 ring-1 ring-amber-400/50'
                 : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/80 shadow-sm'
             }`}
           >
@@ -384,8 +409,8 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Scrollable Body */}
-        <div className="p-6 overflow-y-auto space-y-6 text-xs max-h-[75vh]">
+        {/* Modal Scrollable Body - Independent Scroll Region */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6 text-xs">
           {/* TAB 1: OPTIONS STRATEGY & TECHNICALS */}
           {activeTab === 'OPTIONS_TECH' && (
             <div className="space-y-6 animate-in fade-in duration-150">
@@ -852,35 +877,36 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                 </div>
               </div>
 
-              {/* Institutional 13F Ownership & SEC EDGAR */}
+              {/* Institutional 13F Ownership & SEC EDGAR Compliance Matrix */}
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
                     <Building className="w-4 h-4 text-emerald-400" />
-                    <span>Institutional 13F Ownership &amp; SEC EDGAR Disclosures</span>
+                    <span>Official SEC EDGAR Regulatory &amp; Financial Filings</span>
                   </h3>
                   <a
-                    href={intel.secEdgarUrl}
+                    href={secEdgarUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 hover:text-white border border-purple-500/50 font-mono text-[11px] font-bold flex items-center space-x-1.5 transition-colors shadow-sm"
+                    title={`Open Official SEC EDGAR Profile for ${ticker.symbol}`}
                   >
-                    <span>SEC EDGAR Filings</span>
-                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                    <span>SEC EDGAR CIK Profile ({ticker.symbol})</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-purple-400" />
                   </a>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2">
+                  <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2">
                     <div className="flex items-center justify-between text-slate-400 text-[11px]">
-                      <span>Total Institutional Float:</span>
+                      <span>Total Institutional Float (13F):</span>
                       <span className="font-bold font-mono text-emerald-400 text-sm">
                         {intel.institutionalOwnershipPct}%
                       </span>
                     </div>
-                    <div className="border-t border-slate-800/80 pt-1.5 space-y-1">
+                    <div className="border-t border-slate-800/80 pt-2 space-y-1">
                       <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">
-                        Top 13F Asset Managers:
+                        Top 13F Institutional Holders:
                       </span>
                       {(intel.topHolders || []).map((holder, idx) => (
                         <div key={idx} className="flex items-center justify-between text-[11px] py-0.5">
@@ -891,15 +917,97 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2">
-                    <div className="text-slate-400 text-[11px]">Latest Regulatory Disclosure:</div>
-                    <div className="flex items-center justify-between bg-slate-900 p-2 rounded-lg border border-slate-800 font-mono text-xs">
-                      <span className="font-bold text-white">Form {intel.latestFilingType}</span>
-                      <span className="text-slate-400">Filed: {intel.latestFilingDate}</span>
+                  <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 font-bold text-xs">
+                        {isFundOrETF ? 'Fund & Trust Regulatory Filings' : 'Corporate SEC Filings'}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-purple-300 border border-purple-500/30">
+                        {primaryFilingLabel}
+                      </span>
                     </div>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
-                      Audited financial statements and corporate filings from SEC EDGAR.
-                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {isFundOrETF ? (
+                        <>
+                          <a
+                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=N-CSR`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
+                          >
+                            <span>Form N-CSR (Annual)</span>
+                            <ExternalLink className="w-3 h-3 text-purple-400" />
+                          </a>
+                          <a
+                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=N-CSRS`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
+                          >
+                            <span>Form N-CSRS (Semi-Ann)</span>
+                            <ExternalLink className="w-3 h-3 text-purple-400" />
+                          </a>
+                          <a
+                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=N-PORT`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
+                          >
+                            <span>Form N-PORT (Holdings)</span>
+                            <ExternalLink className="w-3 h-3 text-purple-400" />
+                          </a>
+                          <a
+                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=485BPOS`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
+                          >
+                            <span>Prospectus (485BPOS)</span>
+                            <ExternalLink className="w-3 h-3 text-purple-400" />
+                          </a>
+                        </>
+                      ) : (
+                        <>
+                          <a
+                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=10-K`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
+                          >
+                            <span>Form 10-K (Annual)</span>
+                            <ExternalLink className="w-3 h-3 text-purple-400" />
+                          </a>
+                          <a
+                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=10-Q`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
+                          >
+                            <span>Form 10-Q (Quarterly)</span>
+                            <ExternalLink className="w-3 h-3 text-purple-400" />
+                          </a>
+                          <a
+                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=8-K`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
+                          >
+                            <span>Form 8-K (Events)</span>
+                            <ExternalLink className="w-3 h-3 text-purple-400" />
+                          </a>
+                          <a
+                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=DEF%2014A`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
+                          >
+                            <span>Proxy DEF 14A</span>
+                            <ExternalLink className="w-3 h-3 text-purple-400" />
+                          </a>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
