@@ -70,6 +70,10 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
         const updated = [...currentTickers, sym];
         onUpdateGroupTickers(activeGroup.id, updated);
         onAddCustomTickerMeta(sym);
+        if (onRecalculateTickers) {
+          onRecalculateTickers(updated);
+        }
+        setFileUploadSuccess(`Added ${sym} and initiated live market data fetch.`);
       }
       setSingleTickerInput('');
     }
@@ -86,31 +90,40 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
       const merged = Array.from(new Set([...currentTickers, ...valid]));
       onUpdateGroupTickers(activeGroup.id, merged);
       valid.forEach((sym) => onAddCustomTickerMeta(sym));
+      if (onRecalculateTickers) {
+        onRecalculateTickers(merged);
+      }
       setBulkInput('');
       setIsBulkOpen(false);
-      setFileUploadSuccess(`Added ${valid.length} tickers in bulk.`);
+      setFileUploadSuccess(`Added ${valid.length} tickers and initiated live market data calculation.`);
     }
   };
 
   // Toggle individual ticker
   const handleToggleTicker = (symbol: string) => {
     if (currentTickers.includes(symbol)) {
-      onUpdateGroupTickers(
-        activeGroup.id,
-        currentTickers.filter((s) => s !== symbol)
-      );
+      const remaining = currentTickers.filter((s) => s !== symbol);
+      onUpdateGroupTickers(activeGroup.id, remaining);
+      if (onRecalculateTickers && remaining.length > 0) {
+        onRecalculateTickers(remaining);
+      }
     } else {
-      onUpdateGroupTickers(activeGroup.id, [...currentTickers, symbol]);
+      const updated = [...currentTickers, symbol];
+      onUpdateGroupTickers(activeGroup.id, updated);
       onAddCustomTickerMeta(symbol);
+      if (onRecalculateTickers) {
+        onRecalculateTickers(updated);
+      }
     }
   };
 
   // Remove individual ticker
   const handleRemoveTicker = (symbol: string) => {
-    onUpdateGroupTickers(
-      activeGroup.id,
-      currentTickers.filter((s) => s !== symbol)
-    );
+    const remaining = currentTickers.filter((s) => s !== symbol);
+    onUpdateGroupTickers(activeGroup.id, remaining);
+    if (onRecalculateTickers && remaining.length > 0) {
+      onRecalculateTickers(remaining);
+    }
   };
 
   // Handle File Upload (CSV / Excel)
@@ -131,9 +144,12 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
       const merged = Array.from(new Set([...currentTickers, ...res.tickers]));
       onUpdateGroupTickers(activeGroup.id, merged);
       res.tickers.forEach((sym) => onAddCustomTickerMeta(sym));
+      if (onRecalculateTickers) {
+        onRecalculateTickers(merged);
+      }
 
       setFileUploadSuccess(
-        `Successfully imported ${res.tickers.length} tickers from "${file.name}"!`
+        `Successfully imported ${res.tickers.length} tickers from "${file.name}" and initiated live market processing!`
       );
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err: any) {
@@ -448,51 +464,21 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
         <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
           <div className="flex items-center space-x-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Active Universe Overridden in Browser Storage</span>
+            <span className="font-semibold text-slate-300">Auto-Synced to Local Storage &amp; Live Market Feed</span>
           </div>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => {
-                const configPayload = {
-                  updated_at: new Date().toISOString(),
-                  watchlist_group: activeGroup?.name || 'Custom Watchlist',
-                  total_tickers: currentTickers.length,
-                  tickers: currentTickers,
-                };
-                const blob = new Blob([JSON.stringify(configPayload, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', 'options_tickers.json');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                setFileUploadSuccess('Watchlist synced locally & options_tickers.json exported for GitHub repository sync.');
-              }}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center space-x-1.5 border border-slate-700 transition-colors cursor-pointer"
-              title="Export tickers to config/options_tickers.json for repository commit"
-            >
-              <Download className="w-3.5 h-3.5 text-blue-400" />
-              <span>Sync to GitHub / Export JSON</span>
-            </button>
-
-            {onRecalculateTickers && (
-              <button
-                onClick={() => onRecalculateTickers(currentTickers)}
-                disabled={isRecalculating || currentTickers.length === 0}
-                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold flex items-center space-x-1.5 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
-                title="Fetch live quotes, Bollinger Bands, historical volatility, and options chains for these tickers"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRecalculating ? 'animate-spin' : ''}`} />
-                <span>{isRecalculating ? 'Processing Live Market Data...' : '⚡ Fetch Real Market Data & Options'}</span>
-              </button>
+            {isRecalculating && (
+              <span className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/50 text-emerald-300 border border-emerald-500/40 font-mono text-xs">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                <span>Processing Live Market Data...</span>
+              </span>
             )}
             <button
               onClick={onClose}
-              className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold transition-colors cursor-pointer"
+              className="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold shadow-md shadow-amber-600/30 transition-colors cursor-pointer"
             >
-              Done
+              Apply &amp; Done
             </button>
           </div>
         </div>

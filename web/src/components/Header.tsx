@@ -9,6 +9,8 @@ import {
   Star,
   FileSpreadsheet,
   Zap,
+  Sun,
+  Moon,
 } from './icons';
 import { ScreenerSummary } from '../types/options';
 
@@ -27,6 +29,8 @@ interface HeaderProps {
   onOpenReports: () => void;
   onOpenSchwab: () => void;
   onOpenDiagnostics?: () => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -44,6 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenReports,
   onOpenSchwab,
   onOpenDiagnostics,
+  theme = 'dark',
+  onToggleTheme,
 }) => {
   const formattedTime = React.useMemo(() => {
     if (!lastUpdated) return 'Live Session';
@@ -172,6 +178,30 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Activity className={`w-3.5 h-3.5 text-emerald-400 ${isRecalculating ? 'animate-spin' : ''}`} />
               <span>{isRecalculating ? 'Calculating...' : 'Live Fetch'}</span>
+            </button>
+          )}
+
+          {/* Day / Night Mode (Light / Dark) Toggle */}
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              role="switch"
+              aria-checked={theme === 'dark'}
+              aria-label={theme === 'dark' ? 'Switch to Day Mode (Light Theme)' : 'Switch to Night Mode (Dark Theme)'}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-amber-300 hover:border-amber-400/50 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              title={theme === 'dark' ? 'Switch to Day Mode (Light Theme)' : 'Switch to Night Mode (Dark Theme)'}
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Day Mode</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="hidden sm:inline">Night Mode</span>
+                </>
+              )}
             </button>
           )}
 
