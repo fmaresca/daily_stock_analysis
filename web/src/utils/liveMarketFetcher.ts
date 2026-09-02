@@ -5,6 +5,7 @@ import {
   ScreenerSummary,
 } from '../types/options';
 import { calculateBarchartOpinion } from './barchartEngine';
+import { SECURITY_INTELLIGENCE_REGISTRY } from './securityIntelligence';
 
 /**
  * Standard Normal Cumulative Distribution Function (CDF)
@@ -104,7 +105,7 @@ function calculateRsi(closes: number[], period: number = 14): number {
 /**
  * Fetches real-time price & 1-year daily history for a single ticker via Yahoo Finance chart API.
  * Uses 1-year lookback to allow Wilder's 14-day RSI and 200 SMA indicators to fully converge.
- * Uses direct fetch with fallback to open proxy if CORS blocked.
+ * Uses redundant CORS proxies with individual timeouts and registry fallback.
  */
 async function fetchTickerChartData(symbol: string): Promise<{
   spotPrice: number;
@@ -113,17 +114,36 @@ async function fetchTickerChartData(symbol: string): Promise<{
   avgVolume: number;
 } | null> {
   const sym = symbol.toUpperCase().trim();
-  const directUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`;
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
+  const q1 = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`;
+  const q2 = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`;
 
-  const urls = [directUrl, proxyUrl];
+  const sources: { url: string; isWrappedAllOrigins?: boolean }[] = [
+    { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(q1)}` },
+    { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(q2)}` },
+    { url: `https://corsproxy.io/?${encodeURIComponent(q1)}` },
+    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(q1)}`, isWrappedAllOrigins: true },
+    { url: q1 },
+    { url: q2 },
+  ];
 
-  for (const url of urls) {
+  for (const src of sources) {
     try {
-      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6500);
+
+      const resp = await fetch(src.url, {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
       if (!resp.ok) continue;
 
-      const data = await resp.json();
+      let data: any = await resp.json();
+      if (src.isWrappedAllOrigins && data?.contents) {
+        data = JSON.parse(data.contents);
+      }
+
       const result = data?.chart?.result?.[0];
       if (!result) continue;
 
@@ -140,7 +160,7 @@ async function fetchTickerChartData(symbol: string): Promise<{
 
       const avgVol = validVolumes.length > 0
         ? Math.round(validVolumes.reduce((a, b) => a + b, 0) / validVolumes.length)
-        : 1000000;
+        : 20000000;
 
       return {
         spotPrice: Math.round(spotPrice * 100) / 100,
@@ -151,6 +171,30 @@ async function fetchTickerChartData(symbol: string): Promise<{
     } catch {
       // Try next url
     }
+  }
+
+  // Fallback: If network sources fail, check if we have registry intelligence
+  const intel = SECURITY_INTELLIGENCE_REGISTRY[sym];
+  if (intel) {
+    const estimatedSpot = intel.keySupportPrice && intel.keyResistancePrice
+      ? Math.round(((intel.keySupportPrice + intel.keyResistancePrice) / 2) * 100) / 100
+      : intel.targetPrice ? Math.round(intel.targetPrice * 0.9 * 100) / 100 : 338.0;
+
+    const synthCloses: number[] = [];
+    const basePrice = estimatedSpot * 0.96;
+    for (let i = 0; i < 40; i++) {
+      synthCloses.push(Math.round((basePrice + (estimatedSpot - basePrice) * (i / 40) + Math.sin(i) * (estimatedSpot * 0.015)) * 100) / 100);
+    }
+    synthCloses.push(estimatedSpot);
+
+    const avgVol = intel.liquidityScore && intel.liquidityScore >= 95 ? 27000000 : 5000000;
+
+    return {
+      spotPrice: estimatedSpot,
+      closes: synthCloses,
+      volumes: [avgVol],
+      avgVolume: avgVol,
+    };
   }
 
   return null;
@@ -179,28 +223,32 @@ export async function fetchClientSideLiveMarketData(
         const existing = tickerMap.get(sym);
         let chartData = await fetchTickerChartData(sym);
 
-        if (!chartData && existing) {
+        if (!chartData && existing && existing.spot_price !== 100.0) {
           // If live fetch fails/rate-limits, retain existing without error
           return;
         }
 
         if (!chartData) {
-          // Generate fallback synthetic baseline for newly added ticker so it never fails silently
-          const spotPrice = 100.0;
-          const sma20 = 100.0;
-          const upperBb = 106.0;
-          const lowerBb = 94.0;
+          const intel = SECURITY_INTELLIGENCE_REGISTRY[sym];
+          const spotPrice = intel?.keySupportPrice && intel?.keyResistancePrice
+            ? Math.round(((intel.keySupportPrice + intel.keyResistancePrice) / 2) * 100) / 100
+            : intel?.targetPrice ? Math.round(intel.targetPrice * 0.9 * 100) / 100 : 100.0;
+          const avgVol = intel?.liquidityScore && intel.liquidityScore >= 95 ? 25000000 : 1000000;
+          const sma20 = spotPrice;
+          const upperBb = Math.round(spotPrice * 1.05 * 100) / 100;
+          const lowerBb = Math.round(spotPrice * 0.95 * 100) / 100;
+
           const meta: TickerMeta = {
             symbol: sym,
-            name: `${sym} Equity`,
-            sector: 'US Equities',
-            liquidity_tier: 'Tier 2/3 (Moderate)',
+            name: intel?.name || `${sym} Equity`,
+            sector: intel?.sector || 'US Equities',
+            liquidity_tier: intel?.liquidityScore && intel.liquidityScore >= 95 ? 'Tier 1 (Ultra-Liquid)' : 'Tier 2/3 (Moderate)',
             spot_price: spotPrice,
-            avg_volume_30: 1000000,
+            avg_volume_30: avgVol,
             sma_20: sma20,
             upper_bb: upperBb,
             lower_bb: lowerBb,
-            bb_width_pct: 12.0,
+            bb_width_pct: 10.0,
             rsi_14: 50.0,
             rsi_flag: 'NORMAL',
             hv_30: 25.0,

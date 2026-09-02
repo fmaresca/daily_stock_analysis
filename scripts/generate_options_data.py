@@ -87,14 +87,14 @@ except ImportError:
 # -----------------------------------------------------------------------------
 
 DEFAULT_WATCHLIST = [
-    "SPY", "QQQ", "IWM", "NVDA", "AAPL", "MSFT", "AMZN", "TSLA",
+    "SPY", "QQQ", "IWM", "NVDA", "AAPL", "MSFT", "AMZN", "GOOGL", "TSLA",
     "PLTR", "IONQ", "NET", "RTX", "JEPI", "SCHD", "SPCX", "CLM", "CRF", "ZETA", "BLZE", "AXTI"
 ]
 
 WATCHLIST_FILE = Path("data/watchlist.json")
 
 # Liquidity classification mappings
-TIER_1_TICKERS = {"SPY", "QQQ", "NVDA", "AAPL", "MSFT", "AMZN", "TSLA"}
+TIER_1_TICKERS = {"SPY", "QQQ", "NVDA", "AAPL", "MSFT", "AMZN", "GOOGL", "TSLA"}
 TIER_4_TICKERS = {"AXTI", "BLZE", "ZETA"}
 
 TICKER_SECTORS = {
@@ -105,6 +105,7 @@ TICKER_SECTORS = {
     "AAPL": ("Apple Inc.", "Consumer Tech", "Tier 1 Mega Cap"),
     "MSFT": ("Microsoft Corporation", "Software & Cloud", "Tier 1 Mega Cap"),
     "AMZN": ("Amazon.com, Inc.", "E-Commerce & Cloud", "Tier 1 Mega Cap"),
+    "GOOGL": ("Alphabet Inc.", "Interactive Media & Cloud", "Tier 1 Mega Cap"),
     "TSLA": ("Tesla, Inc.", "Automotive / Tech", "Tier 1 High Beta"),
     "PLTR": ("Palantir Technologies", "AI & Enterprise Software", "Growth Tech"),
     "IONQ": ("IonQ, Inc.", "Quantum Computing", "Speculative Tech"),
