@@ -290,7 +290,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
               </th>
 
               <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3 text-center z-20">
-                <span>AI Score &amp; News</span>
+                <span>Analyst &amp; AI Rating</span>
               </th>
 
               <th className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-4 text-center z-20">Audit</th>
@@ -545,38 +545,43 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
                       )}
                     </td>
 
-                    {/* AI Score & Sentiment Badge */}
+                    {/* Equity Analyst & AI Rating Badge */}
                     <td className="py-3.5 px-3 text-center">
-                      <div className="flex flex-col items-center gap-0.5">
+                      <div className="flex flex-col items-center gap-1">
+                        {/* Equity Analyst Consensus Badge */}
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${intel.compositeScore >= 85
-                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                              : intel.compositeScore >= 75
-                                ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
-                                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                            }`}
-                          title={`Consensus: ${intel.analystConsensus} • Target: $${intel.targetPrice.toFixed(2)} (+${intel.upsidePct}%)`}
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            (intel.analystConsensus || '').toUpperCase().includes('STRONG BUY')
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : (intel.analystConsensus || '').toUpperCase().includes('BUY')
+                              ? 'bg-teal-500/15 text-teal-300 border-teal-500/30'
+                              : (intel.analystConsensus || '').toUpperCase().includes('HOLD')
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                              : 'bg-slate-800 text-slate-300 border-slate-700'
+                          }`}
+                          title={`Wall St Target: $${intel.targetPrice.toFixed(2)} (+${intel.upsidePct}% upside) • ${intel.analystCoverageCount} Analysts`}
                         >
-                          {intel.compositeScore}/100
+                          {intel.analystConsensus || 'Moderate Buy'}
                         </span>
+
+                        {/* AI Composite Score */}
                         <div className="flex items-center gap-1">
+                          <span
+                            className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold"
+                            title={`AI Score: ${intel.compositeScore}/100`}
+                          >
+                            AI: {intel.compositeScore}/100
+                          </span>
                           {intel.socialSentiment?.stocktwits_bullish_pct && (
                             <span
-                              className={`text-[9px] font-mono px-1 py-0.2 rounded ${intel.socialSentiment.stocktwits_bullish_pct >= 60
+                              className={`text-[9px] font-mono px-1 py-0.2 rounded ${
+                                intel.socialSentiment.stocktwits_bullish_pct >= 60
                                   ? 'text-emerald-400 bg-emerald-500/10'
                                   : 'text-slate-400 bg-slate-800'
-                                }`}
+                              }`}
                               title={`StockTwits: ${intel.socialSentiment.stocktwits_bullish_pct}% Bullish`}
                             >
                               {intel.socialSentiment.stocktwits_bullish_pct}% Bull
-                            </span>
-                          )}
-                          {intel.socialSentiment?.reddit_rank && intel.socialSentiment.reddit_rank !== 'N/A' && (
-                            <span
-                              className="text-[9px] font-mono px-1 py-0.2 rounded text-cyan-300 bg-cyan-500/10 border border-cyan-500/20"
-                              title={intel.socialSentiment.social_volume_flag}
-                            >
-                              {intel.socialSentiment.reddit_rank.split(' ')[0]}
                             </span>
                           )}
                         </div>

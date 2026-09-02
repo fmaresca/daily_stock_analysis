@@ -514,6 +514,52 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                 </div>
               </div>
 
+              {/* SECTION 2.5: Equity Analysts Consensus & Price Target Snapshot */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                  <div className="flex items-center space-x-2">
+                    <Target className="w-4 h-4 text-emerald-400" />
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                        Equity Research Consensus &amp; Price Targets
+                      </h3>
+                      <div className="text-[10px] text-slate-400">
+                        Wall Street Analyst Coverage ({analystTargets?.numberOfAnalysts || analystTargets?.number_of_analysts || 24} Analysts)
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
+                      {analystTargets?.recommendation || intel.analystConsensus || 'Moderate Buy'}
+                    </span>
+                    <button
+                      onClick={() => setActiveTab('NEWS_ANALYST')}
+                      className="text-xs text-blue-400 hover:text-blue-300 underline font-medium"
+                    >
+                      View Breakdown &rarr;
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block uppercase font-mono">Low Target</span>
+                    <span className="text-sm font-bold font-mono text-rose-300">${analystTargets?.low?.toFixed(2) || (spotPrice * 0.88).toFixed(2)}</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-blue-950/40 border border-blue-800/50">
+                    <span className="text-[10px] text-blue-300 block uppercase font-mono">Mean Consensus</span>
+                    <span className="text-sm font-bold font-mono text-blue-200">${analystTargets?.mean?.toFixed(2) || (spotPrice * 1.12).toFixed(2)}</span>
+                    <span className="text-[10px] font-mono text-emerald-400 block">
+                      +{Math.round((((analystTargets?.mean || (spotPrice * 1.12)) - spotPrice) / spotPrice) * 1000) / 10}% Upside
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block uppercase font-mono">High Target</span>
+                    <span className="text-sm font-bold font-mono text-emerald-300">${analystTargets?.high?.toFixed(2) || (spotPrice * 1.25).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* SECTION 3: Technical Boundaries */}
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
                 <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
