@@ -101,70 +101,70 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
       </div>
 
       {/* Sub-Navigation Level for Active Tree */}
-      <div className="glass-panel p-2 rounded-xl border border-slate-800/90 overflow-x-auto">
+      <div className="glass-panel py-2.5 px-3 rounded-xl border border-slate-800/90 overflow-x-auto min-h-[52px] flex items-center shadow-lg">
         {activeTree === 'EQUITIES' ? (
           /* Tree 1: US Equities Sub-Navigation */
-          <div className="flex items-center space-x-1 min-w-max">
+          <div className="flex items-center space-x-1.5 min-w-max">
             <button
               onClick={() => onSelectEquitiesTab('TECHNICAL_SCREENER')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeEquitiesTab === 'TECHNICAL_SCREENER'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Activity className="w-3.5 h-3.5" />
+              <Activity className="w-4 h-4" />
               <span>Technical Screener</span>
             </button>
 
             <button
               onClick={() => onSelectEquitiesTab('INTERACTIVE_CHARTS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeEquitiesTab === 'INTERACTIVE_CHARTS'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+              <BarChart2 className="w-4 h-4 text-cyan-400" />
               <span>Interactive Candlestick Charts &amp; BB Envelopes</span>
             </button>
 
             <button
               onClick={() => onSelectEquitiesTab('FUNDAMENTAL_HEALTH')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeEquitiesTab === 'FUNDAMENTAL_HEALTH'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Fundamental Health &amp; SEC EDGAR</span>
             </button>
 
             <button
               onClick={() => onSelectEquitiesTab('TREND_SUPPORT')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeEquitiesTab === 'TREND_SUPPORT'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Compass className="w-3.5 h-3.5" />
+              <Compass className="w-4 h-4" />
               <span>Trend &amp; Support Map</span>
             </button>
 
             <button
               onClick={() => onSelectEquitiesTab('VOLATILITY_RISK')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeEquitiesTab === 'VOLATILITY_RISK'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Flame className="w-3.5 h-3.5 text-amber-400" />
+              <Flame className="w-4 h-4 text-amber-400" />
               <span>Volatility &amp; Risk Profiler</span>
               {highIvrCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-mono">
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-mono">
                   {highIvrCount}
                 </span>
               )}
@@ -172,16 +172,16 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectEquitiesTab('EARNINGS_CALENDAR')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeEquitiesTab === 'EARNINGS_CALENDAR'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Calendar className="w-3.5 h-3.5 text-rose-400" />
+              <Calendar className="w-4 h-4 text-rose-400" />
               <span>Earnings Calendar &amp; Risk</span>
               {earningsAlertCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/20 text-rose-300 font-mono">
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-500/20 text-rose-300 font-mono">
                   {earningsAlertCount}
                 </span>
               )}
@@ -189,124 +189,124 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <button
               onClick={() => onSelectEquitiesTab('SECTOR_OVERVIEW')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeEquitiesTab === 'SECTOR_OVERVIEW'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <PieChart className="w-3.5 h-3.5" />
+              <PieChart className="w-4 h-4" />
               <span>Sector &amp; Universe Overview</span>
             </button>
           </div>
         ) : (
           /* Tree 2: Options & Weekly Engine Sub-Navigation */
-          <div className="flex items-center space-x-1 min-w-max">
+          <div className="flex items-center space-x-1.5 min-w-max">
             <button
               onClick={() => onSelectOptionsTab('INCOME_SCREENER')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeOptionsTab === 'INCOME_SCREENER'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <TrendingUp className="w-3.5 h-3.5" />
+              <TrendingUp className="w-4 h-4" />
               <span>Conservative Income (CSPs &amp; CCs)</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('MULTI_LEG_SPREADS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeOptionsTab === 'MULTI_LEG_SPREADS'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Multi-Leg Spreads &amp; Iron Condors</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('VOLATILITY_SKEW')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeOptionsTab === 'VOLATILITY_SKEW'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Activity className="w-3.5 h-3.5 text-cyan-400" />
+              <Activity className="w-4 h-4 text-cyan-400" />
               <span>25Δ Volatility Skew &amp; Term Structure</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('BACKTEST_MARGIN')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeOptionsTab === 'BACKTEST_MARGIN'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <BarChart2 className="w-3.5 h-3.5 text-purple-400" />
+              <BarChart2 className="w-4 h-4 text-purple-400" />
               <span>Backtester &amp; Margin Stress-Test</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('BROKER_STAGING')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeOptionsTab === 'BROKER_STAGING'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <Zap className="w-4 h-4 text-amber-400" />
               <span>Broker Staging &amp; Order Payloads</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('EXPIRATION_CADENCE')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeOptionsTab === 'EXPIRATION_CADENCE'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Layers className="w-3.5 h-3.5" />
+              <Layers className="w-4 h-4" />
               <span>Expiration Cadence &amp; CBOE Registry</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('DELTA_GREEKS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeOptionsTab === 'DELTA_GREEKS'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Sliders className="w-3.5 h-3.5" />
+              <Sliders className="w-4 h-4" />
               <span>Delta Harvest &amp; Greeks Radar</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('TICKER_AUDIT')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeOptionsTab === 'TICKER_AUDIT'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>5-Part Options Safety Audit</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('INCOME_CALCULATOR')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-semibold flex items-center space-x-2 transition-all leading-normal ${
                 activeOptionsTab === 'INCOME_CALCULATOR'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Calculator className="w-3.5 h-3.5 text-cyan-400" />
+              <Calculator className="w-4 h-4 text-cyan-400" />
               <span>Cash Income Calculator</span>
             </button>
           </div>

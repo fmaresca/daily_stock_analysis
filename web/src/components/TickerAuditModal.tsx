@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import {
   X,
   ShieldCheck,
@@ -19,6 +20,10 @@ import {
   Target,
   BarChart2,
   MessageSquare,
+  Printer,
+  FileSpreadsheet,
+  FileText,
+  Download,
 } from './icons';
 import { TickerMeta, OptionOpportunity } from '../types/options';
 import { InteractiveChart } from './InteractiveChart';
@@ -89,6 +94,131 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   const putCollateral = putStrikeTarget * 100;
   const estimatedWeeklyPutPremium = bestCSP ? bestCSP.premium_total : Math.round(putStrikeTarget * (ivCurrent / 100) * 0.12 * 100);
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportCSV = () => {
+    if (!ticker) return;
+    const headers = [
+      'Symbol',
+      'Name',
+      'Sector',
+      'Spot Price',
+      '20-Day SMA',
+      'Lower BB (2-SD)',
+      'Upper BB (2-SD)',
+      '14-Day RSI',
+      'IV Current %',
+      '30-Day HV %',
+      'IV Rank',
+      '30-Day Avg Volume',
+      'Liquidity Tier',
+      'Earnings Within 7d',
+      'Barchart Overall Opinion',
+      'AI Composite Score',
+      'Analyst Target Mean',
+      'Analyst Recommendation',
+      'Best CSP Strike',
+      'Best CSP DTE',
+      'Best CSP Annualized ROC %',
+      'Best CSP Cushion %',
+      'Best CC Strike',
+      'Best CC Annualized ROC %',
+    ];
+
+    const values = [
+      ticker.symbol,
+      `"${ticker.name || ticker.symbol}"`,
+      `"${ticker.sector || 'Equities'}"`,
+      spotPrice,
+      sma20,
+      lowerBb,
+      upperBb,
+      rsi14,
+      ivCurrent,
+      hv30,
+      ivRank,
+      avgVolume30,
+      `"${liquidityTier}"`,
+      ticker.earnings_within_7d ? 'YES' : 'NO',
+      `"${barchartOpinion?.opinion_label || 'Neutral'}"`,
+      intel.compositeScore,
+      analystTargets?.mean ?? 'N/A',
+      `"${analystTargets?.recommendation ?? 'N/A'}"`,
+      bestCSP?.strike ?? 'N/A',
+      bestCSP?.dte ?? 'N/A',
+      bestCSP?.annualized_roc ?? 'N/A',
+      bestCSP?.cushion_pct ?? 'N/A',
+      bestCC?.strike ?? 'N/A',
+      bestCC?.annualized_roc ?? 'N/A',
+    ];
+
+    const csvContent = [headers.join(','), values.join(',')].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${ticker.symbol}_options_audit_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportExcel = () => {
+    if (!ticker) return;
+    const summaryData = [
+      { Parameter: 'Ticker Symbol', Value: ticker.symbol },
+      { Parameter: 'Company Name', Value: ticker.name || ticker.symbol },
+      { Parameter: 'Sector', Value: ticker.sector || 'Equities' },
+      { Parameter: 'Spot Price ($)', Value: spotPrice },
+      { Parameter: '20-Day SMA ($)', Value: sma20 },
+      { Parameter: 'Lower Bollinger Band ($)', Value: lowerBb },
+      { Parameter: 'Upper Bollinger Band ($)', Value: upperBb },
+      { Parameter: '14-Day Blended RSI', Value: rsi14 },
+      { Parameter: 'Current Implied Volatility (IV %)', Value: ivCurrent },
+      { Parameter: '30-Day Historical Volatility (HV %)', Value: hv30 },
+      { Parameter: 'IV Rank (IVR %)', Value: ivRank },
+      { Parameter: '30-Day Average Volume', Value: avgVolume30 },
+      { Parameter: 'Liquidity Classification', Value: liquidityTier },
+      { Parameter: 'Earnings Within 7 Days', Value: ticker.earnings_within_7d ? 'YES' : 'NO' },
+      { Parameter: 'Barchart Technical Opinion', Value: barchartOpinion?.opinion_label || 'Neutral' },
+      { Parameter: 'AI Composite Score', Value: `${intel.compositeScore}/100 (${intel.sentimentLabel})` },
+      { Parameter: 'Analyst Mean Target ($)', Value: analystTargets?.mean ?? 'N/A' },
+      { Parameter: 'Analyst Consensus Rating', Value: analystTargets?.recommendation ?? 'N/A' },
+      { Parameter: 'Best CSP Strike ($)', Value: bestCSP?.strike ?? 'N/A' },
+      { Parameter: 'Best CSP Expiration', Value: bestCSP?.expiration ?? 'N/A' },
+      { Parameter: 'Best CSP Annualized ROC %', Value: bestCSP?.annualized_roc ?? 'N/A' },
+      { Parameter: 'Best CC Strike ($)', Value: bestCC?.strike ?? 'N/A' },
+      { Parameter: 'Best CC Annualized ROC %', Value: bestCC?.annualized_roc ?? 'N/A' },
+    ];
+
+    const oppsData = tickerOpps.map((o) => ({
+      Strategy: o.strategy,
+      Expiration: o.expiration,
+      DTE: o.dte,
+      Strike: o.strike,
+      Delta: o.delta,
+      Premium: o.premium_total,
+      Collateral: o.collateral_required,
+      'Annualized ROC %': o.annualized_roc,
+      'Cushion %': o.cushion_pct,
+      'POP %': o.pop_pct,
+      'Safety Tier': o.safety_tier,
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Security Intelligence');
+
+    if (oppsData.length > 0) {
+      const wsOpps = XLSX.utils.json_to_sheet(oppsData);
+      XLSX.utils.book_append_sheet(wb, wsOpps, 'Option Opportunities');
+    }
+
+    XLSX.writeFile(wb, `${ticker.symbol}_full_audit_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div
@@ -140,21 +270,49 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            {/* Action Buttons: Print, CSV, Excel */}
+            <div className="hidden sm:flex items-center gap-1.5 mr-2">
+              <button
+                onClick={handlePrint}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1"
+                title="Print Ticker Intelligence Report"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print</span>
+              </button>
+              <button
+                onClick={handleExportCSV}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1"
+                title="Export Selected Ticker Data to CSV"
+              >
+                <FileText className="w-3.5 h-3.5 text-blue-400" />
+                <span>CSV</span>
+              </button>
+              <button
+                onClick={handleExportExcel}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1"
+                title="Export Formatted Multi-Sheet Excel Workbook (.xlsx)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Excel</span>
+              </button>
+            </div>
+
             {/* AI Composite Score Ribbon */}
-            <div className="hidden sm:flex items-center space-x-3 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
+            <div className="hidden md:flex items-center space-x-3 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
               <div className="text-right">
-                <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">AI Composite Score</div>
+                <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">AI Score</div>
                 <div className="text-xs font-bold text-slate-200">{intel.sentimentLabel}</div>
               </div>
-              <div className={`px-2.5 py-1 rounded-lg font-black font-mono text-sm border flex items-center gap-1 ${
+              <div className={`px-2 py-0.5 rounded-lg font-black font-mono text-sm border flex items-center gap-1 ${
                 intel.compositeScore >= 85
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                   : intel.compositeScore >= 75
                   ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                   : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
               }`}>
-                <Award className="w-4 h-4" />
+                <Award className="w-3.5 h-3.5" />
                 <span>{intel.compositeScore}/100</span>
               </div>
             </div>

@@ -6,19 +6,22 @@ interface KPICardsProps {
   tickers: TickerMeta[];
   onFilterHighIvr: () => void;
   onFilterOversold: () => void;
+  onFilterNearSupport?: () => void;
   onFilterEarnings: () => void;
-  activeFilter: 'ALL' | 'IVR' | 'OVERSOLD' | 'EARNINGS';
+  activeFilter: 'ALL' | 'IVR' | 'OVERSOLD' | 'SUPPORT' | 'EARNINGS';
 }
 
 export const KPICards: React.FC<KPICardsProps> = ({
   tickers,
   onFilterHighIvr,
   onFilterOversold,
+  onFilterNearSupport,
   onFilterEarnings,
   activeFilter,
 }) => {
   const highIvrList = tickers.filter((t) => t.iv_rank >= 45);
-  const oversoldList = tickers.filter((t) => t.rsi_14 < 35 || t.spot_price <= t.lower_bb * 1.02);
+  const oversoldList = tickers.filter((t) => t.rsi_14 < 35);
+  const nearSupportList = tickers.filter((t) => t.spot_price <= t.lower_bb * 1.02);
   const earningsAlertList = tickers.filter((t) => t.earnings_within_7d);
   const avgIv = tickers.length > 0
     ? (tickers.reduce((acc, t) => acc + t.iv_current, 0) / tickers.length).toFixed(1)
@@ -65,11 +68,11 @@ export const KPICards: React.FC<KPICardsProps> = ({
         </div>
       </div>
 
-      {/* KPI 2: Tickers Near Support / Oversold */}
+      {/* KPI 2: Tickers Oversold (RSI < 35) & Near Support */}
       <div
         onClick={onFilterOversold}
         className={`glass-panel p-4 rounded-xl relative overflow-hidden group cursor-pointer transition-all border ${
-          activeFilter === 'OVERSOLD'
+          activeFilter === 'OVERSOLD' || activeFilter === 'SUPPORT'
             ? 'border-cyan-500 bg-cyan-950/20 shadow-lg shadow-cyan-500/10'
             : 'border-cyan-500/20 hover:border-cyan-500/50'
         }`}
@@ -77,17 +80,34 @@ export const KPICards: React.FC<KPICardsProps> = ({
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center space-x-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
             <ShieldCheck className="w-4 h-4 text-cyan-400" />
-            <span>Near Support / Oversold</span>
+            <span>Oversold Dips</span>
           </div>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-mono font-bold">
-            RSI &lt; 35
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 font-mono font-bold">
+              RSI &lt; 35
+            </span>
+            {onFilterNearSupport && nearSupportList.length > 0 && (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFilterNearSupport();
+                }}
+                className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors font-mono font-bold ${
+                  activeFilter === 'SUPPORT'
+                    ? 'bg-blue-500/30 text-blue-200 border-blue-400'
+                    : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-cyan-300'
+                }`}
+              >
+                {nearSupportList.length} at BB
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-baseline space-x-2 mt-1">
           <span className="text-3xl font-black font-mono text-cyan-400 tracking-tight">
             {oversoldList.length}
           </span>
-          <span className="text-xs text-slate-400">prime CSP dips</span>
+          <span className="text-xs text-slate-400">tickers (RSI &lt; 35)</span>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap mt-2">
           {oversoldList.map((t) => (
@@ -99,7 +119,9 @@ export const KPICards: React.FC<KPICardsProps> = ({
             </span>
           ))}
           {oversoldList.length === 0 && (
-            <span className="text-[11px] text-slate-400">All tickers trading in normal range</span>
+            <span className="text-[11px] text-slate-400">
+              0 tickers with RSI &lt; 35 ({nearSupportList.length} near Lower BB)
+            </span>
           )}
         </div>
       </div>

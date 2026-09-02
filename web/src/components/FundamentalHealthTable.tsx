@@ -15,9 +15,10 @@ import {
 
 interface FundamentalHealthTableProps {
   data: FundamentalHealthData[];
+  onSelectTicker?: (symbol: string) => void;
 }
 
-export const FundamentalHealthTable: React.FC<FundamentalHealthTableProps> = ({ data }) => {
+export const FundamentalHealthTable: React.FC<FundamentalHealthTableProps> = ({ data, onSelectTicker }) => {
   const [filterZone, setFilterZone] = useState<'ALL' | 'SAFE' | 'GREY' | 'DISTRESS'>('ALL');
   const [sortBy, setSortBy] = useState<keyof FundamentalHealthData>('altman_z_score');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -248,7 +249,14 @@ export const FundamentalHealthTable: React.FC<FundamentalHealthTableProps> = ({ 
                     {/* Symbol */}
                     <td className="py-3 px-3.5">
                       <div className="flex items-center space-x-2">
-                        <span className="font-bold text-white text-xs">{item.symbol}</span>
+                        <button
+                          onClick={() => onSelectTicker && onSelectTicker(item.symbol)}
+                          className="font-bold text-white text-xs hover:text-emerald-400 hover:underline flex items-center gap-1 group text-left"
+                          title={`Click to open full AI audit for ${item.symbol}`}
+                        >
+                          <span>{item.symbol}</span>
+                          <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                        </button>
                         <span className="text-[10px] text-slate-400 font-sans">
                           ${item.spot_price.toFixed(2)}
                         </span>
