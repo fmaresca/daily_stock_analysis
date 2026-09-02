@@ -149,6 +149,39 @@ export const App: React.FC = () => {
   const [showWatchlistOnly, setShowWatchlistOnly] = useState<boolean>(false);
   const [customTickers, setCustomTickers] = useState<TickerMeta[]>([]);
 
+  // Theme State (Dark / Light Day-Night mode)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('deltaharvest_theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
+    } catch {
+      // fallback to dark
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('deltaharvest_theme', theme);
+      if (theme === 'light') {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      }
+    } catch (e) {
+      console.warn('Failed to persist theme:', e);
+    }
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Sync watchlist groups to localStorage
   useEffect(() => {
     try {
@@ -714,10 +747,13 @@ export const App: React.FC = () => {
   };
 
   const handleAddCustomTickerMeta = (symbol: string) => {
-    if (!universeTickers.some((t) => t.symbol === symbol)) {
+    const cleanSym = symbol.trim().toUpperCase().replace(/[^A-Z0-9.\-_]/g, '');
+    if (!cleanSym) return;
+
+    if (!universeTickers.some((t) => t.symbol === cleanSym)) {
       const syntheticMeta: TickerMeta = {
-        symbol,
-        name: `${symbol} (Custom User Asset)`,
+        symbol: cleanSym,
+        name: `${cleanSym} (Custom Ingested Asset)`,
         sector: 'Custom Watchlist',
         liquidity_tier: 'Tier 2/3 (Moderate)',
         spot_price: 100.0,
@@ -736,7 +772,23 @@ export const App: React.FC = () => {
         has_weeklys: true,
         expiration_cadence: 'Daily / Multi-Weekly',
       };
-      setCustomTickers((prev) => [...prev, syntheticMeta]);
+      setCustomTickers((prev) => {
+        if (prev.some((c) => c.symbol === cleanSym)) return prev;
+        return [...prev, syntheticMeta];
+      });
+
+      // Also ensure it is present in the Core Universe group so it appears in the master list
+      setWatchlistGroups((prev) =>
+        prev.map((g) => {
+          if (g.id === 'core-universe' && !g.tickers.includes(cleanSym)) {
+            return { ...g, tickers: [...g.tickers, cleanSym] };
+          }
+          return g;
+        })
+      );
+
+      // Automatically trigger live data processing for the newly ingested symbol
+      handleLiveRecalculate([cleanSym]);
     }
   };
 
@@ -753,7 +805,6 @@ export const App: React.FC = () => {
       sortBy: 'iv_rank',
       sortOrder: 'desc',
     });
-    setShowWatchlistOnly(false);
   };
 
   const handleSort = (column: any) => {
@@ -847,6 +898,8 @@ export const App: React.FC = () => {
         onOpenReports={() => setIsReportQueryModalOpen(true)}
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
         onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
