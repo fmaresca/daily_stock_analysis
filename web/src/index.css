@@ -60,3 +60,104 @@ html {
   scrollbar-width: thin;
   scrollbar-color: #334155 #090d16;
 }
+
+/* Print Optimization & High-Contrast PDF Stylesheet */
+@media print {
+  @page {
+    size: auto;
+    margin: 10mm 10mm 10mm 10mm;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 10pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Strip dark glassmorphism and heavy backgrounds for clean print output */
+  .glass-panel,
+  .bg-slate-950,
+  .bg-slate-900,
+  .bg-slate-900\/90,
+  .bg-slate-950\/85,
+  .bg-slate-950\/80,
+  .bg-slate-800,
+  .bg-slate-800\/40,
+  .bg-slate-950\/60 {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Force high contrast text */
+  .text-white,
+  .text-slate-100,
+  .text-slate-200,
+  .text-slate-300 {
+    color: #0f172a !important;
+  }
+
+  .text-slate-400,
+  .text-slate-500 {
+    color: #475569 !important;
+  }
+
+  /* Badges in print */
+  .bg-emerald-500\/10,
+  .bg-emerald-500\/15,
+  .bg-emerald-500\/20 {
+    background: #ecfdf5 !important;
+    color: #047857 !important;
+    border-color: #a7f3d0 !important;
+  }
+
+  .bg-cyan-500\/10,
+  .bg-cyan-500\/15,
+  .bg-cyan-500\/20 {
+    background: #ecfeff !important;
+    color: #0e7490 !important;
+    border-color: #a5f3fc !important;
+  }
+
+  .bg-rose-500\/10,
+  .bg-rose-500\/20 {
+    background: #fff1f2 !important;
+    color: #be123c !important;
+    border-color: #fecdd3 !important;
+  }
+
+  .bg-amber-500\/10,
+  .bg-amber-500\/15,
+  .bg-amber-500\/20 {
+    background: #fffbeb !important;
+    color: #b45309 !important;
+    border-color: #fde68a !important;
+  }
+
+  /* Hide interactive controls in print */
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ensure clean page breaks */
+  table, tr, .break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  tr {
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  th {
+    background: #f8fafc !important;
+    color: #334155 !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+  }
+}

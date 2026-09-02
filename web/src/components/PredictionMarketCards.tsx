@@ -54,6 +54,8 @@ export const PredictionMarketCards: React.FC<PredictionMarketCardsProps> = ({ ev
         {events.map((ev, idx) => {
           const prob = parseProb(ev.probability);
           const colorClass = getProbColor(prob);
+          const isKalshi = ev.source?.includes('Kalshi');
+          const isPredictIt = ev.source?.includes('PredictIt');
 
           return (
             <a
@@ -65,11 +67,24 @@ export const PredictionMarketCards: React.FC<PredictionMarketCardsProps> = ({ ev
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                    {ev.source || 'Market'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded border ${
+                      isKalshi
+                        ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                        : isPredictIt
+                        ? 'bg-blue-500/10 text-blue-300 border-blue-500/30'
+                        : 'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}>
+                      {ev.source || 'US Market'}
+                    </span>
+                    {isKalshi && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono">
+                        CFTC Regulated
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center text-slate-500 group-hover:text-cyan-400 transition-colors">
-                    <span className="text-[11px] mr-1">View Contract</span>
+                    <span className="text-[11px] mr-1">Live Orderbook</span>
                     <ExternalLink className="w-3 h-3" />
                   </div>
                 </div>
@@ -77,10 +92,15 @@ export const PredictionMarketCards: React.FC<PredictionMarketCardsProps> = ({ ev
                 <p className="text-xs font-semibold text-slate-200 line-clamp-2 leading-relaxed group-hover:text-blue-300 transition-colors">
                   {ev.event}
                 </p>
+                {ev.relevance_note && (
+                  <span className="text-[10px] text-cyan-400/80 font-sans block mt-1.5">
+                    🎯 {ev.relevance_note}
+                  </span>
+                )}
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-medium">Implied Odds ("Yes")</span>
+                <span className="text-xs text-slate-400 font-medium">Implied Probability ("Yes")</span>
                 <div className="flex items-center gap-2">
                   <div className="w-16 h-2 bg-slate-800 rounded-full overflow-hidden hidden sm:block">
                     <div

@@ -575,7 +575,8 @@ export const App: React.FC = () => {
 
       // Quick KPI flags
       if (filters.onlyHighIvr && t.iv_rank < 45) return false;
-      if (filters.onlyOversold && t.rsi_14 > 40) return false;
+      if (filters.onlyOversold && (t.rsi_14 ?? 50) >= 35) return false;
+      if (filters.onlyNearSupport && t.spot_price > (t.lower_bb ?? 0) * 1.02) return false;
       if (filters.onlyEarningsAlert && !t.earnings_within_7d) return false;
 
       // Weekly Cadence Quick Filter
@@ -941,15 +942,18 @@ export const App: React.FC = () => {
               ? 'IVR'
               : filters.onlyOversold
                 ? 'OVERSOLD'
-                : filters.onlyEarningsAlert
-                  ? 'EARNINGS'
-                  : 'ALL'
+                : filters.onlyNearSupport
+                  ? 'SUPPORT'
+                  : filters.onlyEarningsAlert
+                    ? 'EARNINGS'
+                    : 'ALL'
           }
           onFilterHighIvr={() =>
             setFilters((prev) => ({
               ...prev,
               onlyHighIvr: !prev.onlyHighIvr,
               onlyOversold: false,
+              onlyNearSupport: false,
               onlyEarningsAlert: false,
             }))
           }
@@ -957,6 +961,16 @@ export const App: React.FC = () => {
             setFilters((prev) => ({
               ...prev,
               onlyOversold: !prev.onlyOversold,
+              onlyNearSupport: false,
+              onlyHighIvr: false,
+              onlyEarningsAlert: false,
+            }))
+          }
+          onFilterNearSupport={() =>
+            setFilters((prev) => ({
+              ...prev,
+              onlyNearSupport: !prev.onlyNearSupport,
+              onlyOversold: false,
               onlyHighIvr: false,
               onlyEarningsAlert: false,
             }))
@@ -967,6 +981,7 @@ export const App: React.FC = () => {
               onlyEarningsAlert: !prev.onlyEarningsAlert,
               onlyHighIvr: false,
               onlyOversold: false,
+              onlyNearSupport: false,
             }))
           }
         />
@@ -1025,15 +1040,30 @@ export const App: React.FC = () => {
 
             <button
               onClick={() =>
-                setFilters((prev) => ({ ...prev, onlyOversold: !prev.onlyOversold }))
+                setFilters((prev) => ({ ...prev, onlyOversold: !prev.onlyOversold, onlyNearSupport: false }))
               }
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${filters.onlyOversold
                   ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
                 }`}
+              title="Filter tickers with 14-Day RSI strictly < 35"
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Oversold Dips</span>
+              <span>Oversold (RSI &lt; 35)</span>
+            </button>
+
+            <button
+              onClick={() =>
+                setFilters((prev) => ({ ...prev, onlyNearSupport: !prev.onlyNearSupport, onlyOversold: false }))
+              }
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${filters.onlyNearSupport
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                }`}
+              title="Filter tickers trading within 2% of Lower Bollinger Band"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+              <span>Near Lower Support</span>
             </button>
 
             <button
@@ -1205,7 +1235,36 @@ export const App: React.FC = () => {
           ) : activeEquitiesTab === 'FUNDAMENTAL_HEALTH' ? (
             /* Fundamental Solvency, Altman Z-Score & SEC EDGAR Filings */
             <div className="space-y-4">
-              <FundamentalHealthTable data={fundamentalHealthData} />
+              <FundamentalHealthTable
+                data={fundamentalHealthData}
+                onSelectTicker={(symbol) => {
+                  const target = universeTickers.find((t) => t.symbol === symbol);
+                  if (target) {
+                    setSelectedTicker(target);
+                  } else {
+                    const fundItem = fundamentalHealthData.find((f) => f.symbol === symbol);
+                    setSelectedTicker({
+                      symbol,
+                      name: fundItem?.name || symbol,
+                      sector: fundItem?.sector || 'Equities',
+                      liquidity_tier: 'Tier 2/3 (Moderate)',
+                      spot_price: fundItem?.spot_price || 100.0,
+                      avg_volume_30: 1000000,
+                      sma_20: fundItem?.spot_price || 100.0,
+                      upper_bb: (fundItem?.spot_price || 100.0) * 1.07,
+                      lower_bb: (fundItem?.spot_price || 100.0) * 0.93,
+                      bb_width_pct: 14.0,
+                      rsi_14: 50.0,
+                      rsi_flag: 'NORMAL',
+                      hv_30: 25.0,
+                      iv_current: 25.0,
+                      iv_rank: 35,
+                      earnings_within_7d: false,
+                      next_earnings_date: 'N/A',
+                    });
+                  }
+                }}
+              />
             </div>
           ) : (
             /* Tree 1: US Equities Analysis (Primary Screener Table) */

@@ -85,6 +85,8 @@ export interface PredictionMarketEvent {
   event: string;
   probability: string;
   url?: string;
+  category?: 'EQUITY_EARNINGS' | 'CORP_CATALYST' | 'SECTOR_MACRO' | 'FED_RATES' | string;
+  relevance_note?: string;
 }
 
 export interface SocialSentiment {
@@ -93,6 +95,12 @@ export interface SocialSentiment {
   reddit_rank?: string;
   reddit_sentiment?: string;
   social_volume_flag?: string;
+  twitter_cashtag_sentiment?: string;
+  twitter_volume_score?: number;
+  yahoo_finance_community_score?: number;
+  seeking_alpha_sentiment?: string;
+  seeking_alpha_quant_rating?: number;
+  tradingview_technical_rating?: string;
 }
 
 export interface BarchartOpinion {
@@ -258,6 +266,7 @@ export interface FilterState {
   search: string;
   onlyHighIvr?: boolean;
   onlyOversold?: boolean;
+  onlyNearSupport?: boolean;
   onlyEarningsAlert?: boolean;
   weeklyCadence?: 'ALL' | 'WEEKLY_ONLY' | 'MONTHLY_ONLY';
   opinionFilter?: 'ALL' | 'TOP_1_PCT' | 'BUY_ONLY' | 'WEEKLY_ONLY';

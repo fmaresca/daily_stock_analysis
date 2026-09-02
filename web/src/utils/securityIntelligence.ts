@@ -981,33 +981,68 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
   const ivr = meta?.iv_rank ?? 35;
   const isTier1 = meta?.liquidity_tier?.includes('Tier 1') || upper === 'TSLA' || upper === 'NVDA' || upper === 'SPY' || upper === 'QQQ';
 
+  const sector = meta?.sector || 'US Technology';
+  const isTechOrAI = sector.includes('Tech') || sector.includes('Semiconductor') || upper === 'NVDA' || upper === 'AMD' || upper === 'MSFT' || upper === 'GOOGL' || upper === 'META' || upper === 'AAPL';
+  const isEVorClean = sector.includes('Auto') || sector.includes('Energy') || upper === 'TSLA';
+  const isFinancialOrMacro = sector.includes('Financial') || sector.includes('ETF') || upper === 'SPY' || upper === 'QQQ' || upper === 'JPM';
+
   const defaultPredictionMarkets = [
     {
+      source: 'Kalshi' as const,
+      event: isTechOrAI
+        ? `Will ${upper} beat next consensus quarterly Cloud/AI enterprise revenue estimates?`
+        : isEVorClean
+        ? `Will US EV tax incentives & regulatory credits expand before year-end?`
+        : isFinancialOrMacro
+        ? `Will the Federal Reserve cut federal funds rate by ≥25 bps at next FOMC?`
+        : `Will ${upper} post positive YoY Net Income growth in upcoming 10-Q?`,
+      probability: isTier1 ? '68.5%' : '59.0%',
+      url: `https://kalshi.com/markets?search=${upper}`,
+      category: isFinancialOrMacro ? 'FED_RATES' : 'EQUITY_EARNINGS',
+      relevance_note: isFinancialOrMacro ? 'Direct Macro Rate Sensitivity' : `Company-Specific Earnings Catalyst (${upper})`,
+    },
+    {
+      source: 'PredictIt' as const,
+      event: isTechOrAI
+        ? `US Department of Commerce to issue new AI semiconductor export restrictions?`
+        : isEVorClean
+        ? `Will US average retail gas prices remain above $3.40/gal in Q3?`
+        : `Will US GDP growth print above 2.2% in next BEA preliminary release?`,
+      probability: isTechOrAI ? '42.0%' : '51.5%',
+      url: `https://www.predictit.org/search?query=${upper}`,
+      category: 'SECTOR_MACRO',
+      relevance_note: `Sector Policy & Regulatory Context (${sector})`,
+    },
+    {
       source: 'Polymarket' as const,
-      event: `Will ${upper} market valuation expand by >10% over the next fiscal quarter?`,
-      probability: '64.5%',
+      event: `Will ${upper} market capitalization exceed $${Math.round(spot * 1.15 * (isTier1 ? 500 : 50))}B by end of year?`,
+      probability: '63.0%',
       url: `https://polymarket.com/search?q=${upper}`,
+      category: 'CORP_CATALYST',
+      relevance_note: `Equity Price Target & Market Cap Expansion (${upper})`,
     },
     {
       source: 'Manifold' as const,
-      event: `${upper} beats Next Quarter Consensus Revenue & EPS Targets?`,
-      probability: '68.0%',
+      event: `Will ${upper} outperform the S&P 500 benchmark over the next 12 months?`,
+      probability: '57.5%',
       url: `https://manifold.markets/search?q=${upper}`,
-    },
-    {
-      source: 'Manifold' as const,
-      event: `Will ${upper} outperform the S&P 500 over the next 12 months?`,
-      probability: '52.0%',
-      url: `https://manifold.markets/search?q=${upper}`,
+      category: 'EQUITY_EARNINGS',
+      relevance_note: `Alpha vs S&P 500 Index Benchmark`,
     },
   ];
 
   const defaultSocialSentiment = {
     stocktwits_sentiment: (ivr >= 45 ? 'Bullish' : 'Neutral') as 'Bullish' | 'Neutral' | 'Bearish',
-    stocktwits_bullish_pct: ivr >= 45 ? 71.5 : 55.0,
-    reddit_rank: isTier1 ? '#4 on WSB' : 'N/A',
+    stocktwits_bullish_pct: ivr >= 45 ? 74.5 : 58.0,
+    reddit_rank: isTier1 ? '#3 on /r/wallstreetbets' : 'Top 25 Mentions',
     reddit_sentiment: (ivr >= 45 ? 'Bullish' : 'Neutral') as 'Bullish' | 'Neutral' | 'Bearish',
-    social_volume_flag: isTier1 ? '2,450 comments today' : '180 comments today',
+    social_volume_flag: isTier1 ? '3,120 discussions / 24h' : '420 discussions / 24h',
+    twitter_cashtag_sentiment: (ivr >= 45 ? 'Bullish' : 'Neutral') as 'Bullish' | 'Neutral' | 'Bearish',
+    twitter_volume_score: isTier1 ? 88 : 64,
+    yahoo_finance_community_score: ivr >= 45 ? 78 : 62,
+    seeking_alpha_sentiment: (ivr >= 45 ? 'Strong Buy' : 'Buy'),
+    seeking_alpha_quant_rating: ivr >= 45 ? 4.72 : 4.15,
+    tradingview_technical_rating: (rsi < 35 ? 'Strong Buy (Oversold)' : rsi > 65 ? 'Neutral / Overbought' : 'Buy'),
   };
 
   if (SECURITY_INTELLIGENCE_REGISTRY[upper]) {
@@ -1015,7 +1050,7 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
     return {
       ...reg,
       predictionMarkets: reg.predictionMarkets || meta?.prediction_markets || defaultPredictionMarkets,
-      socialSentiment: reg.socialSentiment || meta?.social_sentiment || defaultSocialSentiment,
+      socialSentiment: reg.socialSentiment ? { ...defaultSocialSentiment, ...reg.socialSentiment } : defaultSocialSentiment,
     };
   }
 

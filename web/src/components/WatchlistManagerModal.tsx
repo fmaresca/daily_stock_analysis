@@ -448,10 +448,35 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
         <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
           <div className="flex items-center space-x-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Changes save automatically to browser storage</span>
+            <span>Active Universe Overridden in Browser Storage</span>
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              onClick={() => {
+                const configPayload = {
+                  updated_at: new Date().toISOString(),
+                  watchlist_group: activeGroup?.name || 'Custom Watchlist',
+                  total_tickers: currentTickers.length,
+                  tickers: currentTickers,
+                };
+                const blob = new Blob([JSON.stringify(configPayload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'options_tickers.json');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setFileUploadSuccess('Watchlist synced locally & options_tickers.json exported for GitHub repository sync.');
+              }}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center space-x-1.5 border border-slate-700 transition-colors cursor-pointer"
+              title="Export tickers to config/options_tickers.json for repository commit"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-400" />
+              <span>Sync to GitHub / Export JSON</span>
+            </button>
+
             {onRecalculateTickers && (
               <button
                 onClick={() => onRecalculateTickers(currentTickers)}

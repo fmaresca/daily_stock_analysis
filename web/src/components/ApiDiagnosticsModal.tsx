@@ -117,15 +117,30 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
         return;
       }
 
+      if (statusData && statusData.status === 'TOKEN_REQUIRED') {
+        updateTest('schwab_api', {
+          status: 'WARNING',
+          latencyMs: elapsed,
+          message: 'Schwab App Key configured, but OAuth Access Token required. Click "Configure Schwab API" to authorize.',
+          details: {
+            app_key_masked: savedKey ? savedKey.slice(0, 4) + '••••••••' + savedKey.slice(-4) : 'Configured',
+            token_status: 'Token Required / Expired (30s handshake TTL)',
+            action: 'Click Authorize on Schwab.com and paste URL within 30s',
+          },
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        return;
+      }
+
       if (savedKey && savedSecret && savedEnabled) {
         updateTest('schwab_api', {
-          status: 'SUCCESS',
+          status: 'WARNING',
           latencyMs: Math.max(120, elapsed),
-          message: 'Schwab credentials validated in local storage. Ready for OAuth live token synchronization.',
+          message: 'Schwab credentials stored locally. Complete OAuth authorization on Schwab.com to stream live data.',
           details: {
             app_key_masked: savedKey.slice(0, 4) + '••••••••' + savedKey.slice(-4),
             callback_url: localStorage.getItem('schwab_callback_url') || 'https://127.0.0.1',
-            mode: 'Client-Side Key Provisioning Active',
+            status: 'Pending OAuth Handshake / Local Storage Mode',
           },
           timestamp: new Date().toLocaleTimeString(),
         });
