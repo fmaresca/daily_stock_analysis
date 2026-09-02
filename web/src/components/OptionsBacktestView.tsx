@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import * as XLSX from 'xlsx';
 import { runOptionsBacktest, computeMarginStressTest } from '../utils/optionsBacktest';
+import { exportCustomDataToExcel } from '../utils/exportImport';
 import {
   ShieldCheck,
   TrendingUp,
@@ -111,16 +111,14 @@ export const OptionsBacktestView: React.FC<OptionsBacktestViewProps> = ({
       'Risk Status': sc.riskStatus,
     }));
 
-    const wb = XLSX.utils.book_new();
-    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-    const wsEquity = XLSX.utils.json_to_sheet(equityData);
-    const wsStress = XLSX.utils.json_to_sheet(stressData);
-
-    XLSX.utils.book_append_sheet(wb, wsSummary, 'Strategy KPIs');
-    XLSX.utils.book_append_sheet(wb, wsEquity, 'Monthly Equity Curve');
-    XLSX.utils.book_append_sheet(wb, wsStress, 'FINRA 4210 Margin Stress');
-
-    XLSX.writeFile(wb, `options_backtest_${backtest.symbol}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    exportCustomDataToExcel(
+      [
+        { name: 'Strategy KPIs', data: summaryData },
+        { name: 'Monthly Equity Curve', data: equityData },
+        { name: 'FINRA 4210 Margin Stress', data: stressData },
+      ],
+      `options_backtest_${backtest.symbol}_${new Date().toISOString().slice(0, 10)}.xls`
+    );
   };
 
   return (

@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   BarChart2,
   Zap,
+  MessageSquare,
 } from './icons';
 
 interface HelpHandbookModalProps {

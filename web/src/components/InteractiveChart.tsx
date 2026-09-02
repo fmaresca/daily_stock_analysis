@@ -13,8 +13,8 @@ import {
   HistogramData,
   Time,
 } from 'lightweight-charts';
-import * as XLSX from 'xlsx';
 import { TickerMeta, OptionOpportunity } from '../types/options';
+import { exportCustomDataToExcel } from '../utils/exportImport';
 import {
   Activity,
   ShieldCheck,
@@ -438,10 +438,10 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = ({
                 'Upper BB': chartData.upperBb[i]?.value || 0,
                 'Lower BB': chartData.lowerBb[i]?.value || 0,
               }));
-              const ws = XLSX.utils.json_to_sheet(sheetData);
-              const wb = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(wb, ws, `${ticker.symbol} Daily`);
-              XLSX.writeFile(wb, `${ticker.symbol}_candlestick_data_${new Date().toISOString().slice(0, 10)}.xlsx`);
+              exportCustomDataToExcel(
+                [{ name: `${ticker.symbol} Daily`, data: sheetData }],
+                `${ticker.symbol}_candlestick_data_${new Date().toISOString().slice(0, 10)}.xls`
+              );
             }}
             className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-slate-800 text-[11px] font-semibold flex items-center space-x-1 transition-colors"
             title="Export Daily OHLCV to Excel"

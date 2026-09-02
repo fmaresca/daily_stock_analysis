@@ -353,6 +353,46 @@ export function exportToExcel(
   downloadFile(xml, actualFilename, 'application/vnd.ms-excel;charset=utf-8;');
 }
 
+export function exportCustomDataToExcel(
+  sheets: Array<{ name: string; data: Record<string, any>[] }>,
+  filename = 'export.xls'
+) {
+  const actualFilename = filename.endsWith('.xlsx')
+    ? filename.replace(/\.xlsx$/, '.xls')
+    : filename.endsWith('.xls')
+    ? filename
+    : `${filename}.xls`;
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<?mso-application progid="Excel.Sheet"?>\n`;
+  xml += `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n`;
+  xml += ` xmlns:o="urn:schemas-microsoft-com:office:office"\n`;
+  xml += ` xmlns:x="urn:schemas-microsoft-com:office:excel"\n`;
+  xml += ` xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"\n`;
+  xml += ` xmlns:html="http://www.w3.org/TR/REC-html40">\n`;
+  xml += ` <Styles>\n`;
+  xml += `  <Style ss:ID="Default" ss:Name="Normal">\n`;
+  xml += `   <Alignment ss:Vertical="Center"/>\n`;
+  xml += `   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Color="#0F172A"/>\n`;
+  xml += `  </Style>\n`;
+  xml += `  <Style ss:ID="Header">\n`;
+  xml += `   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>\n`;
+  xml += `   <Interior ss:Color="#047857" ss:Pattern="Solid"/>\n`;
+  xml += `   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>\n`;
+  xml += `  </Style>\n`;
+  xml += ` </Styles>\n`;
+
+  sheets.forEach((sheet) => {
+    if (sheet.data.length === 0) return;
+    const headers = Object.keys(sheet.data[0]);
+    const rows = sheet.data.map((item) => headers.map((h) => item[h]));
+    xml += buildXmlWorksheet(sheet.name, headers, rows);
+  });
+
+  xml += `</Workbook>`;
+  downloadFile(xml, actualFilename, 'application/vnd.ms-excel;charset=utf-8;');
+}
+
 // ----------------------------------------------------------------------------
 // 4. FILE IMPORT (CSV, TSV, XML, TXT) FOR WATCHLIST INGESTION
 // ----------------------------------------------------------------------------
