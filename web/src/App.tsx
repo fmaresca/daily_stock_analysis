@@ -370,18 +370,20 @@ export const App: React.FC = () => {
       if (res.ok && contentType.includes('application/json')) {
         const json: OptionsDataPayload = await res.json();
         if (json.tickers && json.tickers.length > 0) {
+          const incomingTickers = json.tickers;
+          const incomingOpps = json.opportunities || [];
           setDataPayload((prev) => {
             if (!prev || !prev.tickers) return json;
             const tickerMap = new Map<string, TickerMeta>();
             prev.tickers.forEach((t) => tickerMap.set(t.symbol, t));
-            json.tickers.forEach((t) => tickerMap.set(t.symbol, t));
+            incomingTickers.forEach((t) => tickerMap.set(t.symbol, t));
 
             const oppMap = new Map<string, OptionOpportunity>();
             (prev.opportunities || []).forEach((o) => {
               const k = o.id || `${o.strategy}_${o.symbol}_${o.strike}`;
               oppMap.set(k, o);
             });
-            (json.opportunities || []).forEach((o) => {
+            incomingOpps.forEach((o) => {
               const k = o.id || `${o.strategy}_${o.symbol}_${o.strike}`;
               oppMap.set(k, o);
             });
@@ -394,7 +396,7 @@ export const App: React.FC = () => {
           });
           setDataSource('FastAPI Live Engine');
           setCustomTickers((prev) =>
-            prev.filter((c) => !json.tickers?.some((t) => t.symbol === c.symbol))
+            prev.filter((c) => !incomingTickers.some((t) => t.symbol === c.symbol))
           );
           success = true;
         }
