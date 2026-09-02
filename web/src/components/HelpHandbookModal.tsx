@@ -987,50 +987,56 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
               <div className="bg-slate-950/70 p-4 rounded-xl border border-purple-500/30 space-y-3">
                 <div className="flex items-center space-x-2 text-purple-400 font-bold text-xs">
                   <BarChart2 className="w-4 h-4" />
-                  <span>Prediction Market Cards (Audit Tab → Prediction Markets)</span>
+                  <span>Prediction Market Analytics &amp; Term Structure (Audit Tab → Prediction Markets)</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                   <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
-                    <div className="font-bold text-white">Polymarket Gamma API</div>
+                    <div className="font-bold text-white">Kalshi (CFTC Regulated) &amp; Polymarket</div>
                     <p className="text-slate-400 text-[11px] leading-relaxed">
-                      Polymarket is the world's largest decentralized prediction market. Contracts shown here are binary (Yes / No) events linked to a specific ticker — for example, "Will NVDA close above $150 by Dec 31?" The <strong>Yes % probability</strong> represents real money bet on an outcome, not just sentiment.
+                      CFTC-regulated USD contracts and decentralized USDC orderbooks. Binary (Yes/No) contracts representing real capital backing specific corporate combinations, earnings hurdles, and policy timelines.
                     </p>
                   </div>
                   <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
-                    <div className="font-bold text-blue-400">Manifold Markets</div>
+                    <div className="font-bold text-cyan-400">Multi-Year Term Structures</div>
                     <p className="text-slate-400 text-[11px] leading-relaxed">
-                      A complementary prediction market where traders stake virtual currency on event outcomes. Manifold often surfaces early signals on earnings surprises, regulatory decisions, and sector-specific catalysts. Use as a contrarian indicator when Manifold and Polymarket diverge significantly.
+                      Models complex multi-horizon catalysts (such as SPCX / TSLA strategic combination or Robotaxi regulatory clearance) across 2025, 2026, 2027, and 2028+. Computes cumulative odds, marginal density (+Δ%), and annualized hazard rates.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <div className="font-bold text-blue-400">PMCI Scoring Engine (0-100)</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      Weighted composite score factoring CFTC regulation weighting (1.20x), decentralized orderbook depth (1.15x), and volume logarithmic scaling to compute true market confidence.
                     </p>
                   </div>
                 </div>
-                <div className="bg-amber-950/30 p-3 rounded-lg border border-amber-500/30 text-xs text-amber-300">
-                  <strong>Usage Rule:</strong> Prediction market probabilities above 70% for a bullish event (e.g. "Beats earnings") support writing a Cash-Secured Put. Probabilities below 30% are a caution flag — consider widening strike distance or skipping that expiration.
+                <div className="bg-cyan-950/30 p-3 rounded-lg border border-cyan-500/30 text-xs text-cyan-300">
+                  <strong>Options Coupling Rule:</strong> When near-term (&lt;12M) catalyst hazard rate is low (&lt;25%), short put assignments are protected, creating an optimal Cash-Secured Put (CSP) harvesting window. When multi-year cumulative odds exceed 60%, long LEAPS call spreads offer asymmetric convexity.
                 </div>
               </div>
 
               {/* Social Sentiment Gauge */}
               <div className="bg-slate-950/70 p-4 rounded-xl border border-cyan-500/30 space-y-3">
-                <div className="flex items-center space-x-2 text-cyan-400 font-bold text-xs">
+                <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
                   <Activity className="w-4 h-4" />
-                  <span>Social Sentiment Gauge (Audit Tab → Social &amp; Forum Sentiment)</span>
+                  <span>Social Sentiment Velocity Score (SSVS) &amp; Multi-Channel Matrix</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                   <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
-                    <div className="font-bold text-emerald-400">StockTwits Bull/Bear %</div>
+                    <div className="font-bold text-emerald-400">StockTwits &amp; Reddit WSB</div>
                     <p className="text-slate-400 text-[11px] leading-relaxed">
-                      Live ratio of Bullish vs. Bearish message tags from retail traders. A Bull% ≥ 60% indicates bullish retail bias; ≤ 35% signals fear or short-bias in the crowd. Use as a contrarian indicator for extreme readings.
+                      Live ratio of Bullish vs. Bearish Cashtag messages and Reddit /r/wallstreetbets trending rank. Computes retail volume velocity (z-scores) to detect viral momentum surges.
                     </p>
                   </div>
                   <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
-                    <div className="font-bold text-cyan-400">Reddit /r/WallStreetBets Rank</div>
+                    <div className="font-bold text-amber-400">SSVS Composite (0-100)</div>
                     <p className="text-slate-400 text-[11px] leading-relaxed">
-                      Real-time 24-hour trending rank from the WSB subreddit. Top 10 tickers carry meme-driven gamma squeeze risk. A stock ranked #1–5 on WSB with high IV may see outsized option premium — but also elevated tail risk.
+                      Blends StockTwits (30%), Reddit (20%), X/Twitter Cashtags (20%), Seeking Alpha Quant (15%), and TradingView 26-Indicator Consensus (15%) into a single momentum index.
                     </p>
                   </div>
                   <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
-                    <div className="font-bold text-amber-300">Screener Sentiment Chips</div>
+                    <div className="font-bold text-purple-400">Retail Flow Divergence</div>
                     <p className="text-slate-400 text-[11px] leading-relaxed">
-                      The main screener table shows compact chips (e.g. "74% Bull" or "WSB #3") directly in the AI Score column so you can filter high-sentiment tickers at a glance without opening each audit detail.
+                      Flags divergence between retail hype and fundamental/technical factors. Detects FOMO exhaustions, short squeeze warnings, or constructive smart money accumulation.
                     </p>
                   </div>
                 </div>

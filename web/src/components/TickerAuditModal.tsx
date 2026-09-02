@@ -377,7 +377,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                     : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                 }`}
               >
-                {predictionMarkets.length}
+                {predictionMarkets.length} • {intel.pmciScore ?? 55}% PMCI
               </span>
             )}
           </button>
@@ -391,6 +391,17 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
             }`}
           >
             <span>💬 Social &amp; Forum Sentiment</span>
+            {intel.ssvsScore !== undefined && (
+              <span
+                className={`text-[11px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                  activeTab === 'SOCIAL_SENTIMENT'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}
+              >
+                {intel.ssvsScore}% SSVS
+              </span>
+            )}
           </button>
         </div>
 
@@ -1133,14 +1144,23 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
           {/* TAB 3: PREDICTION MARKETS */}
           {activeTab === 'PREDICTION_MARKETS' && (
             <div className="animate-in fade-in duration-150">
-              <PredictionMarketCards events={predictionMarkets} />
+              <PredictionMarketCards
+                events={predictionMarkets}
+                termStructure={intel.termStructure}
+                pmciScore={intel.pmciScore}
+                symbol={ticker.symbol}
+              />
             </div>
           )}
 
           {/* TAB 4: SOCIAL & FORUM SENTIMENT */}
           {activeTab === 'SOCIAL_SENTIMENT' && (
             <div className="animate-in fade-in duration-150">
-              <SocialSentimentGauge sentiment={socialSentiment} />
+              <SocialSentimentGauge
+                sentiment={socialSentiment}
+                technicalScore={intel.technicalScore}
+                fundamentalScore={intel.fundamentalScore}
+              />
             </div>
           )}
         </div>

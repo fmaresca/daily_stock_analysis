@@ -14,6 +14,8 @@ import {
   CorporateActions,
   MarketChameleonPattern,
   PredictionMarketEvent,
+  PredictionMarketTermStructure,
+  PredictionMarketTermStructurePoint,
   SocialSentiment,
   TickerMeta,
 } from '../types/options';
@@ -59,8 +61,12 @@ export interface SecurityIntelligence {
   analystTargets?: AnalystIntelligence;
   corporateActions?: CorporateActions;
   predictionMarkets?: PredictionMarketEvent[];
+  termStructure?: PredictionMarketTermStructure;
   socialSentiment?: SocialSentiment;
   marketChameleon?: MarketChameleonPattern;
+  pmciScore?: number;
+  ssvsScore?: number;
+  icrrsScore?: number;
 }
 
 export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence> = {
@@ -854,11 +860,80 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
     predictionMarkets: [
       {
         source: 'Kalshi',
+        event: 'Will Tesla (TSLA) or SpaceX announce a strategic SPAC combination / tender involving SPCX holdings before end of 2025?',
+        probability: '6.5%',
+        url: 'https://kalshi.com/markets?search=SPCX+2025',
+        category: 'CORP_CATALYST',
+        horizon_year: '2025',
+        term_structure_group: 'SPCX / TSLA Combination',
+        volume_usd: 1250000,
+        liquidity_depth: '$340k book depth',
+        historical_7d_change_pct: 0.5,
+        catalyst_impact_rating: 'HIGH',
+        cross_platform_consensus: {
+          kalshi: '6.5%',
+          polymarket: '8.0%',
+          manifold: '9.5%',
+          predictit: '7.0%',
+        },
+        relevance_note: 'Immediate Fiscal Cycle Combination Window',
+      },
+      {
+        source: 'Kalshi',
         event: 'Will Tesla (TSLA) or SpaceX / xAI announce a strategic SPAC combination or tender offer involving SPCX holdings in 2026?',
         probability: '21.5%',
         url: 'https://kalshi.com/markets?search=SPCX+TSLA',
         category: 'CORP_CATALYST',
+        horizon_year: '2026',
+        term_structure_group: 'SPCX / TSLA Combination',
+        volume_usd: 4850000,
+        liquidity_depth: '$1.2M book depth',
+        historical_7d_change_pct: 3.2,
+        catalyst_impact_rating: 'HIGH',
+        cross_platform_consensus: {
+          kalshi: '21.5%',
+          polymarket: '24.0%',
+          manifold: '26.5%',
+          predictit: '22.0%',
+        },
         relevance_note: 'SpaceX / Tesla Strategic Capital Deployment & Merger Odds',
+      },
+      {
+        source: 'Polymarket',
+        event: 'Will SPCX complete tender offer / merger combination with SpaceX ecosystem entities by year-end 2027?',
+        probability: '52.0%',
+        url: 'https://polymarket.com/search?q=SPCX+2027',
+        category: 'CORP_CATALYST',
+        horizon_year: '2027',
+        term_structure_group: 'SPCX / TSLA Combination',
+        volume_usd: 3200000,
+        liquidity_depth: '$850k book depth',
+        historical_7d_change_pct: 5.8,
+        catalyst_impact_rating: 'HIGH',
+        cross_platform_consensus: {
+          kalshi: '49.0%',
+          polymarket: '52.0%',
+          manifold: '55.0%',
+        },
+        relevance_note: 'Multi-Year Long Horizon Cumulative Merger Likelihood',
+      },
+      {
+        source: 'Manifold',
+        event: 'Will SPCX portfolio assets merge or tender into SpaceX / xAI enterprise by 2028 or later?',
+        probability: '78.5%',
+        url: 'https://manifold.markets/search?q=SPCX+2028',
+        category: 'CORP_CATALYST',
+        horizon_year: '2028+',
+        term_structure_group: 'SPCX / TSLA Combination',
+        volume_usd: 950000,
+        liquidity_depth: 'Active Mana Pool',
+        historical_7d_change_pct: 2.1,
+        catalyst_impact_rating: 'HIGH',
+        cross_platform_consensus: {
+          manifold: '78.5%',
+          predictit: '74.0%',
+        },
+        relevance_note: 'Long-Run Structural Consolidation Benchmark',
       },
       {
         source: 'Polymarket',
@@ -866,6 +941,9 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
         probability: '74.0%',
         url: 'https://polymarket.com/search?q=SPCX+SpaceX',
         category: 'CORP_CATALYST',
+        horizon_year: '2026',
+        volume_usd: 2100000,
+        liquidity_depth: '$600k book depth',
         relevance_note: 'Space Infrastructure Acquisition Premium',
       },
       {
@@ -874,6 +952,7 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
         probability: '62.0%',
         url: 'https://www.predictit.org/search?query=SpaceX+Tesla',
         category: 'SECTOR_MACRO',
+        horizon_year: '2026',
         relevance_note: 'Regulatory Clearance Probability',
       },
       {
@@ -882,6 +961,7 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
         probability: '96.5%',
         url: 'https://manifold.markets/search?q=SPCX',
         category: 'EQUITY_EARNINGS',
+        horizon_year: '2026',
         relevance_note: 'Treasury Trust Collateral Protection',
       },
     ],
@@ -891,6 +971,16 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
       reddit_rank: 'N/A',
       reddit_sentiment: 'Neutral',
       social_volume_flag: 'Low retail chatter',
+      twitter_cashtag_sentiment: 'Neutral',
+      twitter_volume_score: 48,
+      yahoo_finance_community_score: 65,
+      seeking_alpha_sentiment: 'Hold',
+      seeking_alpha_quant_rating: 3.45,
+      tradingview_technical_rating: 'Neutral',
+      volume_z_score: 0.35,
+      sentiment_momentum: 'Steady',
+      retail_vs_institutional_divergence: 'Institutional Trust Accumulation (Low Retail Noise)',
+      fomo_risk_flag: 'None (Calm Accumulation)',
     },
   },
 
@@ -972,12 +1062,23 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
     },
     predictionMarkets: [
       {
-        source: 'Kalshi',
-        event: 'Will Tesla (TSLA) or SpaceX / xAI announce a strategic SPAC combination or tender offer involving SPCX holdings in 2026?',
-        probability: '21.5%',
-        url: 'https://kalshi.com/markets?search=TSLA+merger',
+        source: 'Polymarket',
+        event: 'Will Tesla Robotaxi network launch commercial driverless rides in pilot state by end of 2025?',
+        probability: '28.0%',
+        url: 'https://polymarket.com/search?q=Tesla+Robotaxi+2025',
         category: 'CORP_CATALYST',
-        relevance_note: 'SpaceX / Tesla Strategic Capital Deployment & Merger Odds',
+        horizon_year: '2025',
+        term_structure_group: 'Robotaxi Commercial Clearance',
+        volume_usd: 8500000,
+        liquidity_depth: '$2.4M book depth',
+        historical_7d_change_pct: 4.5,
+        catalyst_impact_rating: 'HIGH',
+        cross_platform_consensus: {
+          kalshi: '26.0%',
+          polymarket: '28.0%',
+          manifold: '31.5%',
+        },
+        relevance_note: 'Immediate Commercial Unsupervised Deployment',
       },
       {
         source: 'Polymarket',
@@ -985,7 +1086,66 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
         probability: '68.0%',
         url: 'https://polymarket.com/search?q=Tesla+Robotaxi',
         category: 'CORP_CATALYST',
+        horizon_year: '2026',
+        term_structure_group: 'Robotaxi Commercial Clearance',
+        volume_usd: 14200000,
+        liquidity_depth: '$4.1M book depth',
+        historical_7d_change_pct: 6.2,
+        catalyst_impact_rating: 'HIGH',
+        cross_platform_consensus: {
+          kalshi: '65.5%',
+          polymarket: '68.0%',
+          manifold: '71.0%',
+          predictit: '67.0%',
+        },
         relevance_note: 'Autonomous Ride-Hail Commercial Monetization',
+      },
+      {
+        source: 'Manifold',
+        event: 'Will Tesla Robotaxi fleet operations exceed 100,000 active commercial revenue vehicles globally by end of 2027?',
+        probability: '86.0%',
+        url: 'https://manifold.markets/search?q=Tesla+Robotaxi+2027',
+        category: 'CORP_CATALYST',
+        horizon_year: '2027',
+        term_structure_group: 'Robotaxi Commercial Clearance',
+        volume_usd: 3600000,
+        liquidity_depth: '$1.1M pool',
+        historical_7d_change_pct: 3.8,
+        catalyst_impact_rating: 'HIGH',
+        cross_platform_consensus: {
+          polymarket: '84.0%',
+          manifold: '86.0%',
+        },
+        relevance_note: 'Global Autonomous Fleet Scale Trajectory',
+      },
+      {
+        source: 'Manifold',
+        event: 'Will Tesla autonomous mobility software revenue surpass $25B ARR before 2028 or later?',
+        probability: '94.0%',
+        url: 'https://manifold.markets/search?q=Tesla+FSD+2028',
+        category: 'CORP_CATALYST',
+        horizon_year: '2028+',
+        term_structure_group: 'Robotaxi Commercial Clearance',
+        volume_usd: 2100000,
+        liquidity_depth: 'Active Mana',
+        historical_7d_change_pct: 1.5,
+        catalyst_impact_rating: 'HIGH',
+        cross_platform_consensus: {
+          manifold: '94.0%',
+        },
+        relevance_note: 'Long-Range Software Gross Margin Transformation',
+      },
+      {
+        source: 'Kalshi',
+        event: 'Will Tesla (TSLA) or SpaceX / xAI announce a strategic SPAC combination or tender offer involving SPCX holdings in 2026?',
+        probability: '21.5%',
+        url: 'https://kalshi.com/markets?search=TSLA+merger',
+        category: 'CORP_CATALYST',
+        horizon_year: '2026',
+        term_structure_group: 'SPCX / TSLA Combination',
+        volume_usd: 4850000,
+        liquidity_depth: '$1.2M book depth',
+        relevance_note: 'SpaceX / Tesla Strategic Capital Deployment & Merger Odds',
       },
       {
         source: 'PredictIt',
@@ -993,6 +1153,7 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
         probability: '72.5%',
         url: 'https://www.predictit.org/search?query=EV+policy',
         category: 'SECTOR_MACRO',
+        horizon_year: '2026',
         relevance_note: 'Federal Regulatory & Tax Credit Landscape',
       },
       {
@@ -1001,6 +1162,7 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
         probability: '64.0%',
         url: 'https://manifold.markets/search?q=Tesla+deliveries',
         category: 'EQUITY_EARNINGS',
+        horizon_year: '2026',
         relevance_note: 'Volume Production & Global Delivery Trajectory',
       },
     ],
@@ -1016,6 +1178,10 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
       seeking_alpha_sentiment: 'Strong Buy',
       seeking_alpha_quant_rating: 4.65,
       tradingview_technical_rating: 'Buy',
+      volume_z_score: 2.85,
+      sentiment_momentum: 'Accelerating',
+      retail_vs_institutional_divergence: 'High Retail Momentum Aligned with High IV Put Selling',
+      fomo_risk_flag: 'Moderate (Monitor RSI upper bound)',
     },
   },
 
@@ -1180,7 +1346,7 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
 
   const rsi = meta?.rsi_14 ?? 50;
 
-  const defaultSocialSentiment = {
+  const defaultSocialSentiment: SocialSentiment = {
     stocktwits_sentiment: (ivr >= 45 ? 'Bullish' : 'Neutral') as 'Bullish' | 'Neutral' | 'Bearish',
     stocktwits_bullish_pct: ivr >= 45 ? 74.5 : 58.0,
     reddit_rank: isTier1 ? '#3 on /r/wallstreetbets' : 'Top 25 Mentions',
@@ -1192,14 +1358,38 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
     seeking_alpha_sentiment: (ivr >= 45 ? 'Strong Buy' : 'Buy'),
     seeking_alpha_quant_rating: ivr >= 45 ? 4.72 : 4.15,
     tradingview_technical_rating: (rsi < 35 ? 'Strong Buy (Oversold)' : rsi > 65 ? 'Neutral / Overbought' : 'Buy'),
+    volume_z_score: isTier1 ? 1.85 : 0.45,
+    sentiment_momentum: ivr >= 45 ? 'Accelerating' : 'Steady',
+    retail_vs_institutional_divergence: isTier1 ? 'High Institutional & Retail Synergy' : 'Standard Alignment',
+    fomo_risk_flag: rsi > 68 ? 'Elevated RSI Warning' : 'Healthy Range',
   };
 
   if (SECURITY_INTELLIGENCE_REGISTRY[upper]) {
     const reg = SECURITY_INTELLIGENCE_REGISTRY[upper];
+    const rawEvents = reg.predictionMarkets || meta?.prediction_markets || defaultPredictionMarkets;
+    const termStruct = calculatePredictionTermStructure(rawEvents, upper);
+    const rawSentiment = reg.socialSentiment ? { ...defaultSocialSentiment, ...reg.socialSentiment } : defaultSocialSentiment;
+    const scores = calculateSentimentVelocityAndScoring(rawSentiment, reg.technicalScore, reg.fundamentalScore, rawEvents);
+
+    const enrichedSentiment: SocialSentiment = {
+      ...rawSentiment,
+      ssvs_composite_score: scores.ssvs,
+      pmci_composite_score: scores.pmci,
+      icrrs_composite_score: scores.icrrs,
+      icrrs_decision_action: scores.action,
+      sentiment_momentum: scores.momentum,
+      retail_vs_institutional_divergence: scores.divergence,
+      fomo_risk_flag: scores.fomoRisk,
+    };
+
     return {
       ...reg,
-      predictionMarkets: reg.predictionMarkets || meta?.prediction_markets || defaultPredictionMarkets,
-      socialSentiment: reg.socialSentiment ? { ...defaultSocialSentiment, ...reg.socialSentiment } : defaultSocialSentiment,
+      predictionMarkets: rawEvents,
+      termStructure: termStruct,
+      socialSentiment: enrichedSentiment,
+      pmciScore: scores.pmci,
+      ssvsScore: scores.ssvs,
+      icrrsScore: scores.icrrs,
     };
   }
 
@@ -1211,6 +1401,52 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
   if (isTier1) composite += 5; // Liquidity edge
   composite = Math.min(95, Math.max(55, composite));
 
+  const customEvents = [
+    {
+      source: 'Polymarket',
+      event: `Will ${upper} close above $${Math.round(spot * 1.05)} this calendar quarter?`,
+      probability: composite >= 75 ? '68.5%' : '44.0%',
+      url: `https://polymarket.com/search?q=${upper}`,
+      horizon_year: '2026',
+      term_structure_group: `${upper} Price Target Catalyst`,
+      catalyst_impact_rating: 'MEDIUM' as const,
+    },
+    {
+      source: 'Manifold',
+      event: `${upper} quarterly revenue beats Wall St consensus estimate?`,
+      probability: composite >= 75 ? '72.0%' : '52.0%',
+      url: `https://manifold.markets/search?q=${upper}`,
+      horizon_year: '2026',
+      term_structure_group: `${upper} Earnings Catalyst`,
+      catalyst_impact_rating: 'HIGH' as const,
+    },
+    {
+      source: 'Polymarket',
+      event: `Will ${upper} outperform benchmark sector index in 2027?`,
+      probability: composite >= 75 ? '61.0%' : '48.0%',
+      url: `https://polymarket.com/search?q=${upper}+2027`,
+      horizon_year: '2027',
+      term_structure_group: `${upper} Price Target Catalyst`,
+      catalyst_impact_rating: 'MEDIUM' as const,
+    },
+  ];
+
+  const termStruct = calculatePredictionTermStructure(customEvents, upper);
+  const techScore = Math.round(composite * 0.95);
+  const fundScore = 78;
+  const scores = calculateSentimentVelocityAndScoring(defaultSocialSentiment, techScore, fundScore, customEvents);
+
+  const enrichedSentiment: SocialSentiment = {
+    ...defaultSocialSentiment,
+    ssvs_composite_score: scores.ssvs,
+    pmci_composite_score: scores.pmci,
+    icrrs_composite_score: scores.icrrs,
+    icrrs_decision_action: scores.action,
+    sentiment_momentum: scores.momentum,
+    retail_vs_institutional_divergence: scores.divergence,
+    fomo_risk_flag: scores.fomoRisk,
+  };
+
   return {
     symbol: upper,
     name: meta?.name || `${upper} Corporation`,
@@ -1219,8 +1455,8 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
     sentimentLabel: composite >= 80 ? 'Bullish' : composite >= 65 ? 'Neutral / Hold' : 'Cautious',
     decisionAction: composite >= 80 ? 'BUY_CSP' : 'HOLD_WAIT',
     decisionLabel: composite >= 80 ? 'Conservative Put Corridor Candidate' : 'Monitor Support & Catalysts',
-    technicalScore: Math.round(composite * 0.95),
-    fundamentalScore: 78,
+    technicalScore: techScore,
+    fundamentalScore: fundScore,
     liquidityScore: isTier1 ? 95 : 70,
     volatilityEdgeScore: Math.min(99, ivr + 25),
     targetPrice: Math.round(spot * 1.12 * 100) / 100,
@@ -1267,27 +1503,12 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
       trailing_pe: 24.5,
       forward_pe: 21.2,
     },
-    predictionMarkets: [
-      {
-        source: 'Polymarket',
-        event: `Will ${upper} close above $${Math.round(spot * 1.05)} this calendar quarter?`,
-        probability: composite >= 75 ? '68.5%' : '44.0%',
-        url: `https://polymarket.com/search?q=${upper}`,
-      },
-      {
-        source: 'Manifold',
-        event: `${upper} quarterly revenue beats Wall St consensus estimate?`,
-        probability: composite >= 75 ? '72.0%' : '52.0%',
-        url: `https://manifold.markets/search?q=${upper}`,
-      },
-    ],
-    socialSentiment: {
-      stocktwits_sentiment: composite >= 80 ? 'Bullish' : composite >= 65 ? 'Neutral' : 'Bearish',
-      stocktwits_bullish_pct: composite >= 80 ? 74.5 : composite >= 65 ? 55.0 : 38.0,
-      reddit_rank: isTier1 ? '#5 on WSB' : 'N/A',
-      reddit_sentiment: composite >= 80 ? 'Bullish' : 'Neutral',
-      social_volume_flag: isTier1 ? '1,420 comments today' : '180 comments today',
-    },
+    predictionMarkets: customEvents,
+    termStructure: termStruct,
+    socialSentiment: enrichedSentiment,
+    pmciScore: scores.pmci,
+    ssvsScore: scores.ssvs,
+    icrrsScore: scores.icrrs,
     marketChameleon: calculateMarketChameleonPattern(meta || {
       symbol: upper,
       name: `${upper} Corporation`,
@@ -1307,6 +1528,175 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
       earnings_within_7d: false,
       next_earnings_date: 'N/A',
     }),
+  };
+}
+
+/**
+ * Calculates a multi-year catalyst probability term structure from prediction market events.
+ * Resolves cumulative probability, marginal density, and hazard rate across 2025, 2026, 2027, 2028+.
+ */
+export function calculatePredictionTermStructure(
+  events: PredictionMarketEvent[] = [],
+  symbol?: string
+): PredictionMarketTermStructure | undefined {
+  if (!events || events.length === 0) return undefined;
+
+  // Filter events that have horizon_year or term_structure_group
+  const groupedEvents = events.filter((e) => e.horizon_year || e.term_structure_group);
+  if (groupedEvents.length === 0) return undefined;
+
+  const targetGroup = groupedEvents[0].term_structure_group || `${symbol || 'Equity'} Catalyst Horizon`;
+
+  const years = ['2025', '2026', '2027', '2028+'];
+  const timeline: PredictionMarketTermStructurePoint[] = [];
+
+  let prevCumulative = 0;
+
+  years.forEach((yr, idx) => {
+    const matching = groupedEvents.filter((e) => e.horizon_year === yr);
+    let cumProb = 0;
+
+    if (matching.length > 0) {
+      const probs = matching.map((e) => parseFloat(e.probability.replace('%', '')) || 0);
+      cumProb = Math.max(...probs);
+    } else {
+      // Interpolate realistic term progression if data point is implicit
+      if (idx === 0) cumProb = Math.max(5, prevCumulative);
+      else if (idx === 1) cumProb = Math.max(20, prevCumulative + 15);
+      else if (idx === 2) cumProb = Math.max(45, prevCumulative + 25);
+      else cumProb = Math.max(70, prevCumulative + 25);
+    }
+
+    cumProb = Math.min(99, Math.max(prevCumulative, cumProb));
+    const marginal = Math.max(0, Math.round((cumProb - prevCumulative) * 10) / 10);
+    const horizonYearsElapsed = idx + 1;
+    // Implied annualized hazard rate: -ln(1 - P)/t
+    const pFrac = Math.min(0.99, Math.max(0.01, cumProb / 100));
+    const hazardRate = Math.round((-Math.log(1 - pFrac) / horizonYearsElapsed) * 1000) / 10;
+
+    let driver = 'Baseline Structural Adoption';
+    if (yr === '2025') driver = 'Fiscal Cycle & Regulatory Filings';
+    else if (yr === '2026') driver = 'Commercial Product Rollout & Integration';
+    else if (yr === '2027') driver = 'Scale Commercial Revenue & Earnings Inflection';
+    else if (yr === '2028+') driver = 'Long-Term Market Consolidation & Dominance';
+
+    const consensusLabel: 'Low Likelihood' | 'Emerging Catalyst' | 'High Probability' | 'Consensus Outcome' =
+      cumProb >= 75 ? 'Consensus Outcome' : cumProb >= 50 ? 'High Probability' : cumProb >= 25 ? 'Emerging Catalyst' : 'Low Likelihood';
+
+    timeline.push({
+      horizon_year: yr,
+      cumulative_probability_pct: Math.round(cumProb * 10) / 10,
+      marginal_probability_pct: marginal,
+      implied_hazard_rate_annual: hazardRate,
+      primary_driver: driver,
+      cross_market_spread_pct: matching[0]?.cross_platform_consensus ? 3.5 : 2.0,
+      consensus_label: consensusLabel,
+    });
+
+    prevCumulative = cumProb;
+  });
+
+  // Find peak marginal acceleration year
+  let maxMarginal = -1;
+  let peakYear = '2026';
+  timeline.forEach((pt) => {
+    if (pt.marginal_probability_pct > maxMarginal) {
+      maxMarginal = pt.marginal_probability_pct;
+      peakYear = pt.horizon_year;
+    }
+  });
+
+  return {
+    group_name: targetGroup,
+    catalyst_description: `Multi-horizon crowdsourced timeline tracking cumulative odds of ${targetGroup}.`,
+    timeline,
+    peak_inflection_year: peakYear,
+    options_implication: `Near-term (<2026) low hazard rate preserves CSP margin of safety; long-term (>2027) inflection points favor LEAPS call spreads.`,
+  };
+}
+
+/**
+ * Calculates quantitative scoring:
+ * - PMCI (Prediction Market Composite Index)
+ * - SSVS (Social Sentiment Velocity Score)
+ * - ICRRS (Integrated Catalyst Risk-Reward Score)
+ */
+export function calculateSentimentVelocityAndScoring(
+  sentiment?: SocialSentiment,
+  technicalScore = 75,
+  fundamentalScore = 75,
+  predictionMarkets: PredictionMarketEvent[] = []
+): {
+  pmci: number;
+  ssvs: number;
+  icrrs: number;
+  action: 'HIGH_CONVICTION_HARVEST' | 'BUY_CSP_STEADY' | 'NEUTRAL_WHEEL' | 'HOLD_DEFENSIVE';
+  divergence: string;
+  momentum: 'Accelerating' | 'Steady' | 'Fading';
+  fomoRisk: string;
+} {
+  // 1. Calculate PMCI (0 - 100)
+  let pmci = 50;
+  if (predictionMarkets.length > 0) {
+    let weightedSum = 0;
+    let weightTotal = 0;
+
+    predictionMarkets.forEach((ev) => {
+      const prob = parseFloat(ev.probability.replace('%', '')) || 50;
+      let pWeight = 1.0;
+      if (ev.source.includes('Kalshi')) pWeight = 1.20; // CFTC regulated
+      else if (ev.source.includes('Polymarket')) pWeight = 1.15; // High liquidity
+      else if (ev.source.includes('PredictIt')) pWeight = 1.05;
+      else if (ev.source.includes('Manifold')) pWeight = 0.90;
+
+      const volWeight = ev.volume_usd ? Math.min(1.2, Math.max(0.8, Math.log10(ev.volume_usd) / 5)) : 1.0;
+      const combinedWeight = pWeight * volWeight;
+
+      weightedSum += prob * combinedWeight;
+      weightTotal += combinedWeight;
+    });
+
+    pmci = weightTotal > 0 ? Math.round((weightedSum / weightTotal) * 10) / 10 : 50;
+  }
+  pmci = Math.min(99, Math.max(10, pmci));
+
+  // 2. Calculate SSVS (0 - 100)
+  const stBull = sentiment?.stocktwits_bullish_pct ?? 58;
+  const redditBull = sentiment?.reddit_sentiment?.includes('Bull') ? 78 : sentiment?.reddit_sentiment?.includes('Bear') ? 32 : 50;
+  const twitterBull = sentiment?.twitter_volume_score ? Math.min(100, sentiment.twitter_volume_score * 0.9) : 65;
+  const saQuant = sentiment?.seeking_alpha_quant_rating ? (sentiment.seeking_alpha_quant_rating / 5.0) * 100 : 70;
+  const tvScore = sentiment?.tradingview_technical_rating?.includes('Strong') ? 88 : sentiment?.tradingview_technical_rating?.includes('Buy') ? 75 : 50;
+
+  const rawSsvs = (0.30 * stBull) + (0.20 * redditBull) + (0.20 * twitterBull) + (0.15 * saQuant) + (0.15 * tvScore);
+  const ssvs = Math.min(99, Math.max(15, Math.round(rawSsvs * 10) / 10));
+
+  // 3. Divergence & Momentum
+  const zScore = sentiment?.volume_z_score ?? 0.8;
+  const momentum: 'Accelerating' | 'Steady' | 'Fading' = zScore >= 1.5 ? 'Accelerating' : zScore <= -0.5 ? 'Fading' : 'Steady';
+  const fomoRisk = (stBull > 85 && technicalScore < 60) ? 'High Retail FOMO vs Technical Resistance' : 'Balanced Retail Flow';
+  const divergence = (stBull > 75 && fundamentalScore > 75) ? 'Constructive Synergy' : (stBull > 80 && fundamentalScore < 50) ? 'Retail Speculation Divergence' : 'Aligned Normal';
+
+  // 4. Calculate ICRRS (Integrated Catalyst Risk-Reward Score)
+  // Tech (30%) + Fund (25%) + PMCI (25%) + SSVS (20%)
+  const icrrs = Math.min(
+    99,
+    Math.max(10, Math.round(((0.30 * technicalScore) + (0.25 * fundamentalScore) + (0.25 * pmci) + (0.20 * ssvs)) * 10) / 10)
+  );
+
+  let action: 'HIGH_CONVICTION_HARVEST' | 'BUY_CSP_STEADY' | 'NEUTRAL_WHEEL' | 'HOLD_DEFENSIVE' = 'BUY_CSP_STEADY';
+  if (icrrs >= 82) action = 'HIGH_CONVICTION_HARVEST';
+  else if (icrrs >= 68) action = 'BUY_CSP_STEADY';
+  else if (icrrs >= 52) action = 'NEUTRAL_WHEEL';
+  else action = 'HOLD_DEFENSIVE';
+
+  return {
+    pmci,
+    ssvs,
+    icrrs,
+    action,
+    divergence,
+    momentum,
+    fomoRisk,
   };
 }
 
