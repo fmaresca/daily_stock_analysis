@@ -61,6 +61,14 @@ export interface VolatilitySkewData {
   }[];
 }
 
+export interface AnalystRatingsBreakdown {
+  strong_buy: number;
+  buy: number;
+  hold: number;
+  underperform: number;
+  sell: number;
+}
+
 export interface AnalystIntelligence {
   current?: number;
   mean?: number;
@@ -69,6 +77,8 @@ export interface AnalystIntelligence {
   recommendation?: string;
   numberOfAnalysts?: number;
   number_of_analysts?: number;
+  score?: number; // 1.0 (Strong Buy) to 5.0 (Strong Sell)
+  ratings_breakdown?: AnalystRatingsBreakdown;
 }
 
 export interface CorporateActions {

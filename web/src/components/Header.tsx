@@ -168,19 +168,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Help</span>
           </button>
 
-          {/* Live Recalculate Button */}
-          {onLiveRecalculate && (
-            <button
-              onClick={onLiveRecalculate}
-              disabled={isLoading || isRecalculating}
-              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/50 text-emerald-300 hover:border-emerald-400 transition-all disabled:opacity-50 shadow-sm shadow-emerald-500/10 cursor-pointer whitespace-nowrap"
-              title="Compute real market prices, Bollinger Bands, and options for all active tickers on demand"
-            >
-              <Activity className={`w-3.5 h-3.5 text-emerald-400 ${isRecalculating ? 'animate-spin' : ''}`} />
-              <span>{isRecalculating ? 'Calculating...' : 'Live Fetch'}</span>
-            </button>
-          )}
-
           {/* Day / Night Mode (Light / Dark) Toggle */}
           {onToggleTheme && (
             <button
@@ -205,15 +192,15 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Sync Button */}
+          {/* Unified Real-Time Live Sync & Recalculate Button */}
           <button
-            onClick={onRefresh}
+            onClick={onLiveRecalculate || onRefresh}
             disabled={isLoading || isRecalculating}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:border-emerald-500/50 transition-all disabled:opacity-50 cursor-pointer"
-            title="Reload latest cached data snapshot"
+            className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/60 text-emerald-300 hover:border-emerald-400 transition-all disabled:opacity-50 shadow-sm shadow-emerald-500/20 cursor-pointer whitespace-nowrap"
+            title="Fetch real-time market quotes, refresh Bollinger Bands, RSI & recalculate options Greeks across all watchlists"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isLoading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Sync</span>
+            <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isRecalculating || isLoading ? 'animate-spin' : ''}`} />
+            <span>{isRecalculating ? 'Syncing...' : 'Live Sync'}</span>
           </button>
         </div>
       </div>
