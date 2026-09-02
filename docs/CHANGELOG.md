@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [修复] DeltaHarvest TickerAuditModal TypeScript Syntax & Cloudflare Pages Build: 补全 `handleExportExcel` 闭包括号，消除 Cloudflare Pages CI/CD 构建阶段中 `tsc -b` 报出的 `TS1005: '}' expected` 编译异常。
 - [新功能] DeltaHarvest Sticky Table Headers & Direct SEC EDGAR Regulatory Integration: (1) 为 `PrimaryScreenerTable`、`FundamentalHealthTable` 与 `MultiLegSpreadTable` 全面引入 `sticky top-0 z-20` 冻结锁定表头机制，向下滚动标的列表时列标题恒定可见；(2) 在个股审计卡（`TickerAuditModal`）顶部动作栏与第二标签页中新增 SEC EDGAR 官方合规与财报直链，根据标的类型自动路由（股票直达 10-K/10-Q/8-K/DEF 14A，基金/ETF 直达 N-CSR/N-CSRS/N-PORT/485BPOS）；(3) 修正模态卡 Flex 容器收缩缺陷（`shrink-0` 与 `flex-1 min-h-0`），彻底根除标签菜单在窗口打开时被上下压缩切半的问题。
 - [改进] DeltaHarvest Navigation & Modal Menu Uniformity: 重构个股详情审计卡（`TickerAuditModal`）与大盘期权二级导航树（`DualMenuTree`）的标签菜单体系，统一设置容器高度（`min-h-[58px]`）与按键垂直内边距（`py-2.5 px-4`），为非激活项增加立体暗色背景与边框框架，彻底解决菜单过窄及文字显示不明显/截断问题。
 - [修复] DeltaHarvest TypeScript Strict Mode & Icons Remediation: 清理 `icons.tsx` 中的重复符号导出并将 `securityIntelligence.ts` 中 `rsi` 变量声明前置，彻底解决 Cloudflare Pages 生产构建 `tsc -b` 阶段的 TS2451 / TS2448 编译错误。
