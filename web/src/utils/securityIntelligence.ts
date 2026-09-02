@@ -12,8 +12,10 @@
 import {
   AnalystIntelligence,
   CorporateActions,
+  MarketChameleonPattern,
   PredictionMarketEvent,
   SocialSentiment,
+  TickerMeta,
 } from '../types/options';
 
 export interface NewsStory {
@@ -58,6 +60,7 @@ export interface SecurityIntelligence {
   corporateActions?: CorporateActions;
   predictionMarkets?: PredictionMarketEvent[];
   socialSentiment?: SocialSentiment;
+  marketChameleon?: MarketChameleonPattern;
 }
 
 export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence> = {
@@ -1141,5 +1144,95 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
       reddit_sentiment: composite >= 80 ? 'Bullish' : 'Neutral',
       social_volume_flag: isTier1 ? '1,420 comments today' : '180 comments today',
     },
+    marketChameleon: calculateMarketChameleonPattern(meta || {
+      symbol: upper,
+      name: `${upper} Corporation`,
+      sector,
+      liquidity_tier: isTier1 ? 'Tier 1' : 'Tier 2/3',
+      spot_price: spot,
+      avg_volume_30: 1000000,
+      sma_20: spot,
+      upper_bb: spot * 1.05,
+      lower_bb: spot * 0.95,
+      bb_width_pct: 10.0,
+      rsi_14: rsi,
+      rsi_flag: 'NORMAL',
+      hv_30: 25.0,
+      iv_current: 25.0,
+      iv_rank: ivr,
+      earnings_within_7d: false,
+      next_earnings_date: 'N/A',
+    }),
+  };
+}
+
+export function calculateMarketChameleonPattern(meta?: TickerMeta | null): MarketChameleonPattern {
+  const spot = meta?.spot_price || 100.0;
+  const sma20 = meta?.sma_20 || spot;
+  const sma50 = meta?.lower_bb && meta?.upper_bb ? ((meta.lower_bb + meta.upper_bb) / 2) * 0.98 : spot * 0.97;
+  const sma250 = sma50 * 0.94;
+  const rsi = meta?.rsi_14 ?? 50;
+
+  const gap_price_sma20 = Math.round(((spot - sma20) / sma20) * 1000) / 10;
+  const gap_sma20_sma50 = Math.round(((sma20 - sma50) / sma50) * 1000) / 10;
+  const gap_sma50_sma250 = Math.round(((sma50 - sma250) / sma250) * 1000) / 10;
+
+  const isUptrend = spot > sma20 && sma20 > sma50 && sma50 > sma250;
+  const isDowntrend = spot < sma20 && sma20 < sma50 && sma50 < sma250;
+  const isBottomBounce = sma20 < sma50 && spot > sma20 && rsi < 45;
+  const isTopPullback = sma20 > sma50 && spot < sma20 && spot > sma50;
+  const isDeadCatBounce = sma50 < sma250 && spot < sma20 && rsi < 35;
+  const isFastBullish = sma20 < sma50 && spot > sma20;
+  const isFastBearish = sma20 > sma50 && spot < sma20;
+
+  const flags: string[] = [];
+  if (isUptrend) flags.push('Uptrend (Bullish Stack)');
+  if (isDowntrend) flags.push('Downtrend (Bearish Stack)');
+  if (isBottomBounce) flags.push('Bottom Bounce');
+  if (isTopPullback) flags.push('Top Pullback (Dip in Uptrend)');
+  if (isDeadCatBounce) flags.push('Dead Cat Bounce Alert');
+  if (isFastBullish && !isBottomBounce) flags.push('Fast Bullish Crossover');
+  if (isFastBearish && !isTopPullback) flags.push('Fast Bearish Crossover');
+
+  const isMomentum = (spot > sma20 && rsi >= 55) || (meta?.iv_rank ?? 0) >= 50;
+  const stockIdeas: string[] = [];
+  if (isMomentum) stockIdeas.push('🔥 Momentum Stock');
+  if (isUptrend) stockIdeas.push('📈 Market Leader');
+  else if (isBottomBounce || isTopPullback) stockIdeas.push('⚡ Reversal Setup');
+  else if (isDowntrend) stockIdeas.push('📉 Market Lagger');
+  else stockIdeas.push('🎯 Core Range');
+
+  const strategies: string[] = [];
+  if (isUptrend) {
+    strategies.push('Bull Put Spread (0.20Δ)');
+    strategies.push('Covered Call (Strike ≥ Upper BB)');
+  }
+  if (isTopPullback || isBottomBounce || isFastBullish) {
+    strategies.push('Cash-Secured Put (CSP ≤ Lower BB)');
+    strategies.push('Long Call Calendar');
+  }
+  if (isDowntrend || isDeadCatBounce || isFastBearish) {
+    strategies.push('Bear Call Spread (Credit)');
+    strategies.push('Collar Hedge Protection');
+  }
+  if (strategies.length === 0) {
+    strategies.push('Neutral Iron Condor (Range-Bound)');
+  }
+
+  return {
+    symbol: meta?.symbol,
+    technical_flags: flags.length > 0 ? flags : ['Consolidation / Neutral Stack'],
+    primary_trend: isUptrend ? 'Uptrend' : isDowntrend ? 'Downtrend' : 'Neutral / Consolidation',
+    stock_ideas_category: stockIdeas.join(' • '),
+    is_momentum_stock: isMomentum,
+    moving_average_gaps: {
+      price_vs_sma20: gap_price_sma20,
+      sma20_vs_sma50: gap_sma20_sma50,
+      sma50_vs_sma250: gap_sma50_sma250,
+    },
+    sma_20: Math.round(sma20 * 100) / 100,
+    sma_50: Math.round(sma50 * 100) / 100,
+    sma_250: Math.round(sma250 * 100) / 100,
+    aligned_strategies: strategies,
   };
 }
