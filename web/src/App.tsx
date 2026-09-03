@@ -28,6 +28,9 @@ import { PmccScreenerView } from './components/PmccScreenerView';
 import { PortfolioMarginSimulatorView } from './components/PortfolioMarginSimulatorView';
 import { MultiAgentTradeAuditorView } from './components/MultiAgentTradeAuditorView';
 import { DefensiveRollAssistantView } from './components/DefensiveRollAssistantView';
+import { TaxAlphaOptimizerView } from './components/TaxAlphaOptimizerView';
+import { ExecutivePortfolioDigestView } from './components/ExecutivePortfolioDigestView';
+import { startContinuousRiskSweeper, stopContinuousRiskSweeper } from './utils/continuousRiskSweeper';
 import { OptionContractData } from './utils/optionChainMatrix';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import {
@@ -1745,6 +1748,12 @@ export const App: React.FC = () => {
               <DefensiveRollAssistantView
                 onStageRollOrder={handleStageSpread}
               />
+            ) : activeOptionsTab === 'TAX_ALPHA_OPTIMIZER' ? (
+              /* Section 1256 Tax-Alpha & Wash-Sale Shield Optimizer */
+              <TaxAlphaOptimizerView />
+            ) : activeOptionsTab === 'EXECUTIVE_DIGEST' ? (
+              /* Executive Portfolio Health Digest & Exporter */
+              <ExecutivePortfolioDigestView />
             ) : activeOptionsTab === 'VOLATILITY_SKEW' ? (
               /* 25-Delta Volatility Skew & Term Structure Radar */
               <VolatilitySkewRadar skewData={volatilitySkewData} />
