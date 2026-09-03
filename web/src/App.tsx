@@ -74,9 +74,9 @@ const DEFAULT_UNIVERSE_SYMBOLS = [
 
 const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
   {
-    id: 'core-universe',
-    name: 'Core Universe',
-    description: 'Default multi-asset watchlist of ETFs, Mega-Caps, CEFs, and Growth',
+    id: 'frank-favorites',
+    name: 'Frank Favorites',
+    description: "Frank's primary high-conviction watchlist of core ETFs, Mega-Caps, CEFs, and growth plays",
     tickers: DEFAULT_UNIVERSE_SYMBOLS,
     isDefault: true,
     createdAt: new Date().toISOString(),
@@ -86,7 +86,7 @@ const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
     name: 'Tier 1 Ultra-Liquid',
     description: 'Tightest penny-wide spreads and institutional depth',
     tickers: ['SPY', 'QQQ', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'TSLA'],
-    isDefault: true,
+    isDefault: false,
     createdAt: new Date().toISOString(),
   },
   {
@@ -94,7 +94,7 @@ const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
     name: 'Dividend, CEFs & High-Yield',
     description: 'Income ETFs, Closed-End Funds (CEFs), and covered-call vehicles',
     tickers: ['JEPI', 'SCHD', 'SPCX', 'CLM', 'CRF'],
-    isDefault: true,
+    isDefault: false,
     createdAt: new Date().toISOString(),
   },
 ];
@@ -135,7 +135,39 @@ export const App: React.FC = () => {
       const saved = localStorage.getItem('deltaharvest_watchlist_groups');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Automatic migration of legacy default watchlist to "Frank Favorites"
+          let migrated = false;
+          const updatedGroups: WatchlistGroup[] = parsed.map((g: WatchlistGroup, idx: number) => {
+            if (
+              g.id === 'core-universe' ||
+              g.id === 'core-18' ||
+              g.name === 'Core Universe' ||
+              (idx === 0 && (g.isDefault || !g.name || g.name === 'Default Watchlist'))
+            ) {
+              migrated = true;
+              return {
+                ...g,
+                id: 'frank-favorites',
+                name: 'Frank Favorites',
+                description: g.description || "Frank's primary high-conviction watchlist of core ETFs, Mega-Caps, CEFs, and growth plays",
+                isDefault: true,
+              };
+            }
+            return g;
+          });
+
+          // Ensure at least one Frank Favorites exists if none matched
+          if (!updatedGroups.some((g) => g.name === 'Frank Favorites' || g.id === 'frank-favorites')) {
+            updatedGroups.unshift(INITIAL_WATCHLIST_GROUPS[0]);
+            migrated = true;
+          }
+
+          if (migrated) {
+            localStorage.setItem('deltaharvest_watchlist_groups', JSON.stringify(updatedGroups));
+          }
+          return updatedGroups;
+        }
       }
     } catch (e) {
       console.warn('Failed to load watchlist groups:', e);
@@ -144,7 +176,11 @@ export const App: React.FC = () => {
   });
 
   const [activeGroupId, setActiveGroupId] = useState<string>(() => {
-    return localStorage.getItem('deltaharvest_active_group_id') || 'core-18';
+    const saved = localStorage.getItem('deltaharvest_active_group_id');
+    if (!saved || saved === 'core-18' || saved === 'core-universe') {
+      return 'frank-favorites';
+    }
+    return saved;
   });
 
   const [showWatchlistOnly, setShowWatchlistOnly] = useState<boolean>(false);
@@ -932,11 +968,27 @@ export const App: React.FC = () => {
     setActiveGroupId(newGroup.id);
   };
 
+  const handleRenameWatchlist = (groupId: string, newName: string) => {
+    const cleanName = newName.trim();
+    if (!cleanName) return;
+    setWatchlistGroups((prev) =>
+      prev.map((g) =>
+        g.id === groupId
+          ? { ...g, name: cleanName, updatedAt: new Date().toISOString() }
+          : g
+      )
+    );
+  };
+
   const handleDeleteWatchlist = (groupId: string) => {
-    setWatchlistGroups((prev) => prev.filter((g) => g.id !== groupId));
-    if (activeGroupId === groupId) {
-      setActiveGroupId('core-18');
-    }
+    setWatchlistGroups((prev) => {
+      if (prev.length <= 1) return prev; // Guard against deleting the only remaining watchlist
+      const remaining = prev.filter((g) => g.id !== groupId);
+      if (activeGroupId === groupId) {
+        setActiveGroupId(remaining[0]?.id || 'frank-favorites');
+      }
+      return remaining;
+    });
   };
 
   const handleUpdateGroupTickers = (groupId: string, tickers: string[]) => {
@@ -1271,19 +1323,43 @@ export const App: React.FC = () => {
 
           {/* Quick Filter Buttons & Watchlist Filter */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Active Watchlist Toggle */}
-            <button
-              onClick={() => setShowWatchlistOnly(!showWatchlistOnly)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${showWatchlistOnly
-                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+            {/* Active Watchlist Controls & Quick Switcher */}
+            <div className="flex items-center rounded-lg bg-slate-900 border border-slate-800 p-0.5">
+              <button
+                onClick={() => setShowWatchlistOnly(!showWatchlistOnly)}
+                className={`px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                  showWatchlistOnly
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
-            >
-              <Star className="w-3.5 h-3.5" filled={showWatchlistOnly} />
-              <span>
-                {activeGroup.name} ({currentWatchlistSymbols.length})
-              </span>
-            </button>
+                title={showWatchlistOnly ? 'Filtering active watchlist (Click to show all)' : 'Filter by active watchlist'}
+              >
+                <Star className="w-3.5 h-3.5" filled={showWatchlistOnly} />
+                <span>{showWatchlistOnly ? 'Filtering:' : 'Watchlist:'}</span>
+              </button>
+
+              <select
+                value={activeGroupId}
+                onChange={(e) => {
+                  if (e.target.value === '__manage__') {
+                    setIsWatchlistModalOpen(true);
+                  } else {
+                    setActiveGroupId(e.target.value);
+                  }
+                }}
+                className="bg-transparent text-amber-400 font-semibold text-xs py-1 px-2 border-0 focus:outline-none cursor-pointer hover:text-amber-300"
+                title="Switch active watchlist"
+              >
+                {watchlistGroups.map((g) => (
+                  <option key={g.id} value={g.id} className="bg-slate-900 text-slate-200">
+                    {g.name} ({g.tickers.length})
+                  </option>
+                ))}
+                <option value="__manage__" className="bg-slate-900 text-amber-400 font-bold">
+                  + Manage Watchlists...
+                </option>
+              </select>
+            </div>
 
             {/* Quick Strategy Flags */}
             <button
@@ -1694,6 +1770,7 @@ export const App: React.FC = () => {
         activeGroupId={activeGroupId}
         onSelectGroup={(id) => setActiveGroupId(id)}
         onCreateGroup={handleCreateWatchlist}
+        onRenameGroup={handleRenameWatchlist}
         onDeleteGroup={handleDeleteWatchlist}
         onUpdateGroupTickers={handleUpdateGroupTickers}
         availableUniverse={universeTickers}
