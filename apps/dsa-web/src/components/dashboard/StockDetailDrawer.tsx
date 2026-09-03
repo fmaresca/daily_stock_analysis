@@ -7,6 +7,7 @@ import {
   BarChart2,
   CheckCircle2,
   FileText,
+  Loader2,
   ShieldAlert,
   Sparkles,
   X,
@@ -15,6 +16,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ColorType, CrosshairMode, LineStyle, createChart } from 'lightweight-charts';
 import type { CandleData, TradeSetupItem } from '../../types/tradeSetup';
+import type { WatchlistQuoteEntry } from '../../types/marketData';
+import { useWatchlistQuoteStore } from '../../stores/watchlistQuoteStore';
 import { cn } from '../../utils/cn';
 
 interface StockDetailDrawerProps {
@@ -22,6 +25,7 @@ interface StockDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenRawReportModal?: (trade: TradeSetupItem) => void;
+  quoteEntry?: WatchlistQuoteEntry;
 }
 
 type DrawerTab = 'chart' | 'thesis' | 'risks' | 'indicators' | 'raw';
@@ -30,9 +34,15 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({
   trade,
   isOpen,
   onClose,
+  quoteEntry,
 }) => {
   const [activeTab, setActiveTab] = useState<DrawerTab>('chart');
   const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  const storeEntry = useWatchlistQuoteStore((s) =>
+    trade ? s.cache[trade.ticker.toUpperCase()] : undefined
+  );
+  const activeQuoteEntry = quoteEntry ?? storeEntry;
 
   // Close on Escape
   useEffect(() => {
@@ -48,9 +58,15 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({
   // Generate synthetic candles if not provided
   const candleData = useMemo<CandleData[]>(() => {
     if (!trade) return [];
+    if (activeQuoteEntry?.candles && activeQuoteEntry.candles.length > 0) {
+      return activeQuoteEntry.candles;
+    }
     if (trade.candles && trade.candles.length > 0) return trade.candles;
 
-    const currentPrice = trade.current_price ?? trade.currentPrice ?? 150;
+    const currentPrice =
+      (activeQuoteEntry?.quote?.currentPrice ?? 0) > 0
+        ? activeQuoteEntry!.quote!.currentPrice
+        : (trade.current_price ?? trade.currentPrice ?? 150);
     const tickerSeed = trade.ticker.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
     const items: CandleData[] = [];
     const baseDate = new Date('2026-08-01T00:00:00Z');
@@ -261,21 +277,55 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({
 
           <div className="flex items-center gap-3">
             <div className="text-right flex flex-col items-end">
-              <span className="text-lg font-bold font-financial text-foreground">
-                ${currentPrice.toFixed(2)}
-              </span>
-              <span
-                className={cn(
-                  'text-[10px] font-semibold px-2 py-0.5 rounded border',
-                  grade.includes('Tier 1')
-                    ? 'text-accent-long bg-accent-long/10 border-accent-long/30'
-                    : grade.includes('Tier 2')
-                    ? 'text-accent-neutral bg-accent-neutral/10 border-accent-neutral/30'
-                    : 'text-muted-text bg-surface-dark border-border-subtle'
+              {activeQuoteEntry?.status === 'hydrating' || activeQuoteEntry?.status === 'pending' ? (
+                <div className="flex items-center gap-1 text-muted-text text-xs">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Updating...</span>
+                </div>
+              ) : (
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-lg font-bold font-financial text-foreground">
+                    ${(activeQuoteEntry?.quote?.currentPrice ?? currentPrice) > 0
+                      ? (activeQuoteEntry?.quote?.currentPrice ?? currentPrice).toFixed(2)
+                      : '—'}
+                  </span>
+                  {activeQuoteEntry?.quote?.changePct !== undefined && activeQuoteEntry.quote.changePct !== null && (
+                    <span
+                      className={cn(
+                        'text-xs font-financial font-medium',
+                        activeQuoteEntry.quote.changePct >= 0 ? 'text-accent-long' : 'text-accent-short'
+                      )}
+                    >
+                      {activeQuoteEntry.quote.changePct >= 0 ? '+' : ''}
+                      {activeQuoteEntry.quote.changePct.toFixed(2)}%
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {activeQuoteEntry?.status === 'failed' && (
+                  <span className="text-[10px] text-accent-short font-medium px-1.5 py-0.2 rounded bg-accent-short/10 border border-accent-short/20">
+                    Delayed / Offline
+                  </span>
                 )}
-              >
-                {grade}
-              </span>
+                {activeQuoteEntry?.status === 'ready' && (
+                  <span className="text-[10px] text-accent-long font-medium px-1.5 py-0.2 rounded bg-accent-long/10 border border-accent-long/20">
+                    Live Data
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    'text-[10px] font-semibold px-2 py-0.5 rounded border',
+                    grade.includes('Tier 1')
+                      ? 'text-accent-long bg-accent-long/10 border-accent-long/30'
+                      : grade.includes('Tier 2')
+                      ? 'text-accent-neutral bg-accent-neutral/10 border-accent-neutral/30'
+                      : 'text-muted-text bg-surface-dark border-border-subtle'
+                  )}
+                >
+                  {grade}
+                </span>
+              </div>
             </div>
 
             <button
@@ -530,39 +580,108 @@ export const StockDetailDrawer: React.FC<StockDetailDrawerProps> = ({
           {/* TAB 4: TECHNICAL INDICATORS */}
           {activeTab === 'indicators' && (
             <div className="flex flex-col gap-3">
-              <div className="rounded-xl border border-border-subtle bg-surface-dark/70 overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border-subtle bg-card-dark text-[10px] text-muted-text uppercase font-semibold">
-                      <th className="py-2.5 px-3 text-left">Indicator</th>
-                      <th className="py-2.5 px-3 text-right">Value</th>
-                      <th className="py-2.5 px-3 text-right">Interpretation</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-subtle/60">
-                    <tr>
-                      <td className="py-2.5 px-3 font-medium text-foreground">RSI (14)</td>
-                      <td className="py-2.5 px-3 text-right font-financial">58.4</td>
-                      <td className="py-2.5 px-3 text-right text-accent-long font-medium">Neutral / Bullish</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-medium text-foreground">MACD Histogram</td>
-                      <td className="py-2.5 px-3 text-right font-financial text-accent-long">+1.24</td>
-                      <td className="py-2.5 px-3 text-right text-accent-long font-medium">Bullish Expansion</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-medium text-foreground">200 DMA</td>
-                      <td className="py-2.5 px-3 text-right font-financial">${(currentPrice * 0.94).toFixed(2)}</td>
-                      <td className="py-2.5 px-3 text-right text-accent-long font-medium">Trading Above</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-medium text-foreground">ATR Volatility</td>
-                      <td className="py-2.5 px-3 text-right font-financial">${(currentPrice * 0.035).toFixed(2)}</td>
-                      <td className="py-2.5 px-3 text-right text-secondary-text font-medium">Moderate</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {activeQuoteEntry?.status === 'hydrating' || activeQuoteEntry?.status === 'pending' ? (
+                <div className="rounded-xl border border-border-subtle bg-surface-dark/70 p-8 flex flex-col items-center justify-center gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-accent-long" />
+                  <span className="text-xs text-muted-text">Computing live indicators from market history...</span>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border-subtle bg-surface-dark/70 overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border-subtle bg-card-dark text-[10px] text-muted-text uppercase font-semibold">
+                        <th className="py-2.5 px-3 text-left">Indicator</th>
+                        <th className="py-2.5 px-3 text-right">Value</th>
+                        <th className="py-2.5 px-3 text-right">Interpretation</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-subtle/60">
+                      <tr>
+                        <td className="py-2.5 px-3 font-medium text-foreground">RSI (14)</td>
+                        <td className="py-2.5 px-3 text-right font-financial">
+                          {activeQuoteEntry?.technicals?.rsi14 ?? '—'}
+                        </td>
+                        <td
+                          className={cn(
+                            'py-2.5 px-3 text-right font-medium',
+                            activeQuoteEntry?.technicals?.rsiSignal === 'oversold'
+                              ? 'text-accent-long'
+                              : activeQuoteEntry?.technicals?.rsiSignal === 'overbought'
+                              ? 'text-accent-short'
+                              : 'text-secondary-text'
+                          )}
+                        >
+                          {activeQuoteEntry?.technicals?.rsiSignal === 'oversold'
+                            ? 'Oversold (Rebound Potential)'
+                            : activeQuoteEntry?.technicals?.rsiSignal === 'overbought'
+                            ? 'Overbought (Caution)'
+                            : activeQuoteEntry?.technicals?.rsi14
+                            ? 'Neutral'
+                            : 'Awaiting data'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2.5 px-3 font-medium text-foreground">20 EMA</td>
+                        <td className="py-2.5 px-3 text-right font-financial">
+                          {activeQuoteEntry?.technicals?.ema20
+                            ? `$${activeQuoteEntry.technicals.ema20.toFixed(2)}`
+                            : '—'}
+                        </td>
+                        <td
+                          className={cn(
+                            'py-2.5 px-3 text-right font-medium',
+                            activeQuoteEntry?.technicals?.aboveEma20 ? 'text-accent-long' : 'text-accent-short'
+                          )}
+                        >
+                          {activeQuoteEntry?.technicals?.ema20
+                            ? activeQuoteEntry.technicals.aboveEma20
+                              ? 'Above 20 EMA (Bullish)'
+                              : 'Below 20 EMA (Bearish)'
+                            : '—'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2.5 px-3 font-medium text-foreground">50 EMA</td>
+                        <td className="py-2.5 px-3 text-right font-financial">
+                          {activeQuoteEntry?.technicals?.ema50
+                            ? `$${activeQuoteEntry.technicals.ema50.toFixed(2)}`
+                            : '—'}
+                        </td>
+                        <td
+                          className={cn(
+                            'py-2.5 px-3 text-right font-medium',
+                            activeQuoteEntry?.technicals?.aboveEma50 ? 'text-accent-long' : 'text-accent-short'
+                          )}
+                        >
+                          {activeQuoteEntry?.technicals?.ema50
+                            ? activeQuoteEntry.technicals.aboveEma50
+                              ? 'Above 50 EMA (Trend Intact)'
+                              : 'Below 50 EMA (Under Pressure)'
+                            : '—'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2.5 px-3 font-medium text-foreground">ATR (14 Volatility)</td>
+                        <td className="py-2.5 px-3 text-right font-financial">
+                          {activeQuoteEntry?.technicals?.atr14
+                            ? `$${activeQuoteEntry.technicals.atr14.toFixed(2)}`
+                            : '—'}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-secondary-text font-medium">Daily Range Expectation</td>
+                      </tr>
+                      {activeQuoteEntry?.quote?.volume && (
+                        <tr>
+                          <td className="py-2.5 px-3 font-medium text-foreground">Volume</td>
+                          <td className="py-2.5 px-3 text-right font-financial">
+                            {activeQuoteEntry.quote.volume.toLocaleString()}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-secondary-text font-medium">Shares Traded</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 

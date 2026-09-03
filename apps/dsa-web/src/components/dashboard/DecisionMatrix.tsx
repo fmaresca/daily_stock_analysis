@@ -7,10 +7,12 @@ import {
   ChevronRight,
   Filter,
   Flame,
+  Loader2,
   Search,
   TrendingUp,
 } from 'lucide-react';
 import type { TradeSetupItem } from '../../types/tradeSetup';
+import type { WatchlistQuoteEntry } from '../../types/marketData';
 import { cn } from '../../utils/cn';
 
 export type FilterPreset = 'all' | 'high_conviction' | 'bullish' | 'risk_alerts';
@@ -31,6 +33,17 @@ interface DecisionMatrixProps {
   onSelectTrade: (trade: TradeSetupItem) => void;
   isLoading?: boolean;
   className?: string;
+  /**
+   * Per-ticker hydration cache from watchlistQuoteStore.
+   * When provided, price cells show real-time status indicators.
+   */
+  hydrationCache?: Record<string, WatchlistQuoteEntry>;
+  /**
+   * QC gate: when true, rows whose hydration status is pending or hydrating
+   * are excluded from the rendered table until data is ready.
+   * Default false (show spinner in row instead).
+   */
+  hideUnhydrated?: boolean;
 }
 
 export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
@@ -39,6 +52,8 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
   onSelectTrade,
   isLoading = false,
   className,
+  hydrationCache,
+  hideUnhydrated = false,
 }) => {
   const [activeFilter, setActiveFilter] = useState<FilterPreset>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -375,7 +390,8 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
               </tr>
             ) : (
               sortedTrades.map((t) => {
-                const isSelected = selectedTicker?.toUpperCase() === t.ticker.toUpperCase();
+                const ticker = t.ticker.toUpperCase();
+                const isSelected = selectedTicker?.toUpperCase() === ticker;
                 const score = t.conviction_score ?? t.convictionScore ?? 5.0;
                 const bias = (t.bias || 'NEUTRAL').toUpperCase();
                 const currentPrice = t.current_price ?? t.currentPrice ?? 0;
@@ -383,6 +399,16 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                 const stopLoss = t.stop_loss ?? t.stopLoss ?? 0;
                 const takeProfit = t.take_profit ?? t.takeProfit ?? 0;
                 const rr = t.risk_reward_ratio ?? t.riskRewardRatio ?? 0;
+
+                // Hydration-aware rendering
+                const hydEntry = hydrationCache?.[ticker];
+                const hydStatus = hydEntry?.status;
+                const isHydrating = hydStatus === 'pending' || hydStatus === 'hydrating';
+                const hydFailed = hydStatus === 'failed';
+
+                // Apply QC gate: skip row if hard-blocking is enabled and data isn't ready
+                if (hideUnhydrated && isHydrating) return null;
+
                 const grade =
                   t.setup_grade ||
                   t.setupGrade ||
@@ -395,6 +421,26 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                 const isBullish = bias === 'BULLISH';
                 const isBearish = bias === 'BEARISH';
 
+                // Price cell renderers
+                const PriceCell: React.FC<{ value: number; colorClass?: string }> = ({ value, colorClass }) => {
+                  if (isHydrating) {
+                    return (
+                      <span className="inline-flex items-center gap-1 text-muted-text text-xs">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="text-[10px]">Fetching…</span>
+                      </span>
+                    );
+                  }
+                  if (hydFailed || value === 0) {
+                    return <span className="text-muted-text font-financial text-xs">—</span>;
+                  }
+                  return (
+                    <span className={cn('font-financial font-semibold text-[13px]', colorClass)}>
+                      ${value.toFixed(2)}
+                    </span>
+                  );
+                };
+
                 return (
                   <tr
                     key={t.ticker}
@@ -403,7 +449,8 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                       'cursor-pointer transition-colors group',
                       isSelected
                         ? 'bg-accent-long/10 border-l-2 border-l-accent-long'
-                        : 'hover:bg-surface-dark/70'
+                        : 'hover:bg-surface-dark/70',
+                      isHydrating && 'opacity-75'
                     )}
                   >
                     {/* Ticker & Company */}
@@ -482,30 +529,36 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
 
                     {/* Current Price */}
                     <td className="py-3 px-3 text-right">
-                      <span className="font-financial text-foreground font-semibold text-[13px]">
-                        ${currentPrice.toFixed(2)}
-                      </span>
+                      {isHydrating ? (
+                        <span className="inline-flex items-center gap-1 text-muted-text text-xs justify-end">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span className="text-[10px]">Loading…</span>
+                        </span>
+                      ) : hydFailed ? (
+                        <span className="inline-flex items-center gap-1 text-accent-short/70 text-[10px]" title={hydEntry?.error}>
+                          <AlertTriangle className="h-3 w-3" />
+                          No data
+                        </span>
+                      ) : (
+                        <span className="font-financial text-foreground font-semibold text-[13px]">
+                          ${currentPrice > 0 ? currentPrice.toFixed(2) : '—'}
+                        </span>
+                      )}
                     </td>
 
                     {/* Entry Target */}
                     <td className="py-3 px-3 text-right">
-                      <span className="font-financial text-secondary-text font-medium">
-                        ${entryPrice.toFixed(2)}
-                      </span>
+                      <PriceCell value={entryPrice} colorClass="text-secondary-text" />
                     </td>
 
                     {/* Stop Loss */}
                     <td className="py-3 px-3 text-right">
-                      <span className="font-financial text-accent-short font-medium">
-                        ${stopLoss.toFixed(2)}
-                      </span>
+                      <PriceCell value={stopLoss} colorClass="text-accent-short" />
                     </td>
 
                     {/* Profit Target */}
                     <td className="py-3 px-3 text-right">
-                      <span className="font-financial text-accent-long font-medium">
-                        ${takeProfit.toFixed(2)}
-                      </span>
+                      <PriceCell value={takeProfit} colorClass="text-accent-long" />
                     </td>
 
                     {/* Risk/Reward Ratio */}

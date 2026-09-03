@@ -31,6 +31,7 @@ import {
 } from '../components/watchlist/HomeStockWorkspace';
 import { useDashboardLifecycle, useHomeDashboardState } from '../hooks';
 import { useWatchlist } from '../hooks/useWatchlist';
+import { useWatchlistQuoteStore } from '../stores/watchlistQuoteStore';
 import { useUiLanguage } from '../contexts/UiLanguageContext';
 import type { SetupStatusResponse } from '../types/systemConfig';
 import { normalizeReportLanguage } from '../utils/reportLanguage';
@@ -647,6 +648,27 @@ const HomePage: React.FC = () => {
     setTodayAnalysisRefreshVersion((version) => version + 1);
   }, []);
 
+  const watchlistState = useWatchlist();
+  const refreshWatchlist = watchlistState.refresh;
+
+  // ── Quote hydration ──────────────────────────────────────────────────────
+  const quoteCache = useWatchlistQuoteStore((s) => s.cache);
+  const hydrateAllTickers = useWatchlistQuoteStore((s) => s.hydrateAll);
+  const invalidateAllTickers = useWatchlistQuoteStore((s) => s.invalidateAll);
+
+  // Re-hydrate the full watchlist on the 30s lifecycle tick (marks stale then re-fetches)
+  const refreshQuoteCache = useCallback(() => {
+    invalidateAllTickers();
+    void hydrateAllTickers(watchlistState.watchlistCodes);
+  }, [invalidateAllTickers, hydrateAllTickers, watchlistState.watchlistCodes]);
+
+  // Trigger hydrateAll whenever the watchlist code list changes
+  useEffect(() => {
+    if (watchlistState.watchlistCodes.length > 0) {
+      void hydrateAllTickers(watchlistState.watchlistCodes);
+    }
+  }, [watchlistState.watchlistCodes, hydrateAllTickers]);
+
   const handleDashboardDataRefresh = useCallback(() => {
     setTodayAnalysisRefreshVersion((version) => version + 1);
   }, []);
@@ -667,6 +689,7 @@ const HomePage: React.FC = () => {
     onDashboardDataRefresh: handleDashboardDataRefresh,
     onCompletedTaskDataRefreshStarted: handleCompletedTaskDataRefreshStarted,
     onCompletedTaskDataRefreshed: handleCompletedTaskDataRefreshed,
+    refreshQuoteCache,
   });
 
   useEffect(() => {
@@ -679,8 +702,6 @@ const HomePage: React.FC = () => {
     }
   }, [isLoadingStockBar, stockBarItems.length]);
 
-  const watchlistState = useWatchlist();
-  const refreshWatchlist = watchlistState.refresh;
   const watchlistCodesByNormalized = useMemo(() => {
     const codesByNormalized = new Map<string, string>();
     for (const code of watchlistState.watchlistCodes) {
@@ -1382,7 +1403,8 @@ const HomePage: React.FC = () => {
         item.stockCode !== 'MARKET' &&
         !seenTickers.has(item.stockCode.toUpperCase())
       ) {
-        list.push(convertStockBarToTradeSetup(item));
+        const cacheEntry = quoteCache[item.stockCode.toUpperCase()];
+        list.push(convertStockBarToTradeSetup(item, cacheEntry));
         seenTickers.add(item.stockCode.toUpperCase());
       }
     }
@@ -1762,6 +1784,7 @@ const HomePage: React.FC = () => {
                     trades={decisionMatrixTrades}
                     selectedTicker={selectedDrawerTrade?.ticker}
                     onSelectTrade={handleSelectTrade}
+                    hydrationCache={quoteCache}
                   />
                 ) : isLoadingReport ? (
                   <div className="flex h-full flex-col items-center justify-center py-12">
