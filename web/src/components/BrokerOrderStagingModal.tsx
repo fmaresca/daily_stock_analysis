@@ -5,6 +5,7 @@ import {
   AccountType,
   PriceExecutionType,
   recordSubmittedOrder,
+  addExecutedOrderToPortfolioBook,
 } from '../utils/brokerOrderStaging';
 import {
   ShieldCheck,
@@ -129,6 +130,7 @@ export const BrokerOrderStagingModal: React.FC<BrokerOrderStagingModalProps> = (
           brokerOrderId: orderId,
           notes: `Validated on Charles Schwab Trader API (${mode})`,
         });
+        addExecutedOrderToPortfolioBook(stagedOrder);
 
         setSubmissionFeedback({
           success: true,
@@ -157,6 +159,7 @@ export const BrokerOrderStagingModal: React.FC<BrokerOrderStagingModalProps> = (
           brokerOrderId: orderId,
           notes: `Local Simulation Mode: ${errMsg}`,
         });
+        addExecutedOrderToPortfolioBook(stagedOrder);
 
         setSubmissionFeedback({
           success: true,
@@ -221,6 +224,7 @@ export const BrokerOrderStagingModal: React.FC<BrokerOrderStagingModalProps> = (
         brokerOrderId: orderId,
         notes: res?.ok ? 'Dispatched to local IBKR Gateway' : 'Staged for TWS BasketTrader import',
       });
+      addExecutedOrderToPortfolioBook(stagedOrder);
 
       setSubmissionFeedback({
         success: true,

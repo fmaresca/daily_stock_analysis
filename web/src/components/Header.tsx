@@ -12,6 +12,7 @@ import {
   Sun,
   Moon,
   Bell,
+  ShieldCheck,
 } from './icons';
 import { ScreenerSummary } from '../types/options';
 
@@ -31,6 +32,7 @@ interface HeaderProps {
   onOpenSchwab: () => void;
   onOpenAlerts?: () => void;
   onOpenDiagnostics?: () => void;
+  onOpenExecutiveDigest?: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
 }
@@ -51,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSchwab,
   onOpenAlerts,
   onOpenDiagnostics,
+  onOpenExecutiveDigest,
   theme = 'dark',
   onToggleTheme,
 }) => {
@@ -128,6 +131,20 @@ export const Header: React.FC<HeaderProps> = ({
               <Zap className="w-3.5 h-3.5 text-amber-200 group-hover:scale-110 transition-transform" />
               <span>API Self-Test</span>
               <span className="w-2 h-2 rounded-full bg-emerald-200 animate-pulse ml-0.5" />
+            </button>
+          )}
+
+          {/* Portfolio Health Pulse Badge */}
+          {onOpenExecutiveDigest && (
+            <button
+              onClick={onOpenExecutiveDigest}
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold font-mono rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer whitespace-nowrap shadow-sm shadow-emerald-500/10"
+              title="Click to view Executive Portfolio Health Digest & Briefing"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>94/100 Health</span>
+              <span className="text-slate-500">•</span>
+              <span className="text-cyan-300">+$142/d</span>
             </button>
           )}
 

@@ -1197,6 +1197,30 @@ export const App: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+
+      if (e.key === '?' || (e.ctrlKey && e.key === '/')) {
+        e.preventDefault();
+        setIsHelpModalOpen((prev) => !prev);
+      } else if (e.altKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        setActiveTree('OPTIONS');
+        setActiveOptionsTab('BROKER_STAGING');
+      } else if (e.altKey && (e.key === 'e' || e.key === 'E')) {
+        e.preventDefault();
+        setActiveTree('OPTIONS');
+        setActiveOptionsTab('EXECUTIVE_DIGEST');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white">
       {/* Header with Search, Watchlists, Reports, and Help triggers */}
@@ -1216,6 +1240,10 @@ export const App: React.FC = () => {
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
         onOpenAlerts={() => setIsAlertsModalOpen(true)}
         onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
+        onOpenExecutiveDigest={() => {
+          setActiveTree('OPTIONS');
+          setActiveOptionsTab('EXECUTIVE_DIGEST');
+        }}
         theme={theme}
         onToggleTheme={handleToggleTheme}
       />
