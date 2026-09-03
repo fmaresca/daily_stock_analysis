@@ -2922,3 +2922,14 @@ textarea {
     text-align: left;
   }
 }
+
+/* Institutional FinTech Trading Theme Utilities */
+.font-financial {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.num-tabular {
+  font-variant-numeric: tabular-nums;
+}
+

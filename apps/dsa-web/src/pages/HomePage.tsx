@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BarChart3, Check, SlidersHorizontal, X } from 'lucide-react';
+import { BarChart3, Check, LayoutGrid, SlidersHorizontal, Table, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getParsedApiError, type ParsedApiError } from '../api/error';
 import { analysisApi, DuplicateTaskError } from '../api/analysis';
@@ -8,7 +8,13 @@ import { historyApi } from '../api/history';
 import { agentApi, type SkillInfo } from '../api/agent';
 import { systemConfigApi } from '../api/systemConfig';
 import { ApiErrorAlert, Button, Drawer, EmptyState, InlineAlert } from '../components/common';
-import { DashboardStateBlock } from '../components/dashboard';
+import { DashboardStateBlock, DecisionMatrix, StockDetailDrawer } from '../components/dashboard';
+import type { TradeSetupItem } from '../types/tradeSetup';
+import {
+  INSTITUTIONAL_SAMPLE_SETUPS,
+  convertStockBarToTradeSetup,
+  convertAnalysisReportToTradeSetup,
+} from '../utils/tradeSetupAdapter';
 import { StockAutocomplete } from '../components/StockAutocomplete';
 import { StockHistoryTrendDrawer } from '../components/history';
 import { ReportMarkdownDrawer } from '../components/report/ReportMarkdownDrawer';
@@ -39,6 +45,7 @@ import type {
 import type { RunFlowSnapshotSource } from '../types/runFlow';
 import { getTodayInShanghai } from '../utils/format';
 import { normalizeStockCode } from '../utils/stockCode';
+import { cn } from '../utils/cn';
 
 type MarketReviewNotice = {
   variant: 'success' | 'warning' | 'danger';
@@ -281,6 +288,9 @@ const HomePage: React.FC = () => {
   const [completedTaskRefreshPendingCounts, setCompletedTaskRefreshPendingCounts] = useState<Map<string, number>>(
     new Map(),
   );
+  const [selectedDrawerTrade, setSelectedDrawerTrade] = useState<TradeSetupItem | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [homeViewMode, setHomeViewMode] = useState<'matrix' | 'classic'>('matrix');
   const duplicateBannerTimer = useRef<number | null>(null);
   const marketReviewPollTimer = useRef<number | null>(null);
   const stockBarLoadStartedRef = useRef(false);
@@ -1356,6 +1366,42 @@ const HomePage: React.FC = () => {
     });
   }, [marketReviewHistoryItems, stockBarItems, t]);
 
+  const decisionMatrixTrades = useMemo<TradeSetupItem[]>(() => {
+    const list: TradeSetupItem[] = [];
+    const seenTickers = new Set<string>();
+
+    if (selectedReport) {
+      const currentSetup = convertAnalysisReportToTradeSetup(selectedReport);
+      list.push(currentSetup);
+      seenTickers.add(currentSetup.ticker.toUpperCase());
+    }
+
+    for (const item of mergedStockBarItems) {
+      if (
+        item.stockCode &&
+        item.stockCode !== 'MARKET' &&
+        !seenTickers.has(item.stockCode.toUpperCase())
+      ) {
+        list.push(convertStockBarToTradeSetup(item));
+        seenTickers.add(item.stockCode.toUpperCase());
+      }
+    }
+
+    for (const sample of INSTITUTIONAL_SAMPLE_SETUPS) {
+      if (!seenTickers.has(sample.ticker.toUpperCase())) {
+        list.push(sample);
+        seenTickers.add(sample.ticker.toUpperCase());
+      }
+    }
+
+    return list;
+  }, [selectedReport, mergedStockBarItems]);
+
+  const handleSelectTrade = useCallback((trade: TradeSetupItem) => {
+    setSelectedDrawerTrade(trade);
+    setIsDrawerOpen(true);
+  }, []);
+
   const sidebarContent = useMemo(
     () => (
       <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
@@ -1671,122 +1717,170 @@ const HomePage: React.FC = () => {
                 onDismiss={clearError}
               />
             ) : null}
-            {!marketReviewReport && isLoadingReport ? (
-              <div className="flex h-full flex-col items-center justify-center">
-                <DashboardStateBlock title={t('home.loadingReport')} loading />
-              </div>
-            ) : !marketReviewReport && selectedReport ? (
-              <div className={isHistoryTrendOpen ? 'max-w-6xl space-y-4 pb-8' : 'max-w-4xl space-y-4 pb-8'}>
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {!isMarketReviewHistoryReport ? (
-                    <>
+            {!marketReviewReport ? (
+              <div className="space-y-4 pb-8">
+                {/* View Mode Switcher */}
+                <div className="flex items-center justify-between border-b border-border-subtle/80 pb-2.5">
+                  <div className="flex items-center gap-1 rounded-lg border border-border-subtle bg-surface-dark p-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setHomeViewMode('matrix')}
+                      className={cn(
+                        'flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-all',
+                        homeViewMode === 'matrix'
+                          ? 'bg-card-dark text-accent-long shadow-sm border border-border-subtle'
+                          : 'text-muted-text hover:text-foreground'
+                      )}
+                    >
+                      <Table className="h-3.5 w-3.5" />
+                      <span>Executive Matrix</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHomeViewMode('classic')}
+                      className={cn(
+                        'flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-all',
+                        homeViewMode === 'classic'
+                          ? 'bg-card-dark text-foreground shadow-sm border border-border-subtle'
+                          : 'text-muted-text hover:text-foreground'
+                      )}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                      <span>Detailed Report</span>
+                    </button>
+                  </div>
+
+                  {homeViewMode === 'matrix' && (
+                    <span className="text-[11px] text-muted-text hidden sm:inline">
+                      Click any setup to open institutional analysis drawer
+                    </span>
+                  )}
+                </div>
+
+                {homeViewMode === 'matrix' ? (
+                  <DecisionMatrix
+                    trades={decisionMatrixTrades}
+                    selectedTicker={selectedDrawerTrade?.ticker}
+                    onSelectTrade={handleSelectTrade}
+                  />
+                ) : isLoadingReport ? (
+                  <div className="flex h-full flex-col items-center justify-center py-12">
+                    <DashboardStateBlock title={t('home.loadingReport')} loading />
+                  </div>
+                ) : selectedReport ? (
+                  <div className={isHistoryTrendOpen ? 'max-w-6xl space-y-4 pb-8' : 'max-w-4xl space-y-4 pb-8'}>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {!isMarketReviewHistoryReport ? (
+                        <>
+                          <Button
+                            variant="home-action-ai"
+                            size="sm"
+                            disabled={isAnalyzing || selectedReport.meta.id === undefined}
+                            onClick={handleReanalyze}
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            {t('home.reanalyze')}
+                          </Button>
+                          <Button
+                            variant="home-action-ai"
+                            size="sm"
+                            disabled={selectedReport.meta.id === undefined}
+                            onClick={handleAskFollowUp}
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            {t('home.askAi')}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="home-action-ai"
+                          size="sm"
+                          disabled={isSubmittingMarketReview}
+                          isLoading={isSubmittingMarketReview}
+                          loadingText={t('home.submitMarketReview')}
+                          onClick={() => void handleTriggerMarketReview()}
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                          {t('home.rerunMarketReview')}
+                        </Button>
+                      )}
                       <Button
                         variant="home-action-ai"
                         size="sm"
-                        disabled={isAnalyzing || selectedReport.meta.id === undefined}
-                        onClick={handleReanalyze}
+                        disabled={selectedReport.meta.id === undefined || isHistoryTrendUnavailable}
+                        className={isHistoryTrendOpen ? 'border-primary/70 bg-primary/15 text-primary shadow-glow-cyan' : undefined}
+                        onClick={() => {
+                          if (isHistoryTrendOpen) {
+                            closeHistoryTrend();
+                            return;
+                          }
+                          void openHistoryTrend();
+                        }}
                       >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        {t('home.reanalyze')}
+                        <BarChart3 className="h-4 w-4" />
+                        {t('home.historyTrend')}
                       </Button>
                       <Button
                         variant="home-action-ai"
                         size="sm"
                         disabled={selectedReport.meta.id === undefined}
-                        onClick={handleAskFollowUp}
+                        onClick={openMarkdownDrawer}
                       >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        {t('home.askAi')}
+                        {t('home.fullReport')}
                       </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="home-action-ai"
-                      size="sm"
-                      disabled={isSubmittingMarketReview}
-                      isLoading={isSubmittingMarketReview}
-                      loadingText={t('home.submitMarketReview')}
-                      onClick={() => void handleTriggerMarketReview()}
-                    >
-                      <BarChart3 className="h-4 w-4" />
-                      {t('home.rerunMarketReview')}
-                    </Button>
-                  )}
-                  <Button
-                    variant="home-action-ai"
-                    size="sm"
-                    disabled={selectedReport.meta.id === undefined || isHistoryTrendUnavailable}
-                    className={isHistoryTrendOpen ? 'border-primary/70 bg-primary/15 text-primary shadow-glow-cyan' : undefined}
-                    onClick={() => {
-                      if (isHistoryTrendOpen) {
-                        closeHistoryTrend();
-                        return;
-                      }
-                      void openHistoryTrend();
-                    }}
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    {t('home.historyTrend')}
-                  </Button>
-                  <Button
-                    variant="home-action-ai"
-                    size="sm"
-                    disabled={selectedReport.meta.id === undefined}
-                    onClick={openMarkdownDrawer}
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    {t('home.fullReport')}
-                  </Button>
-                </div>
-                {isHistoryTrendOpen ? (
-                  <StockHistoryTrendDrawer
-                    key={`stock-history-${selectedReport.meta.id}`}
-                    report={selectedReport}
-                    items={stockHistoryItems}
-                    total={stockHistoryTotal}
-                    hasMore={stockHistoryHasMore}
-                    isLoading={isLoadingStockHistory}
-                    isLoadingMore={isLoadingMoreStockHistory}
-                    error={stockHistoryError}
-                    filters={stockHistoryFilters}
-                    onClose={closeHistoryTrend}
-                    onRangeChange={(range) => void setStockHistoryRange(range)}
-                    onLoadMore={() => void loadMoreStockHistory()}
-                    onSelectRecord={(recordId) => void selectHistoryItem(recordId)}
-                    onRetry={() => void openHistoryTrend()}
-                  />
+                    </div>
+                    {isHistoryTrendOpen ? (
+                      <StockHistoryTrendDrawer
+                        key={`stock-history-${selectedReport.meta.id}`}
+                        report={selectedReport}
+                        items={stockHistoryItems}
+                        total={stockHistoryTotal}
+                        hasMore={stockHistoryHasMore}
+                        isLoading={isLoadingStockHistory}
+                        isLoadingMore={isLoadingMoreStockHistory}
+                        error={stockHistoryError}
+                        filters={stockHistoryFilters}
+                        onClose={closeHistoryTrend}
+                        onRangeChange={(range) => void setStockHistoryRange(range)}
+                        onLoadMore={() => void loadMoreStockHistory()}
+                        onSelectRecord={(recordId) => void selectHistoryItem(recordId)}
+                        onRetry={() => void openHistoryTrend()}
+                      />
+                    ) : (
+                      <ReportSummary
+                        data={selectedReport}
+                        isHistory
+                        onOpenRunFlow={openHistoryRunFlow}
+                        watchlist={{
+                          isInWatchlist: watchlistState.isInWatchlist,
+                          onToggle: watchlistState.toggleWatchlist,
+                          isActioning: watchlistState.isActioning,
+                          actionMessage: watchlistState.actionMessage,
+                        }}
+                      />
+                    )}
+                  </div>
                 ) : (
-                  <ReportSummary
-                    data={selectedReport}
-                    isHistory
-                    onOpenRunFlow={openHistoryRunFlow}
-                    watchlist={{
-                      isInWatchlist: watchlistState.isInWatchlist,
-                      onToggle: watchlistState.toggleWatchlist,
-                      isActioning: watchlistState.isActioning,
-                      actionMessage: watchlistState.actionMessage,
-                    }}
-                  />
+                  <div className="flex h-full items-center justify-center py-12">
+                    <EmptyState
+                      title={t('home.startAnalysisTitle')}
+                      description={t('home.startAnalysisDescription')}
+                      className="max-w-xl border-dashed"
+                      icon={(
+                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                      )}
+                    />
+                  </div>
                 )}
-              </div>
-            ) : !marketReviewReport ? (
-              <div className="flex h-full items-center justify-center">
-                <EmptyState
-                  title={t('home.startAnalysisTitle')}
-                  description={t('home.startAnalysisDescription')}
-                  className="max-w-xl border-dashed"
-                  icon={(
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  )}
-                />
               </div>
             ) : null}
           </section>
@@ -1819,6 +1913,12 @@ const HomePage: React.FC = () => {
           />
         </Drawer>
       ) : null}
+
+      <StockDetailDrawer
+        trade={selectedDrawerTrade}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
 
     </div>
   );

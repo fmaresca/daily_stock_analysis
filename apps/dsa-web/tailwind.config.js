@@ -91,6 +91,19 @@ export default {
         'surface-3': 'var(--surface-3)',
         'overlay-hover': 'var(--overlay-hover)',
         'overlay-selected': 'var(--overlay-selected)',
+        // Institutional Dark Slate Theme Tokens
+        'bg-surface-dark': '#0B0F17',
+        'surface-dark': '#0B0F17',
+        'bg-card-dark': '#111827',
+        'card-dark': '#111827',
+        'border-subtle': '#1F2937',
+        'accent-long': '#10B981',
+        'accent-short': '#F43F5E',
+        'accent-neutral': '#F59E0B',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       borderColor: {
         dim: 'hsl(var(--border-dim-raw) / 0.06)',
