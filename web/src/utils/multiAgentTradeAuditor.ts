@@ -65,7 +65,7 @@ export async function runMultiAgentTradeAudit(
   const spot = ticker.spot_price > 0 ? ticker.spot_price : 100;
   const dte = Math.max(7, customDte);
   const ivRank = ticker.iv_rank || 30;
-  const lowerBb = ticker.lower_band || spot * 0.95;
+  const lowerBb = ticker.lower_bb || spot * 0.95;
   const upperBb = ticker.upper_bb || spot * 1.05;
 
   // 1. Attempt backend multi-agent endpoint

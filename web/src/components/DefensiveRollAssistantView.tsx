@@ -88,16 +88,22 @@ export const DefensiveRollAssistantView: React.FC<DefensiveRollAssistantViewProp
       strategy_name: `Defensive Roll (${tactic.name})`,
       expiration: new Date(Date.now() + tactic.newDte * 86400000).toISOString().split('T')[0],
       dte: tactic.newDte,
+      current_price: activePosition.spotPrice,
       short_strike: tactic.newStrike,
       short_delta: -0.22,
+      short_type: 'call',
       long_strike: activePosition.strike,
       long_delta: activePosition.currentDelta,
+      long_type: 'call',
+      spread_width: Math.abs(activePosition.strike - tactic.newStrike),
       net_credit: tactic.netCredit,
       max_loss: Math.abs(activePosition.strike - tactic.newStrike),
       max_profit: tactic.netCredit,
+      roc_pct: 10,
       annualized_roc: Math.round((tactic.netCredit / (tactic.newStrike || 100)) * (365 / tactic.newDte) * 1000) / 10,
       pop_pct: tactic.recoveryProbabilityPct,
       cushion_pct: tactic.breakevenImprovement,
+      iv_rank: 30,
     };
 
     onStageRollOrder(spread);

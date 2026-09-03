@@ -1427,7 +1427,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">How do the Interactive Option Chain Matrix &amp; Volatility Smile work?</div>
                   <p className="text-xs text-slate-400">
-                    Navigate to <strong>Option Chain &amp; IV Smile</strong> in the Options menu to view a strike-by-strike straddle ladder pairing Calls (left) and Puts (right) with real-time Greeks ($\Delta, \Gamma, \Theta, \mathcal{V}$), Volume, and Open Interest for any expiration date. The interactive Volatility Smile chart plots Implied Volatility across strikes to reveal call/put skew and mispriced volatility smirks. Click any contract to stage an order directly.
+                    Navigate to <strong>Option Chain &amp; IV Smile</strong> in the Options menu to view a strike-by-strike straddle ladder pairing Calls (left) and Puts (right) with real-time Greeks (Delta, Gamma, Theta, Vega), Volume, and Open Interest for any expiration date. The interactive Volatility Smile chart plots Implied Volatility across strikes to reveal call/put skew and mispriced volatility smirks. Click any contract to stage an order directly.
                   </p>
                 </div>
 

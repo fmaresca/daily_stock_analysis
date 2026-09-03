@@ -102,6 +102,7 @@ export const MultiAgentTradeAuditorView: React.FC<MultiAgentTradeAuditorViewProp
       pop_pct: auditResult.quantAgent.popEstimated,
       iv: activeTicker.iv_rank * 0.4 + 16,
       iv_rank: activeTicker.iv_rank,
+      rsi: activeTicker.rsi_14 || 50,
       safety_tier: 'AI-Approved Institutional Trade',
       tier_color: 'emerald',
       tags: ['AI_AGENT_STRUCTURING', 'INSTITUTIONAL_EXIT_RULES'],
