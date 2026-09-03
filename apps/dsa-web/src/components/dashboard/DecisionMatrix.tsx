@@ -1,670 +1,560 @@
-import React, { useMemo, useState } from 'react';
-import {
-  AlertTriangle,
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ChevronRight,
-  Filter,
-  Flame,
+import React, { useState, useMemo } from 'react';
+import { 
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown, 
+  Search, 
+  ChevronRight, 
+  TrendingUp, 
+  TrendingDown, 
+  Minus,
+  Sparkles,
   Loader2,
-  Percent,
-  Search,
-  SlidersHorizontal,
-  TrendingUp,
+  AlertTriangle
 } from 'lucide-react';
 import type { TradeSetupItem } from '../../types/tradeSetup';
 import type { WatchlistQuoteEntry } from '../../types/marketData';
-import { cn } from '../../utils/cn';
 
-export type FilterPreset = 'all' | 'high_conviction' | 'bullish' | 'options_income' | 'risk_alerts';
-export type SortField =
-  | 'ticker'
-  | 'bias'
-  | 'conviction'
-  | 'price'
-  | 'entry'
-  | 'stop'
-  | 'target'
-  | 'rr';
-export type SortDirection = 'asc' | 'desc';
+export type MarketBias = 'BULLISH' | 'BEARISH' | 'NEUTRAL';
 
-interface DecisionMatrixProps {
-  trades: TradeSetupItem[];
+export interface TradeSignal {
+  id: string;
+  ticker: string;
+  companyName: string;
+  bias: MarketBias;
+  convictionScore: number; // 0.0 to 10.0
+  currentPrice: number;
+  entryPrice: number;
+  targetPrice: number;
+  stopLoss: number;
+  riskRewardRatio: number;
+  primaryCatalyst: string;
+  optionsStrategy?: string;
+  setupTier: 'Tier 1' | 'Tier 2' | 'Tier 3';
+  rawTrade?: TradeSetupItem;
+}
+
+export interface DecisionMatrixProps {
+  signals?: TradeSignal[];
+  trades?: TradeSetupItem[];
   selectedTicker?: string | null;
-  onSelectTrade: (trade: TradeSetupItem) => void;
+  onSelectTicker?: (signal: TradeSignal) => void;
+  onSelectTrade?: (trade: TradeSetupItem) => void;
   isLoading?: boolean;
   className?: string;
-  /**
-   * Per-ticker hydration cache from watchlistQuoteStore.
-   * When provided, price cells show real-time status indicators.
-   */
   hydrationCache?: Record<string, WatchlistQuoteEntry>;
-  /**
-   * QC gate: when true, rows whose hydration status is pending or hydrating
-   * are excluded from the rendered table until data is ready.
-   * Default false (show spinner in row instead).
-   */
   hideUnhydrated?: boolean;
 }
 
-export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
+export type SortableField = 
+  | 'ticker' 
+  | 'bias' 
+  | 'convictionScore' 
+  | 'currentPrice' 
+  | 'entryPrice' 
+  | 'targetPrice' 
+  | 'stopLoss' 
+  | 'riskRewardRatio';
+
+// Default Mock Dataset for Immediate Visual Validation
+export const DEFAULT_SIGNALS: TradeSignal[] = [
+  {
+    id: '1',
+    ticker: 'NVDA',
+    companyName: 'NVIDIA Corporation',
+    bias: 'BULLISH',
+    convictionScore: 9.2,
+    currentPrice: 128.40,
+    entryPrice: 125.50,
+    targetPrice: 145.00,
+    stopLoss: 118.00,
+    riskRewardRatio: 2.6,
+    primaryCatalyst: 'Data center CAPEX beat; Blackwell ramp validation',
+    optionsStrategy: 'Sell $120 CSP (32 DTE, 18.5% Ann. Yield)',
+    setupTier: 'Tier 1'
+  },
+  {
+    id: '2',
+    ticker: 'MSFT',
+    companyName: 'Microsoft Corp',
+    bias: 'BULLISH',
+    convictionScore: 8.4,
+    currentPrice: 448.20,
+    entryPrice: 442.00,
+    targetPrice: 485.00,
+    stopLoss: 428.00,
+    riskRewardRatio: 3.1,
+    primaryCatalyst: 'Azure AI enterprise run-rate expansion',
+    optionsStrategy: 'Bull Call Debit Spread 445/470',
+    setupTier: 'Tier 1'
+  },
+  {
+    id: '3',
+    ticker: 'TSLA',
+    companyName: 'Tesla, Inc.',
+    bias: 'BEARISH',
+    convictionScore: 6.8,
+    currentPrice: 215.10,
+    entryPrice: 218.00,
+    targetPrice: 185.00,
+    stopLoss: 229.00,
+    riskRewardRatio: 3.0,
+    primaryCatalyst: 'Auto gross margin compression & EU delivery drop',
+    optionsStrategy: 'Bear Put Spread 215/195',
+    setupTier: 'Tier 2'
+  },
+  {
+    id: '4',
+    ticker: 'JNJ',
+    companyName: 'Johnson & Johnson',
+    bias: 'NEUTRAL',
+    convictionScore: 5.4,
+    currentPrice: 161.80,
+    entryPrice: 159.00,
+    targetPrice: 168.00,
+    stopLoss: 155.00,
+    riskRewardRatio: 2.25,
+    primaryCatalyst: 'Defensive health sector rotation; stable dividend profile',
+    optionsStrategy: 'Covered Call @ $167.50 strike',
+    setupTier: 'Tier 3'
+  }
+];
+
+// Helper to adapt existing TradeSetupItem into TradeSignal
+function adaptTradeSetupToSignal(trade: TradeSetupItem): TradeSignal {
+  const conviction = trade.conviction_score ?? trade.convictionScore ?? 5.0;
+  const rr = trade.risk_reward_ratio ?? trade.riskRewardRatio ?? 2.0;
+  const biasStr = (trade.bias || 'NEUTRAL').toUpperCase();
+  const bias: MarketBias = biasStr === 'BULLISH' ? 'BULLISH' : biasStr === 'BEARISH' ? 'BEARISH' : 'NEUTRAL';
+
+  let tier: 'Tier 1' | 'Tier 2' | 'Tier 3' = 'Tier 3';
+  if (conviction >= 8.0 && rr >= 2.0) {
+    tier = 'Tier 1';
+  } else if (conviction >= 6.5) {
+    tier = 'Tier 2';
+  }
+
+  let optionsDesc: string | undefined = undefined;
+  const opt = trade.options_setup || trade.optionsSetup;
+  if (opt) {
+    optionsDesc = `${opt.strategy_type === 'CSP' ? 'Sell' : 'Sell'} $${opt.strike.toFixed(1)} ${opt.strategy_type} (${opt.expiration}, ${opt.annualized_yield_pct.toFixed(0)}% Ann. Yield)`;
+  }
+
+  return {
+    id: trade.ticker,
+    ticker: trade.ticker,
+    companyName: trade.company_name || trade.companyName || trade.ticker,
+    bias,
+    convictionScore: conviction,
+    currentPrice: trade.current_price ?? trade.currentPrice ?? 0.0,
+    entryPrice: trade.entry_price ?? trade.entryPrice ?? 0.0,
+    targetPrice: trade.take_profit ?? trade.takeProfit ?? 0.0,
+    stopLoss: trade.stop_loss ?? trade.stopLoss ?? 0.0,
+    riskRewardRatio: rr,
+    primaryCatalyst: trade.catalyst || 'Quantitative multi-factor analysis',
+    optionsStrategy: optionsDesc,
+    setupTier: tier,
+    rawTrade: trade,
+  };
+}
+
+export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({ 
+  signals: propSignals,
   trades,
   selectedTicker,
+  onSelectTicker,
   onSelectTrade,
   isLoading = false,
-  className,
+  className = '',
   hydrationCache,
   hideUnhydrated = false,
 }) => {
-  const [activeFilter, setActiveFilter] = useState<FilterPreset>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortField, setSortField] = useState<SortField>('conviction');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  // Normalize dataset from either signals or trades prop
+  const baseSignals = useMemo<TradeSignal[]>(() => {
+    if (propSignals && propSignals.length > 0) {
+      return propSignals;
+    }
+    if (trades && trades.length > 0) {
+      return trades.map(adaptTradeSetupToSignal);
+    }
+    return DEFAULT_SIGNALS;
+  }, [propSignals, trades]);
 
-  // Handle column header sorting
-  const handleSort = (field: SortField) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBias, setSelectedBias] = useState<string>('ALL');
+  const [highConvictionOnly, setHighConvictionOnly] = useState(false);
+  const [sortField, setSortField] = useState<SortableField>('convictionScore');
+  const [sortAscending, setSortAscending] = useState(false);
+
+  // Sorting Handler
+  const handleSort = (field: SortableField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortAscending(!sortAscending);
     } else {
       setSortField(field);
-      setSortDirection('desc');
+      setSortAscending(field === 'ticker' || field === 'currentPrice'); // sensible defaults
     }
   };
 
-  // Filter & Search Logic
-  const filteredTrades = useMemo(() => {
-    return trades.filter((t) => {
-      // Search
-      const q = searchQuery.trim().toLowerCase();
-      if (q) {
-        const tickerMatch = t.ticker.toLowerCase().includes(q);
-        const nameMatch = (t.company_name || t.companyName || '').toLowerCase().includes(q);
-        const catalystMatch = (t.catalyst || '').toLowerCase().includes(q);
-        if (!tickerMatch && !nameMatch && !catalystMatch) return false;
-      }
+  // Filter and Sort Processing
+  const filteredAndSortedSignals = useMemo(() => {
+    return baseSignals
+      .filter((item) => {
+        // QC Gate for hydration if required
+        if (hideUnhydrated && hydrationCache) {
+          const hyd = hydrationCache[item.ticker.toUpperCase()];
+          if (hyd && (hyd.status === 'pending' || hyd.status === 'hydrating')) {
+            return false;
+          }
+        }
 
-      // Quick Filters
-      const score = t.conviction_score ?? t.convictionScore ?? 0;
-      const bias = (t.bias || '').toUpperCase();
-      const hasRisks =
-        t.has_risk_alerts ||
-        (t.risk_summary && !t.risk_summary.toLowerCase().includes('standard') && t.risk_summary.length > 5);
+        const matchesSearch = 
+          item.ticker.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.primaryCatalyst.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesBias = selectedBias === 'ALL' || item.bias === selectedBias;
+        const matchesConviction = !highConvictionOnly || item.convictionScore >= 8.0;
 
-      if (activeFilter === 'high_conviction') {
-        return score >= 8.0;
-      }
-      if (activeFilter === 'bullish') {
-        return bias === 'BULLISH';
-      }
-      if (activeFilter === 'options_income') {
-        return Boolean(t.options_setup || t.optionsSetup);
-      }
-      if (activeFilter === 'risk_alerts') {
-        return Boolean(hasRisks);
-      }
+        return matchesSearch && matchesBias && matchesConviction;
+      })
+      .sort((a, b) => {
+        let valueA = a[sortField];
+        let valueB = b[sortField];
 
-      return true;
-    });
-  }, [trades, searchQuery, activeFilter]);
+        // Hydration override for live price sorting
+        if (sortField === 'currentPrice' && hydrationCache) {
+          const priceA = hydrationCache[a.ticker.toUpperCase()]?.quote?.currentPrice;
+          const priceB = hydrationCache[b.ticker.toUpperCase()]?.quote?.currentPrice;
+          if (priceA !== undefined && priceA > 0) valueA = priceA;
+          if (priceB !== undefined && priceB > 0) valueB = priceB;
+        }
 
-  // Sorting Logic
-  const sortedTrades = useMemo(() => {
-    const list = [...filteredTrades];
-    list.sort((a, b) => {
-      let valA: number | string = 0;
-      let valB: number | string = 0;
+        if (typeof valueA === 'string' && typeof valueB === 'string') {
+          return sortAscending 
+            ? valueA.localeCompare(valueB) 
+            : valueB.localeCompare(valueA);
+        }
 
-      switch (sortField) {
-        case 'ticker':
-          valA = a.ticker;
-          valB = b.ticker;
-          break;
-        case 'bias':
-          valA = a.bias;
-          valB = b.bias;
-          break;
-        case 'conviction':
-          valA = a.conviction_score ?? a.convictionScore ?? 0;
-          valB = b.conviction_score ?? b.convictionScore ?? 0;
-          break;
-        case 'price':
-          valA = a.current_price ?? a.currentPrice ?? 0;
-          valB = b.current_price ?? b.currentPrice ?? 0;
-          break;
-        case 'entry':
-          valA = a.entry_price ?? a.entryPrice ?? 0;
-          valB = b.entry_price ?? b.entryPrice ?? 0;
-          break;
-        case 'stop':
-          valA = a.stop_loss ?? a.stopLoss ?? 0;
-          valB = b.stop_loss ?? b.stopLoss ?? 0;
-          break;
-        case 'target':
-          valA = a.take_profit ?? a.takeProfit ?? 0;
-          valB = b.take_profit ?? b.takeProfit ?? 0;
-          break;
-        case 'rr':
-          valA = a.risk_reward_ratio ?? a.riskRewardRatio ?? 0;
-          valB = b.risk_reward_ratio ?? b.riskRewardRatio ?? 0;
-          break;
-      }
+        return sortAscending 
+          ? (valueA as number) - (valueB as number) 
+          : (valueB as number) - (valueA as number);
+      });
+  }, [baseSignals, searchTerm, selectedBias, highConvictionOnly, sortField, sortAscending, hideUnhydrated, hydrationCache]);
 
-      if (typeof valA === 'string' && typeof valB === 'string') {
-        return sortDirection === 'asc'
-          ? valA.localeCompare(valB)
-          : valB.localeCompare(valA);
-      }
-
-      return sortDirection === 'asc'
-        ? (valA as number) - (valB as number)
-        : (valB as number) - (valA as number);
-    });
-    return list;
-  }, [filteredTrades, sortField, sortDirection]);
-
-  // Counts for quick filter badges
-  const counts = useMemo(() => {
-    return {
-      all: trades.length,
-      high_conviction: trades.filter((t) => (t.conviction_score ?? t.convictionScore ?? 0) >= 8.0).length,
-      bullish: trades.filter((t) => (t.bias || '').toUpperCase() === 'BULLISH').length,
-      options_income: trades.filter((t) => Boolean(t.options_setup || t.optionsSetup)).length,
-      risk_alerts: trades.filter(
-        (t) =>
-          t.has_risk_alerts ||
-          (t.risk_summary && !t.risk_summary.toLowerCase().includes('standard') && t.risk_summary.length > 5)
-      ).length,
-    };
-  }, [trades]);
-
-  const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="h-3 w-3 opacity-30 group-hover:opacity-70 transition-opacity" />;
+  const handleRowClick = (item: TradeSignal) => {
+    if (onSelectTicker) {
+      onSelectTicker(item);
     }
-    return sortDirection === 'asc' ? (
-      <ArrowUp className="h-3 w-3 text-accent-long stroke-[2.5]" />
-    ) : (
-      <ArrowDown className="h-3 w-3 text-accent-long stroke-[2.5]" />
+    if (onSelectTrade) {
+      if (item.rawTrade) {
+        onSelectTrade(item.rawTrade);
+      } else {
+        // Synthesize a TradeSetupItem from TradeSignal
+        onSelectTrade({
+          ticker: item.ticker,
+          company_name: item.companyName,
+          bias: item.bias,
+          conviction_score: item.convictionScore,
+          current_price: item.currentPrice,
+          entry_price: item.entryPrice,
+          stop_loss: item.stopLoss,
+          take_profit: item.targetPrice,
+          risk_reward_ratio: item.riskRewardRatio,
+          catalyst: item.primaryCatalyst,
+          risk_summary: 'Standard volatility guard',
+          action_checklist: [`Review ${item.ticker} key levels`, `Verify catalyst alignment`],
+          raw_markdown: item.primaryCatalyst,
+          has_risk_alerts: item.convictionScore < 5.0,
+        });
+      }
+    }
+  };
+
+  // Conviction Bar Component
+  const renderConvictionScore = (score: number) => {
+    const percentage = (score / 10) * 100;
+    const isTopTier = score >= 8.0;
+
+    return (
+      <div className="flex items-center gap-2.5">
+        <span className="font-mono text-xs font-semibold tabular-nums text-slate-100">
+          {score.toFixed(1)}
+        </span>
+        <div className="h-1.5 w-14 overflow-hidden rounded-full bg-slate-800">
+          <div 
+            className={`h-full transition-all duration-300 ${
+              isTopTier ? 'bg-emerald-400' : score >= 6.0 ? 'bg-sky-400' : 'bg-amber-400'
+            }`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // Directional Bias Badge
+  const renderBiasBadge = (bias: MarketBias) => {
+    const styles = {
+      BULLISH: 'border-emerald-500/30 bg-emerald-950/40 text-emerald-400',
+      BEARISH: 'border-rose-500/30 bg-rose-950/40 text-rose-400',
+      NEUTRAL: 'border-amber-500/30 bg-amber-950/40 text-amber-400',
+    };
+
+    const icons = {
+      BULLISH: <TrendingUp className="h-3 w-3" />,
+      BEARISH: <TrendingDown className="h-3 w-3" />,
+      NEUTRAL: <Minus className="h-3 w-3" />,
+    };
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-semibold tracking-wider ${styles[bias]}`}>
+        {icons[bias]}
+        {bias}
+      </span>
     );
   };
 
   return (
-    <div
-      className={cn(
-        'rounded-xl border border-border-subtle bg-card-dark shadow-soft-card flex flex-col overflow-hidden select-none',
-        className
-      )}
-    >
-      {/* Header & Controls Toolbar */}
-      <div className="p-3 sm:p-4 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card-dark">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-accent-long animate-pulse" />
-            <h2 className="text-sm font-bold text-foreground tracking-tight uppercase font-financial">
-              Executive Decision Matrix
-            </h2>
-            <span className="text-[11px] font-mono tabular-nums px-1.5 py-0.5 rounded bg-surface-dark border border-border-subtle text-secondary-text inline-flex items-center gap-1">
-              {isLoading ? <span className="h-1.5 w-1.5 rounded-full bg-accent-long animate-ping" /> : null}
-              {sortedTrades.length} Setups
-            </span>
-          </div>
-          <p className="text-xs text-muted-text">
-            High-density institutional trade matrix with automated options setups and risk/reward quantification.
-          </p>
+    <div className={`w-full rounded-xl border border-slate-800 bg-[#0B0F17] text-slate-200 shadow-2xl ${className}`}>
+      {/* Control Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 p-4">
+        {/* Search Input */}
+        <div className="relative min-w-[260px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Search ticker, company, catalyst..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-lg border border-slate-800 bg-[#0F172A] py-1.5 pl-9 pr-3 text-sm text-slate-100 placeholder-slate-500 transition-colors focus:border-cyan-500 focus:outline-none"
+          />
         </div>
 
-        {/* Filters & Search */}
+        {/* Filter Badges & High Conviction Toggle */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Quick Filter Chips */}
-          <div className="inline-flex rounded-lg border border-border-subtle bg-surface-dark p-0.5 text-xs">
-            <button
-              type="button"
-              onClick={() => setActiveFilter('all')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
-                activeFilter === 'all'
-                  ? 'bg-card-dark text-foreground shadow-sm border border-border-subtle'
-                  : 'text-muted-text hover:text-foreground'
-              )}
-            >
-              <span>All</span>
-              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.all})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveFilter('high_conviction')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
-                activeFilter === 'high_conviction'
-                  ? 'bg-card-dark text-accent-long shadow-sm border border-border-subtle'
-                  : 'text-muted-text hover:text-foreground'
-              )}
-            >
-              <Flame className="h-3 w-3 text-accent-long" />
-              <span>Conviction &ge; 8.0</span>
-              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.high_conviction})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveFilter('bullish')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
-                activeFilter === 'bullish'
-                  ? 'bg-card-dark text-accent-long shadow-sm border border-border-subtle'
-                  : 'text-muted-text hover:text-foreground'
-              )}
-            >
-              <TrendingUp className="h-3 w-3 text-accent-long" />
-              <span>Bullish</span>
-              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.bullish})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveFilter('options_income')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
-                activeFilter === 'options_income'
-                  ? 'bg-card-dark text-emerald-400 shadow-sm border border-border-subtle'
-                  : 'text-muted-text hover:text-foreground'
-              )}
-            >
-              <Percent className="h-3 w-3 text-emerald-400" />
-              <span>Options Income</span>
-              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.options_income})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveFilter('risk_alerts')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
-                activeFilter === 'risk_alerts'
-                  ? 'bg-card-dark text-accent-short shadow-sm border border-border-subtle'
-                  : 'text-muted-text hover:text-foreground'
-              )}
-            >
-              <AlertTriangle className="h-3 w-3 text-accent-short" />
-              <span>Risk Alerts</span>
-              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.risk_alerts})</span>
-            </button>
+          <div className="flex rounded-lg border border-slate-800 bg-[#0F172A] p-0.5">
+            {(['ALL', 'BULLISH', 'BEARISH', 'NEUTRAL'] as const).map((bias) => (
+              <button
+                key={bias}
+                type="button"
+                onClick={() => setSelectedBias(bias)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                  selectedBias === bias
+                    ? 'bg-slate-800 text-cyan-400 font-semibold shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {bias}
+              </button>
+            ))}
           </div>
 
-          {/* Search Input */}
-          <div className="relative flex items-center">
-            <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-text pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search ticker, company, catalyst..."
-              className="h-8 w-44 sm:w-56 rounded-lg border border-border-subtle bg-surface-dark pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-text focus:outline-none focus:border-border-subtle focus:ring-1 focus:ring-accent-long/30 font-sans"
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setHighConvictionOnly(!highConvictionOnly)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+              highConvictionOnly
+                ? 'border-emerald-500/50 bg-emerald-950/30 text-emerald-300'
+                : 'border-slate-800 bg-[#0F172A] text-slate-400 hover:border-slate-700'
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+            Conviction &ge; 8.0
+          </button>
         </div>
       </div>
 
-      {/* Decision Table (table-fixed for zero layout shifts) */}
+      {/* High-Density Data Matrix */}
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed text-left border-collapse min-w-[980px]">
-          {/* Explicit Column Width Allocation: Sums to 100% */}
-          <colgroup>
-            <col className="w-[15%]" />
-            <col className="w-[8%]" />
-            <col className="w-[12%]" />
-            <col className="w-[9%]" />
-            <col className="w-[9%]" />
-            <col className="w-[9%]" />
-            <col className="w-[9%]" />
-            <col className="w-[8%]" />
-            <col className="w-[16%]" />
-            <col className="w-[5%]" />
-          </colgroup>
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-border-subtle bg-surface-dark/90 text-[11px] font-semibold text-muted-text tracking-wider uppercase">
-              {/* 1. Ticker */}
-              <th
+            <tr className="border-b border-slate-800/80 bg-[#080B10] text-[11px] uppercase tracking-wider text-slate-400">
+              <th 
+                className="cursor-pointer px-4 py-3 hover:text-slate-200"
                 onClick={() => handleSort('ticker')}
-                className="py-2.5 px-3 sm:px-4 cursor-pointer hover:text-foreground transition-colors group"
               >
-                <div className="flex items-center gap-1.5">
-                  <span>Ticker</span>
-                  {renderSortIcon('ticker')}
+                <div className="flex items-center gap-1">
+                  Ticker / Asset
+                  <SortIndicator field="ticker" activeField={sortField} ascending={sortAscending} />
                 </div>
               </th>
-
-              {/* 2. Bias Badge */}
-              <th
+              <th 
+                className="cursor-pointer px-3 py-3 hover:text-slate-200"
+                onClick={() => handleSort('convictionScore')}
+              >
+                <div className="flex items-center gap-1">
+                  Conviction
+                  <SortIndicator field="convictionScore" activeField={sortField} ascending={sortAscending} />
+                </div>
+              </th>
+              <th 
+                className="cursor-pointer px-3 py-3 hover:text-slate-200"
                 onClick={() => handleSort('bias')}
-                className="py-2.5 px-2 cursor-pointer hover:text-foreground transition-colors group"
               >
-                <div className="flex items-center gap-1.5">
-                  <span>Bias</span>
-                  {renderSortIcon('bias')}
+                <div className="flex items-center gap-1">
+                  Bias
+                  <SortIndicator field="bias" activeField={sortField} ascending={sortAscending} />
                 </div>
               </th>
-
-              {/* 3. Conviction Score */}
-              <th
-                onClick={() => handleSort('conviction')}
-                className="py-2.5 px-3 cursor-pointer hover:text-foreground transition-colors group"
+              <th 
+                className="cursor-pointer px-3 py-3 text-right hover:text-slate-200"
+                onClick={() => handleSort('currentPrice')}
               >
-                <div className="flex items-center gap-1.5">
-                  <span>Conviction</span>
-                  {renderSortIcon('conviction')}
+                <div className="flex items-center justify-end gap-1">
+                  Last Price
+                  <SortIndicator field="currentPrice" activeField={sortField} ascending={sortAscending} />
                 </div>
               </th>
-
-              {/* 4. Last Price */}
-              <th
-                onClick={() => handleSort('price')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
+              <th 
+                className="cursor-pointer px-3 py-3 text-right hover:text-slate-200"
+                onClick={() => handleSort('entryPrice')}
               >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Last Price</span>
-                  {renderSortIcon('price')}
+                <div className="flex items-center justify-end gap-1">
+                  Entry Zone
+                  <SortIndicator field="entryPrice" activeField={sortField} ascending={sortAscending} />
                 </div>
               </th>
-
-              {/* 5. Buy/Entry Zone */}
-              <th
-                onClick={() => handleSort('entry')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
+              <th 
+                className="cursor-pointer px-3 py-3 text-right hover:text-slate-200"
+                onClick={() => handleSort('targetPrice')}
               >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Entry Zone</span>
-                  {renderSortIcon('entry')}
+                <div className="flex items-center justify-end gap-1">
+                  Take Profit
+                  <SortIndicator field="targetPrice" activeField={sortField} ascending={sortAscending} />
                 </div>
               </th>
-
-              {/* 6. Target */}
-              <th
-                onClick={() => handleSort('target')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
+              <th 
+                className="cursor-pointer px-3 py-3 text-right hover:text-slate-200"
+                onClick={() => handleSort('stopLoss')}
               >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Target</span>
-                  {renderSortIcon('target')}
+                <div className="flex items-center justify-end gap-1">
+                  Stop Loss
+                  <SortIndicator field="stopLoss" activeField={sortField} ascending={sortAscending} />
                 </div>
               </th>
-
-              {/* 7. Invalidation Stop */}
-              <th
-                onClick={() => handleSort('stop')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
+              <th 
+                className="cursor-pointer px-3 py-3 text-right hover:text-slate-200"
+                onClick={() => handleSort('riskRewardRatio')}
               >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Inval. Stop</span>
-                  {renderSortIcon('stop')}
+                <div className="flex items-center justify-end gap-1">
+                  R : R
+                  <SortIndicator field="riskRewardRatio" activeField={sortField} ascending={sortAscending} />
                 </div>
               </th>
-
-              {/* 8. Risk/Reward Ratio */}
-              <th
-                onClick={() => handleSort('rr')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
-              >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>R:R Ratio</span>
-                  {renderSortIcon('rr')}
-                </div>
-              </th>
-
-              {/* 9. Options Setup (CSP / CC) */}
-              <th className="py-2.5 px-3">Options Setup</th>
-
-              {/* 10. Actions */}
-              <th className="py-2.5 px-2 text-center">Inspect</th>
+              <th className="px-4 py-3">Core Catalyst / Option Target</th>
+              <th className="px-3 py-3 text-center">Action</th>
             </tr>
           </thead>
-
-          <tbody className="divide-y divide-border-subtle text-xs font-sans">
-            {sortedTrades.length === 0 ? (
+          <tbody className="divide-y divide-slate-800/60 bg-[#0B0F17]">
+            {filteredAndSortedSignals.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-12 text-center text-muted-text">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <Filter className="h-6 w-6 stroke-[1.5] text-muted-text/60" />
-                    <span className="text-sm font-medium">No trade setups match the active filters</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveFilter('all');
-                        setSearchQuery('');
-                      }}
-                      className="text-xs text-accent-long hover:underline mt-1"
-                    >
-                      Reset filters
-                    </button>
-                  </div>
+                <td colSpan={10} className="py-12 text-center text-sm text-slate-500">
+                  No trade setups match the current filters.
                 </td>
               </tr>
             ) : (
-              sortedTrades.map((t) => {
-                const ticker = t.ticker.toUpperCase();
-                const isSelected = selectedTicker?.toUpperCase() === ticker;
-                const score = t.conviction_score ?? t.convictionScore ?? 5.0;
-                const bias = (t.bias || 'NEUTRAL').toUpperCase();
-                const currentPrice = t.current_price ?? t.currentPrice ?? 0;
-                const entryPrice = t.entry_price ?? t.entryPrice ?? 0;
-                const stopLoss = t.stop_loss ?? t.stopLoss ?? 0;
-                const takeProfit = t.take_profit ?? t.takeProfit ?? 0;
-                const rr = t.risk_reward_ratio ?? t.riskRewardRatio ?? 0;
-
-                // Hydration-aware rendering
-                const hydEntry = hydrationCache?.[ticker];
-                const hydStatus = hydEntry?.status;
-                const isHydrating = hydStatus === 'pending' || hydStatus === 'hydrating';
-                const hydFailed = hydStatus === 'failed';
-
-                // Apply QC gate: skip row if hard-blocking is enabled and data isn't ready
-                if (hideUnhydrated && isHydrating) return null;
-
-                const isBullish = bias === 'BULLISH';
-                const isBearish = bias === 'BEARISH';
-
-                // Derived options setup
-                const optionsSetup = t.options_setup || t.optionsSetup;
-
-                // Price cell renderer with monospace tabular-nums
-                const PriceCell: React.FC<{ value: number; colorClass?: string }> = ({ value, colorClass }) => {
-                  if (isHydrating) {
-                    return (
-                      <span className="inline-flex items-center gap-1 text-muted-text text-xs justify-end">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span className="text-[10px]">Fetching…</span>
-                      </span>
-                    );
-                  }
-                  if (hydFailed || value === 0) {
-                    return <span className="text-muted-text font-mono text-xs">—</span>;
-                  }
-                  return (
-                    <span className={cn('font-mono tabular-nums font-semibold text-[13px]', colorClass)}>
-                      ${value.toFixed(2)}
-                    </span>
-                  );
-                };
+              filteredAndSortedSignals.map((item) => {
+                const isSelected = selectedTicker?.toUpperCase() === item.ticker.toUpperCase();
+                const hyd = hydrationCache?.[item.ticker.toUpperCase()];
+                const isHydrating = hyd && (hyd.status === 'pending' || hyd.status === 'hydrating');
+                const hydFailed = hyd && hyd.status === 'failed';
+                const livePrice = (hyd?.quote?.currentPrice ?? 0) > 0 ? hyd!.quote!.currentPrice : item.currentPrice;
 
                 return (
                   <tr
-                    key={t.ticker}
-                    onClick={() => onSelectTrade(t)}
-                    className={cn(
-                      'cursor-pointer transition-colors group',
-                      isSelected
-                        ? 'bg-accent-long/10 border-l-2 border-l-accent-long'
-                        : 'hover:bg-surface-dark/70',
-                      isHydrating && 'opacity-75'
-                    )}
+                    key={item.id}
+                    onClick={() => handleRowClick(item)}
+                    className={`group cursor-pointer transition-colors hover:bg-[#151D2F] ${
+                      isSelected ? 'bg-cyan-950/20 border-l-2 border-l-cyan-400' : ''
+                    }`}
                   >
-                    {/* 1. Ticker & Company Name */}
-                    <td className="py-2.5 px-3 sm:px-4">
-                      <div className="flex flex-col truncate">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-foreground font-financial tracking-tight text-sm">
-                            {t.ticker}
-                          </span>
-                          <span className="text-[10px] px-1 py-0.2 rounded bg-surface-dark text-muted-text border border-border-subtle font-mono">
-                            {t.market}
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-muted-text truncate">
-                          {t.company_name || t.companyName || t.ticker}
+                    {/* Ticker & Company */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold tracking-tight text-slate-100">
+                          {item.ticker}
+                        </span>
+                        <span className="rounded bg-slate-800/80 px-1.5 py-0.2 text-[10px] text-slate-400">
+                          {item.setupTier}
                         </span>
                       </div>
-                    </td>
-
-                    {/* 2. Bias Badge */}
-                    <td className="py-2.5 px-2">
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border',
-                          isBullish &&
-                            'bg-emerald-950/40 text-emerald-400 border-emerald-500/30',
-                          isBearish &&
-                            'bg-rose-950/40 text-rose-400 border-rose-500/30',
-                          !isBullish &&
-                            !isBearish &&
-                            'bg-amber-950/40 text-amber-400 border-amber-500/30'
-                        )}
-                      >
-                        {isBullish && <ArrowUp className="h-3 w-3 stroke-[2.5]" />}
-                        {isBearish && <ArrowDown className="h-3 w-3 stroke-[2.5]" />}
-                        <span>{bias}</span>
-                      </span>
-                    </td>
-
-                    {/* 3. Conviction Score (Progress bar 1-10) */}
-                    <td className="py-2.5 px-3">
-                      <div className="flex flex-col gap-1 min-w-[90px]">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-mono tabular-nums font-bold text-foreground">
-                            {score.toFixed(1)}
-                            <span className="text-muted-text font-normal text-[10px]">/10</span>
-                          </span>
-                          <span
-                            className={cn(
-                              'text-[10px] font-semibold',
-                              score >= 8
-                                ? 'text-emerald-400'
-                                : score >= 6
-                                ? 'text-amber-400'
-                                : 'text-muted-text'
-                            )}
-                          >
-                            {score >= 8 ? 'STRONG' : score >= 6 ? 'MOD' : 'WEAK'}
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-surface-dark border border-border-subtle overflow-hidden">
-                          <div
-                            className={cn(
-                              'h-full rounded-full transition-all duration-300',
-                              score >= 8
-                                ? 'bg-emerald-400'
-                                : score >= 6
-                                ? 'bg-amber-400'
-                                : 'bg-rose-400'
-                            )}
-                            style={{ width: `${Math.min(100, Math.max(5, score * 10))}%` }}
-                          />
-                        </div>
+                      <div className="max-w-[140px] truncate text-[11px] text-slate-400">
+                        {item.companyName}
                       </div>
                     </td>
 
-                    {/* 4. Last Price (tabular-nums, right align) */}
-                    <td className="py-2.5 px-3 text-right">
+                    {/* Conviction Score */}
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {renderConvictionScore(item.convictionScore)}
+                    </td>
+
+                    {/* Market Bias */}
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {renderBiasBadge(item.bias)}
+                    </td>
+
+                    {/* Current Price */}
+                    <td className="px-3 py-3 text-right font-mono text-xs font-medium tabular-nums text-slate-100">
                       {isHydrating ? (
-                        <span className="inline-flex items-center gap-1 text-muted-text text-xs justify-end">
+                        <span className="inline-flex items-center gap-1 text-slate-500 text-[11px] justify-end">
                           <Loader2 className="h-3 w-3 animate-spin" />
-                          <span className="text-[10px]">Loading…</span>
+                          <span>Loading…</span>
                         </span>
-                      ) : hydFailed ? (
-                        <span className="inline-flex items-center gap-1 text-rose-400/80 text-[10px]" title={hydEntry?.error}>
+                      ) : hydFailed && livePrice === 0 ? (
+                        <span className="inline-flex items-center gap-1 text-rose-400/80 text-[10px]" title={hyd?.error}>
                           <AlertTriangle className="h-3 w-3" />
                           Offline
                         </span>
                       ) : (
-                        <span className="font-mono tabular-nums text-foreground font-semibold text-[13px]">
-                          ${currentPrice > 0 ? currentPrice.toFixed(2) : '—'}
-                        </span>
+                        `$${livePrice.toFixed(2)}`
                       )}
                     </td>
 
-                    {/* 5. Buy/Entry Zone */}
-                    <td className="py-2.5 px-3 text-right">
-                      <PriceCell value={entryPrice} colorClass="text-secondary-text" />
+                    {/* Entry Price */}
+                    <td className="px-3 py-3 text-right font-mono text-xs tabular-nums text-slate-300">
+                      ${item.entryPrice.toFixed(2)}
                     </td>
 
-                    {/* 6. Target */}
-                    <td className="py-2.5 px-3 text-right">
-                      <PriceCell value={takeProfit} colorClass="text-emerald-400 font-semibold" />
+                    {/* Target Price */}
+                    <td className="px-3 py-3 text-right font-mono text-xs tabular-nums text-emerald-400">
+                      ${item.targetPrice.toFixed(2)}
                     </td>
 
-                    {/* 7. Invalidation Stop */}
-                    <td className="py-2.5 px-3 text-right">
-                      <PriceCell value={stopLoss} colorClass="text-rose-400 font-semibold" />
+                    {/* Stop Loss */}
+                    <td className="px-3 py-3 text-right font-mono text-xs tabular-nums text-rose-400">
+                      ${item.stopLoss.toFixed(2)}
                     </td>
 
-                    {/* 8. Risk/Reward Ratio */}
-                    <td className="py-2.5 px-3 text-right">
-                      <span
-                        className={cn(
-                          'font-mono tabular-nums font-bold px-1.5 py-0.5 rounded text-[11px] inline-block',
-                          rr >= 2.0
-                            ? 'text-emerald-400 bg-emerald-950/40 border border-emerald-500/30'
-                            : rr >= 1.5
-                            ? 'text-amber-400 bg-amber-950/40'
-                            : 'text-muted-text bg-surface-dark'
-                        )}
-                      >
-                        1:{rr > 0 ? rr.toFixed(2) : '—'}
+                    {/* Risk-Reward Ratio */}
+                    <td className="px-3 py-3 text-right font-mono text-xs font-semibold tabular-nums text-slate-100">
+                      <span className={item.riskRewardRatio >= 2.0 ? 'text-emerald-400' : 'text-slate-300'}>
+                        1:{item.riskRewardRatio.toFixed(1)}
                       </span>
                     </td>
 
-                    {/* 9. Options Setup (CSP / CC) */}
-                    <td className="py-2.5 px-3">
-                      {optionsSetup ? (
-                        <div className="flex flex-col truncate">
-                          <div className="flex items-center gap-1">
-                            <span
-                              className={cn(
-                                'text-[10px] font-bold px-1 py-0.2 rounded font-mono',
-                                optionsSetup.strategy_type === 'CSP'
-                                  ? 'bg-emerald-950/50 text-emerald-300 border border-emerald-500/30'
-                                  : 'bg-indigo-950/50 text-indigo-300 border border-indigo-500/30'
-                              )}
-                            >
-                              {optionsSetup.strategy_type}
-                            </span>
-                            <span className="font-mono tabular-nums font-semibold text-foreground text-xs">
-                              ${optionsSetup.strike.toFixed(1)}
-                            </span>
-                            <span className="text-[10px] text-emerald-400 font-mono font-medium">
-                              {optionsSetup.annualized_yield_pct.toFixed(0)}% APY
-                            </span>
-                          </div>
-                          <span className="text-[10px] text-muted-text truncate font-mono">
-                            {optionsSetup.cushion_pct.toFixed(1)}% cushion • {optionsSetup.expiration}
-                          </span>
+                    {/* Catalyst / Options */}
+                    <td className="px-4 py-3">
+                      <div className="max-w-[280px] truncate text-xs text-slate-300">
+                        {item.primaryCatalyst}
+                      </div>
+                      {item.optionsStrategy && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          {item.optionsStrategy}
                         </div>
-                      ) : (
-                        <span className="text-muted-text font-mono text-[11px]">—</span>
                       )}
                     </td>
 
-                    {/* 10. Actions */}
-                    <td className="py-2.5 px-2 text-center">
-                      <button
+                    {/* Inspect CTA */}
+                    <td className="px-3 py-3 text-center">
+                      <button 
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onSelectTrade(t);
+                          handleRowClick(item);
                         }}
-                        className="h-7 w-7 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-dark text-muted-text hover:text-foreground hover:border-accent-long/40 transition-colors"
-                        title="Inspect Ticker Setup"
+                        className="rounded p-1 text-slate-500 group-hover:bg-slate-800 group-hover:text-cyan-400"
+                        title="Inspect Ticker"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </button>
@@ -677,32 +567,27 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
         </table>
       </div>
 
-      {/* Table Footer Stats Strip */}
-      <div className="p-2.5 px-4 bg-surface-dark/90 border-t border-border-subtle flex flex-wrap items-center justify-between gap-2 text-xs text-muted-text">
-        <div className="flex items-center gap-3">
-          <span className="font-medium text-secondary-text">
-            Showing <strong className="text-foreground font-mono tabular-nums">{sortedTrades.length}</strong> of{' '}
-            <span className="font-mono tabular-nums">{trades.length}</span> setups
-          </span>
-          <span className="hidden sm:inline text-border-subtle">|</span>
-          <span className="hidden sm:inline">
-            Click any row to open the 550px Ticker Inspector
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3 text-[11px] font-mono">
-          <span className="inline-flex items-center gap-1 text-emerald-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Bullish: {counts.bullish}
-          </span>
-          <span className="inline-flex items-center gap-1 text-indigo-400">
-            <Percent className="h-3 w-3" />
-            Options Yield Setups: {counts.options_income}
-          </span>
-        </div>
+      {/* Footer Meta */}
+      <div className="flex items-center justify-between border-t border-slate-800 px-4 py-2 text-[11px] text-slate-500">
+        <span>Displaying {filteredAndSortedSignals.length} of {baseSignals.length} trade models</span>
+        <span className="font-mono">Sort: {sortField} ({sortAscending ? 'ASC' : 'DESC'})</span>
       </div>
     </div>
   );
+};
+
+// Sort Direction Indicator Sub-component
+const SortIndicator: React.FC<{ 
+  field: SortableField; 
+  activeField: SortableField; 
+  ascending: boolean 
+}> = ({ field, activeField, ascending }) => {
+  if (field !== activeField) {
+    return <ArrowUpDown className="h-3 w-3 opacity-30 group-hover:opacity-100" />;
+  }
+  return ascending 
+    ? <ArrowUp className="h-3 w-3 text-cyan-400" /> 
+    : <ArrowDown className="h-3 w-3 text-cyan-400" />;
 };
 
 export default DecisionMatrix;
