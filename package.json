@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "web",
-    "apps/*"
+    "web"
   ],
   "description": "Options & Technical Volatility Screener for conservative weekly income (CSPs and Covered Calls)",
   "scripts": {
