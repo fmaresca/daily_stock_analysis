@@ -1,7 +1,7 @@
 import type React from 'react';
 import { lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { ApiErrorAlert, Shell } from './components/common';
+import { ApiErrorAlert, AppLayout } from './components/common';
 import {
   PageLoadingFallback,
   RouteOutletBoundary,
@@ -74,9 +74,9 @@ const AppContent: React.FC = () => {
     <Routes>
       <Route
         element={(
-          <Shell>
+          <AppLayout>
             <RouteOutletBoundary />
-          </Shell>
+          </AppLayout>
         )}
       >
         <Route path="/" element={<HomePage />} />

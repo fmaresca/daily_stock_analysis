@@ -17,6 +17,11 @@ from src.schemas.analysis_context_pack import (
     DataQuality,
 )
 from src.schemas.report_schema import AnalysisReportSchema
+from src.schemas.trade_setup import (
+    DailyDashboardPayload,
+    TradeSetup,
+    parse_llm_record_to_ui,
+)
 
 __all__ = [
     "AnalysisReportSchema",
@@ -27,4 +32,7 @@ __all__ = [
     "AnalysisSubject",
     "ContextFieldStatus",
     "DataQuality",
+    "TradeSetup",
+    "DailyDashboardPayload",
+    "parse_llm_record_to_ui",
 ]
