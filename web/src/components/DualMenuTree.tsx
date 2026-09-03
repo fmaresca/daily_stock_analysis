@@ -227,6 +227,42 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             </button>
 
             <button
+              onClick={() => onSelectOptionsTab('OPTION_CHAIN_MATRIX')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'OPTION_CHAIN_MATRIX'
+                  ? 'bg-cyan-600 text-white border-cyan-400 shadow-md shadow-cyan-600/30 ring-1 ring-cyan-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <Layers className="w-4 h-4 text-cyan-400" />
+              <span>Option Chain &amp; IV Smile</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('PMCC_SCREENER')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'PMCC_SCREENER'
+                  ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/30 ring-1 ring-purple-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4 text-purple-400" />
+              <span>Poor Man’s Covered Call (PMCC)</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('PORTFOLIO_MARGIN_SIM')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'PORTFOLIO_MARGIN_SIM'
+                  ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <Sliders className="w-4 h-4 text-indigo-400" />
+              <span>Portfolio Margin &amp; Stress Sim</span>
+            </button>
+
+            <button
               onClick={() => onSelectOptionsTab('VOLATILITY_SKEW')}
               className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeOptionsTab === 'VOLATILITY_SKEW'

@@ -402,12 +402,16 @@ export type OptionsTabType =
   | 'INCOME_SCREENER'
   | 'MULTI_LEG_SPREADS'
   | 'VOLATILITY_SKEW'
+  | 'OPTION_CHAIN_MATRIX'
+  | 'PMCC_SCREENER'
+  | 'PORTFOLIO_MARGIN_SIM'
   | 'EXPIRATION_CADENCE'
   | 'BACKTEST_MARGIN'
   | 'BROKER_STAGING'
   | 'DELTA_GREEKS'
   | 'TICKER_AUDIT'
   | 'INCOME_CALCULATOR';
+
 
 export interface WatchlistGroup {
   id: string;
