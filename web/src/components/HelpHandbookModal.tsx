@@ -1451,6 +1451,20 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     When short options face adverse price moves, DeltaHarvest enforces the <strong>0.50 Delta Rule</strong>: never permit an option to reach assignment without testing a defensive adjustment. The <strong>Defensive Rolling &amp; Repair Engine</strong> evaluates four institutional repair tactics: (1) <em>Roll Out &amp; Down</em> (extending expiration 21–28 days while dropping strike $5.00 for a net credit); (2) <em>Roll Flat</em> (extending time at the same strike to harvest maximum extrinsic value); (3) <em>Inverted Wing Defense</em> (selling an opposing credit spread to reduce maximum drawdown); and (4) <em>1:2 Ratio Stock Repair</em> (recovering underwater stock at zero net capital cost).
                   </p>
                 </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">How do Section 1256 Index Contracts and the Wash-Sale Shield optimize taxes?</div>
+                  <p className="text-xs text-slate-400">
+                    Under <strong>IRS Section 1256</strong>, all trading profits in broad index options (SPX, XSP, NDX, RUT) enjoy statutory 60/40 tax treatment: 60% is taxed at the lower long-term capital gains rate (20%) and 40% at short-term rates, generating an effective blended tax rate of ~26.8% vs. 37% for standard equity options. In addition, Section 1256 contracts settle in cash and are exempt from the 30-day wash-sale rule. The <strong>Wash-Sale Shield</strong> identifies underwater equity positions and suggests non-substantially identical replacement proxies (e.g. SPY &rarr; XSP) to bank immediate tax deductions while keeping continuous market exposure.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">What is the Executive Portfolio Health Digest &amp; Continuous Guardian?</div>
+                  <p className="text-xs text-slate-400">
+                    The <strong>Executive Portfolio Health Digest</strong> aggregates total Net Liquidity, Daily Theta Cashflow run-rate, SPY Beta Delta exposure, and Portfolio Margin (TIMS) capital savings into a unified C-suite dashboard with one-click <strong>Download Markdown</strong> and <strong>Print Executive PDF</strong> capabilities. In the background, the <strong>Continuous Risk Sweeper</strong> autonomously audits active positions against the 80% profit-taking threshold and 0.50 Delta defense trigger, issuing instant alerts to protect capital.
+                  </p>
+                </div>
               </div>
             </div>
           )}

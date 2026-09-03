@@ -13,6 +13,7 @@ import {
   Calculator,
   Zap,
   Award,
+  DollarSign,
 } from './icons';
 import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 
@@ -285,6 +286,30 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             >
               <ShieldCheck className="w-4 h-4 text-amber-400" />
               <span>Defensive Rolling &amp; Repair</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('TAX_ALPHA_OPTIMIZER')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'TAX_ALPHA_OPTIMIZER'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <DollarSign className="w-4 h-4 text-emerald-400" />
+              <span>Section 1256 Tax-Alpha &amp; Wash-Sale</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('EXECUTIVE_DIGEST')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'EXECUTIVE_DIGEST'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <Award className="w-4 h-4 text-blue-400" />
+              <span>Executive Portfolio Health Digest</span>
             </button>
 
             <button
