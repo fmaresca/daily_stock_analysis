@@ -8,14 +8,16 @@ import {
   Filter,
   Flame,
   Loader2,
+  Percent,
   Search,
+  SlidersHorizontal,
   TrendingUp,
 } from 'lucide-react';
 import type { TradeSetupItem } from '../../types/tradeSetup';
 import type { WatchlistQuoteEntry } from '../../types/marketData';
 import { cn } from '../../utils/cn';
 
-export type FilterPreset = 'all' | 'high_conviction' | 'bullish' | 'risk_alerts';
+export type FilterPreset = 'all' | 'high_conviction' | 'bullish' | 'options_income' | 'risk_alerts';
 export type SortField =
   | 'ticker'
   | 'bias'
@@ -78,7 +80,7 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
       if (q) {
         const tickerMatch = t.ticker.toLowerCase().includes(q);
         const nameMatch = (t.company_name || t.companyName || '').toLowerCase().includes(q);
-        const catalystMatch = t.catalyst.toLowerCase().includes(q);
+        const catalystMatch = (t.catalyst || '').toLowerCase().includes(q);
         if (!tickerMatch && !nameMatch && !catalystMatch) return false;
       }
 
@@ -94,6 +96,9 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
       }
       if (activeFilter === 'bullish') {
         return bias === 'BULLISH';
+      }
+      if (activeFilter === 'options_income') {
+        return Boolean(t.options_setup || t.optionsSetup);
       }
       if (activeFilter === 'risk_alerts') {
         return Boolean(hasRisks);
@@ -164,6 +169,7 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
       all: trades.length,
       high_conviction: trades.filter((t) => (t.conviction_score ?? t.convictionScore ?? 0) >= 8.0).length,
       bullish: trades.filter((t) => (t.bias || '').toUpperCase() === 'BULLISH').length,
+      options_income: trades.filter((t) => Boolean(t.options_setup || t.optionsSetup)).length,
       risk_alerts: trades.filter(
         (t) =>
           t.has_risk_alerts ||
@@ -191,20 +197,20 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
       )}
     >
       {/* Header & Controls Toolbar */}
-      <div className="p-3 sm:p-4 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card-dark/90">
+      <div className="p-3 sm:p-4 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card-dark">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-accent-long" />
-            <h2 className="text-sm font-semibold text-foreground tracking-tight uppercase">
+            <span className="h-2 w-2 rounded-full bg-accent-long animate-pulse" />
+            <h2 className="text-sm font-bold text-foreground tracking-tight uppercase font-financial">
               Executive Decision Matrix
             </h2>
-            <span className="text-[11px] font-financial px-1.5 py-0.5 rounded bg-surface-dark border border-border-subtle text-secondary-text inline-flex items-center gap-1">
+            <span className="text-[11px] font-mono tabular-nums px-1.5 py-0.5 rounded bg-surface-dark border border-border-subtle text-secondary-text inline-flex items-center gap-1">
               {isLoading ? <span className="h-1.5 w-1.5 rounded-full bg-accent-long animate-ping" /> : null}
               {sortedTrades.length} Setups
             </span>
           </div>
           <p className="text-xs text-muted-text">
-            High-density institutional trade setups with algorithmic risk/reward quantification.
+            High-density institutional trade matrix with automated options setups and risk/reward quantification.
           </p>
         </div>
 
@@ -216,59 +222,74 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
               type="button"
               onClick={() => setActiveFilter('all')}
               className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all',
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
                 activeFilter === 'all'
-                  ? 'bg-card-dark text-foreground shadow-sm border border-border-subtle/80'
+                  ? 'bg-card-dark text-foreground shadow-sm border border-border-subtle'
                   : 'text-muted-text hover:text-foreground'
               )}
             >
               <span>All</span>
-              <span className="text-[10px] opacity-70 font-financial">({counts.all})</span>
+              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.all})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveFilter('high_conviction')}
               className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all',
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
                 activeFilter === 'high_conviction'
-                  ? 'bg-card-dark text-accent-long shadow-sm border border-border-subtle/80'
+                  ? 'bg-card-dark text-accent-long shadow-sm border border-border-subtle'
                   : 'text-muted-text hover:text-foreground'
               )}
             >
               <Flame className="h-3 w-3 text-accent-long" />
-              <span>Conviction &gt; 8</span>
-              <span className="text-[10px] opacity-70 font-financial">({counts.high_conviction})</span>
+              <span>Conviction &ge; 8.0</span>
+              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.high_conviction})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveFilter('bullish')}
               className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all',
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
                 activeFilter === 'bullish'
-                  ? 'bg-card-dark text-accent-long shadow-sm border border-border-subtle/80'
+                  ? 'bg-card-dark text-accent-long shadow-sm border border-border-subtle'
                   : 'text-muted-text hover:text-foreground'
               )}
             >
               <TrendingUp className="h-3 w-3 text-accent-long" />
               <span>Bullish</span>
-              <span className="text-[10px] opacity-70 font-financial">({counts.bullish})</span>
+              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.bullish})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveFilter('options_income')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
+                activeFilter === 'options_income'
+                  ? 'bg-card-dark text-emerald-400 shadow-sm border border-border-subtle'
+                  : 'text-muted-text hover:text-foreground'
+              )}
+            >
+              <Percent className="h-3 w-3 text-emerald-400" />
+              <span>Options Income</span>
+              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.options_income})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveFilter('risk_alerts')}
               className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all',
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all text-[11px]',
                 activeFilter === 'risk_alerts'
-                  ? 'bg-card-dark text-accent-short shadow-sm border border-border-subtle/80'
+                  ? 'bg-card-dark text-accent-short shadow-sm border border-border-subtle'
                   : 'text-muted-text hover:text-foreground'
               )}
             >
               <AlertTriangle className="h-3 w-3 text-accent-short" />
               <span>Risk Alerts</span>
-              <span className="text-[10px] opacity-70 font-financial">({counts.risk_alerts})</span>
+              <span className="text-[10px] opacity-70 font-mono tabular-nums">({counts.risk_alerts})</span>
             </button>
           </div>
 
@@ -279,72 +300,87 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search ticker, name, catalyst..."
-              className="h-8 w-44 sm:w-56 rounded-lg border border-border-subtle bg-surface-dark pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-text focus:outline-none focus:border-border-subtle/90 focus:ring-1 focus:ring-accent-long/30 font-sans"
+              placeholder="Search ticker, company, catalyst..."
+              className="h-8 w-44 sm:w-56 rounded-lg border border-border-subtle bg-surface-dark pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-text focus:outline-none focus:border-border-subtle focus:ring-1 focus:ring-accent-long/30 font-sans"
             />
           </div>
         </div>
       </div>
 
-      {/* Decision Table */}
+      {/* Decision Table (table-fixed for zero layout shifts) */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full table-fixed text-left border-collapse min-w-[980px]">
+          {/* Explicit Column Width Allocation: Sums to 100% */}
+          <colgroup>
+            <col className="w-[15%]" />
+            <col className="w-[8%]" />
+            <col className="w-[12%]" />
+            <col className="w-[9%]" />
+            <col className="w-[9%]" />
+            <col className="w-[9%]" />
+            <col className="w-[9%]" />
+            <col className="w-[8%]" />
+            <col className="w-[16%]" />
+            <col className="w-[5%]" />
+          </colgroup>
           <thead>
-            <tr className="border-b border-border-subtle/80 bg-surface-dark/60 text-[11px] font-semibold text-muted-text tracking-wider uppercase">
+            <tr className="border-b border-border-subtle bg-surface-dark/90 text-[11px] font-semibold text-muted-text tracking-wider uppercase">
+              {/* 1. Ticker */}
               <th
                 onClick={() => handleSort('ticker')}
                 className="py-2.5 px-3 sm:px-4 cursor-pointer hover:text-foreground transition-colors group"
               >
                 <div className="flex items-center gap-1.5">
-                  <span>Ticker &amp; Asset</span>
+                  <span>Ticker</span>
                   {renderSortIcon('ticker')}
                 </div>
               </th>
+
+              {/* 2. Bias Badge */}
               <th
                 onClick={() => handleSort('bias')}
-                className="py-2.5 px-3 cursor-pointer hover:text-foreground transition-colors group"
+                className="py-2.5 px-2 cursor-pointer hover:text-foreground transition-colors group"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Bias</span>
                   {renderSortIcon('bias')}
                 </div>
               </th>
+
+              {/* 3. Conviction Score */}
               <th
                 onClick={() => handleSort('conviction')}
-                className="py-2.5 px-3 cursor-pointer hover:text-foreground transition-colors group min-w-[130px]"
+                className="py-2.5 px-3 cursor-pointer hover:text-foreground transition-colors group"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Conviction</span>
                   {renderSortIcon('conviction')}
                 </div>
               </th>
+
+              {/* 4. Last Price */}
               <th
                 onClick={() => handleSort('price')}
                 className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
               >
                 <div className="flex items-center justify-end gap-1.5">
-                  <span>Price</span>
+                  <span>Last Price</span>
                   {renderSortIcon('price')}
                 </div>
               </th>
+
+              {/* 5. Buy/Entry Zone */}
               <th
                 onClick={() => handleSort('entry')}
                 className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
               >
                 <div className="flex items-center justify-end gap-1.5">
-                  <span>Entry</span>
+                  <span>Entry Zone</span>
                   {renderSortIcon('entry')}
                 </div>
               </th>
-              <th
-                onClick={() => handleSort('stop')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
-              >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Stop Loss</span>
-                  {renderSortIcon('stop')}
-                </div>
-              </th>
+
+              {/* 6. Target */}
               <th
                 onClick={() => handleSort('target')}
                 className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
@@ -354,6 +390,19 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                   {renderSortIcon('target')}
                 </div>
               </th>
+
+              {/* 7. Invalidation Stop */}
+              <th
+                onClick={() => handleSort('stop')}
+                className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
+              >
+                <div className="flex items-center justify-end gap-1.5">
+                  <span>Inval. Stop</span>
+                  {renderSortIcon('stop')}
+                </div>
+              </th>
+
+              {/* 8. Risk/Reward Ratio */}
               <th
                 onClick={() => handleSort('rr')}
                 className="py-2.5 px-3 text-right cursor-pointer hover:text-foreground transition-colors group"
@@ -363,25 +412,29 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                   {renderSortIcon('rr')}
                 </div>
               </th>
-              <th className="py-2.5 px-3 sm:px-4">Primary Catalyst &amp; Grade</th>
-              <th className="py-2.5 px-2 text-center w-8" />
+
+              {/* 9. Options Setup (CSP / CC) */}
+              <th className="py-2.5 px-3">Options Setup</th>
+
+              {/* 10. Actions */}
+              <th className="py-2.5 px-2 text-center">Inspect</th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-border-subtle/60 text-xs">
+          <tbody className="divide-y divide-border-subtle text-xs font-sans">
             {sortedTrades.length === 0 ? (
               <tr>
                 <td colSpan={10} className="py-12 text-center text-muted-text">
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <Filter className="h-6 w-6 text-muted-text/50" />
-                    <span className="font-medium">No trade setups match the selected criteria.</span>
+                    <Filter className="h-6 w-6 stroke-[1.5] text-muted-text/60" />
+                    <span className="text-sm font-medium">No trade setups match the active filters</span>
                     <button
                       type="button"
                       onClick={() => {
                         setActiveFilter('all');
                         setSearchQuery('');
                       }}
-                      className="text-xs text-accent-long hover:underline font-medium mt-1"
+                      className="text-xs text-accent-long hover:underline mt-1"
                     >
                       Reset filters
                     </button>
@@ -409,33 +462,27 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                 // Apply QC gate: skip row if hard-blocking is enabled and data isn't ready
                 if (hideUnhydrated && isHydrating) return null;
 
-                const grade =
-                  t.setup_grade ||
-                  t.setupGrade ||
-                  (score >= 8 && rr >= 2
-                    ? 'Tier 1 (High Conviction)'
-                    : score >= 6.5 && rr >= 1.5
-                    ? 'Tier 2 (Actionable)'
-                    : 'Tier 3 (Watch Only)');
-
                 const isBullish = bias === 'BULLISH';
                 const isBearish = bias === 'BEARISH';
 
-                // Price cell renderers
+                // Derived options setup
+                const optionsSetup = t.options_setup || t.optionsSetup;
+
+                // Price cell renderer with monospace tabular-nums
                 const PriceCell: React.FC<{ value: number; colorClass?: string }> = ({ value, colorClass }) => {
                   if (isHydrating) {
                     return (
-                      <span className="inline-flex items-center gap-1 text-muted-text text-xs">
+                      <span className="inline-flex items-center gap-1 text-muted-text text-xs justify-end">
                         <Loader2 className="h-3 w-3 animate-spin" />
                         <span className="text-[10px]">Fetching…</span>
                       </span>
                     );
                   }
                   if (hydFailed || value === 0) {
-                    return <span className="text-muted-text font-financial text-xs">—</span>;
+                    return <span className="text-muted-text font-mono text-xs">—</span>;
                   }
                   return (
-                    <span className={cn('font-financial font-semibold text-[13px]', colorClass)}>
+                    <span className={cn('font-mono tabular-nums font-semibold text-[13px]', colorClass)}>
                       ${value.toFixed(2)}
                     </span>
                   );
@@ -453,9 +500,9 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                       isHydrating && 'opacity-75'
                     )}
                   >
-                    {/* Ticker & Company */}
-                    <td className="py-3 px-3 sm:px-4">
-                      <div className="flex flex-col">
+                    {/* 1. Ticker & Company Name */}
+                    <td className="py-2.5 px-3 sm:px-4">
+                      <div className="flex flex-col truncate">
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-foreground font-financial tracking-tight text-sm">
                             {t.ticker}
@@ -464,24 +511,24 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                             {t.market}
                           </span>
                         </div>
-                        <span className="text-[11px] text-muted-text truncate max-w-[140px] sm:max-w-[180px]">
+                        <span className="text-[11px] text-muted-text truncate">
                           {t.company_name || t.companyName || t.ticker}
                         </span>
                       </div>
                     </td>
 
-                    {/* Market Bias Badge */}
-                    <td className="py-3 px-3">
+                    {/* 2. Bias Badge */}
+                    <td className="py-2.5 px-2">
                       <span
                         className={cn(
-                          'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border',
+                          'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border',
                           isBullish &&
-                            'bg-accent-long/15 text-accent-long border-accent-long/30',
+                            'bg-emerald-950/40 text-emerald-400 border-emerald-500/30',
                           isBearish &&
-                            'bg-accent-short/15 text-accent-short border-accent-short/30',
+                            'bg-rose-950/40 text-rose-400 border-rose-500/30',
                           !isBullish &&
                             !isBearish &&
-                            'bg-accent-neutral/15 text-accent-neutral border-accent-neutral/30'
+                            'bg-amber-950/40 text-amber-400 border-amber-500/30'
                         )}
                       >
                         {isBullish && <ArrowUp className="h-3 w-3 stroke-[2.5]" />}
@@ -490,36 +537,36 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                       </span>
                     </td>
 
-                    {/* Conviction Score & Mini Progress Bar */}
-                    <td className="py-3 px-3">
-                      <div className="flex flex-col gap-1 min-w-[110px]">
+                    {/* 3. Conviction Score (Progress bar 1-10) */}
+                    <td className="py-2.5 px-3">
+                      <div className="flex flex-col gap-1 min-w-[90px]">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-financial font-bold text-foreground">
+                          <span className="font-mono tabular-nums font-bold text-foreground">
                             {score.toFixed(1)}
-                            <span className="text-muted-text font-normal">/10</span>
+                            <span className="text-muted-text font-normal text-[10px]">/10</span>
                           </span>
                           <span
                             className={cn(
                               'text-[10px] font-semibold',
                               score >= 8
-                                ? 'text-accent-long'
+                                ? 'text-emerald-400'
                                 : score >= 6
-                                ? 'text-accent-neutral'
+                                ? 'text-amber-400'
                                 : 'text-muted-text'
                             )}
                           >
-                            {score >= 8 ? 'STRONG' : score >= 6 ? 'MODERATE' : 'WEAK'}
+                            {score >= 8 ? 'STRONG' : score >= 6 ? 'MOD' : 'WEAK'}
                           </span>
                         </div>
-                        <div className="h-1.5 w-full rounded-full bg-surface-dark border border-border-subtle/80 overflow-hidden">
+                        <div className="h-1.5 w-full rounded-full bg-surface-dark border border-border-subtle overflow-hidden">
                           <div
                             className={cn(
                               'h-full rounded-full transition-all duration-300',
                               score >= 8
-                                ? 'bg-accent-long'
+                                ? 'bg-emerald-400'
                                 : score >= 6
-                                ? 'bg-accent-neutral'
-                                : 'bg-accent-short'
+                                ? 'bg-amber-400'
+                                : 'bg-rose-400'
                             )}
                             style={{ width: `${Math.min(100, Math.max(5, score * 10))}%` }}
                           />
@@ -527,49 +574,49 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                       </div>
                     </td>
 
-                    {/* Current Price */}
-                    <td className="py-3 px-3 text-right">
+                    {/* 4. Last Price (tabular-nums, right align) */}
+                    <td className="py-2.5 px-3 text-right">
                       {isHydrating ? (
                         <span className="inline-flex items-center gap-1 text-muted-text text-xs justify-end">
                           <Loader2 className="h-3 w-3 animate-spin" />
                           <span className="text-[10px]">Loading…</span>
                         </span>
                       ) : hydFailed ? (
-                        <span className="inline-flex items-center gap-1 text-accent-short/70 text-[10px]" title={hydEntry?.error}>
+                        <span className="inline-flex items-center gap-1 text-rose-400/80 text-[10px]" title={hydEntry?.error}>
                           <AlertTriangle className="h-3 w-3" />
-                          No data
+                          Offline
                         </span>
                       ) : (
-                        <span className="font-financial text-foreground font-semibold text-[13px]">
+                        <span className="font-mono tabular-nums text-foreground font-semibold text-[13px]">
                           ${currentPrice > 0 ? currentPrice.toFixed(2) : '—'}
                         </span>
                       )}
                     </td>
 
-                    {/* Entry Target */}
-                    <td className="py-3 px-3 text-right">
+                    {/* 5. Buy/Entry Zone */}
+                    <td className="py-2.5 px-3 text-right">
                       <PriceCell value={entryPrice} colorClass="text-secondary-text" />
                     </td>
 
-                    {/* Stop Loss */}
-                    <td className="py-3 px-3 text-right">
-                      <PriceCell value={stopLoss} colorClass="text-accent-short" />
+                    {/* 6. Target */}
+                    <td className="py-2.5 px-3 text-right">
+                      <PriceCell value={takeProfit} colorClass="text-emerald-400 font-semibold" />
                     </td>
 
-                    {/* Profit Target */}
-                    <td className="py-3 px-3 text-right">
-                      <PriceCell value={takeProfit} colorClass="text-accent-long" />
+                    {/* 7. Invalidation Stop */}
+                    <td className="py-2.5 px-3 text-right">
+                      <PriceCell value={stopLoss} colorClass="text-rose-400 font-semibold" />
                     </td>
 
-                    {/* Risk/Reward Ratio */}
-                    <td className="py-3 px-3 text-right">
+                    {/* 8. Risk/Reward Ratio */}
+                    <td className="py-2.5 px-3 text-right">
                       <span
                         className={cn(
-                          'font-financial font-bold px-1.5 py-0.5 rounded text-[11px]',
+                          'font-mono tabular-nums font-bold px-1.5 py-0.5 rounded text-[11px] inline-block',
                           rr >= 2.0
-                            ? 'text-accent-long bg-accent-long/10 border border-accent-long/20'
+                            ? 'text-emerald-400 bg-emerald-950/40 border border-emerald-500/30'
                             : rr >= 1.5
-                            ? 'text-accent-neutral bg-accent-neutral/10'
+                            ? 'text-amber-400 bg-amber-950/40'
                             : 'text-muted-text bg-surface-dark'
                         )}
                       >
@@ -577,32 +624,50 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
                       </span>
                     </td>
 
-                    {/* Primary Catalyst & Setup Grade */}
-                    <td className="py-3 px-3 sm:px-4 max-w-[220px]">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-foreground text-xs font-medium truncate" title={t.catalyst}>
-                          {t.catalyst}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={cn(
-                              'text-[10px] font-semibold px-1.5 py-0.2 rounded font-sans',
-                              grade.includes('Tier 1')
-                                ? 'text-accent-long bg-accent-long/10 border border-accent-long/30'
-                                : grade.includes('Tier 2')
-                                ? 'text-accent-neutral bg-accent-neutral/10 border border-accent-neutral/30'
-                                : 'text-muted-text bg-surface-dark border border-border-subtle'
-                            )}
-                          >
-                            {grade}
+                    {/* 9. Options Setup (CSP / CC) */}
+                    <td className="py-2.5 px-3">
+                      {optionsSetup ? (
+                        <div className="flex flex-col truncate">
+                          <div className="flex items-center gap-1">
+                            <span
+                              className={cn(
+                                'text-[10px] font-bold px-1 py-0.2 rounded font-mono',
+                                optionsSetup.strategy_type === 'CSP'
+                                  ? 'bg-emerald-950/50 text-emerald-300 border border-emerald-500/30'
+                                  : 'bg-indigo-950/50 text-indigo-300 border border-indigo-500/30'
+                              )}
+                            >
+                              {optionsSetup.strategy_type}
+                            </span>
+                            <span className="font-mono tabular-nums font-semibold text-foreground text-xs">
+                              ${optionsSetup.strike.toFixed(1)}
+                            </span>
+                            <span className="text-[10px] text-emerald-400 font-mono font-medium">
+                              {optionsSetup.annualized_yield_pct.toFixed(0)}% APY
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-muted-text truncate font-mono">
+                            {optionsSetup.cushion_pct.toFixed(1)}% cushion • {optionsSetup.expiration}
                           </span>
                         </div>
-                      </div>
+                      ) : (
+                        <span className="text-muted-text font-mono text-[11px]">—</span>
+                      )}
                     </td>
 
-                    {/* Arrow Indicator */}
-                    <td className="py-3 px-2 text-center">
-                      <ChevronRight className="h-4 w-4 text-muted-text group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+                    {/* 10. Actions */}
+                    <td className="py-2.5 px-2 text-center">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectTrade(t);
+                        }}
+                        className="h-7 w-7 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-dark text-muted-text hover:text-foreground hover:border-accent-long/40 transition-colors"
+                        title="Inspect Ticker Setup"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 );
@@ -611,6 +676,33 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Table Footer Stats Strip */}
+      <div className="p-2.5 px-4 bg-surface-dark/90 border-t border-border-subtle flex flex-wrap items-center justify-between gap-2 text-xs text-muted-text">
+        <div className="flex items-center gap-3">
+          <span className="font-medium text-secondary-text">
+            Showing <strong className="text-foreground font-mono tabular-nums">{sortedTrades.length}</strong> of{' '}
+            <span className="font-mono tabular-nums">{trades.length}</span> setups
+          </span>
+          <span className="hidden sm:inline text-border-subtle">|</span>
+          <span className="hidden sm:inline">
+            Click any row to open the 550px Ticker Inspector
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3 text-[11px] font-mono">
+          <span className="inline-flex items-center gap-1 text-emerald-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Bullish: {counts.bullish}
+          </span>
+          <span className="inline-flex items-center gap-1 text-indigo-400">
+            <Percent className="h-3 w-3" />
+            Options Yield Setups: {counts.options_income}
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
+
+export default DecisionMatrix;

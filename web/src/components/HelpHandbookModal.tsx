@@ -1369,6 +1369,13 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Frequently Asked Questions
                 </h4>
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">How does the Koyfin / TradingView Institutional Terminal Architecture work?</div>
+                  <p className="text-xs text-slate-400">
+                    The platform is engineered as a high-density institutional workstation: (1) <strong>Top Macro Bar</strong> features real-time macro tape tracking SPY, QQQ, DIA, IWM, and VIX with dynamic percentage change badges, live NYSE trading status (OPEN/CLOSED), and data sync clocks; (2) <strong>Collapsible Left Command Rail</strong> provides quick access to Signals Matrix, Watchlists, Options Income Scanner, Archive &amp; Backtests, and Settings &amp; API Keys; (3) <strong>Executive Decision Matrix</strong> utilizes a <code>table-fixed</code> zero-shift layout with 10 explicit dimensions including options setups (CSP / CC annualized yield) and monospace tabular numbers; (4) <strong>550px Slide-Over Ticker Inspector</strong> provides deep dive with 50-day TradingView candlestick charts, Entry/Target/Stop horizontal overlays, structured Bull/Bear/Catalyst thesis, and actionable options bracket protocols.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">How does Automated Watchlist Hydration &amp; Screener Quality Control work?</div>
                   <p className="text-xs text-slate-400">
                     Immediately upon adding any symbol (e.g. <code>EOSE</code>) to a watchlist, DeltaHarvest automatically triggers a background hydration pipeline: (1) Fetches real-time price, volume, and percentage change via the quote API; (2) Retrieves 50-day daily OHLCV history; (3) Dynamically derives 20 EMA, 50 EMA, 14-period RSI, and 14-period ATR; (4) Enforces a strict <strong>Quality Control Gate</strong> in the Decision Matrix screener displaying a live "Fetching..." indicator until confirmed data is ready, completely eliminating placeholder default prices ($100.00) or missing technicals.

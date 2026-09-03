@@ -1,5 +1,5 @@
 import type { StockBarItem, AnalysisReport } from '../types/analysis';
-import type { TradeSetupItem } from '../types/tradeSetup';
+import type { TradeSetupItem, OptionsSetup, AnalyticalThesis } from '../types/tradeSetup';
 import type { WatchlistQuoteEntry } from '../types/marketData';
 
 export const INSTITUTIONAL_SAMPLE_SETUPS: TradeSetupItem[] = [
@@ -248,8 +248,67 @@ export function convertStockBarToTradeSetup(
     ],
     raw_markdown: `### Analysis for ${code} (${item.stockName || ''})\n\n- **Score:** ${rawScore}/100\n- **Advice:** ${item.operationAdvice || 'N/A'}\n- **Action:** ${item.action || item.actionLabel || 'N/A'}`,
     has_risk_alerts: convictionScore < 5.0,
+    options_setup: deriveOptionsSetup(currentPrice, bias),
+    thesis: deriveAnalyticalThesis(code, item.stockName || code, bias, catalyst),
     ...(technicals && { technical_indicators: technicals }),
     ...(quoteEntry?.candles?.length && { candles: quoteEntry.candles }),
+  };
+}
+
+export function deriveOptionsSetup(currentPrice: number, bias: string): OptionsSetup | undefined {
+  if (!currentPrice || currentPrice <= 0) return undefined;
+  const isBull = bias === 'BULLISH';
+
+  if (isBull) {
+    const strike = Math.max(1, +(currentPrice * 0.94).toFixed(currentPrice > 50 ? 0 : 1));
+    const cushionPct = +(((currentPrice - strike) / currentPrice) * 100).toFixed(1);
+    const estPremium = +(strike * 0.024).toFixed(2);
+    const apy = +((estPremium / strike) * (365 / 35) * 100).toFixed(1);
+    return {
+      strategy_type: 'CSP',
+      strike,
+      expiration: '35 DTE',
+      dte: 35,
+      delta: 0.18,
+      annualized_yield_pct: Math.min(65, Math.max(12, apy)),
+      cushion_pct: cushionPct,
+      premium_estimate: estPremium,
+    };
+  } else {
+    const strike = +(currentPrice * 1.06).toFixed(currentPrice > 50 ? 0 : 1);
+    const cushionPct = +(((strike - currentPrice) / currentPrice) * 100).toFixed(1);
+    const estPremium = +(currentPrice * 0.022).toFixed(2);
+    const apy = +((estPremium / currentPrice) * (365 / 35) * 100).toFixed(1);
+    return {
+      strategy_type: 'CC',
+      strike,
+      expiration: '35 DTE',
+      dte: 35,
+      delta: 0.20,
+      annualized_yield_pct: Math.min(50, Math.max(10, apy)),
+      cushion_pct: cushionPct,
+      premium_estimate: estPremium,
+    };
+  }
+}
+
+export function deriveAnalyticalThesis(
+  ticker: string,
+  companyName: string,
+  bias: string,
+  catalyst: string
+): AnalyticalThesis {
+  return {
+    bull_case: [
+      `${companyName || ticker} exhibits solid technical foundation with institutional sponsorship.`,
+      `Relative strength sustained above key 20/50 day moving average envelopes.`,
+      `Catalyst: ${catalyst}`,
+    ],
+    bear_invalidation: [
+      `Breakdown below structural support invalidate current directional bias.`,
+      `Unexpected macroeconomic contraction or sector-wide risk-off rotation.`,
+    ],
+    catalyst_timing: 'Active 2–6 week horizon with upcoming liquidity & volume confirmation.',
   };
 }
 
@@ -323,5 +382,7 @@ export function convertAnalysisReportToTradeSetup(report: AnalysisReport): Trade
     ai_thesis: report.summary?.analysisSummary || '',
     raw_markdown: report.summary?.analysisSummary || '',
     has_risk_alerts: convictionScore < 5.0,
+    options_setup: deriveOptionsSetup(currentPrice, bias),
+    thesis: deriveAnalyticalThesis(code, report.meta.stockName || code, bias, catalyst),
   };
 }

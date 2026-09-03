@@ -8,7 +8,7 @@ import { historyApi } from '../api/history';
 import { agentApi, type SkillInfo } from '../api/agent';
 import { systemConfigApi } from '../api/systemConfig';
 import { ApiErrorAlert, Button, Drawer, EmptyState, InlineAlert } from '../components/common';
-import { DashboardStateBlock, DecisionMatrix, StockDetailDrawer } from '../components/dashboard';
+import { DashboardStateBlock, DecisionMatrix, TickerDrawer } from '../components/dashboard';
 import type { TradeSetupItem } from '../types/tradeSetup';
 import {
   INSTITUTIONAL_SAMPLE_SETUPS,
@@ -1937,7 +1937,7 @@ const HomePage: React.FC = () => {
         </Drawer>
       ) : null}
 
-      <StockDetailDrawer
+      <TickerDrawer
         trade={selectedDrawerTrade}
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}

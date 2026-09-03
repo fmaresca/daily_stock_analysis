@@ -91,15 +91,17 @@ export default {
         'surface-3': 'var(--surface-3)',
         'overlay-hover': 'var(--overlay-hover)',
         'overlay-selected': 'var(--overlay-selected)',
-        // Institutional Dark Slate Theme Tokens
-        'bg-surface-dark': '#0B0F17',
-        'surface-dark': '#0B0F17',
-        'bg-card-dark': '#111827',
-        'card-dark': '#111827',
-        'border-subtle': '#1F2937',
+        // Institutional Dark Slate Theme Tokens (Koyfin / TradingView style)
+        'bg-surface-dark': '#080B10',
+        'surface-dark': '#080B10',
+        'bg-card-dark': '#0F172A',
+        'card-dark': '#0F172A',
+        'border-subtle': '#1E293B',
         'accent-long': '#10B981',
         'accent-short': '#F43F5E',
         'accent-neutral': '#F59E0B',
+        'text-primary': '#F8FAFC',
+        'text-muted': '#94A3B8',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
