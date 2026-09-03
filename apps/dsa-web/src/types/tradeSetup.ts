@@ -7,6 +7,23 @@ export interface CandleData {
   volume?: number;
 }
 
+export interface OptionsSetup {
+  strategy_type: 'CSP' | 'CC' | string;
+  strike: number;
+  expiration: string;
+  dte: number;
+  delta: number;
+  annualized_yield_pct: number;
+  cushion_pct: number;
+  premium_estimate: number;
+}
+
+export interface AnalyticalThesis {
+  bull_case: string[];
+  bear_invalidation: string[];
+  catalyst_timing: string;
+}
+
 export interface TradeSetupItem {
   ticker: string;
   company_name?: string | null;
@@ -39,6 +56,9 @@ export interface TradeSetupItem {
   technical_indicators?: Record<string, string | number>;
   ai_thesis?: string;
   has_risk_alerts?: boolean;
+  options_setup?: OptionsSetup;
+  optionsSetup?: OptionsSetup;
+  thesis?: AnalyticalThesis;
 }
 
 export interface DailyDashboardPayload {

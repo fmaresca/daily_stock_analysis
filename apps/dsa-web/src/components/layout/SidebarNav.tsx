@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
 import {
   Activity,
   BarChart3,
   Bell,
   Gauge,
+  History,
+  Layers,
   LayoutDashboard,
   LineChart,
   ListOrdered,
   LogOut,
   MessageSquareCode,
+  Percent,
   Settings,
+  Sliders,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { SCREENING_CONFIG_CHANGED_EVENT, SYSTEM_CONFIG_CHANGED_EVENT, screeningApi } from '../../api/screening';
@@ -31,6 +34,15 @@ type SidebarNavProps = {
 
 type NavItem = {
   key: string;
+  label: string;
+  to: string;
+  icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
+  badge?: 'completion';
+};
+
+type DefaultNavItem = {
+  key: string;
   labelKey: UiTextKey;
   to: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -38,11 +50,19 @@ type NavItem = {
   badge?: 'completion';
 };
 
-const NAV_ITEMS: NavItem[] = [
+const COMMAND_NAV_ITEMS: NavItem[] = [
+  { key: 'matrix', label: 'Signals Matrix', to: '/', icon: LayoutDashboard, exact: true },
+  { key: 'watchlists', label: 'Watchlists', to: '/?tab=watchlist', icon: Layers },
+  { key: 'options', label: 'Options Income Scanner', to: '/screening', icon: Percent },
+  { key: 'archive', label: 'Archive & Backtests', to: '/backtest', icon: History },
+  { key: 'settings', label: 'Settings & API Keys', to: '/settings', icon: Sliders },
+];
+
+const DEFAULT_NAV_ITEMS: DefaultNavItem[] = [
   { key: 'home', labelKey: 'layout.nav.home', to: '/', icon: LayoutDashboard, exact: true },
+  { key: 'chat', labelKey: 'layout.nav.chat', to: '/chat', icon: MessageSquareCode, badge: 'completion' },
   { key: 'screening', labelKey: 'layout.nav.screening', to: '/screening', icon: ListOrdered },
   { key: 'portfolio', labelKey: 'layout.nav.portfolio', to: '/portfolio', icon: LineChart },
-  { key: 'chat', labelKey: 'layout.nav.chat', to: '/chat', icon: MessageSquareCode, badge: 'completion' },
   { key: 'decision-signals', labelKey: 'layout.nav.decisionSignals', to: '/decision-signals', icon: Activity },
   { key: 'backtest', labelKey: 'layout.nav.backtest', to: '/backtest', icon: BarChart3 },
   { key: 'alerts', labelKey: 'layout.nav.alerts', to: '/alerts', icon: Bell },
@@ -84,56 +104,64 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ collapsed = false, onNav
     };
   }, []);
 
-  const navItems = showScreeningNav ? NAV_ITEMS : NAV_ITEMS.filter((item) => item.key !== 'screening');
   const isRail = variant === 'rail';
+
+  const defaultItems = showScreeningNav
+    ? DEFAULT_NAV_ITEMS
+    : DEFAULT_NAV_ITEMS.filter((item) => item.key !== 'screening');
+
+  const itemsToRender = isRail
+    ? COMMAND_NAV_ITEMS.map((c) => ({ ...c, displayLabel: c.label }))
+    : defaultItems.map((d) => ({
+        key: d.key,
+        to: d.to,
+        icon: d.icon,
+        exact: d.exact,
+        badge: d.badge,
+        displayLabel: t(d.labelKey),
+      }));
+
   const itemBaseClass = cn(
-    'group relative flex h-[var(--nav-item-height)] w-full items-center overflow-hidden rounded-2xl border border-transparent text-sm leading-none text-secondary-text transition-all',
+    'group/item relative flex h-10 w-full items-center rounded-xl border border-transparent text-xs font-medium text-secondary-text transition-all',
     isRail
-      ? 'justify-center gap-2.5 px-2'
+      ? 'px-2.5 justify-start gap-3'
       : collapsed
         ? 'justify-center px-0'
-        : 'gap-3 px-[var(--nav-item-padding-x)]'
+        : 'gap-3 px-3'
   );
   const itemInteractiveClass = cn(
     itemBaseClass,
-    'hover:bg-[var(--nav-hover-bg)] hover:text-foreground'
+    'hover:bg-surface-dark hover:text-foreground hover:border-border-subtle'
   );
-  const itemActiveClass = 'border-[var(--nav-active-border)] bg-[var(--nav-active-bg)] font-medium text-[hsl(var(--primary))]';
-  const itemIconClass = cn(isRail ? 'h-[18px] w-[18px]' : 'h-5 w-5', 'shrink-0');
-  const itemLabelClass = cn('truncate', isRail ? 'text-center' : '');
+  const itemActiveClass = 'border-border-subtle bg-surface-dark font-semibold text-accent-long shadow-sm';
+  const itemIconClass = 'h-4 w-4 shrink-0';
 
   return (
     <div className="flex h-full flex-col">
       <div
         className={cn(
-          'flex items-center',
-          isRail ? 'mb-5 justify-center gap-2 pt-1' : 'mb-4 gap-2 px-1',
-          collapsed || isRail ? 'justify-center' : ''
+          'flex items-center gap-2.5 mb-4',
+          isRail ? 'px-1 pt-1' : 'px-1',
+          collapsed ? 'justify-center' : ''
         )}
       >
-        <div
-          className={cn(
-            'flex items-center justify-center bg-primary-gradient text-[hsl(var(--primary-foreground))] shadow-[0_12px_28px_var(--nav-brand-shadow)]',
-            isRail ? 'h-9 w-9 rounded-[1rem]' : 'h-10 w-10 rounded-2xl'
-          )}
-        >
-          <BarChart3 className={cn(isRail ? 'h-[19px] w-[19px]' : 'h-5 w-5')} />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+          <BarChart3 className="h-4 w-4" />
         </div>
-        {!collapsed ? (
-          <p className={cn('min-w-0 truncate font-semibold text-foreground', isRail ? 'text-[0.95rem] leading-none' : 'text-sm')}>DSA</p>
-        ) : null}
+        <div className={cn('min-w-0 transition-opacity duration-200', isRail ? 'opacity-0 group-hover/sidebar:opacity-100' : '')}>
+          <p className="font-bold text-foreground text-xs tracking-wider uppercase font-financial">Koyfin Terminal</p>
+        </div>
       </div>
 
       <nav className={cn('flex flex-col gap-1.5', isRail ? '' : 'flex-1')} aria-label={t('layout.mainNav')}>
-        {navItems.map(({ key, labelKey, to, icon: Icon, exact, badge }) => {
-          const label = t(labelKey);
-          return (
+        {itemsToRender.map(({ key, displayLabel, to, icon: Icon, exact, badge }) => (
           <NavLink
             key={key}
             to={to}
             end={exact}
             onClick={onNavigate}
-            aria-label={label}
+            aria-label={displayLabel}
+            title={displayLabel}
             className={({ isActive }) =>
               cn(
                 itemInteractiveClass,
@@ -143,24 +171,27 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ collapsed = false, onNav
           >
             {({ isActive }) => (
               <>
-                <Icon className={cn(itemIconClass, isActive ? 'text-[var(--nav-icon-active)]' : 'text-current')} />
-                {!collapsed ? <span className={itemLabelClass}>{label}</span> : null}
+                <Icon className={cn(itemIconClass, isActive ? 'text-accent-long' : 'text-muted-text group-hover/item:text-foreground')} />
+                <span
+                  className={cn(
+                    'truncate font-medium transition-opacity duration-200',
+                    isRail ? 'opacity-0 group-hover/sidebar:opacity-100 whitespace-nowrap overflow-hidden' : ''
+                  )}
+                >
+                  {displayLabel}
+                </span>
                 {badge === 'completion' && completionBadge ? (
                   <StatusDot
                     tone="info"
                     data-testid="chat-completion-badge"
-                    className={cn(
-                      'absolute right-3 border-2 border-background shadow-[0_0_10px_var(--nav-indicator-shadow)]',
-                      collapsed ? 'right-2 top-2' : ''
-                    )}
+                    className="absolute right-3 border-2 border-background"
                     aria-label={t('layout.newChatMessage')}
                   />
                 ) : null}
               </>
             )}
           </NavLink>
-        );
-        })}
+        ))}
 
         <ThemeToggle
           variant={isRail ? 'rail' : 'nav'}

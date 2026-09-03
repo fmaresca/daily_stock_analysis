@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 import { Drawer } from '../common/Drawer';
 import { SidebarNav } from './SidebarNav';
-import { TopMarketBar } from './TopMarketBar';
+import { TopMacroBar } from './TopMacroBar';
 import { DesktopUpdateIndicator } from './DesktopUpdateIndicator';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import { UiLanguageToggle } from '../i18n/UiLanguageToggle';
@@ -16,7 +16,6 @@ interface AppLayoutProps {
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const { t } = useUiLanguage();
 
   useEffect(() => {
@@ -34,43 +33,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-surface-dark text-foreground flex flex-col font-sans antialiased selection:bg-accent-long/20 selection:text-accent-long">
-      {/* Persistent Top Macro Strip */}
-      <TopMarketBar />
+      {/* Persistent Top Macro Strip (h-10 fixed at top) */}
+      <TopMacroBar />
 
       <div className="flex flex-1 min-h-0 relative">
-        {/* Desktop Left Rail Navigation */}
+        {/* Desktop Left Command Rail (w-16 hover:w-56 transition-all duration-200 z-30) */}
         <aside
-          className={cn(
-            'sticky top-11 z-20 hidden lg:flex flex-col shrink-0 border-r border-border-subtle bg-card-dark/95 backdrop-blur-md transition-[width] duration-200 h-[calc(100vh-2.75rem)] select-none',
-            collapsed ? 'w-16 p-2' : 'w-44 p-3'
-          )}
+          className="sticky top-10 z-30 hidden lg:flex flex-col shrink-0 border-r border-border-subtle bg-card-dark backdrop-blur-md transition-all duration-200 h-[calc(100vh-2.5rem)] select-none w-16 hover:w-56 p-2 group/sidebar overflow-hidden"
           aria-label={t('layout.desktopSidebar')}
         >
           <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
             <SidebarNav
-              collapsed={collapsed}
               variant="rail"
               onNavigate={() => setMobileOpen(false)}
             />
-          </div>
-
-          {/* Rail Collapse Toggle */}
-          <div className="pt-2 border-t border-border-subtle/80 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setCollapsed(!collapsed)}
-              className="flex h-8 w-full items-center justify-center rounded-lg border border-border-subtle bg-surface-dark text-secondary-text hover:text-foreground hover:border-border-subtle/80 transition-colors text-xs gap-1.5"
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {collapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <>
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="text-[11px] font-medium text-muted-text">Collapse</span>
-                </>
-              )}
-            </button>
           </div>
         </aside>
 
