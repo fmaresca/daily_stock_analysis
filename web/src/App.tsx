@@ -23,6 +23,10 @@ import { BrokerOrderStagingModal } from './components/BrokerOrderStagingModal';
 import { BrokerStagingWorkbench } from './components/BrokerStagingWorkbench';
 import { AlertSettingsModal } from './components/AlertSettingsModal';
 import { evaluateAndDispatchAlerts } from './utils/alertDispatcher';
+import { OptionChainMatrixView } from './components/OptionChainMatrixView';
+import { PmccScreenerView } from './components/PmccScreenerView';
+import { PortfolioMarginSimulatorView } from './components/PortfolioMarginSimulatorView';
+import { OptionContractData } from './utils/optionChainMatrix';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   stageSingleLegOrder,
@@ -570,11 +574,50 @@ export const App: React.FC = () => {
   };
 
   const handleStageSpread = (spread: MultiLegSpread) => {
-    const staged = stageMultiLegSpreadOrder(spread, 1, 'SCHWAB', 'REG_T_MARGIN', 'MIDPOINT');
     setActiveStagedSpread(spread);
     setActiveStagedOpportunity(null);
-    setStagedOrder(staged);
+    const order = stageMultiLegSpreadOrder(spread, 1, 'REG_T_MARGIN', 'MID');
+    setStagedOrder(order);
     setIsStagedModalOpen(true);
+  };
+
+  const handleStageContractFromChain = (contract: OptionContractData, spotPrice: number) => {
+    const isPut = contract.type === 'PUT';
+    const opp: OptionOpportunity = {
+      id: `CHAIN_${contract.underlyingSymbol}_${contract.strike}_${contract.type}`,
+      symbol: contract.underlyingSymbol,
+      name: contract.underlyingSymbol,
+      category: 'Equities',
+      sector: 'Technology',
+      liquidity_tier: 'Tier 1',
+      strategy: isPut ? 'CSP' : 'COVERED_CALL',
+      strategy_name: isPut ? 'Cash-Secured Put' : 'Covered Call',
+      expiration: contract.expiration,
+      dte: contract.dte,
+      current_price: spotPrice,
+      strike: contract.strike,
+      type: isPut ? 'put' : 'call',
+      bid: contract.bid,
+      ask: contract.ask,
+      mid: contract.mid,
+      collateral_required: isPut ? contract.strike * 100 : spotPrice * 100,
+      premium_total: Math.round(contract.mid * 100),
+      breakeven: isPut ? contract.strike - contract.mid : spotPrice - contract.mid,
+      cushion_pct: isPut ? Math.round(((spotPrice - contract.strike) / spotPrice) * 1000) / 10 : 0,
+      roc_pct: Math.round((contract.mid / (isPut ? contract.strike : spotPrice)) * 1000) / 10,
+      annualized_roc: Math.round((contract.mid / (isPut ? contract.strike : spotPrice)) * (365 / Math.max(1, contract.dte)) * 1000) / 10,
+      delta: contract.delta,
+      abs_delta: Math.abs(contract.delta),
+      theta: contract.theta,
+      pop_pct: Math.round((1 - Math.abs(contract.delta)) * 1000) / 10,
+      iv: contract.iv,
+      iv_rank: 35,
+      safety_tier: 'Option Chain Contract',
+      tier_color: 'cyan',
+      tags: ['OPTION_CHAIN', contract.type],
+      rating: 85,
+    };
+    handleStageOpportunity(opp);
   };
 
   const handleUpdateStagedQuantity = (qty: number) => {
@@ -1673,6 +1716,22 @@ export const App: React.FC = () => {
                 spreads={multiLegSpreads}
                 onStageSpreadOrder={handleStageSpread}
               />
+            ) : activeOptionsTab === 'OPTION_CHAIN_MATRIX' ? (
+              /* Interactive Option Chain Matrix & Volatility Smile Visualizer */
+              <OptionChainMatrixView
+                tickers={universeTickers}
+                onStageCustomOrder={handleStageContractFromChain}
+                onCalculateIncome={(c, s) => handleStageContractFromChain(c, s)}
+              />
+            ) : activeOptionsTab === 'PMCC_SCREENER' ? (
+              /* Poor Man's Covered Call (PMCC) & Diagonal Spread Screener */
+              <PmccScreenerView
+                tickers={universeTickers}
+                onStagePmcc={handleStageSpread}
+              />
+            ) : activeOptionsTab === 'PORTFOLIO_MARGIN_SIM' ? (
+              /* Real-Time Portfolio Margin & What-If Stress Test Simulator */
+              <PortfolioMarginSimulatorView />
             ) : activeOptionsTab === 'VOLATILITY_SKEW' ? (
               /* 25-Delta Volatility Skew & Term Structure Radar */
               <VolatilitySkewRadar skewData={volatilitySkewData} />
