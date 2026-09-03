@@ -1409,6 +1409,20 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     You can create multiple custom-named watchlists by opening the Watchlist Manager (<code>W</code>) and clicking <strong>+ New List</strong>. To rename any watchlist (including your primary default <strong>Frank Favorites</strong>), click the <strong>Rename</strong> button next to the active list name, type the new name, and hit Save. To delete an unwanted watchlist, click <strong>Delete Watchlist</strong> and confirm the prompt (you must maintain at least one watchlist). You can also quickly switch between active watchlists using the dropdown selector in the screener Filter Bar.
                   </p>
                 </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">How does 1-Click Broker Order Execution &amp; Simulation Mode work?</div>
+                  <p className="text-xs text-slate-400">
+                    When staging a Cash-Secured Put or defined-risk spread, DeltaHarvest automatically constructs validated broker payloads for Charles Schwab, Interactive Brokers (IBKR), and Thinkorswim with mandatory 80% profit-taking limits and 0.50 Delta roll alerts. In the staging modal, toggle <strong>Simulation / Dry-Run</strong> to test order margin and bracket validation safely, or toggle <strong>Enable Live Orders</strong> to transmit directly to the Charles Schwab Retail Trader API or IBKR Client Portal Gateway. All previewed and executed orders are logged in the <strong>Execution History</strong> tab with CSV export.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">How do Watchlist Server Sync and Real-Time Alerts work?</div>
+                  <p className="text-xs text-slate-400">
+                    Click <strong>☁️ Sync to Server</strong> in the Watchlist Manager to persist your customized universe to the backend server across sessions, or export/import JSON backups. Open <strong>Alerts</strong> in the header to activate native OS browser notifications or configure Discord/Telegram webhooks that trigger when watchlist tickers hit oversold RSI-14 (&lt; 35), touch Lower Bollinger Band support, or spike in IV Rank (&ge; 45%).
+                  </p>
+                </div>
               </div>
             </div>
           )}

@@ -345,3 +345,50 @@ class SchwabFetcher(BaseFetcher):
         df["date"] = pd.to_datetime(df["date"])
         df.set_index("date", inplace=True)
         return df
+
+    def get_account_numbers(self) -> List[Dict[str, str]]:
+        """
+        Retrieves user's account numbers and encrypted hash values for order placement.
+        Endpoint: GET /trader/v1/accounts/accountNumbers
+        """
+        headers = self._get_headers()
+        url = f"{_SCHWAB_API_BASE}/trader/v1/accounts/accountNumbers"
+        resp = requests.get(url, headers=headers, timeout=12)
+        if resp.status_code != 200:
+            raise DataFetchError(f"[Schwab] Failed to get accounts ({resp.status_code}): {resp.text}")
+        return resp.json()
+
+    def place_order(
+        self,
+        account_hash: str,
+        order_payload: Dict[str, Any],
+        is_preview: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Submits or previews an order via Schwab Retail Trader API.
+        If is_preview=True: POST /trader/v1/accounts/{account_hash}/previewOrder
+        If is_preview=False: POST /trader/v1/accounts/{account_hash}/orders
+        """
+        headers = self._get_headers()
+        headers["Content-Type"] = "application/json"
+
+        endpoint = "previewOrder" if is_preview else "orders"
+        url = f"{_SCHWAB_API_BASE}/trader/v1/accounts/{account_hash}/{endpoint}"
+
+        resp = requests.post(url, headers=headers, json=order_payload, timeout=15)
+        if resp.status_code in (200, 201):
+            location = resp.headers.get("Location", "")
+            order_id = location.split("/")[-1] if location else ""
+            result = {
+                "status": "SUCCESS",
+                "is_preview": is_preview,
+                "order_id": order_id,
+                "location": location,
+                "response": resp.json() if resp.text.strip() else {},
+            }
+            return result
+        else:
+            raise DataFetchError(
+                f"[Schwab] Order {'preview' if is_preview else 'placement'} failed ({resp.status_code}): {resp.text}"
+            )
+

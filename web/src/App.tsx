@@ -21,6 +21,8 @@ import { OptionsBacktestView } from './components/OptionsBacktestView';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { BrokerOrderStagingModal } from './components/BrokerOrderStagingModal';
 import { BrokerStagingWorkbench } from './components/BrokerStagingWorkbench';
+import { AlertSettingsModal } from './components/AlertSettingsModal';
+import { evaluateAndDispatchAlerts } from './utils/alertDispatcher';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   stageSingleLegOrder,
@@ -121,6 +123,7 @@ export const App: React.FC = () => {
   const [isReportQueryModalOpen, setIsReportQueryModalOpen] = useState<boolean>(false);
   const [isSchwabModalOpen, setIsSchwabModalOpen] = useState<boolean>(false);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState<boolean>(false);
+  const [isAlertsModalOpen, setIsAlertsModalOpen] = useState<boolean>(false);
   const [lastLiveFetchTime, setLastLiveFetchTime] = useState<string>(() => {
     return localStorage.getItem('deltaharvest_last_live_fetch') || '';
   });
@@ -478,6 +481,12 @@ export const App: React.FC = () => {
       } catch (e) {
         console.warn('Failed to save last live fetch time', e);
       }
+      // Evaluate algorithmic alert triggers and dispatch notifications/webhooks
+      setTimeout(() => {
+        evaluateAndDispatchAlerts(universeTickers, allUniverseOpportunities).catch((err) => {
+          console.warn('Alert evaluation failed:', err);
+        });
+      }, 500);
     }
 
     setIsRecalculating(false);
@@ -1157,6 +1166,7 @@ export const App: React.FC = () => {
         onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
+        onOpenAlerts={() => setIsAlertsModalOpen(true)}
         onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
@@ -1844,6 +1854,16 @@ export const App: React.FC = () => {
             onPricingTypeChange={handleUpdateStagedPricingType}
           />
         </ErrorBoundary>
+      )}
+
+      {/* 9. Real-Time Alert Engine & Webhooks Modal */}
+      {isAlertsModalOpen && (
+        <AlertSettingsModal
+          isOpen={isAlertsModalOpen}
+          onClose={() => setIsAlertsModalOpen(false)}
+          tickers={universeTickers}
+          opportunities={allUniverseOpportunities}
+        />
       )}
 
       {/* Footer */}
