@@ -130,33 +130,78 @@ export function calculateBlackScholesOption(
   };
 }
 
-// Generate expiration dates list (Weekly to Annual)
+// Generate true CBOE calendar Friday expirations (Weekly, Monthly, LEAPS)
 export function getAvailableExpirations(): ExpirationGroup[] {
   const now = new Date();
-  const dteOffsets = [7, 14, 21, 30, 45, 60, 90, 180, 365];
+  const expirations: ExpirationGroup[] = [];
 
-  return dteOffsets.map((dte) => {
-    const expDate = new Date(now.getTime() + dte * 86400000);
-    // Align to Friday
-    const dayOfWeek = expDate.getDay();
-    const diff = (5 - dayOfWeek + 7) % 7;
-    expDate.setDate(expDate.getDate() + (diff === 0 && dte > 5 ? 0 : diff));
+  // 1. Next 4 Weekly Fridays
+  for (let w = 1; w <= 4; w++) {
+    const d = new Date(now);
+    const day = d.getDay();
+    const daysUntilFriday = ((5 - day + 7) % 7) || 7;
+    d.setDate(d.getDate() + daysUntilFriday + (w - 1) * 7);
+    d.setHours(16, 0, 0, 0);
 
-    const iso = expDate.toISOString().split('T')[0];
-    const formatted = expDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    const diffMs = d.getTime() - now.getTime();
+    const dte = Math.max(1, Math.round(diffMs / 86400000));
+    const iso = d.toISOString().split('T')[0];
+    const fmt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-    return {
+    expirations.push({
       expiration: iso,
       dte,
-      formattedDate: `${formatted} (${dte}d)`,
-      atmIv: 24.5,
-    };
+      formattedDate: `[Weekly] ${fmt} (${dte}d)`,
+      atmIv: 24.0 + w * 0.4,
+    });
+  }
+
+  // 2. Next 3 Monthly 3rd Fridays
+  for (let m = 1; m <= 3; m++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + m, 1);
+    while (d.getDay() !== 5) {
+      d.setDate(d.getDate() + 1);
+    }
+    d.setDate(d.getDate() + 14);
+    d.setHours(16, 0, 0, 0);
+
+    const diffMs = d.getTime() - now.getTime();
+    const dte = Math.max(1, Math.round(diffMs / 86400000));
+    const iso = d.toISOString().split('T')[0];
+    const fmt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    if (!expirations.some((e) => e.expiration === iso)) {
+      expirations.push({
+        expiration: iso,
+        dte,
+        formattedDate: `[Monthly] ${fmt} (${dte}d)`,
+        atmIv: 25.5 + m * 0.3,
+      });
+    }
+  }
+
+  // 3. Long-Term LEAPS (January 3rd Friday)
+  const leapsYear = now.getMonth() >= 10 ? now.getFullYear() + 2 : now.getFullYear() + 1;
+  const leapsDate = new Date(leapsYear, 0, 1);
+  while (leapsDate.getDay() !== 5) {
+    leapsDate.setDate(leapsDate.getDate() + 1);
+  }
+  leapsDate.setDate(leapsDate.getDate() + 14);
+  const leapsDiff = leapsDate.getTime() - now.getTime();
+  const leapsDte = Math.round(leapsDiff / 86400000);
+  const leapsIso = leapsDate.toISOString().split('T')[0];
+  const leapsFmt = leapsDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  expirations.push({
+    expiration: leapsIso,
+    dte: leapsDte,
+    formattedDate: `[LEAPS] ${leapsFmt} (${leapsDte}d)`,
+    atmIv: 27.0,
   });
+
+  return expirations.sort((a, b) => a.dte - b.dte);
 }
+
 
 // Generate full strike straddle matrix
 export function generateOptionChainMatrix(

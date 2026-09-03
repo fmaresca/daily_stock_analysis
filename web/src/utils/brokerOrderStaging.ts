@@ -562,3 +562,46 @@ export function clearSubmittedOrders(): void {
   }
 }
 
+export function addExecutedOrderToPortfolioBook(order: StagedBracketOrder): void {
+  try {
+    const raw = localStorage.getItem('deltaharvest_portfolio_book');
+    const existing = raw ? JSON.parse(raw) : [];
+
+    const shortLeg = order.entryLegs.find((l) => l.instruction === 'SELL_TO_OPEN') || order.entryLegs[0];
+    const longLeg = order.entryLegs.find((l) => l.instruction === 'BUY_TO_OPEN');
+
+    const posType =
+      order.strategy === 'CASH_SECURED_PUT'
+        ? 'CSP'
+        : order.strategy === 'COVERED_CALL'
+        ? 'COVERED_CALL'
+        : order.strategy.includes('PMCC')
+        ? 'PMCC'
+        : 'CREDIT_SPREAD';
+
+    const newPos = {
+      id: `POS_${order.underlyingSymbol}_${Date.now().toString().slice(-4)}`,
+      symbol: order.underlyingSymbol,
+      type: posType,
+      quantity: order.quantity,
+      spotPrice: order.underlyingPrice,
+      strike: shortLeg?.strike || 0,
+      strike2: longLeg?.strike,
+      dte: shortLeg?.dte || 30,
+      entryPrice: Math.abs(order.limitPrice),
+      currentOptionPrice: Math.abs(order.limitPrice),
+      iv: 25,
+      delta: shortLeg?.delta || -0.20,
+      theta: 0.15,
+      vega: -0.15,
+      beta: 1.0,
+    };
+
+    const updated = [newPos, ...(Array.isArray(existing) ? existing : [])];
+    localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Failed to sync executed order to portfolio book:', e);
+  }
+}
+
+

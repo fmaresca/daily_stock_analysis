@@ -5,6 +5,7 @@ import {
   DefensiveRepairTactic,
   generateDefensiveRepairTactics,
   getSampleThreatenedPositions,
+  evaluateThreatLevel,
 } from '../utils/defensiveRollAssistant';
 import {
   ShieldCheck,
@@ -26,12 +27,51 @@ interface DefensiveRollAssistantViewProps {
 export const DefensiveRollAssistantView: React.FC<DefensiveRollAssistantViewProps> = ({
   onStageRollOrder,
 }) => {
-  const samplePositions = useMemo(() => getSampleThreatenedPositions(), []);
-  const [selectedPosId, setSelectedPosId] = useState<string>(samplePositions[0].id);
+  const availablePositions = useMemo(() => {
+    const presets = getSampleThreatenedPositions();
+    try {
+      const raw = localStorage.getItem('deltaharvest_portfolio_book');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const ledgerPositions: ThreatenedPositionInfo[] = parsed
+            .filter((p: any) => p.type === 'CSP' || p.type === 'COVERED_CALL')
+            .map((p: any) => {
+              const { threatLevel, distancePct } = evaluateThreatLevel(
+                p.spotPrice,
+                p.strike,
+                p.delta,
+                p.type === 'CSP' ? 'CSP' : 'COVERED_CALL'
+              );
+              return {
+                id: p.id,
+                symbol: p.symbol,
+                strategy: p.type === 'CSP' ? 'CSP' : 'COVERED_CALL',
+                spotPrice: p.spotPrice,
+                strike: p.strike,
+                dte: p.dte,
+                currentDelta: p.delta,
+                distanceToStrikePct: distancePct,
+                currentOptionPrice: p.currentOptionPrice || p.entryPrice,
+                originalCredit: p.entryPrice,
+                threatLevel,
+              };
+            });
+          const existingIds = new Set(ledgerPositions.map((p) => p.id));
+          return [...ledgerPositions, ...presets.filter((p) => !existingIds.has(p.id))];
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load portfolio positions for roll assistant:', e);
+    }
+    return presets;
+  }, []);
+
+  const [selectedPosId, setSelectedPosId] = useState<string>(availablePositions[0].id);
 
   const activePosition = useMemo(() => {
-    return samplePositions.find((p) => p.id === selectedPosId) || samplePositions[0];
-  }, [samplePositions, selectedPosId]);
+    return availablePositions.find((p) => p.id === selectedPosId) || availablePositions[0];
+  }, [availablePositions, selectedPosId]);
 
   const report = useMemo(() => {
     return generateDefensiveRepairTactics(activePosition);
@@ -95,7 +135,7 @@ export const DefensiveRollAssistantView: React.FC<DefensiveRollAssistantViewProp
               onChange={(e) => setSelectedPosId(e.target.value)}
               className="bg-transparent text-white font-bold cursor-pointer focus:outline-none font-mono"
             >
-              {samplePositions.map((p) => (
+              {availablePositions.map((p) => (
                 <option key={p.id} value={p.id} className="bg-slate-900 text-white">
                   {p.symbol} ${p.strike} {p.strategy} ({p.threatLevel.replace('_', ' ')})
                 </option>
