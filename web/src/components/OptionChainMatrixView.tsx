@@ -131,7 +131,7 @@ export const OptionChainMatrixView: React.FC<OptionChainMatrixViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-                Full strike-by-strike straddle view pairing Calls &amp; Puts with live Greeks ($\Delta, \Gamma, \Theta, \mathcal{V}$), Volume/OI, and Volatility Smile skew curve analysis.
+                Full strike-by-strike straddle view pairing Calls &amp; Puts with live Greeks (Delta, Gamma, Theta, Vega), Volume/OI, and Volatility Smile skew curve analysis.
               </p>
             </div>
           </div>

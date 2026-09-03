@@ -122,7 +122,7 @@ export function generatePmccOpportunities(tickers: TickerMeta[]): PmccOpportunit
     let safetyScore = 75;
     if (hasZeroExtrinsicRisk) safetyScore += 12;
     if (downsideCushionPct >= 5) safetyScore += 8;
-    if (t.liquidityTier === 'Tier 1') safetyScore += 5;
+    if (t.liquidity_tier === 'Tier 1') safetyScore += 5;
     safetyScore = Math.min(99, Math.max(55, safetyScore));
 
     const safetyTier = hasZeroExtrinsicRisk

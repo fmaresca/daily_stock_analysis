@@ -165,15 +165,15 @@ export async function evaluateAndDispatchAlerts(
     const isRsiOversold = settings.alertOnRsiOversold && t.rsi_14 !== undefined && t.rsi_14 < 35;
     const isNearLowerBand =
       settings.alertOnBollingerBand &&
-      t.lower_band !== undefined &&
-      t.spot_price <= t.lower_band * 1.02;
-    const isHighIvr = settings.alertOnHighIvr && t.ivr_30d !== undefined && t.ivr_30d >= 45;
+      t.lower_bb !== undefined &&
+      t.spot_price <= t.lower_bb * 1.02;
+    const isHighIvr = settings.alertOnHighIvr && t.iv_rank !== undefined && t.iv_rank >= 45;
 
     if (isRsiOversold || isNearLowerBand || isHighIvr) {
       const triggers: string[] = [];
       if (isRsiOversold) triggers.push(`RSI-14 Oversold (${t.rsi_14?.toFixed(1)})`);
-      if (isNearLowerBand) triggers.push(`Near Lower Support ($${t.spot_price.toFixed(2)} vs Lower BB $${t.lower_band?.toFixed(2)})`);
-      if (isHighIvr) triggers.push(`Elevated IVR (${t.ivr_30d?.toFixed(0)}%)`);
+      if (isNearLowerBand) triggers.push(`Near Lower Support ($${t.spot_price.toFixed(2)} vs Lower BB $${t.lower_bb?.toFixed(2)})`);
+      if (isHighIvr) triggers.push(`Elevated IVR (${t.iv_rank?.toFixed(0)}%)`);
 
       const msg = `${t.symbol}: ${triggers.join(' | ')}`;
       alertMessages.push(msg);
@@ -196,7 +196,7 @@ export async function evaluateAndDispatchAlerts(
           [
             { name: 'Spot Price', value: `$${t.spot_price.toFixed(2)}`, inline: true },
             { name: 'RSI-14', value: `${t.rsi_14?.toFixed(1) || 'N/A'}`, inline: true },
-            { name: 'IV Rank (30d)', value: `${t.ivr_30d?.toFixed(0) || 'N/A'}%`, inline: true },
+            { name: 'IV Rank', value: `${t.iv_rank?.toFixed(0) || 'N/A'}%`, inline: true },
           ]
         );
       }

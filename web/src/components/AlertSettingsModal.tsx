@@ -7,7 +7,6 @@ import {
   Zap,
   Activity,
   ShieldCheck,
-  Send,
 } from './icons';
 import {
   getAlertSettings,

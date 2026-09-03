@@ -334,7 +334,7 @@ export function stageMultiLegSpreadOrder(
   customPrice?: number,
   portfolioEquity: number = 100000
 ): StagedBracketOrder {
-  const spot = spread.current_price;
+  const spot = spread.current_price ?? (spread.short_strike || 100);
   const exp = spread.expiration;
   const dte = spread.dte;
 
@@ -571,11 +571,11 @@ export function addExecutedOrderToPortfolioBook(order: StagedBracketOrder): void
     const longLeg = order.entryLegs.find((l) => l.instruction === 'BUY_TO_OPEN');
 
     const posType =
-      order.strategy === 'CASH_SECURED_PUT'
+      order.strategyName.includes('Put') || order.strategyName.includes('CSP')
         ? 'CSP'
-        : order.strategy === 'COVERED_CALL'
+        : order.strategyName.includes('Covered Call') || order.strategyName.includes('CC')
         ? 'COVERED_CALL'
-        : order.strategy.includes('PMCC')
+        : order.strategyName.includes('PMCC')
         ? 'PMCC'
         : 'CREDIT_SPREAD';
 
@@ -584,7 +584,7 @@ export function addExecutedOrderToPortfolioBook(order: StagedBracketOrder): void
       symbol: order.underlyingSymbol,
       type: posType,
       quantity: order.quantity,
-      spotPrice: order.underlyingPrice,
+      spotPrice: order.spotPrice,
       strike: shortLeg?.strike || 0,
       strike2: longLeg?.strike,
       dte: shortLeg?.dte || 30,

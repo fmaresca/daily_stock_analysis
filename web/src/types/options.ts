@@ -1,20 +1,24 @@
 export type StrategyType =
   | 'CSP'
   | 'CC'
+  | 'COVERED_CALL'
   | 'BULL_PUT_SPREAD'
   | 'BEAR_CALL_SPREAD'
+  | 'BULL_CALL_SPREAD'
+  | 'PMCC'
   | 'IRON_CONDOR';
 
 export interface MultiLegSpread {
   id: string;
   symbol: string;
-  name: string;
-  sector: string;
-  strategy: 'BULL_PUT_SPREAD' | 'BEAR_CALL_SPREAD' | 'IRON_CONDOR';
+  name?: string;
+  sector?: string;
+  strategy: 'BULL_PUT_SPREAD' | 'BEAR_CALL_SPREAD' | 'BULL_CALL_SPREAD' | 'IRON_CONDOR' | 'PMCC';
   strategy_name: string;
   expiration: string;
   dte: number;
   current_price: number;
+  max_profit?: number;
   // Short leg anchored in 0.15 - 0.20 Delta outside Bollinger Bands
   short_strike: number;
   short_delta: number;
@@ -32,8 +36,8 @@ export interface MultiLegSpread {
   spread_width: number;
   net_credit: number;
   max_loss: number;
-  collateral_required: number;
-  breakeven: number;
+  collateral_required?: number;
+  breakeven?: number;
   upper_breakeven?: number;
   cushion_pct: number;
   roc_pct: number;

@@ -581,7 +581,7 @@ export const App: React.FC = () => {
   const handleStageSpread = (spread: MultiLegSpread) => {
     setActiveStagedSpread(spread);
     setActiveStagedOpportunity(null);
-    const order = stageMultiLegSpreadOrder(spread, 1, 'REG_T_MARGIN', 'MID');
+    const order = stageMultiLegSpreadOrder(spread, 1, 'SCHWAB', 'REG_T_MARGIN', 'MIDPOINT');
     setStagedOrder(order);
     setIsStagedModalOpen(true);
   };
@@ -617,6 +617,7 @@ export const App: React.FC = () => {
       pop_pct: Math.round((1 - Math.abs(contract.delta)) * 1000) / 10,
       iv: contract.iv,
       iv_rank: 35,
+      rsi: 50,
       safety_tier: 'Option Chain Contract',
       tier_color: 'cyan',
       tags: ['OPTION_CHAIN', contract.type],

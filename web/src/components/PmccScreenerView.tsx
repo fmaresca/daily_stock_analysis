@@ -67,16 +67,22 @@ export const PmccScreenerView: React.FC<PmccScreenerViewProps> = ({
       strategy_name: 'Poor Man’s Covered Call (PMCC Diagonal)',
       expiration: pmcc.shortExpiration,
       dte: pmcc.shortDte,
+      current_price: pmcc.spotPrice,
       short_strike: pmcc.shortStrike,
       short_delta: pmcc.shortDelta,
+      short_type: 'call',
       long_strike: pmcc.longStrike,
       long_delta: pmcc.longDelta,
+      long_type: 'call',
+      spread_width: Math.abs(pmcc.shortStrike - pmcc.longStrike),
       net_credit: -pmcc.netDebitPerShare,
       max_loss: pmcc.netDebitPerShare,
       max_profit: pmcc.maxProfitAtShortStrike / 100,
+      roc_pct: 12,
       annualized_roc: pmcc.annualizedRoc,
       pop_pct: 78.5,
       cushion_pct: pmcc.downsideCushionPct,
+      iv_rank: 30,
     };
     onStagePmcc(spread);
   };

@@ -249,7 +249,7 @@ export const MultiLegSpreadTable: React.FC<MultiLegSpreadTableProps> = ({
                       <div className="flex items-center space-x-2">
                         <span className="font-bold text-white text-xs">{spread.symbol}</span>
                         <span className="text-[10px] text-slate-400 font-sans">
-                          ${spread.current_price.toFixed(2)}
+                          ${(spread.current_price || 0).toFixed(2)}
                         </span>
                       </div>
                     </td>
