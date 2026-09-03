@@ -26,6 +26,8 @@ import { evaluateAndDispatchAlerts } from './utils/alertDispatcher';
 import { OptionChainMatrixView } from './components/OptionChainMatrixView';
 import { PmccScreenerView } from './components/PmccScreenerView';
 import { PortfolioMarginSimulatorView } from './components/PortfolioMarginSimulatorView';
+import { MultiAgentTradeAuditorView } from './components/MultiAgentTradeAuditorView';
+import { DefensiveRollAssistantView } from './components/DefensiveRollAssistantView';
 import { OptionContractData } from './utils/optionChainMatrix';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import {
@@ -1732,6 +1734,17 @@ export const App: React.FC = () => {
             ) : activeOptionsTab === 'PORTFOLIO_MARGIN_SIM' ? (
               /* Real-Time Portfolio Margin & What-If Stress Test Simulator */
               <PortfolioMarginSimulatorView />
+            ) : activeOptionsTab === 'MULTI_AGENT_AUDIT' ? (
+              /* AI Multi-Agent Trade Structurer & SEC 10-K Auditor */
+              <MultiAgentTradeAuditorView
+                tickers={universeTickers}
+                onStageStructuredOpportunity={handleStageOpportunity}
+              />
+            ) : activeOptionsTab === 'DEFENSIVE_ROLL_ASSISTANT' ? (
+              /* Dynamic Rolling & Defensive Repair Engine */
+              <DefensiveRollAssistantView
+                onStageRollOrder={handleStageSpread}
+              />
             ) : activeOptionsTab === 'VOLATILITY_SKEW' ? (
               /* 25-Delta Volatility Skew & Term Structure Radar */
               <VolatilitySkewRadar skewData={volatilitySkewData} />

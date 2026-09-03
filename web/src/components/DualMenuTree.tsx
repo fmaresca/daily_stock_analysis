@@ -12,6 +12,7 @@ import {
   Sliders,
   Calculator,
   Zap,
+  Award,
 } from './icons';
 import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 
@@ -260,6 +261,30 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             >
               <Sliders className="w-4 h-4 text-indigo-400" />
               <span>Portfolio Margin &amp; Stress Sim</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('MULTI_AGENT_AUDIT')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'MULTI_AGENT_AUDIT'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <Award className="w-4 h-4 text-emerald-400" />
+              <span>AI Multi-Agent Trade Structurer</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('DEFENSIVE_ROLL_ASSISTANT')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'DEFENSIVE_ROLL_ASSISTANT'
+                  ? 'bg-amber-600 text-white border-amber-400 shadow-md shadow-amber-600/30 ring-1 ring-amber-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              <span>Defensive Rolling &amp; Repair</span>
             </button>
 
             <button
