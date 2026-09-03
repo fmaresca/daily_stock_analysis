@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { systemConfigApi } from '../api/systemConfig';
 import { findMatchingStockCode, includesStockCode } from '../utils/stockCode';
+import { useWatchlistQuoteStore } from '../stores/watchlistQuoteStore';
 
 export interface UseWatchlistReturn {
   watchlistCodes: string[];
@@ -15,6 +16,8 @@ export interface UseWatchlistReturn {
 }
 
 export function useWatchlist(): UseWatchlistReturn {
+  const hydrateOne = useWatchlistQuoteStore((s) => s.hydrateOne);
+  const hydrateAll = useWatchlistQuoteStore((s) => s.hydrateAll);
   const [codes, setCodes] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActioning, setIsActioning] = useState(false);
@@ -37,11 +40,13 @@ export function useWatchlist(): UseWatchlistReturn {
       const result = await systemConfigApi.getWatchlist();
       if (mountedRef.current) {
         setCodes(result);
+        // Hydrate all existing watchlist entries so no ticker shows placeholder data
+        void hydrateAll(result);
       }
     } catch {
       // keep existing codes
     }
-  }, []);
+  }, [hydrateAll]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -77,13 +82,16 @@ export function useWatchlist(): UseWatchlistReturn {
       if (mountedRef.current) {
         setCodes(result);
         showMessage(`已加入自选 ${stockCode}`);
+        // Immediately trigger market data hydration so the screener never
+        // shows the $100.00 placeholder for a freshly-added ticker.
+        void hydrateOne(stockCode);
       }
     } catch {
       if (mountedRef.current) showMessage('操作失败');
     } finally {
       if (mountedRef.current) setIsActioning(false);
     }
-  }, [isActioning, showMessage]);
+  }, [isActioning, showMessage, hydrateOne]);
 
   const removeFromWatchlist = useCallback(async (stockCode: string) => {
     if (!stockCode || isActioning) return;

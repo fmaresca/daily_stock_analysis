@@ -1369,6 +1369,13 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Frequently Asked Questions
                 </h4>
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">How does Automated Watchlist Hydration &amp; Screener Quality Control work?</div>
+                  <p className="text-xs text-slate-400">
+                    Immediately upon adding any symbol (e.g. <code>EOSE</code>) to a watchlist, DeltaHarvest automatically triggers a background hydration pipeline: (1) Fetches real-time price, volume, and percentage change via the quote API; (2) Retrieves 50-day daily OHLCV history; (3) Dynamically derives 20 EMA, 50 EMA, 14-period RSI, and 14-period ATR; (4) Enforces a strict <strong>Quality Control Gate</strong> in the Decision Matrix screener displaying a live "Fetching..." indicator until confirmed data is ready, completely eliminating placeholder default prices ($100.00) or missing technicals.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">How do I get real market prices &amp; options for new tickers (e.g. CLM, CRF)?</div>
                   <p className="text-xs text-slate-400">
                     When you add new symbols in the Watchlist Manager (<code>W</code>), click the <strong>⚡ Fetch Real Market Data &amp; Options</strong> button in the modal footer or hit <strong>⚡ Live Fetch</strong> in the top header. The backend Python calculation engine will compute live spot prices, 20 SMA, 2-SD Bollinger Bands, 14d RSI, 30d Historical Volatility, and full options chains on demand.

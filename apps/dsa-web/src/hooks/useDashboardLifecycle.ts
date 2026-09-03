@@ -18,6 +18,8 @@ type UseDashboardLifecycleOptions = {
   onDashboardDataRefresh?: () => void;
   onCompletedTaskDataRefreshStarted?: (task: TaskInfo) => void;
   onCompletedTaskDataRefreshed?: (task: TaskInfo) => void;
+  /** Called on the 30-second tick and visibility-restore to re-validate the quote cache. */
+  refreshQuoteCache?: () => void;
   enabled?: boolean;
 };
 
@@ -37,6 +39,7 @@ export function useDashboardLifecycle({
   onDashboardDataRefresh,
   onCompletedTaskDataRefreshStarted,
   onCompletedTaskDataRefreshed,
+  refreshQuoteCache,
   enabled = true,
 }: UseDashboardLifecycleOptions): void {
   const removalTimeoutsRef = useRef<number[]>([]);
@@ -63,10 +66,11 @@ export function useDashboardLifecycle({
       void refreshMarketReviewHistory?.(true);
       void refreshActiveTasks();
       onDashboardDataRefresh?.();
+      refreshQuoteCache?.();
     }, 30_000);
 
     return () => window.clearInterval(intervalId);
-  }, [enabled, onDashboardDataRefresh, refreshHistory, refreshMarketReviewHistory, refreshStockBar, refreshActiveTasks]);
+  }, [enabled, onDashboardDataRefresh, refreshHistory, refreshMarketReviewHistory, refreshStockBar, refreshActiveTasks, refreshQuoteCache]);
 
   useEffect(() => {
     if (!enabled) {
@@ -80,12 +84,13 @@ export function useDashboardLifecycle({
         void refreshMarketReviewHistory?.(true);
         void refreshActiveTasks();
         onDashboardDataRefresh?.();
+        refreshQuoteCache?.();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [enabled, onDashboardDataRefresh, refreshHistory, refreshMarketReviewHistory, refreshStockBar, refreshActiveTasks]);
+  }, [enabled, onDashboardDataRefresh, refreshHistory, refreshMarketReviewHistory, refreshStockBar, refreshActiveTasks, refreshQuoteCache]);
 
   useEffect(() => {
     return () => {

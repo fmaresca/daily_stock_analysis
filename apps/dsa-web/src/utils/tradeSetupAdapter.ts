@@ -1,5 +1,6 @@
 import type { StockBarItem, AnalysisReport } from '../types/analysis';
 import type { TradeSetupItem } from '../types/tradeSetup';
+import type { WatchlistQuoteEntry } from '../types/marketData';
 
 export const INSTITUTIONAL_SAMPLE_SETUPS: TradeSetupItem[] = [
   {
@@ -153,8 +154,16 @@ export const INSTITUTIONAL_SAMPLE_SETUPS: TradeSetupItem[] = [
 
 /**
  * Transforms a StockBarItem into a TradeSetupItem for the DecisionMatrix.
+ *
+ * @param item       - Latest analysis history entry from stockBarItems
+ * @param quoteEntry - Optional live-quote hydration cache entry. When status
+ *                     is 'ready' the real market price replaces the old
+ *                     placeholder of $100.00.
  */
-export function convertStockBarToTradeSetup(item: StockBarItem): TradeSetupItem {
+export function convertStockBarToTradeSetup(
+  item: StockBarItem,
+  quoteEntry?: WatchlistQuoteEntry,
+): TradeSetupItem {
   const code = item.stockCode || 'UNKNOWN';
   let market = 'US';
   if (/^\d{6}$/.test(code)) {
@@ -174,12 +183,27 @@ export function convertStockBarToTradeSetup(item: StockBarItem): TradeSetupItem 
     bias = 'BEARISH';
   }
 
-  // Anchor simulated or actual prices
-  const basePrice = 100.0;
-  const currentPrice = basePrice;
-  const entryPrice = +(currentPrice * (bias === 'BULLISH' ? 0.98 : 1.02)).toFixed(2);
-  const stopLoss = +(currentPrice * (bias === 'BULLISH' ? 0.93 : 1.07)).toFixed(2);
-  const takeProfit = +(currentPrice * (bias === 'BULLISH' ? 1.12 : 0.88)).toFixed(2);
+  // Use real live price from cache when available; fall back to 0 (signals
+  // "not yet loaded" — the DecisionMatrix will show a spinner for 0/null)
+  const livePrice =
+    quoteEntry?.status === 'ready' && (quoteEntry.quote?.currentPrice ?? 0) > 0
+      ? quoteEntry.quote!.currentPrice
+      : 0;
+
+  const currentPrice = livePrice;
+  const hasRealPrice = currentPrice > 0;
+
+  // Compute levels only when we have a real price; otherwise keep 0 so the
+  // UI can distinguish "loading" from a genuinely zero-priced instrument.
+  const entryPrice = hasRealPrice
+    ? +(currentPrice * (bias === 'BULLISH' ? 0.98 : 1.02)).toFixed(2)
+    : 0;
+  const stopLoss = hasRealPrice
+    ? +(currentPrice * (bias === 'BULLISH' ? 0.93 : 1.07)).toFixed(2)
+    : 0;
+  const takeProfit = hasRealPrice
+    ? +(currentPrice * (bias === 'BULLISH' ? 1.12 : 0.88)).toFixed(2)
+    : 0;
 
   const risk = Math.abs(entryPrice - stopLoss);
   const reward = Math.abs(takeProfit - entryPrice);
@@ -188,9 +212,25 @@ export function convertStockBarToTradeSetup(item: StockBarItem): TradeSetupItem 
   const catalyst = item.operationAdvice || item.actionLabel || `Trend analysis and score of ${convictionScore}/10`;
   const riskSummary = convictionScore < 6 ? 'High volatility & weak trend confirmation' : 'Standard systematic market risk';
 
+  // Build technical indicators map from cache if available
+  const technicals = quoteEntry?.technicals
+    ? {
+        'EMA 20': quoteEntry.technicals.ema20 ?? '—',
+        'EMA 50': quoteEntry.technicals.ema50 ?? '—',
+        'RSI 14': quoteEntry.technicals.rsi14 ?? '—',
+        'ATR 14': quoteEntry.technicals.atr14 ?? '—',
+        'Above EMA 20': quoteEntry.technicals.aboveEma20 ? 'Yes' : 'No',
+        'Above EMA 50': quoteEntry.technicals.aboveEma50 ? 'Yes' : 'No',
+        'RSI Signal': quoteEntry.technicals.rsiSignal,
+        Volume: quoteEntry.quote?.volume ?? '—',
+        'Day High': quoteEntry.quote?.high ?? '—',
+        'Day Low': quoteEntry.quote?.low ?? '—',
+      }
+    : undefined;
+
   return {
     ticker: code.toUpperCase(),
-    company_name: item.stockName || code,
+    company_name: item.stockName || quoteEntry?.quote?.stockName || code,
     market,
     bias,
     conviction_score: convictionScore,
@@ -208,6 +248,8 @@ export function convertStockBarToTradeSetup(item: StockBarItem): TradeSetupItem 
     ],
     raw_markdown: `### Analysis for ${code} (${item.stockName || ''})\n\n- **Score:** ${rawScore}/100\n- **Advice:** ${item.operationAdvice || 'N/A'}\n- **Action:** ${item.action || item.actionLabel || 'N/A'}`,
     has_risk_alerts: convictionScore < 5.0,
+    ...(technicals && { technical_indicators: technicals }),
+    ...(quoteEntry?.candles?.length && { candles: quoteEntry.candles }),
   };
 }
 

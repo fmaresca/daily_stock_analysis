@@ -15,6 +15,7 @@ import {
   type Message,
   type ProgressStep,
 } from '../stores/agentChatStore';
+import { useWatchlistQuoteStore } from '../stores/watchlistQuoteStore';
 import { downloadSession, formatSessionAsMarkdown } from '../utils/chatExport';
 import type { ChatFollowUpContext } from '../utils/chatFollowUp';
 import {
@@ -316,6 +317,7 @@ const ChatPage: React.FC = () => {
           if (isMountedRef.current) {
             setWatchlistCodes(codes);
             setWatchlistMessage(`已加入自选 ${stockCode}`);
+            useWatchlistQuoteStore.getState().hydrateOne(stockCode);
           }
         }
       } catch {
