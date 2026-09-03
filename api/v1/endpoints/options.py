@@ -333,3 +333,165 @@ def get_live_option_chain(
     except Exception as e:
         logger.warning(f"Schwab option chain fetch failed for {symbol}: {e}")
         raise HTTPException(status_code=502, detail=f"Schwab fetch failed: {str(e)}")
+
+
+class SchwabOrderRequest(BaseModel):
+    account_hash: Optional[str] = None
+    order_payload: Dict[str, Any]
+    is_preview: bool = True  # Safe default
+
+
+@router.get("/schwab/accounts")
+def get_schwab_accounts(
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Retrieves Charles Schwab account numbers and encrypted hashes for order routing.
+    """
+    auth = SchwabAuthManager()
+    if not auth.is_configured():
+        raise HTTPException(status_code=400, detail="Schwab API keys are not configured.")
+
+    fetcher = SchwabFetcher(auth_manager=auth)
+    if not fetcher.is_available():
+        raise HTTPException(status_code=401, detail="Schwab OAuth token requires authorization in Web UI.")
+
+    try:
+        accounts = fetcher.get_account_numbers()
+        return {
+            "status": "SUCCESS",
+            "accounts": accounts,
+        }
+    except Exception as e:
+        logger.warning(f"Failed to fetch Schwab accounts: {e}")
+        raise HTTPException(status_code=502, detail=f"Schwab account fetch failed: {str(e)}")
+
+
+@router.post("/schwab/order")
+def submit_schwab_order(
+    request: SchwabOrderRequest,
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Submits or validates an options order through Charles Schwab Retail Trader API.
+    Supports is_preview=True for dry-run simulation and is_preview=False for live submission.
+    """
+    auth = SchwabAuthManager()
+    if not auth.is_configured():
+        raise HTTPException(status_code=400, detail="Schwab API keys are not configured.")
+
+    fetcher = SchwabFetcher(auth_manager=auth)
+    if not fetcher.is_available():
+        raise HTTPException(status_code=401, detail="Schwab OAuth token requires authorization in Web UI.")
+
+    account_hash = request.account_hash
+    if not account_hash:
+        # Resolve the default account hash automatically
+        try:
+            accounts = fetcher.get_account_numbers()
+            if accounts and isinstance(accounts, list) and len(accounts) > 0:
+                account_hash = accounts[0].get("hashValue")
+        except Exception as exc:
+            logger.warning(f"Could not auto-resolve account hash: {exc}")
+
+    if not account_hash:
+        raise HTTPException(status_code=400, detail="Schwab account hash is required to route orders.")
+
+    try:
+        result = fetcher.place_order(
+            account_hash=account_hash,
+            order_payload=request.order_payload,
+            is_preview=request.is_preview,
+        )
+        return {
+            "status": "SUCCESS",
+            "mode": "PREVIEW" if request.is_preview else "LIVE",
+            "account_hash": account_hash[:6] + "..." if len(account_hash) > 6 else account_hash,
+            "order_id": result.get("order_id", ""),
+            "details": result,
+        }
+    except Exception as e:
+        logger.error(f"Schwab order submission failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Order submission failed: {str(e)}")
+
+
+class WatchlistSyncRequest(BaseModel):
+    watchlists: List[Dict[str, Any]]
+
+
+@router.post("/watchlists/sync")
+def sync_watchlists(
+    request: WatchlistSyncRequest,
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Persists user-customized watchlists to the backend filesystem so daily automated screeners
+    track the latest universe across all sessions.
+    """
+    data_dir = os.path.join(os.getcwd(), "data")
+    os.makedirs(data_dir, exist_ok=True)
+
+    target_file = os.path.join(data_dir, "watchlist_groups.json")
+    tickers_file = os.path.join(data_dir, "options_tickers.json")
+
+    try:
+        with open(target_file, "w", encoding="utf-8") as f:
+            json.dump(request.watchlists, f, indent=2, ensure_ascii=False)
+
+        # Extract all unique symbols across all watchlists to update the active universe
+        all_symbols = set()
+        for group in request.watchlists:
+            for s in group.get("tickers", []):
+                cleaned = str(s).strip().upper()
+                if cleaned:
+                    all_symbols.add(cleaned)
+
+        sorted_symbols = sorted(list(all_symbols))
+        with open(tickers_file, "w", encoding="utf-8") as f:
+            json.dump(sorted_symbols, f, indent=2, ensure_ascii=False)
+
+        return {
+            "status": "SUCCESS",
+            "message": f"Successfully synced {len(request.watchlists)} watchlist groups and {len(sorted_symbols)} total tickers to server.",
+            "groups_count": len(request.watchlists),
+            "tickers_count": len(sorted_symbols),
+        }
+    except Exception as e:
+        logger.error(f"Failed to sync watchlists to disk: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save watchlists: {str(e)}")
+
+
+@router.get("/watchlists")
+def get_persisted_watchlists(
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Retrieves server-persisted watchlists and universe tickers.
+    """
+    data_dir = os.path.join(os.getcwd(), "data")
+    target_file = os.path.join(data_dir, "watchlist_groups.json")
+    tickers_file = os.path.join(data_dir, "options_tickers.json")
+
+    groups = []
+    tickers = []
+
+    if os.path.exists(target_file):
+        try:
+            with open(target_file, "r", encoding="utf-8") as f:
+                groups = json.load(f)
+        except Exception:
+            pass
+
+    if os.path.exists(tickers_file):
+        try:
+            with open(tickers_file, "r", encoding="utf-8") as f:
+                tickers = json.load(f)
+        except Exception:
+            pass
+
+    return {
+        "status": "SUCCESS",
+        "groups": groups,
+        "tickers": tickers,
+    }
+

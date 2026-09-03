@@ -514,3 +514,51 @@ export function stageMultiLegSpreadOrder(
     thinkorswimString,
   };
 }
+
+export interface SubmittedOrderRecord {
+  id: string;
+  stagedOrderId: string;
+  symbol: string;
+  strategy: string;
+  broker: BrokerType;
+  quantity: number;
+  netCredit: number;
+  limitPrice: number;
+  mode: 'SIMULATION' | 'LIVE';
+  status: 'SUBMITTED' | 'PREVIEWED' | 'FAILED' | 'FILLED';
+  timestamp: string;
+  brokerOrderId?: string;
+  notes?: string;
+}
+
+export function getSubmittedOrders(): SubmittedOrderRecord[] {
+  try {
+    const saved = localStorage.getItem('deltaharvest_submitted_orders');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('Failed to load submitted orders:', e);
+  }
+  return [];
+}
+
+export function recordSubmittedOrder(order: SubmittedOrderRecord): void {
+  try {
+    const existing = getSubmittedOrders();
+    const updated = [order, ...existing.filter((o) => o.id !== order.id)].slice(0, 100);
+    localStorage.setItem('deltaharvest_submitted_orders', JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Failed to save submitted order:', e);
+  }
+}
+
+export function clearSubmittedOrders(): void {
+  try {
+    localStorage.removeItem('deltaharvest_submitted_orders');
+  } catch (e) {
+    console.warn('Failed to clear submitted orders:', e);
+  }
+}
+

@@ -11,6 +11,7 @@ import {
   Zap,
   Sun,
   Moon,
+  Bell,
 } from './icons';
 import { ScreenerSummary } from '../types/options';
 
@@ -28,6 +29,7 @@ interface HeaderProps {
   onOpenWatchlists: () => void;
   onOpenReports: () => void;
   onOpenSchwab: () => void;
+  onOpenAlerts?: () => void;
   onOpenDiagnostics?: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
@@ -47,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenWatchlists,
   onOpenReports,
   onOpenSchwab,
+  onOpenAlerts,
   onOpenDiagnostics,
   theme = 'dark',
   onToggleTheme,
@@ -147,6 +150,18 @@ export const Header: React.FC<HeaderProps> = ({
             <Star className="w-3.5 h-3.5" filled />
             <span>Watchlists</span>
           </button>
+
+          {/* Alerts & Webhooks Button */}
+          {onOpenAlerts && (
+            <button
+              onClick={onOpenAlerts}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-amber-300 hover:border-amber-500/50 transition-all cursor-pointer whitespace-nowrap"
+              title="Configure real-time desktop push notifications and Discord/Telegram webhooks"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-400" />
+              <span>Alerts</span>
+            </button>
+          )}
 
           {/* Reports & Query Builder Button */}
           <button

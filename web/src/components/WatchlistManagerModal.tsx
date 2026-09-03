@@ -60,7 +60,9 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [fileUploadError, setFileUploadError] = useState<string | null>(null);
   const [fileUploadSuccess, setFileUploadSuccess] = useState<string | null>(null);
+  const [isSyncingBackend, setIsSyncingBackend] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const jsonBackupInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -169,6 +171,66 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
     } catch (err: any) {
       setFileUploadError(err.message || 'Error parsing file.');
     }
+  };
+
+  // Server Sync handler
+  const handleSyncToBackend = async () => {
+    setIsSyncingBackend(true);
+    try {
+      const res = await fetch('/api/v1/options/watchlists/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ watchlists: watchlistGroups }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFileUploadSuccess(data.message || 'Synced watchlists to backend screener.');
+      } else {
+        setFileUploadSuccess('Watchlists persisted in local browser storage (Backend sync offline).');
+      }
+    } catch {
+      setFileUploadSuccess('Watchlists persisted in local browser storage.');
+    } finally {
+      setIsSyncingBackend(false);
+    }
+  };
+
+  // Export JSON backup
+  const handleExportWatchlistsJson = () => {
+    const jsonStr = JSON.stringify(watchlistGroups, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `deltaharvest_watchlists_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setFileUploadSuccess('Watchlists configuration exported (.json).');
+  };
+
+  // Import JSON backup
+  const handleImportWatchlistsJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          localStorage.setItem('deltaharvest_watchlist_groups', JSON.stringify(parsed));
+          setFileUploadSuccess(`Imported ${parsed.length} watchlist groups from ${file.name}. Reloading...`);
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          setFileUploadError('Invalid watchlist backup format: expected array of watchlist groups.');
+        }
+      } catch (err: any) {
+        setFileUploadError('Failed to parse JSON file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Create new group
@@ -592,9 +654,45 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
-          <div className="flex items-center space-x-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold text-slate-300">Auto-Synced to Local Storage &amp; Live Market Feed</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleSyncToBackend}
+              disabled={isSyncingBackend}
+              className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 border border-blue-500/30 font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+              title="Sync current watchlists to server data repository"
+            >
+              {isSyncingBackend ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Upload className="w-3.5 h-3.5" />
+              )}
+              <span>{isSyncingBackend ? 'Syncing...' : '☁️ Sync to Server'}</span>
+            </button>
+
+            <button
+              onClick={handleExportWatchlistsJson}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 flex items-center space-x-1 transition-colors cursor-pointer"
+              title="Export watchlists as JSON file"
+            >
+              <Download className="w-3 h-3 text-slate-400" />
+              <span>Backup (.json)</span>
+            </button>
+
+            <button
+              onClick={() => jsonBackupInputRef.current?.click()}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 flex items-center space-x-1 transition-colors cursor-pointer"
+              title="Restore watchlists from JSON file"
+            >
+              <Upload className="w-3 h-3 text-slate-400" />
+              <span>Restore (.json)</span>
+            </button>
+            <input
+              ref={jsonBackupInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleImportWatchlistsJson}
+              className="hidden"
+            />
           </div>
 
           <div className="flex items-center space-x-2">
