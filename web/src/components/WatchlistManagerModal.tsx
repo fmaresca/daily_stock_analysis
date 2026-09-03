@@ -14,6 +14,7 @@ import {
   Copy,
   RefreshCw,
   Activity,
+  Edit2,
 } from './icons';
 import { WatchlistGroup, TickerMeta } from '../types/options';
 import { parseUploadedFile, downloadSampleTemplate } from '../utils/exportImport';
@@ -25,6 +26,7 @@ interface WatchlistManagerModalProps {
   activeGroupId: string;
   onSelectGroup: (groupId: string) => void;
   onCreateGroup: (name: string, tickers?: string[]) => void;
+  onRenameGroup: (groupId: string, newName: string) => void;
   onDeleteGroup: (groupId: string) => void;
   onUpdateGroupTickers: (groupId: string, tickers: string[]) => void;
   availableUniverse: TickerMeta[];
@@ -40,6 +42,7 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
   activeGroupId,
   onSelectGroup,
   onCreateGroup,
+  onRenameGroup,
   onDeleteGroup,
   onUpdateGroupTickers,
   availableUniverse,
@@ -52,6 +55,9 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isNewGroupInputOpen, setIsNewGroupInputOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [fileUploadError, setFileUploadError] = useState<string | null>(null);
   const [fileUploadSuccess, setFileUploadSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,6 +66,14 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
 
   const activeGroup = watchlistGroups.find((g) => g.id === activeGroupId) || watchlistGroups[0];
   const currentTickers = activeGroup?.tickers || [];
+
+  // Group Selection handler
+  const handleSelectGroup = (id: string) => {
+    onSelectGroup(id);
+    setIsRenaming(false);
+    setIsDeleteConfirmOpen(false);
+    setRenameValue('');
+  };
 
   // Single ticker add
   const handleAddSingle = (e: React.FormEvent) => {
@@ -160,10 +174,36 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
   // Create new group
   const handleCreateGroupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newGroupName.trim()) {
-      onCreateGroup(newGroupName.trim(), []);
+    const cleanName = newGroupName.trim();
+    if (cleanName) {
+      onCreateGroup(cleanName, []);
       setNewGroupName('');
       setIsNewGroupInputOpen(false);
+      setIsRenaming(false);
+      setIsDeleteConfirmOpen(false);
+      setFileUploadSuccess(`Created new watchlist "${cleanName}".`);
+    }
+  };
+
+  // Rename group submit
+  const handleRenameSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanName = renameValue.trim();
+    if (cleanName && cleanName !== activeGroup.name) {
+      onRenameGroup(activeGroup.id, cleanName);
+      setFileUploadSuccess(`Watchlist renamed to "${cleanName}".`);
+    }
+    setIsRenaming(false);
+  };
+
+  // Delete group submit
+  const handleConfirmDelete = () => {
+    if (watchlistGroups.length > 1) {
+      const deletedName = activeGroup.name;
+      onDeleteGroup(activeGroup.id);
+      setIsDeleteConfirmOpen(false);
+      setIsRenaming(false);
+      setFileUploadSuccess(`Deleted watchlist "${deletedName}".`);
     }
   };
 
@@ -203,7 +243,7 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
             {watchlistGroups.map((g) => (
               <button
                 key={g.id}
-                onClick={() => onSelectGroup(g.id)}
+                onClick={() => handleSelectGroup(g.id)}
                 className={`px-3 py-1.5 rounded-lg font-semibold flex items-center space-x-1.5 transition-all ${
                   g.id === activeGroupId
                     ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
@@ -224,7 +264,11 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
             {/* New Group Button */}
             {!isNewGroupInputOpen ? (
               <button
-                onClick={() => setIsNewGroupInputOpen(true)}
+                onClick={() => {
+                  setIsNewGroupInputOpen(true);
+                  setIsRenaming(false);
+                  setIsDeleteConfirmOpen(false);
+                }}
                 className="px-2.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-amber-300 hover:bg-slate-800 flex items-center space-x-1 transition-all border border-dashed border-slate-700"
               >
                 <FolderPlus className="w-3.5 h-3.5" />
@@ -256,19 +300,105 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
               </form>
             )}
           </div>
-
-          {/* Delete active custom list button */}
-          {!activeGroup?.isDefault && watchlistGroups.length > 1 && (
-            <button
-              onClick={() => onDeleteGroup(activeGroup.id)}
-              className="text-xs text-rose-400 hover:text-rose-300 p-1 flex items-center space-x-1 transition-colors"
-              title="Delete this watchlist"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Delete List</span>
-            </button>
-          )}
         </div>
+
+        {/* Active Watchlist Action Strip (Rename, Delete with Confirmation, Ticker Count) */}
+        <div className="px-5 py-2.5 bg-slate-950/70 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-2">
+            {!isRenaming ? (
+              <div className="flex items-center space-x-2">
+                <span className="font-bold text-white text-sm flex items-center gap-1.5">
+                  <Star className="w-3.5 h-3.5 text-amber-400" filled />
+                  {activeGroup.name}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
+                  {currentTickers.length} Tickers
+                </span>
+                {activeGroup.isDefault && (
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    Primary Default
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRenameValue(activeGroup.name);
+                    setIsRenaming(true);
+                    setIsDeleteConfirmOpen(false);
+                  }}
+                  className="p-1 px-2 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors flex items-center space-x-1 border border-slate-700/60"
+                  title="Rename this watchlist"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">Rename</span>
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleRenameSubmit} className="flex items-center space-x-1.5">
+                <input
+                  type="text"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  className="bg-slate-800 text-white px-2.5 py-1 rounded-lg text-xs font-semibold focus:outline-none border border-amber-500/80 w-48"
+                  placeholder="Enter new name..."
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRenaming(false)}
+                  className="p-1 text-slate-400 hover:text-white rounded transition-colors"
+                  title="Cancel"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Delete Action with Safety Confirmation */}
+          <div className="flex items-center space-x-2">
+            {watchlistGroups.length > 1 && (
+              !isDeleteConfirmOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteConfirmOpen(true)}
+                  className="text-xs text-rose-400 hover:text-rose-300 px-2 py-1 rounded hover:bg-rose-950/30 border border-transparent hover:border-rose-900/50 flex items-center space-x-1.5 transition-colors cursor-pointer"
+                  title="Delete this watchlist"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Watchlist</span>
+                </button>
+              ) : (
+                <div className="flex items-center space-x-2 p-1 px-2 bg-rose-950/50 border border-rose-500/50 rounded-lg animate-fade-in">
+                  <span className="text-[11px] text-rose-300 font-medium">
+                    Delete "{activeGroup.name}"?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    className="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-[11px] font-bold transition-colors cursor-pointer"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteConfirmOpen(false)}
+                    className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+
 
         {/* Modal Body */}
         <div className="p-5 overflow-y-auto space-y-5 flex-1 text-sm text-slate-300">

@@ -488,3 +488,11 @@ export const Moon: React.FC<React.SVGProps<SVGSVGElement>> = ({ className, ...pr
     <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
   </svg>
 );
+
+export const Edit2: React.FC<IconProps> = ({ className = "w-4 h-4", ...props }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    <path d="m15 5 4 4" />
+  </svg>
+);
+
