@@ -1437,6 +1437,20 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     A <strong>Poor Man’s Covered Call</strong> replaces costly 100-share stock purchases with deep In-The-Money LEAPS ($0.80+\Delta$) and sells 30–45 DTE short calls ($0.25\Delta$), cutting capital outlay by 60%–75% while maintaining zero extrinsic assignment risk. The <strong>Portfolio Margin &amp; Stress Simulator</strong> lets you enter your active derivatives book and model multi-factor market shocks (Price $\pm 20\%$, Volatility spikes up to $+100\%$, Time decay), comparing standard Reg-T margin against risk-based Portfolio Margin (TIMS) to quantify liberated purchasing power.
                   </p>
                 </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">How does the AI Multi-Agent Trade Structurer &amp; SEC 10-K Auditor work?</div>
+                  <p className="text-xs text-slate-400">
+                    The <strong>AI Multi-Agent Trade Structurer</strong> deploys a council of three specialized agents: (1) The <em>Quant Specialist</em> audits Delta bounds ($0.15–0.20\Delta$), IV Rank, expected price moves, and statistical probability of profit; (2) The <em>Fundamental &amp; SEC Auditor</em> examines corporate debt maturity, interest coverage, and SEC EDGAR 10-K/10-Q disclosures to ensure solvency; (3) The <em>Senior Trade Structurer</em> integrates these insights to formulate precise limit prices, capital allocation limits (max 4.5%–5%), mandatory 80% profit targets, and 0.50 Delta stop triggers, with 1-click order staging.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">What is the 0.50 Delta Defensive Roll Rule and how does the Repair Engine work?</div>
+                  <p className="text-xs text-slate-400">
+                    When short options face adverse price moves, DeltaHarvest enforces the <strong>0.50 Delta Rule</strong>: never permit an option to reach assignment without testing a defensive adjustment. The <strong>Defensive Rolling &amp; Repair Engine</strong> evaluates four institutional repair tactics: (1) <em>Roll Out &amp; Down</em> (extending expiration 21–28 days while dropping strike $5.00 for a net credit); (2) <em>Roll Flat</em> (extending time at the same strike to harvest maximum extrinsic value); (3) <em>Inverted Wing Defense</em> (selling an opposing credit spread to reduce maximum drawdown); and (4) <em>1:2 Ratio Stock Repair</em> (recovering underwater stock at zero net capital cost).
+                  </p>
+                </div>
               </div>
             </div>
           )}

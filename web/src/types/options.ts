@@ -405,12 +405,15 @@ export type OptionsTabType =
   | 'OPTION_CHAIN_MATRIX'
   | 'PMCC_SCREENER'
   | 'PORTFOLIO_MARGIN_SIM'
+  | 'MULTI_AGENT_AUDIT'
+  | 'DEFENSIVE_ROLL_ASSISTANT'
   | 'EXPIRATION_CADENCE'
   | 'BACKTEST_MARGIN'
   | 'BROKER_STAGING'
   | 'DELTA_GREEKS'
   | 'TICKER_AUDIT'
   | 'INCOME_CALCULATOR';
+
 
 
 export interface WatchlistGroup {
