@@ -395,6 +395,7 @@ export type MenuTreeType = 'EQUITIES' | 'OPTIONS';
 
 export type EquitiesTabType =
   | 'TECHNICAL_SCREENER'
+  | 'WEEKLY_STOCK_SCREENERS'
   | 'INTERACTIVE_CHARTS'
   | 'FUNDAMENTAL_HEALTH'
   | 'TREND_SUPPORT'
@@ -404,6 +405,7 @@ export type EquitiesTabType =
 
 export type OptionsTabType =
   | 'INCOME_SCREENER'
+  | 'WEEKLY_STOCK_SCREENERS'
   | 'MULTI_LEG_SPREADS'
   | 'VOLATILITY_SKEW'
   | 'OPTION_CHAIN_MATRIX'

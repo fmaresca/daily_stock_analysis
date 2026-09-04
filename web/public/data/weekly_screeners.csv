@@ -1,0 +1,54 @@
+symbol,name,last_price,price_change,percent_change,opinion,opinion_pct,opinion_previous,opinion_last_week,opinion_last_month,has_options,has_weekly_options,signal_strength,signal_direction,recommended_strategy,source,updated_at
+ZETA,Zeta Global Holdings Corp Cl A,31.35,-1.33,-4.07,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,True,Maximum (Top 1%),Strong Bullish,BULL_PUT_SPREAD,barchart,2026-09-04T22:35:39.241889+00:00
+VLO,Valero Energy Corp,370.72,0.03,0.01,100% Buy,100.0,100% Buy,100% Buy,88% Buy,True,True,Maximum (Top 1%),Strong Bullish,BULL_PUT_SPREAD,barchart,2026-09-04T22:35:39.242040+00:00
+IOVA,Iovance Biotherapeutics Inc,8.79,0.09,1.03,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,True,Maximum (Top 1%),Strong Bullish,BULL_PUT_SPREAD,barchart,2026-09-04T22:35:39.242128+00:00
+PSX,Phillips 66,255.09,0.43,0.17,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,True,Maximum (Top 1%),Strong Bullish,BULL_PUT_SPREAD,barchart,2026-09-04T22:35:39.242201+00:00
+RNG,Ringcentral Inc,73.39,-2.97,-3.89,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,True,Maximum (Top 1%),Strong Bullish,BULL_PUT_SPREAD,barchart,2026-09-04T22:35:39.242277+00:00
+MUFG,Mitsubishi Ufj Financial Group ADR,24.09,-0.04,-0.17,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242351+00:00
+NMM,Navios Maritime Partners LP,92.16,0.82,0.9,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242418+00:00
+AMCX,AMC Global Media Inc,12.48,-0.31,-2.42,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242486+00:00
+OABI,Omniab Inc,4.33,-0.42,-8.84,100% Buy,100.0,100% Buy,100% Buy,64% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242556+00:00
+PBYI,Puma Biotechnology,9.55,0.14,1.49,100% Buy,100.0,100% Buy,100% Buy,96% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242626+00:00
+PLSE,Pulse Biosciences CS,53.24,-1.47,-2.69,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242687+00:00
+RCEL,Avita Medical Inc,11.2,0.26,2.38,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242754+00:00
+RDI,Reading Intl Cl A,2.34,0.22,10.38,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242825+00:00
+RPRX,Royalty Pharma Plc Cl A,63.96,0.08,0.13,100% Buy,100.0,100% Buy,100% Buy,88% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242889+00:00
+RSKD,Riskified Ltd Cl A,6.51,-0.42,-6.06,100% Buy,100.0,100% Buy,100% Buy,96% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.242949+00:00
+RVTY,Revvity Inc,130.22,-0.41,-0.31,100% Buy,100.0,100% Buy,100% Buy,88% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243013+00:00
+SB,Safe Bulkers Inc,9.17,0.16,1.78,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243086+00:00
+SEIC,Sei Investments Company,110.39,-1.07,-0.96,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243147+00:00
+SLDE,Slide Insurance Holdings Inc,24.67,-0.06,-0.24,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243207+00:00
+TBBB,BBB Foods Inc Cl A,49.77,0.09,0.18,100% Buy,100.0,100% Buy,100% Buy,80% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243280+00:00
+TX,Ternium S.A. ADR,58.0,0.02,0.03,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243378+00:00
+TXG,10X Genomics Inc,62.65,-0.57,-0.9,100% Buy,100.0,100% Buy,100% Buy,88% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243446+00:00
+UMBF,UMB Financial Corp,143.76,0.32,0.22,100% Buy,100.0,100% Buy,64% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243511+00:00
+VEON,Veon Ltd ADR,64.21,-2.04,-3.09,100% Buy,100.0,100% Buy,100% Buy,88% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243573+00:00
+WT,Wisdomtree Inc,24.89,0.02,0.08,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243634+00:00
+LPG,Dorian Lpg Ltd,55.2,1.63,3.04,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243695+00:00
+BNS,Bank of Nova Scotia,93.82,-1.1,-1.16,100% Buy,100.0,100% Buy,100% Buy,96% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243776+00:00
+CAAS,China Automotive Sys,5.4,-0.04,-0.74,100% Buy,100.0,100% Buy,100% Buy,72% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243847+00:00
+CGEM,Cullinan Therapeutics Inc,22.09,-0.07,-0.32,100% Buy,100.0,100% Buy,100% Buy,96% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243911+00:00
+CIB,Bancolombia S.A. ADR,100.58,-1.29,-1.27,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.243973+00:00
+CLMT,Calumet Inc,53.13,-0.37,-0.69,100% Buy,100.0,100% Buy,100% Buy,88% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244040+00:00
+CRDL,Cardiol Therapeutics,2.2,0.04,1.85,100% Buy,100.0,100% Buy,100% Buy,64% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244109+00:00
+DAC,Danaos Corp,155.26,1.11,0.72,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244180+00:00
+DINO,HF Sinclair Corp,105.41,-0.74,-0.7,100% Buy,100.0,100% Buy,100% Buy,88% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244244+00:00
+GORO,Goldgroup Mining Inc,4.15,0.1,2.47,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244306+00:00
+MPC,Marathon Petroleum,388.9,1.19,0.31,100% Buy,100.0,100% Buy,100% Buy,88% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244367+00:00
+HALO,Halozyme Therapeutic,110.19,-0.57,-0.51,100% Buy,100.0,100% Buy,100% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244429+00:00
+HNST,The Honest Company,5.95,0.1,1.71,100% Buy,100.0,100% Buy,100% Buy,96% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244491+00:00
+ILMN,Illumina Inc,218.22,-3.44,-1.55,100% Buy,100.0,100% Buy,100% Buy,88% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244554+00:00
+ING,ING Groep N.V. ADR,37.18,0.09,0.24,100% Buy,100.0,100% Buy,88% Buy,100% Buy,True,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244615+00:00
+ARTNA,Artesian Res Corp A,36.19,-0.11,-0.3,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244677+00:00
+BUUU,BuUU Group Limited Class A Ordinary Share,34.6,2.93,9.25,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244740+00:00
+IPEX,Inflection Point Acquisition Corp V,7.75,-3.17,-29.03,Hold,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244804+00:00
+CFFI,C&F Financial Corp,94.89,0.26,0.27,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244868+00:00
+PBAM,Private Bancorp of America Inc,90.1,0.6,0.67,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.244929+00:00
+TISI,Team Inc,27.91,1.16,4.34,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.245014+00:00
+CIX,Compx International Inc,35.0,-0.93,-2.59,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.245081+00:00
+CPBI,Central Plains Bancshares Inc,21.45,0.47,2.24,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.245156+00:00
+PROV,Provident Financial,18.7,0.17,0.92,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.245226+00:00
+SAIH,Saiheat Limited,25.94,0.94,3.74,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.245294+00:00
+EDRY,Eurodry Ltd,57.43,5.38,10.34,100% Buy,100.0,100% Buy,100% Buy,100% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.245382+00:00
+RNXT,Renovorx Inc,2.39,0.02,0.84,100% Buy,100.0,100% Buy,100% Buy,16% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.245452+00:00
+EHLD,Euroholdings Ltd,11.52,0.01,0.04,100% Buy,100.0,100% Buy,100% Buy,80% Buy,False,False,Maximum (Top 1%),Strong Bullish,CSP,barchart,2026-09-04T22:35:39.245512+00:00

@@ -104,6 +104,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
+      id: 'nav-weekly-screeners',
+      title: 'Weekly Stock Screeners (Barchart Top 1% Signals)',
+      subtitle: 'Direction strength signals, 13-indicator technical consensus & weekly options candidates',
+      icon: <Flame className="w-4 h-4 text-amber-400" />,
+      action: () => {
+        onNavigateTree('EQUITIES', 'WEEKLY_STOCK_SCREENERS');
+        onClose();
+      },
+    },
+    {
       id: 'nav-charts',
       title: 'Interactive Technical Charts',
       subtitle: 'TradingView Lightweight Candlestick charts with Bollinger Bands and strike overlays',

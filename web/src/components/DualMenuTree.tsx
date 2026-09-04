@@ -120,6 +120,21 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             </button>
 
             <button
+              onClick={() => onSelectEquitiesTab('WEEKLY_STOCK_SCREENERS')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeEquitiesTab === 'WEEKLY_STOCK_SCREENERS'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <Flame className="w-4 h-4 text-amber-400" />
+              <span>Weekly Stock Screeners</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                Barchart Top 1%
+              </span>
+            </button>
+
+            <button
               onClick={() => onSelectEquitiesTab('INTERACTIVE_CHARTS')}
               className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeEquitiesTab === 'INTERACTIVE_CHARTS'
@@ -214,6 +229,21 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             >
               <TrendingUp className="w-4 h-4" />
               <span>Conservative Income (CSPs &amp; CCs)</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('WEEKLY_STOCK_SCREENERS')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'WEEKLY_STOCK_SCREENERS'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <Flame className="w-4 h-4 text-amber-400" />
+              <span>Weekly Stock Screeners</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                Barchart
+              </span>
             </button>
 
             <button
