@@ -30,6 +30,8 @@ import { MultiAgentTradeAuditorView } from './components/MultiAgentTradeAuditorV
 import { DefensiveRollAssistantView } from './components/DefensiveRollAssistantView';
 import { TaxAlphaOptimizerView } from './components/TaxAlphaOptimizerView';
 import { ExecutivePortfolioDigestView } from './components/ExecutivePortfolioDigestView';
+import { WeeklyStockScreenersView } from './components/WeeklyStockScreenersView';
+import { WeeklyScreenerDataset } from './types/weeklyScreeners';
 import { startContinuousRiskSweeper, stopContinuousRiskSweeper } from './utils/continuousRiskSweeper';
 import { OptionContractData } from './utils/optionChainMatrix';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -140,6 +142,22 @@ export const App: React.FC = () => {
   const [isStagedModalOpen, setIsStagedModalOpen] = useState<boolean>(false);
   const [activeStagedOpportunity, setActiveStagedOpportunity] = useState<OptionOpportunity | null>(null);
   const [activeStagedSpread, setActiveStagedSpread] = useState<MultiLegSpread | null>(null);
+  const [weeklyScreenersDataset, setWeeklyScreenersDataset] = useState<WeeklyScreenerDataset | null>(null);
+
+  useEffect(() => {
+    const loadWeeklyScreeners = async () => {
+      try {
+        const res = await fetch('./data/weekly_screeners.json?t=' + Date.now());
+        if (res.ok) {
+          const json = await res.json();
+          setWeeklyScreenersDataset(json);
+        }
+      } catch (err) {
+        console.warn('Could not load weekly_screeners.json on startup:', err);
+      }
+    };
+    loadWeeklyScreeners();
+  }, []);
 
   // Multi-Watchlist persistent state
   const [watchlistGroups, setWatchlistGroups] = useState<WatchlistGroup[]>(() => {
@@ -1616,7 +1634,49 @@ export const App: React.FC = () => {
 
         {/* Primary Content View Switcher */}
         {activeTree === 'EQUITIES' ? (
-          activeEquitiesTab === 'INTERACTIVE_CHARTS' ? (
+          activeEquitiesTab === 'WEEKLY_STOCK_SCREENERS' ? (
+            /* Weekly Stock Screeners (Barchart Direction Strength & Multi-Source Engine) */
+            <WeeklyStockScreenersView
+              initialDataset={weeklyScreenersDataset}
+              onSelectSymbolForChart={(sym) => {
+                setActiveChartSymbol(sym);
+                setActiveEquitiesTab('INTERACTIVE_CHARTS');
+              }}
+              onOpenTickerAudit={(sym) => {
+                const target = universeTickers.find((t) => t.symbol === sym);
+                if (target) {
+                  setSelectedTicker(target);
+                } else {
+                  setSelectedTicker({
+                    symbol: sym,
+                    name: sym,
+                    sector: 'Screened Candidate',
+                    spot_price: 100,
+                    sma_20: 100,
+                    upper_band: 105,
+                    lower_band: 95,
+                    rsi_14: 50,
+                    iv_rank: 50,
+                    has_weekly_options: true,
+                    liquidity_tier: 'Tier 1',
+                    earnings_alert: false,
+                    days_to_earnings: 45,
+                    dividend_yield_pct: 0,
+                    atr_14: 2,
+                    hv_20: 25,
+                    volume: 1000000,
+                    avg_volume_30: 1000000,
+                    is_above_sma20: true,
+                    price_history_50d: [],
+                  } as any);
+                }
+              }}
+              onOpenBrokerStaging={(_sym, _strat) => {
+                setActiveTree('OPTIONS');
+                setActiveOptionsTab('BROKER_STAGING');
+              }}
+            />
+          ) : activeEquitiesTab === 'INTERACTIVE_CHARTS' ? (
             /* Dedicated Interactive Technical Chart Workspace */
             <div className="space-y-4">
               {/* Ticker Selector Strip */}
@@ -1744,7 +1804,49 @@ export const App: React.FC = () => {
         ) : (
           /* Tree 2: Options & Weekly Yield Engine */
           <div className="space-y-4">
-            {activeOptionsTab === 'MULTI_LEG_SPREADS' ? (
+            {activeOptionsTab === 'WEEKLY_STOCK_SCREENERS' ? (
+              /* Weekly Stock Screeners (Barchart Direction Strength & Multi-Source Engine) */
+              <WeeklyStockScreenersView
+                initialDataset={weeklyScreenersDataset}
+                onSelectSymbolForChart={(sym) => {
+                  setActiveChartSymbol(sym);
+                  setActiveTree('EQUITIES');
+                  setActiveEquitiesTab('INTERACTIVE_CHARTS');
+                }}
+                onOpenTickerAudit={(sym) => {
+                  const target = universeTickers.find((t) => t.symbol === sym);
+                  if (target) {
+                    setSelectedTicker(target);
+                  } else {
+                    setSelectedTicker({
+                      symbol: sym,
+                      name: sym,
+                      sector: 'Screened Candidate',
+                      spot_price: 100,
+                      sma_20: 100,
+                      upper_band: 105,
+                      lower_band: 95,
+                      rsi_14: 50,
+                      iv_rank: 50,
+                      has_weekly_options: true,
+                      liquidity_tier: 'Tier 1',
+                      earnings_alert: false,
+                      days_to_earnings: 45,
+                      dividend_yield_pct: 0,
+                      atr_14: 2,
+                      hv_20: 25,
+                      volume: 1000000,
+                      avg_volume_30: 1000000,
+                      is_above_sma20: true,
+                      price_history_50d: [],
+                    } as any);
+                  }
+                }}
+                onOpenBrokerStaging={(_sym, _strat) => {
+                  setActiveOptionsTab('BROKER_STAGING');
+                }}
+              />
+            ) : activeOptionsTab === 'MULTI_LEG_SPREADS' ? (
               /* Defined-Risk Vertical Spreads & Iron Condors (anchored in 0.15 - 0.20 Delta) */
               <MultiLegSpreadTable
                 spreads={multiLegSpreads}
