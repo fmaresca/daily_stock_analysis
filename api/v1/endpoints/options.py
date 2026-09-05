@@ -13,6 +13,10 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+import time
+import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -760,6 +764,260 @@ Return ONLY a valid, raw JSON object (no surrounding Markdown wrappers, no ```js
         raise HTTPException(status_code=e.code, detail=f"Gemini API returned HTTP {e.code}: {err_body}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Options analysis failed: {str(e)}")
+
+
+_CALENDAR_CACHE: Dict[str, Any] = {
+    "timestamp": 0.0,
+    "data": None,
+}
+
+_SECTOR_IMPACT_MAP = {
+    "CPI": {
+        "sectors": "Technology, Real Estate, Financials, Utilities",
+        "tickers": "QQQ, VNQ, XLF, TLT",
+        "impact": "High"
+    },
+    "PCE": {
+        "sectors": "Broad Market, Tech, Long Duration Assets",
+        "tickers": "SPY, QQQ, TLT",
+        "impact": "High"
+    },
+    "FOMC": {
+        "sectors": "Banking, Tech, Real Estate, Precious Metals",
+        "tickers": "KRE, XLF, QQQ, GLD",
+        "impact": "High"
+    },
+    "FED": {
+        "sectors": "Banking, Broad Market, Bonds",
+        "tickers": "SPY, QQQ, TLT, XLF",
+        "impact": "High"
+    },
+    "NON-FARM": {
+        "sectors": "Consumer Discretionary, Industrials, Small Caps",
+        "tickers": "XLY, XLI, IWM",
+        "impact": "High"
+    },
+    "PAYROLLS": {
+        "sectors": "Consumer Discretionary, Industrials, Financials",
+        "tickers": "XLY, XLI, XLF",
+        "impact": "High"
+    },
+    "RETAIL SALES": {
+        "sectors": "Consumer Discretionary, Retail, Transports",
+        "tickers": "XLY, XRT, IYT",
+        "impact": "High"
+    },
+    "UNEMPLOYMENT": {
+        "sectors": "Broad Equities, Discretionary",
+        "tickers": "SPY, XLY, IWM",
+        "impact": "High"
+    },
+    "PMI": {
+        "sectors": "Industrials, Basic Materials, Cyclicals",
+        "tickers": "XLI, XLB",
+        "impact": "Moderate"
+    },
+    "ISM": {
+        "sectors": "Industrials, Materials, Tech Supply",
+        "tickers": "XLI, XLB, SOXX",
+        "impact": "Moderate"
+    },
+    "CRUDE OIL": {
+        "sectors": "Energy, Transportation, Airlines",
+        "tickers": "XLE, JETS, IYT",
+        "impact": "Moderate"
+    },
+    "JOBLESS CLAIMS": {
+        "sectors": "Broad Equities, High-Beta Assets",
+        "tickers": "SPY, IWM",
+        "impact": "Moderate"
+    },
+    "HOUSING": {
+        "sectors": "Homebuilders, Building Products, Real Estate",
+        "tickers": "ITB, XHB, VNQ, HD",
+        "impact": "Low"
+    },
+    "GDP": {
+        "sectors": "Broad Market, Cyclicals, Small Caps",
+        "tickers": "SPY, DIA, IWM",
+        "impact": "High"
+    },
+    "TREASURY": {
+        "sectors": "Bonds, Financials, High Dividend",
+        "tickers": "TLT, IEF, XLF",
+        "impact": "Moderate"
+    }
+}
+
+_FALLBACK_INDICATORS = [
+    {
+        "title": "ISM Services PMI",
+        "country": "USD",
+        "dateET": "Mon, Sep 7",
+        "timeET": "10:00 AM",
+        "impact": "Moderate",
+        "forecast": "52.0",
+        "previous": "51.4",
+        "sectors": "Industrials, Basic Materials, Tech Supply",
+        "tickers": "XLI, XLB, SOXX",
+        "isoDate": datetime.now(timezone.utc).isoformat()
+    },
+    {
+        "title": "Initial Jobless Claims",
+        "country": "USD",
+        "dateET": "Thu, Sep 10",
+        "timeET": "08:30 AM",
+        "impact": "Moderate",
+        "forecast": "228K",
+        "previous": "227K",
+        "sectors": "Broad Equities, High-Beta Assets",
+        "tickers": "SPY, IWM",
+        "isoDate": datetime.now(timezone.utc).isoformat()
+    },
+    {
+        "title": "CPI m/m & Core CPI y/y",
+        "country": "USD",
+        "dateET": "Wed, Sep 16",
+        "timeET": "08:30 AM",
+        "impact": "High",
+        "forecast": "0.2% / 3.2%",
+        "previous": "0.2% / 3.2%",
+        "sectors": "Technology, Real Estate, Financials, Utilities",
+        "tickers": "QQQ, VNQ, XLF, TLT",
+        "isoDate": datetime.now(timezone.utc).isoformat()
+    },
+    {
+        "title": "FOMC Rate Decision & Press Conference",
+        "country": "USD",
+        "dateET": "Wed, Sep 16",
+        "timeET": "02:00 PM",
+        "impact": "High",
+        "forecast": "4.75% - 5.00%",
+        "previous": "5.25% - 5.50%",
+        "sectors": "Banking, Tech, Real Estate, Precious Metals",
+        "tickers": "KRE, XLF, QQQ, GLD",
+        "isoDate": datetime.now(timezone.utc).isoformat()
+    },
+    {
+        "title": "Retail Sales m/m",
+        "country": "USD",
+        "dateET": "Fri, Sep 18",
+        "timeET": "08:30 AM",
+        "impact": "High",
+        "forecast": "0.3%",
+        "previous": "0.1%",
+        "sectors": "Consumer Discretionary, Retail, Transports",
+        "tickers": "XLY, XRT, IYT",
+        "isoDate": datetime.now(timezone.utc).isoformat()
+    }
+]
+
+
+@router.get("/economic-calendar")
+def get_economic_calendar():
+    """
+    Ingests the weekly macroeconomic calendar from Forex Factory / faireconomy.media,
+    filters for USD events, applies deterministic sector-impact mapping, and normalizes timestamps.
+    """
+    now = time.time()
+    if _CALENDAR_CACHE["data"] is not None and (now - _CALENDAR_CACHE["timestamp"]) < 1800:
+        return _CALENDAR_CACHE["data"]
+
+    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    headers = {
+        "User-Agent": "DailyStockAnalysis/1.0",
+        "Accept": "application/json"
+    }
+
+    try:
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            raw_data = resp.read().decode("utf-8")
+            events = json.loads(raw_data)
+
+        if not isinstance(events, list) or not events:
+            raise ValueError("Empty response from upstream macro calendar")
+
+        usd_events = []
+        for e in events:
+            if not isinstance(e, dict) or e.get("country") != "USD":
+                continue
+
+            title = e.get("title", "Economic Release")
+            title_upper = title.upper()
+            affected_sectors = "Broad Equities"
+            affected_tickers = "SPY"
+            raw_impact = e.get("impact", "Low")
+            mapped_impact = "High" if raw_impact == "High" else ("Moderate" if raw_impact in ("Medium", "Moderate") else "Low")
+
+            for key, mapping in _SECTOR_IMPACT_MAP.items():
+                if key in title_upper:
+                    affected_sectors = mapping["sectors"]
+                    affected_tickers = mapping["tickers"]
+                    if mapping["impact"] == "High":
+                        mapped_impact = "High"
+                    elif mapping["impact"] == "Moderate" and mapped_impact != "High":
+                        mapped_impact = "Moderate"
+                    break
+
+            raw_date = e.get("date", "")
+            date_et = raw_date
+            time_et = ""
+            iso_date = raw_date
+
+            try:
+                # Handle ISO 8601 string e.g. 2026-09-07T10:00:00-04:00
+                dt = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+                try:
+                    import zoneinfo
+                    et_tz = zoneinfo.ZoneInfo("America/New_York")
+                    dt_et = dt.astimezone(et_tz)
+                except Exception:
+                    dt_et = dt
+
+                date_et = dt_et.strftime("%a, %b %d")
+                time_et = dt_et.strftime("%I:%M %p")
+                iso_date = dt_et.isoformat()
+            except Exception:
+                pass
+
+            forecast = str(e.get("forecast") or "").strip()
+            previous = str(e.get("previous") or "").strip()
+
+            usd_events.append({
+                "title": title,
+                "country": "USD",
+                "dateET": date_et,
+                "timeET": time_et,
+                "impact": mapped_impact,
+                "forecast": forecast if forecast else "--",
+                "previous": previous if previous else "--",
+                "sectors": affected_sectors,
+                "tickers": affected_tickers,
+                "isoDate": iso_date
+            })
+
+        result = {
+            "indicators": usd_events,
+            "source": "faireconomy_media",
+            "fallback": False,
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        }
+        _CALENDAR_CACHE["timestamp"] = now
+        _CALENDAR_CACHE["data"] = result
+        return result
+
+    except Exception as err:
+        logger.warning("Failed to fetch upstream macro calendar: %s. Returning baseline schedule.", err)
+        fallback_result = {
+            "indicators": _FALLBACK_INDICATORS,
+            "source": "fallback_baseline",
+            "fallback": True,
+            "notice": f"Remote macro feed temporarily offline ({str(err)}). Displaying baseline schedule.",
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        }
+        return fallback_result
+
 
 
 
