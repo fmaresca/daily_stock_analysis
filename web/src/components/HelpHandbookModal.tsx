@@ -26,6 +26,7 @@ interface HelpHandbookModalProps {
 
 type HandbookTab =
   | 'LAYPERSON_PRIMER'
+  | 'WEEKLY_WORKFLOW_GUIDE'
   | 'AI_OPTIONS_INCOME'
   | 'ECONOMIC_CALENDAR'
   | 'WEEKLY_SCREENERS_GUIDE'
@@ -64,7 +65,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>DeltaHarvest Strategy Handbook &amp; Educational Center</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  v3.2
+                  v3.3
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
@@ -92,7 +93,19 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             }`}
           >
             <span>🌟</span>
-            <span>Plain-English Primer (Non-Traders)</span>
+            <span>Plain-English Primer</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('WEEKLY_WORKFLOW_GUIDE')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'WEEKLY_WORKFLOW_GUIDE'
+                ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                : 'text-emerald-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <span>📅</span>
+            <span>Weekly Workflow &amp; 15–25Δ Funnel</span>
           </button>
 
           <button
@@ -362,6 +375,83 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     Implied Volatility (IV) measures market panic or excitement. When IV Rank is high (&ge; 45%), option buyers overpay for insurance, allowing conservative option sellers to harvest unusually high cash yields.
                   </p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 1: End-of-Week Trading Routine & Cascading Funnel */}
+          {activeTab === 'WEEKLY_WORKFLOW_GUIDE' && (
+            <div className="space-y-6">
+              <div className="border-l-2 border-emerald-400 pl-4 py-1">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>📅 The Systematic End-of-Week Options Ritual (4-Step Workflow)</span>
+                </h3>
+                <p className="text-slate-300 mt-1">
+                  At the end of each trading week, systematic options income investors follow a disciplined 4-step process to manage risk on open positions, audit free cash (avoiding margin and overleverage), and screen high-conviction candidates.
+                </p>
+              </div>
+
+              {/* 4 Steps Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">1</span>
+                    <span>Step 1: Open Positions &amp; Capital Audit</span>
+                  </div>
+                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                    <li><strong className="text-white">80% Profit Rule:</strong> If an option has captured &ge; 80% of its initial premium, close it immediately to eliminate tail gamma risk.</li>
+                    <li><strong className="text-white">Threatened Strikes:</strong> If the underlying spot price drops to within 2.5% of your short put strike, trigger the Defensive Roll Assistant to roll down &amp; out for a net credit.</li>
+                    <li><strong className="text-white">Uncovered Shares Check:</strong> If you hold 100+ shares of stock without an active call, flag it to write a 15–25Δ Covered Call.</li>
+                    <li><strong className="text-white">100% Cash-Secured:</strong> Liquid cash minus committed CSP collateral equals your exact Free Deployable Cash. Never touch margin.</li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-blue-500/30 space-y-2">
+                  <div className="flex items-center gap-2 text-blue-300 font-bold text-sm">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-xs">2</span>
+                    <span>Step 2: Macro &amp; Catalyst Pre-Flight</span>
+                  </div>
+                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                    <li><strong className="text-white">Weekly Economic Releases:</strong> Check upcoming CPI, PPI, FOMC, and Non-Farm Payroll releases. Avoid writing puts into binary macro shocks.</li>
+                    <li><strong className="text-white">Earnings Buffer:</strong> Disqualify any candidate with earnings scheduled in the next 14 to 21 days unless deliberate earnings crush harvest.</li>
+                    <li><strong className="text-white">25-Delta Skew:</strong> Ensure the put volatility premium is elevated relative to calls, confirming option buyers are overpaying.</li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-teal-500/30 space-y-2">
+                  <div className="flex items-center gap-2 text-teal-300 font-bold text-sm">
+                    <span className="w-5 h-5 rounded-full bg-teal-500/20 flex items-center justify-center text-xs">3</span>
+                    <span>Step 3: Cascading Screener (15Δ–25Δ Funnel)</span>
+                  </div>
+                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                    <li><strong className="text-white">Quality Gate:</strong> Barchart Opinion &ge; 70%–80% Buy / Top 1% Signal OR MarketChameleon Primary Uptrend + Thinkorswim watchlist.</li>
+                    <li><strong className="text-white">Volatility Gate:</strong> IV Rank &ge; 35%–50% to ensure adequate premium yield.</li>
+                    <li><strong className="text-white">15Δ–25Δ Sweet Spot:</strong> Position short strike at 0.15–0.25 delta (75%–85% POP), anchored outside the lower 2-SD Bollinger Band.</li>
+                    <li><strong className="text-white">Capital Allocation Gate:</strong> Maximum $15,000 cash collateral per position to prevent overconcentration.</li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-amber-500/30 space-y-2">
+                  <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
+                    <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs">4</span>
+                    <span>Step 4: AI Extended Thinking &amp; Sizing</span>
+                  </div>
+                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                    <li><strong className="text-white">Gemini Extended Thinking:</strong> Generate a 1-click institutional prompt feeding all screened candidates and your exact cash budget to pick the top 1 to 5 put writes.</li>
+                    <li><strong className="text-white">Zero-Billing Bridge:</strong> 100% free with your personal Google Gemini web subscription (no API overage fees).</li>
+                    <li><strong className="text-white">Broker Staging:</strong> Stage exact limit orders directly into your Schwab or broker execution workbench.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Tax Alpha & Loss Carryforward section */}
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+                  📈 YTD Premium &amp; Capital Loss Carryforward Netting
+                </h4>
+                <p className="text-xs text-slate-300">
+                  Option premiums harvested are treated as short-term capital gains in the year closed (unless Section 1256 index options, which enjoy 60/40 tax treatment). DeltaHarvest tracks calendar-year YTD option premiums and capital gains, automatically applying any prior-year capital loss carryforwards (e.g. IRS $3,000 annual allowance or carried-over capital losses) to determine your true estimated taxable liability.
+                </p>
               </div>
             </div>
           )}

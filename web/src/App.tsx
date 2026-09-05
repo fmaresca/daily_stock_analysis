@@ -33,6 +33,9 @@ import { ExecutivePortfolioDigestView } from './components/ExecutivePortfolioDig
 import { WeeklyStockScreenersView } from './components/WeeklyStockScreenersView';
 import { OptionsIncomeAnalyzer } from './components/OptionsIncomeAnalyzer';
 import { EconomicCalendarView } from './components/EconomicCalendarView';
+import { WeeklyPositionAuditView } from './components/WeeklyPositionAuditView';
+import { CascadingScreenerView } from './components/CascadingScreenerView';
+import { getStoredCapitalState } from './utils/capitalAndTaxLedger';
 import { WeeklyScreenerDataset } from './types/weeklyScreeners';
 import { startContinuousRiskSweeper, stopContinuousRiskSweeper } from './utils/continuousRiskSweeper';
 import { OptionContractData } from './utils/optionChainMatrix';
@@ -120,10 +123,10 @@ export const App: React.FC = () => {
   const [isRecalculating, setIsRecalculating] = useState<boolean>(false);
   const [dataSource, setDataSource] = useState<string>('Local JSON');
 
-  // Navigation Tree State
-  const [activeTree, setActiveTree] = useState<MenuTreeType>('EQUITIES');
+  // Navigation Tree State (Defaults to Guided End-of-Week Workflow)
+  const [activeTree, setActiveTree] = useState<MenuTreeType>('WORKFLOW');
   const [activeEquitiesTab, setActiveEquitiesTab] = useState<EquitiesTabType>('TECHNICAL_SCREENER');
-  const [activeOptionsTab, setActiveOptionsTab] = useState<OptionsTabType>('INCOME_SCREENER');
+  const [activeOptionsTab, setActiveOptionsTab] = useState<OptionsTabType>('WEEKLY_POSITION_AUDIT');
   const [activeChartSymbol, setActiveChartSymbol] = useState<string>('SPY');
 
   // Interactive Modal States
@@ -1283,6 +1286,7 @@ export const App: React.FC = () => {
           monthlyCount={weeklyCadenceCounts.monthly}
           highIvrCount={highIvrCount}
           earningsAlertCount={earningsAlertCount}
+          freeCashAmount={getStoredCapitalState().freeCash}
         />
 
         {/* Breadcrumbs & Quick-Jump Navigation Bar */}
@@ -1291,19 +1295,30 @@ export const App: React.FC = () => {
           <div className="flex items-center space-x-2 text-slate-400">
             <span className="text-slate-500 font-semibold">📍 Location:</span>
             <button
-              onClick={() => setActiveTree('EQUITIES')}
-              className={`hover:underline font-semibold ${activeTree === 'EQUITIES' ? 'text-blue-400 font-bold' : 'text-slate-400'
-                }`}
+              onClick={() => setActiveTree('WORKFLOW')}
+              className={`hover:underline font-semibold ${
+                activeTree === 'WORKFLOW' ? 'text-emerald-400 font-bold' : 'text-slate-400'
+              }`}
             >
-              US Equities
+              Weekly Workflow
             </button>
             <span>/</span>
             <button
               onClick={() => setActiveTree('OPTIONS')}
-              className={`hover:underline font-semibold ${activeTree === 'OPTIONS' ? 'text-emerald-400 font-bold' : 'text-slate-400'
-                }`}
+              className={`hover:underline font-semibold ${
+                activeTree === 'OPTIONS' ? 'text-indigo-400 font-bold' : 'text-slate-400'
+              }`}
             >
-              Options Yield
+              Strategy Labs
+            </button>
+            <span>/</span>
+            <button
+              onClick={() => setActiveTree('EQUITIES')}
+              className={`hover:underline font-semibold ${
+                activeTree === 'EQUITIES' ? 'text-blue-400 font-bold' : 'text-slate-400'
+              }`}
+            >
+              US Equities
             </button>
             <span>/</span>
             <span className="text-white font-bold font-mono">
@@ -1354,9 +1369,16 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Global KPI Summary Ribbon */}
-        <KPICards
-          tickers={universeTickers}
+        {/* Contextual Screener Toolbar: Rendered strictly on Screening Views to prevent clutter */}
+        {((activeTree === 'EQUITIES' && activeEquitiesTab === 'TECHNICAL_SCREENER') ||
+          (activeTree === 'OPTIONS' &&
+            (activeOptionsTab === 'INCOME_SCREENER' ||
+              activeOptionsTab === 'DELTA_GREEKS' ||
+              activeOptionsTab === 'EXPIRATION_CADENCE'))) && (
+          <div className="space-y-4">
+            {/* Global KPI Summary Ribbon */}
+            <KPICards
+              tickers={universeTickers}
           activeFilter={
             filters.onlyHighIvr
               ? 'IVR'
@@ -1630,9 +1652,11 @@ export const App: React.FC = () => {
                 </strong>{' '}
                 option contracts
               </span>
-            )}
+              )}
+            </div>
           </div>
         </div>
+      )}
 
         {/* Primary Content View Switcher */}
         {activeTree === 'EQUITIES' ? (
@@ -1819,9 +1843,71 @@ export const App: React.FC = () => {
             </div>
           )
         ) : (
-          /* Tree 2: Options & Weekly Yield Engine */
+          /* Workflow & Options Engine Views */
           <div className="space-y-4">
-            {activeOptionsTab === 'WEEKLY_STOCK_SCREENERS' ? (
+            {activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ? (
+              /* Step 1: Weekly Open Positions Audit, Capital Ledger & Tax Center */
+              <WeeklyPositionAuditView
+                onNavigateToRollAssistant={(sym) => {
+                  setActiveTree('OPTIONS');
+                  setActiveOptionsTab('DEFENSIVE_ROLL_ASSISTANT');
+                }}
+                onNavigateToCoveredCallScreener={(sym) => {
+                  setFilters((prev) => ({ ...prev, search: sym, strategy: 'CC' }));
+                  setActiveTree('WORKFLOW');
+                  setActiveOptionsTab('CASCADING_SCREENER');
+                }}
+                onStageCloseOrder={(pos) => {
+                  handleStageOpportunity({
+                    id: `CLOSE_${pos.symbol}_${pos.strike}`,
+                    symbol: pos.symbol,
+                    name: pos.symbol,
+                    category: 'PORTFOLIO_CLOSE',
+                    sector: 'Portfolio',
+                    strategy: pos.type === 'CSP' ? 'CSP' : 'CC',
+                    strategy_name: `Buy to Close (${pos.type})`,
+                    expiration: new Date(Date.now() + pos.dte * 86400000).toISOString().split('T')[0],
+                    dte: pos.dte,
+                    current_price: pos.spotPrice,
+                    strike: pos.strike,
+                    type: pos.type === 'CSP' ? 'put' : 'call',
+                    bid: pos.currentOptionPrice * 0.95,
+                    ask: pos.currentOptionPrice * 1.05,
+                    mid: pos.currentOptionPrice,
+                    collateral_required: 0,
+                    premium_total: Math.round(pos.currentOptionPrice * 100),
+                    breakeven: pos.strike,
+                    cushion_pct: 0,
+                    roc_pct: 0,
+                    annualized_roc: 0,
+                    delta: pos.delta,
+                    abs_delta: Math.abs(pos.delta),
+                    theta: pos.theta,
+                    pop_pct: 90,
+                    iv: pos.iv,
+                    iv_rank: 50,
+                    rsi: 50,
+                    safety_tier: '80% Profit Close',
+                    tier_color: 'emerald',
+                    tags: ['PROFIT_TAKE', 'GAMMA_SHIELD'],
+                    rating: 99,
+                  });
+                  setActiveOptionsTab('BROKER_STAGING');
+                }}
+              />
+            ) : activeOptionsTab === 'CASCADING_SCREENER' ? (
+              /* Step 3: Cascading Screener (15Δ–25Δ, Barchart, MC, TOS, Cash Budget Gate) */
+              <CascadingScreenerView
+                tickers={universeTickers}
+                allOpportunities={allUniverseOpportunities}
+                onStageOpportunity={handleStageOpportunity}
+                onSelectSymbolForChart={(sym) => {
+                  setActiveChartSymbol(sym);
+                  setActiveTree('EQUITIES');
+                  setActiveEquitiesTab('INTERACTIVE_CHARTS');
+                }}
+              />
+            ) : activeOptionsTab === 'WEEKLY_STOCK_SCREENERS' ? (
               /* Weekly Stock Screeners (Barchart Direction Strength & Multi-Source Engine) */
               <WeeklyStockScreenersView
                 initialDataset={weeklyScreenersDataset}
