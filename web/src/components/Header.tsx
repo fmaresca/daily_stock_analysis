@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   TrendingUp,
   RefreshCw,
@@ -13,8 +13,10 @@ import {
   Moon,
   Bell,
   ShieldCheck,
+  Clock,
 } from './icons';
 import { ScreenerSummary } from '../types/options';
+import { analyzeSyncRateLimits } from '../utils/marketHoursAndAutoSync';
 
 interface HeaderProps {
   summary: ScreenerSummary | null;
@@ -35,6 +37,13 @@ interface HeaderProps {
   onOpenExecutiveDigest?: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
+  autoSyncInterval?: number;
+  onChangeAutoSyncInterval?: (seconds: number) => void;
+  autoSyncCountdown?: number;
+  marketHoursOnly?: boolean;
+  onToggleMarketHoursOnly?: () => void;
+  isMarketOpen?: boolean;
+  isThrottled?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -56,7 +65,26 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExecutiveDigest,
   theme = 'dark',
   onToggleTheme,
+  autoSyncInterval = 300,
+  onChangeAutoSyncInterval,
+  autoSyncCountdown = 300,
+  marketHoursOnly = true,
+  onToggleMarketHoursOnly,
+  isMarketOpen = true,
+  isThrottled = false,
 }) => {
+  const [isAutoSyncMenuOpen, setIsAutoSyncMenuOpen] = useState(false);
+
+  const rateAnalysis = useMemo(() => {
+    return analyzeSyncRateLimits(autoSyncInterval, totalTickers || 21);
+  }, [autoSyncInterval, totalTickers]);
+
+  const countdownText = useMemo(() => {
+    if (!autoSyncInterval || autoSyncInterval <= 0) return 'Off';
+    const m = Math.floor(autoSyncCountdown / 60);
+    const s = autoSyncCountdown % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  }, [autoSyncInterval, autoSyncCountdown]);
   const formattedTime = React.useMemo(() => {
     if (!lastUpdated) return 'Live Session';
     try {
@@ -224,16 +252,148 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Unified Real-Time Live Sync & Recalculate Button */}
-          <button
-            onClick={onLiveRecalculate || onRefresh}
-            disabled={isLoading || isRecalculating}
-            className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/60 text-emerald-300 hover:border-emerald-400 transition-all disabled:opacity-50 shadow-sm shadow-emerald-500/20 cursor-pointer whitespace-nowrap"
-            title="Fetch real-time market quotes, refresh Bollinger Bands, RSI & recalculate options Greeks across all watchlists"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isRecalculating || isLoading ? 'animate-spin' : ''}`} />
-            <span>{isRecalculating ? 'Syncing...' : 'Live Sync'}</span>
-          </button>
+          {/* Unified Real-Time Live Sync & Auto-Sync Split Control */}
+          <div className="relative flex items-center shadow-sm shadow-emerald-500/10">
+            {/* Manual Trigger Button */}
+            <button
+              onClick={onLiveRecalculate || onRefresh}
+              disabled={isLoading || isRecalculating}
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-l-lg bg-emerald-950/70 hover:bg-emerald-900/80 border-y border-l border-emerald-500/60 text-emerald-300 hover:border-emerald-400 transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
+              title="Fetch real-time market quotes, refresh Bollinger Bands, RSI & recalculate options Greeks across all watchlists"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isRecalculating || isLoading ? 'animate-spin' : ''}`} />
+              <span>{isRecalculating ? 'Syncing...' : 'Live Sync'}</span>
+            </button>
+
+            {/* Auto-Sync Cadence & Safety Indicator Dropdown Trigger */}
+            <button
+              onClick={() => setIsAutoSyncMenuOpen(!isAutoSyncMenuOpen)}
+              className={`flex items-center space-x-1 px-2.5 py-1.5 text-[11px] font-mono font-bold rounded-r-lg border transition-all cursor-pointer whitespace-nowrap ${
+                isThrottled
+                  ? 'bg-amber-950/60 border-amber-500/60 text-amber-300'
+                  : autoSyncInterval > 0
+                    ? marketHoursOnly && !isMarketOpen
+                      ? 'bg-slate-900/80 border-slate-700 text-slate-400 hover:text-slate-300'
+                      : 'bg-emerald-900/40 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/60'
+                    : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+              title="Configure Automated Live Sync Frequency & Anti-Block Quota Guard"
+            >
+              {autoSyncInterval > 0 ? (
+                isThrottled ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping mr-0.5" />
+                ) : marketHoursOnly && !isMarketOpen ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mr-0.5" />
+                ) : (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-0.5" />
+                )
+              ) : null}
+              <span>
+                {isThrottled
+                  ? 'Throttled (5m)'
+                  : autoSyncInterval > 0
+                    ? marketHoursOnly && !isMarketOpen
+                      ? 'Paused (Mkt Closed)'
+                      : `Auto: ${countdownText}`
+                    : 'Auto: Off'}
+              </span>
+              <span className="text-[9px] text-slate-400 font-sans ml-0.5">▼</span>
+            </button>
+
+            {/* Automated Sync Configuration Menu */}
+            {isAutoSyncMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 p-3.5 bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl z-50 text-xs space-y-3 font-sans animate-fade-in text-slate-200">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center space-x-1.5">
+                    <Clock className="w-4 h-4 text-emerald-400" />
+                    <span className="font-bold text-white text-xs">Automated Live Sync</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                    Anti-Block Guard
+                  </span>
+                </div>
+
+                {/* Cadence Selection */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-slate-400 font-semibold block">Sync Cadence:</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { sec: 0, label: 'Off', sub: 'Manual Only' },
+                      { sec: 300, label: 'Every 5 min', sub: 'Recommended (0% Block)' },
+                      { sec: 600, label: 'Every 10 min', sub: 'Ultra-Safe' },
+                      { sec: 120, label: 'Every 2 min', sub: 'Active Trading' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.sec}
+                        onClick={() => {
+                          onChangeAutoSyncInterval && onChangeAutoSyncInterval(opt.sec);
+                        }}
+                        className={`p-2 rounded-xl text-left border transition-all ${
+                          autoSyncInterval === opt.sec
+                            ? 'bg-emerald-950/50 border-emerald-500/60 text-white font-bold'
+                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-850'
+                        }`}
+                      >
+                        <span className="block text-xs font-semibold">{opt.label}</span>
+                        <span className="block text-[10px] text-slate-400 font-mono mt-0.5">{opt.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Market Hours Only Safeguard Checkbox */}
+                <div className="pt-2 border-t border-slate-800/80 space-y-1">
+                  <label className="flex items-start space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={marketHoursOnly}
+                      onChange={onToggleMarketHoursOnly}
+                      className="mt-0.5 rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0"
+                    />
+                    <div className="text-[11px]">
+                      <span className="font-semibold text-white block">Market Hours Only (9:30 AM - 4:00 PM ET)</span>
+                      <span className="text-slate-400 text-[10px] block leading-tight">
+                        Automatically pauses syncs during weeknights and weekends to prevent burning API calls when markets are closed.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Live Quota Analysis Meter */}
+                <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5 text-[11px] font-mono">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Hourly API Rate:</span>
+                    <strong className="text-emerald-300">
+                      {rateAnalysis.requestsPerHour} / ~2,000 reqs/hr
+                    </strong>
+                  </div>
+                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${
+                        rateAnalysis.quotaUtilizationPct > 60
+                          ? 'bg-amber-500'
+                          : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min(100, rateAnalysis.quotaUtilizationPct)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-500">
+                    <span>Utilization: {rateAnalysis.quotaUtilizationPct}%</span>
+                    <span>Status: {isMarketOpen ? '🟢 Mkt Open' : '⏸️ Mkt Closed'}</span>
+                  </div>
+                </div>
+
+                <div className="pt-1 flex justify-end">
+                  <button
+                    onClick={() => setIsAutoSyncMenuOpen(false)}
+                    className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
