@@ -447,6 +447,8 @@ export interface DisbursementItem {
   frequency?: 'WEEKLY' | 'MONTHLY' | 'ONE_TIME';
 }
 
+export const MAX_SINGLE_EQUITY_POSITION_LIMIT = 200000; // $200,000 maximum collateral per single equity security CSP
+
 export interface AccountCapitalState {
   totalCash: number;
   plannedDisbursements: DisbursementItem[];
@@ -456,8 +458,9 @@ export interface AccountCapitalState {
   priorYtdPremiumBalance: number;
   currentWeekPremiumsCollected: number;
   ytdPremiumsEarned: number;
-  maxPerPositionAllocation: number; // Defaults to $15,000 per user rule
-  maxAllowedPositions: number; // e.g. floor(freeCash / 15000)
+  maxPerPositionAllocation: number; // Target allocation per position (strictly capped at $200,000 per equity security)
+  singleEquityPositionLimit: number; // Hard ceiling: $200,000 max per single equity security CSP
+  maxAllowedPositions: number; // Dynamically calculated: min(5, floor(freeCash / maxPerPositionAllocation))
   lastUpdated: string;
 }
 

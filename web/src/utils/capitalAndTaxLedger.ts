@@ -22,8 +22,58 @@ import { PortfolioPosition } from './portfolioStressTest';
 const CAPITAL_STORAGE_KEY = 'deltaharvest_capital_ledger';
 const TAX_STORAGE_KEY = 'deltaharvest_tax_ledger';
 
-export const DEFAULT_PER_POSITION_BUDGET = 15000; // $15,000 per position rule
+export const MAX_SINGLE_EQUITY_POSITION_LIMIT = 200000; // $200,000 maximum collateral on any one equity security CSP
+export const DEFAULT_TOTAL_AVAILABLE_CASH = 550000; // $550,000 default total available liquid cash
 export const DEFAULT_WEEKLY_DISBURSEMENT = 5000; // $5,000 weekly living expenses rule
+export const DEFAULT_PER_POSITION_BUDGET = 100000; // Default target allocation per position (strictly capped at $200,000)
+
+/**
+ * Dynamically calculates target allocation per position and maximum concurrent positions permitted:
+ * - Position limit on any one equity security CSP will be NO MORE than $200,000.
+ * - Target allocation per position defaults to freeCash / 5 (bounded between $25k and $200,000).
+ * - Maximum concurrent positions permitted is dynamically calculated as:
+ *   min(5, max(0, floor(freeCash / targetAllocationPerPosition)))
+ */
+export function calculateDynamicPositionSizing(
+  freeCash: number,
+  customPositionAllocation?: number
+): {
+  targetAllocationPerPosition: number;
+  maxConcurrentPositions: number;
+  singleEquityPositionLimit: number;
+  totalCashDeployableToPuts: number;
+} {
+  const singleEquityPositionLimit = MAX_SINGLE_EQUITY_POSITION_LIMIT; // $200,000
+  if (freeCash <= 0) {
+    return {
+      targetAllocationPerPosition: 0,
+      maxConcurrentPositions: 0,
+      singleEquityPositionLimit,
+      totalCashDeployableToPuts: 0,
+    };
+  }
+
+  // Target allocation clamped strictly to the $200,000 single equity security ceiling
+  let targetAllocation =
+    customPositionAllocation && customPositionAllocation > 0
+      ? Math.min(singleEquityPositionLimit, customPositionAllocation)
+      : Math.min(singleEquityPositionLimit, Math.max(25000, Math.floor(freeCash / 5)));
+
+  if (targetAllocation <= 0) {
+    targetAllocation = Math.min(singleEquityPositionLimit, freeCash);
+  }
+
+  // Maximum concurrent positions permitted (capped at 5 max per portfolio rule)
+  const maxConcurrent = Math.min(5, Math.max(1, Math.floor(freeCash / targetAllocation)));
+  const totalDeployable = Math.min(freeCash, maxConcurrent * targetAllocation);
+
+  return {
+    targetAllocationPerPosition: targetAllocation,
+    maxConcurrentPositions: maxConcurrent,
+    singleEquityPositionLimit,
+    totalCashDeployableToPuts: totalDeployable,
+  };
+}
 
 export function getDefaultCapitalState(): AccountCapitalState {
   const defaultDisbursements: DisbursementItem[] = [
@@ -36,10 +86,11 @@ export function getDefaultCapitalState(): AccountCapitalState {
     },
   ];
 
-  const totalCash = 65000;
+  const totalCash = DEFAULT_TOTAL_AVAILABLE_CASH;
   const committed = 0;
   const encumbered = DEFAULT_WEEKLY_DISBURSEMENT;
   const free = Math.max(0, totalCash - encumbered - committed);
+  const sizing = calculateDynamicPositionSizing(free);
 
   return {
     totalCash,
@@ -50,8 +101,9 @@ export function getDefaultCapitalState(): AccountCapitalState {
     priorYtdPremiumBalance: 3600.00,
     currentWeekPremiumsCollected: 1250.00,
     ytdPremiumsEarned: 4850.00,
-    maxPerPositionAllocation: DEFAULT_PER_POSITION_BUDGET,
-    maxAllowedPositions: Math.floor(free / DEFAULT_PER_POSITION_BUDGET),
+    maxPerPositionAllocation: sizing.targetAllocationPerPosition,
+    singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
+    maxAllowedPositions: sizing.maxConcurrentPositions,
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -120,16 +172,19 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
 
     const encumbered = calculateEncumberedDisbursements(state.plannedDisbursements);
     const committed = calculateCommittedCspCollateral(currentPositions);
-    const free = Math.max(0, state.totalCash - encumbered - committed);
-    const maxPerPos = state.maxPerPositionAllocation || DEFAULT_PER_POSITION_BUDGET;
+    const totalCash = Number(state.totalCash) > 0 ? Number(state.totalCash) : DEFAULT_TOTAL_AVAILABLE_CASH;
+    const free = Math.max(0, totalCash - encumbered - committed);
+    const sizing = calculateDynamicPositionSizing(free, state.maxPerPositionAllocation);
 
     state = {
       ...state,
+      totalCash,
       totalEncumberedDisbursements: encumbered,
       committedCollateral: committed,
       freeCash: free,
-      maxPerPositionAllocation: maxPerPos,
-      maxAllowedPositions: Math.max(0, Math.floor(free / maxPerPos)),
+      maxPerPositionAllocation: sizing.targetAllocationPerPosition,
+      singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
+      maxAllowedPositions: sizing.maxConcurrentPositions,
       ytdPremiumsEarned: (Number(state.priorYtdPremiumBalance) || 0) + (Number(state.currentWeekPremiumsCollected) || 0),
     };
     return state;

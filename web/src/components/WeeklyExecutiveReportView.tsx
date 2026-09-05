@@ -113,6 +113,9 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
     lines.push(`Encumbered Planned Disbursements (Living Expenses),-$${(capitalState.totalEncumberedDisbursements || 5000).toFixed(2)}`);
     lines.push(`Committed CSP Collateral (100% Cash-Secured),-$${totalCspCollateral.toFixed(2)}`);
     lines.push(`True Deployable Free Cash,$${capitalState.freeCash.toFixed(2)}`);
+    lines.push(`Single Equity Security CSP Limit,$200000.00 (STRICT MAX)`);
+    lines.push(`Target Allocation per Position,$${(capitalState.maxPerPositionAllocation || 100000).toFixed(2)}`);
+    lines.push(`Max Concurrent Positions Permitted,${capitalState.maxAllowedPositions} (Capped at 5 max)`);
     lines.push(`Long Stock Equity Value,$${totalStockEquity.toFixed(2)}`);
     lines.push(`Total Net Account Value,$${totalNetAccountValue.toFixed(2)}`);
     lines.push('');
@@ -267,7 +270,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
                 ${capitalState.freeCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-[10px] text-emerald-500/80 block font-bold print:text-emerald-600">
-                Available for New CSPs
+                {capitalState.maxAllowedPositions} positions permitted (Max $200k/equity)
               </span>
             </div>
           </div>
