@@ -32,7 +32,7 @@ export interface WeeklyScreenerDataset {
   records: WeeklyScreenerRecord[];
 }
 
-export type ScreenerSourceType = 'BARCHART' | 'MARKETCHAMELEON' | 'CUSTOM_UPLOAD';
+export type ScreenerSourceType = 'BARCHART' | 'MARKETCHAMELEON' | 'BARCHART_WATCHLIST' | 'CUSTOM_UPLOAD';
 
 export interface WeeklyScreenerFilterState {
   searchQuery: string;

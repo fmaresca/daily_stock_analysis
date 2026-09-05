@@ -82,6 +82,18 @@ def main() -> int:
         default=None,
         help="Custom filter overrides in JSON format or path to JSON file (e.g. '{\"c8\":\"Over 20000000000\"}')",
     )
+    parser.add_argument(
+        "--symbols",
+        type=str,
+        default=None,
+        help="Single stock symbol or comma-separated list of symbols (e.g. 'AAPL' or 'AAPL,NVDA,TSLA,DELL')",
+    )
+    parser.add_argument(
+        "--symbols-file",
+        type=str,
+        default=None,
+        help="Path to file containing stock symbols (one per line, comma-separated, or CSV)",
+    )
 
     args = parser.parse_args()
 
@@ -98,6 +110,9 @@ def main() -> int:
             logger.error(f"Failed to parse --filters-json: {e}")
             return 1
 
+    if (args.symbols or args.symbols_file) and args.source == "barchart":
+        args.source = "barchart_custom"
+
     agent = ScreenerRegistry.get_agent(args.source, target_url=args.url)
     if custom_filters and hasattr(agent, "filters"):
         agent.filters.update(custom_filters)
@@ -112,6 +127,8 @@ def main() -> int:
     default_csv_name = (
         f"{args.source}_momentum_screener.csv"
         if args.source == "marketchameleon"
+        else f"{args.source}_view190898.csv"
+        if args.source == "barchart_custom"
         else f"{args.source}_weekly_direction_strength.csv"
     )
     csv_path = Path(args.export_csv) if args.export_csv else screeners_dir / default_csv_name
@@ -121,7 +138,20 @@ def main() -> int:
     else:
         json_path = Path(args.export_json)
 
-    if args.import_csv:
+    if args.symbols or args.symbols_file:
+        raw_symbols = []
+        if args.symbols:
+            raw_symbols.append(args.symbols)
+        if args.symbols_file:
+            with open(args.symbols_file, "r", encoding="utf-8", errors="replace") as f:
+                raw_symbols.append(f.read())
+        symbols_str = " ".join(raw_symbols)
+        logger.info(f"Analyzing custom symbols via {agent.display_name}...")
+        if hasattr(agent, "fetch_records_for_symbols"):
+            records = agent.fetch_records_for_symbols(symbols_str)
+        else:
+            records = agent.fetch_records(limit=args.limit)
+    elif args.import_csv:
         logger.info(f"Importing records from CSV: {args.import_csv}")
         records = agent.parse_csv(args.import_csv)
     else:

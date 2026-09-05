@@ -186,6 +186,61 @@ SPY,SPDR S&P 500 ETF,580.10,1.20,0.21%,22.0,22,Yes
         # Verify non-weekly ticker is not in registry
         self.assertNotIn("NAT", cboe_set)
 
+    def test_barchart_custom_watchlist_agent(self):
+        from src.screener_agents.barchart_custom_agent import BarchartCustomWatchlistAgent
+        agent = ScreenerRegistry.get_agent("barchart_custom")
+        self.assertIsInstance(agent, BarchartCustomWatchlistAgent)
+        self.assertIn("190898", agent.target_url)
+
+        # 1. Test clean_symbols
+        raw_symbols = [" aapl ", "nvda,", "TSLA\n", "aapl", "BRK.B", "INVALID$$$SYMBOL!"]
+        cleaned = agent.clean_symbols(raw_symbols)
+        self.assertEqual(cleaned, ["AAPL", "NVDA", "TSLA", "BRK.B"])
+
+        # 2. Test parse_api_item into ScreenerRecord with exact View 190898 fields
+        mock_item = {
+            "raw": {
+                "symbol": "AAPL",
+                "symbolName": "Apple Inc",
+                "lastPrice": 235.50,
+                "priceChange": 3.25,
+                "percentChange": 1.40,
+                "opinion": "100% Buy",
+                "opinionScore": 100,
+                "opinionStabilityPrevious": "100% Buy",
+                "opinionStabilityLastWeek": "88% Buy",
+                "opinionStabilityLastMonth": "80% Buy",
+                "hasWeeklyOptions": True,
+            }
+        }
+        rec = agent._parse_api_item(mock_item)
+        self.assertEqual(rec.symbol, "AAPL")
+        self.assertEqual(rec.name, "Apple Inc")
+        self.assertEqual(rec.last_price, 235.50)
+        self.assertEqual(rec.price_change, 3.25)
+        self.assertEqual(rec.percent_change, 1.40)
+        self.assertEqual(rec.opinion, "100% Buy")
+        self.assertEqual(rec.opinion_pct, 100.0)
+        self.assertEqual(rec.opinion_previous, "100% Buy")
+        self.assertEqual(rec.opinion_last_week, "88% Buy")
+        self.assertEqual(rec.opinion_last_month, "80% Buy")
+        self.assertTrue(rec.has_weekly_options)
+        self.assertEqual(rec.recommended_strategy, "BULL_PUT_SPREAD")
+
+        # 3. Test View 190898 copy-paste TSV output
+        records = [rec]
+        tsv_text = agent.generate_copy_paste_text(records)
+        self.assertIn("Symbol\tName\tLast Price\tNet Change\t% Change\tBarchart Opinion\tOpinion Score %\tStability (Previous)\tStability (Last Week)\tStability (Last Month)\tWeekly Options\tOptions Cadence\tSignal Strength\tSignal Direction\tRecommended Strategy", tsv_text)
+        self.assertIn("AAPL\tApple Inc\t$235.50\t+3.25\t+1.40%\t100% Buy\t100%\t100% Buy\t88% Buy\t80% Buy\tYes\tWeekly\tMaximum (Top 1%)\tStrongest\tBULL_PUT_SPREAD", tsv_text)
+
+        # 4. Test View 190898 CSV export
+        with tempfile.TemporaryDirectory() as tmpdir:
+            csv_path = Path(tmpdir) / "watchlist_190898.csv"
+            agent.export_csv(records, csv_path)
+            self.assertTrue(csv_path.exists())
+            csv_text = csv_path.read_text(encoding="utf-8")
+            self.assertIn("Symbol,Name,Last Price,Price Change,Percent Change,Signal Opinion,Opinion Score %", csv_text)
+            self.assertIn("AAPL,Apple Inc,$235.50,+3.25,+1.40%", csv_text)
 
 
 if __name__ == "__main__":

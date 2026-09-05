@@ -1,0 +1,6 @@
+Symbol,Name,Last Price,Price Change,Percent Change,Signal Opinion,Opinion Score %,Previous Opinion,Last Week Opinion,Last Month Opinion,Weekly Options,Options Cadence,Signal Strength,Signal Direction,Recommended Strategy,Source,Updated At
+AAPL,Apple Inc,$319.97,-8.24,-2.51%,80% Buy,80%,80% Buy,72% Buy,80% Buy,Yes,Weekly,Strong,Strengthening,BULL_PUT_SPREAD,barchart_custom,2026-09-05T01:29:56.190201+00:00
+NVDA,Nvidia Corp,$230.36,+1.91,+0.84%,100% Buy,100%,88% Buy,72% Buy,100% Buy,Yes,Weekly,Maximum (Top 1%),Strongest,BULL_PUT_SPREAD,barchart_custom,2026-09-05T01:29:56.190417+00:00
+TSLA,Tesla Inc,$354.08,-22.29,-5.92%,72% Sell,-72%,56% Sell,80% Sell,100% Sell,Yes,Weekly,Moderate,Weakening,BEAR_CALL_SPREAD,barchart_custom,2026-09-05T01:29:56.190782+00:00
+DELL,Dell Technologies,$524.14,+7.75,+1.50%,100% Buy,100%,100% Buy,88% Buy,96% Buy,Yes,Weekly,Maximum (Top 1%),Strongest,BULL_PUT_SPREAD,barchart_custom,2026-09-05T01:29:56.190899+00:00
+NOW,Servicenow Inc,$141.26,-4.33,-2.97%,72% Buy,72%,72% Buy,72% Buy,24% Buy,Yes,Weekly,Strong,Strengthening,CSP,barchart_custom,2026-09-05T01:29:56.191781+00:00

@@ -521,6 +521,32 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   <strong>1-Click Copy Results:</strong> Click <strong>Copy Results (TSV)</strong> in the top toolbar to copy all visible records along with their respective column headings directly to your clipboard, formatted for instant pasting into Excel, Google Sheets, or your trade log.
                 </p>
               </div>
+
+              {/* Barchart Custom Watchlist & View 190898 Analysis Engine */}
+              <div className="bg-slate-950/60 p-4 rounded-xl border border-amber-800/60 space-y-3">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-1.5 text-amber-400">
+                  <Flame className="w-4 h-4 text-amber-400" />
+                  <span>5. Barchart Custom Watchlist Agent &amp; View 190898 Analysis Engine</span>
+                </h4>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  The <strong>Barchart Custom Watchlist Agent</strong> (<code className="text-amber-300 font-mono">BarchartCustomWatchlistAgent</code>) lets you ingest any custom set of stock symbols in bulk or individually, querying Barchart to perform analysis and return output identical to <code className="text-amber-300 font-mono">barchart.com/my/watchlist?viewName=190898</code>.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                    <span className="font-bold text-amber-300">Ingestion Modes:</span> Quick Single Symbol or Bulk Textarea (commas, spaces, newlines, or .txt/.csv file upload).<br />
+                    <span className="font-bold text-amber-300">Curated Presets:</span> Mag 7, Semis, CBOE High Vol, AI &amp; Cloud.
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                    <span className="font-bold text-amber-300">View 190898 Columns:</span> Symbol, Name, Last Price, Net Change, % Change, Barchart Opinion, Opinion Score %, Stability (Previous / Last Week / Last Month), Weekly Options, Options Cadence, Signal Strength, Signal Direction, Recommended Strategy.<br />
+                    <span className="font-bold text-amber-300">Resilience:</span> Online WAF-bypass query with automatic fallback to local 13-indicator consensus engine.
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
+                  <div className="text-amber-400 font-bold"># CLI Commands:</div>
+                  <div>python scripts/run_screener_agent.py --source barchart_custom --symbols &quot;AAPL,NVDA,TSLA,DELL,NOW&quot;</div>
+                  <div>python scripts/run_screener_agent.py --source barchart_custom --symbols-file symbols.txt</div>
+                </div>
+              </div>
             </div>
           )}
 
