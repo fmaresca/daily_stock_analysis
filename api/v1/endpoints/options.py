@@ -563,3 +563,39 @@ def perform_multi_agent_trade_audit(
     }
 
 
+class BarchartWatchlistAnalysisRequest(BaseModel):
+    symbols: Optional[List[str]] = Field(default_factory=list)
+    symbols_text: Optional[str] = Field(default="")
+
+
+@router.post("/screeners/barchart/analyze-watchlist")
+def analyze_barchart_watchlist(
+    request: BarchartWatchlistAnalysisRequest,
+) -> Dict[str, Any]:
+    """
+    On-demand analysis of custom stock symbols (single or bulk) against Barchart View 190898.
+    """
+    from datetime import datetime, timezone
+    from src.screener_agents.barchart_custom_agent import BarchartCustomWatchlistAgent
+
+    agent = BarchartCustomWatchlistAgent()
+    input_syms: List[str] = list(request.symbols or [])
+    if request.symbols_text:
+        input_syms.extend(agent.clean_symbols(request.symbols_text))
+
+    cleaned = agent.clean_symbols(input_syms)
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="No valid stock symbols provided.")
+
+    records = agent.fetch_records_for_symbols(cleaned)
+    return {
+        "source_id": "barchart_custom",
+        "source_name": "Barchart Custom Watchlist Analyzer (View 190898)",
+        "source_url": "https://www.barchart.com/my/watchlist?viewName=190898",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "total_count": len(records),
+        "records": [r.to_dict() for r in records],
+    }
+
+
+

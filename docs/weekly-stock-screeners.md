@@ -46,7 +46,21 @@ Primary Target URL:
      - LocalStorage persistence for saving, overwriting, and deleting custom named presets.
      - 1-click "Save & Run Screener" applying criteria to the view.
 
-5. **Web UI Section ("Weekly Stock Screeners")**:
+5. **Barchart Custom Watchlist Agent (`barchart_custom`) & View 190898 Output**:
+   - Ingest stock symbols via single ticker quick-add or bulk ingestion (comma, space, newline separated, or `.txt` / `.csv` file upload).
+   - Queries Barchart's core API (`/proxies/core-api/v1/quotes/get?viewName=190898`) in headless Playwright sessions with fallback to the local 13-indicator technical consensus engine (`barchart_opinion_service.py`).
+   - Produces output identical to `https://www.barchart.com/my/watchlist?viewName=190898`:
+     - Symbol & Name
+     - Last Price, Net Change, % Change
+     - Barchart Opinion & Opinion Score %
+     - Historical Stability: Stability (Previous), Stability (Last Week), Stability (Last Month)
+     - Weekly Options & Options Cadence
+     - Signal Strength & Signal Direction
+     - Recommended Strategy
+   - Built-in tab-delimited text (`generate_copy_paste_text`) and standardized CSV export.
+   - Web UI tab "Barchart Watchlist (View 190898)" with dedicated Ingestion & Analysis Console, quick preset chips (`Mag 7`, `Semis`, `CBOE High Vol`, `AI & Cloud`), single symbol quick analyze, and bulk symbol ingestion.
+
+6. **Web UI Section ("Weekly Stock Screeners")**:
    - Accessible from both the Equities and Options navigation menus, as well as the Ctrl+K Command Palette.
    - Real-time KPI summary (Total universe candidates, 100% direction strength count, weekly options percentage, bullish bias).
    - In-browser CSV Upload: Drag-and-drop or upload any Barchart or MarketChameleon CSV directly.
@@ -55,7 +69,7 @@ Primary Target URL:
 
 ## CLI Usage
 
-### Fetch live data from Barchart
+### Fetch live data from Barchart (Default Direction Strength 190898)
 ```bash
 python scripts/run_screener_agent.py --source barchart
 ```
@@ -73,6 +87,16 @@ python scripts/run_screener_agent.py --source marketchameleon --cboe-only
 ### Run with Custom Category Filter Overrides (JSON)
 ```bash
 python scripts/run_screener_agent.py --source marketchameleon --cboe-only --filters-json '{"c45": "60.0 To 70.0"}'
+```
+
+### Run Barchart Custom Watchlist Analysis (View 190898) with Specific Symbols
+```bash
+python scripts/run_screener_agent.py --source barchart_custom --symbols "AAPL,NVDA,TSLA,DELL,NOW,MSFT,AMD"
+```
+
+### Run Barchart Custom Watchlist Analysis from a File of Symbols
+```bash
+python scripts/run_screener_agent.py --source barchart_custom --symbols-file path/to/symbols.txt
 ```
 
 ### Import an existing CSV file

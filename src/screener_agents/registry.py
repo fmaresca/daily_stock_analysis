@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Type
 
 from .base_agent import BaseScreenerAgent
 from .barchart_agent import BarchartScreenerAgent
+from .barchart_custom_agent import BarchartCustomWatchlistAgent
 from .marketchameleon_agent import MarketChameleonScreenerAgent
 
 
@@ -19,6 +20,7 @@ class ScreenerRegistry:
 
     _agents: Dict[str, Type[BaseScreenerAgent]] = {
         "barchart": BarchartScreenerAgent,
+        "barchart_custom": BarchartCustomWatchlistAgent,
         "marketchameleon": MarketChameleonScreenerAgent,
     }
 
