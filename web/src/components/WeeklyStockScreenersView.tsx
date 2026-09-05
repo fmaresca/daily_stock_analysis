@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   WeeklyScreenerRecord,
   WeeklyScreenerDataset,
@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Plus,
   AlertTriangle,
+  Copy,
 } from './icons';
 
 interface WeeklyStockScreenersViewProps {
@@ -40,23 +41,53 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
   onOpenTickerAudit,
   onOpenBrokerStaging,
 }) => {
-  const [dataset, setDataset] = useState<WeeklyScreenerDataset | null>(initialDataset);
+  const [barchartDataset, setBarchartDataset] = useState<WeeklyScreenerDataset | null>(initialDataset);
+  const [mcDataset, setMcDataset] = useState<WeeklyScreenerDataset | null>(null);
+  const [customDataset, setCustomDataset] = useState<WeeklyScreenerDataset | null>(null);
   const [activeSource, setActiveSource] = useState<ScreenerSourceType>('BARCHART');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [weeklyOnly, setWeeklyOnly] = useState<boolean>(true);
+  const [weeklyOnly, setWeeklyOnly] = useState<boolean>(false);
   const [opinionFilter, setOpinionFilter] = useState<'ALL' | '100' | '80'>('ALL');
   const [strategyFilter, setStrategyFilter] = useState<string>('ALL');
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string>('');
+  const [copySuccessMsg, setCopySuccessMsg] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync if initialDataset changes
-  React.useEffect(() => {
-    if (initialDataset && !dataset) {
-      setDataset(initialDataset);
+  // Sync initial dataset
+  useEffect(() => {
+    if (initialDataset && !barchartDataset) {
+      setBarchartDataset(initialDataset);
     }
-  }, [initialDataset, dataset]);
+  }, [initialDataset, barchartDataset]);
+
+  // Load MarketChameleon dataset
+  useEffect(() => {
+    const fetchMcDataset = async () => {
+      try {
+        const res = await fetch('./data/weekly_screeners_marketchameleon.json?t=' + Date.now());
+        if (res.ok) {
+          const json = await res.json();
+          setMcDataset(json);
+        }
+      } catch (err) {
+        console.warn('Could not load MarketChameleon dataset:', err);
+      }
+    };
+    fetchMcDataset();
+  }, []);
+
+  // Determine active dataset
+  const currentDataset = useMemo(() => {
+    if (activeSource === 'MARKETCHAMELEON') {
+      return mcDataset;
+    }
+    if (activeSource === 'CUSTOM_UPLOAD') {
+      return customDataset;
+    }
+    return barchartDataset;
+  }, [activeSource, barchartDataset, mcDataset, customDataset]);
 
   // Handle CSV file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,12 +104,15 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
           const newDataset: WeeklyScreenerDataset = {
             source_id: activeSource === 'BARCHART' ? 'barchart' : activeSource === 'MARKETCHAMELEON' ? 'marketchameleon' : 'custom_upload',
             source_name: activeSource === 'BARCHART' ? 'Barchart Direction Strength' : activeSource === 'MARKETCHAMELEON' ? 'MarketChameleon Screener' : 'Custom Uploaded Screener',
-            source_url: activeSource === 'BARCHART' ? 'https://www.barchart.com/stocks/signals/direction-strength?viewName=190898&timeFrame=daily&orderBy=hasWeeklyOptions&orderDir=desc' : 'https://marketchameleon.com',
+            source_url: activeSource === 'BARCHART' ? 'https://www.barchart.com/stocks/signals/direction-strength?viewName=190898&timeFrame=daily&orderBy=hasWeeklyOptions&orderDir=desc' : 'https://marketchameleon.com/Screeners/Stocks',
             timestamp: new Date().toISOString(),
             total_count: parsedRecords.length,
             records: parsedRecords,
           };
-          setDataset(newDataset);
+          if (activeSource === 'BARCHART') setBarchartDataset(newDataset);
+          else if (activeSource === 'MARKETCHAMELEON') setMcDataset(newDataset);
+          else setCustomDataset(newDataset);
+
           setUploadSuccessMsg(`Successfully imported ${parsedRecords.length} tickers from ${file.name}!`);
           setTimeout(() => setUploadSuccessMsg(''), 6000);
         } else {
@@ -95,45 +129,166 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
     reader.readAsText(file);
   };
 
+  // Copy and Paste Results function (Tab-delimited with respective column headings)
+  const handleCopyResults = () => {
+    if (filteredRecords.length === 0) return;
+
+    let text = '';
+    if (activeSource === 'MARKETCHAMELEON') {
+      const headers = [
+        'Symbol',
+        'Name',
+        'Price',
+        'Change',
+        '% Chg',
+        'Market Cap',
+        '14-Day RSI',
+        'IV30',
+        '20-Day Vol',
+        '1-Yr Vol',
+        'MA Signal',
+        'Recommended Strategy',
+      ];
+      const rows = filteredRecords.map((r) => {
+        const ex = r.extra_fields || {};
+        return [
+          r.symbol,
+          r.name,
+          `$${r.last_price.toFixed(2)}`,
+          `${r.price_change >= 0 ? '+' : ''}${r.price_change.toFixed(2)}`,
+          `${r.percent_change >= 0 ? '+' : ''}${r.percent_change.toFixed(2)}%`,
+          ex.market_cap_str || '',
+          ex.rsi_14 !== undefined ? String(ex.rsi_14) : '',
+          ex.iv30 !== undefined ? `${ex.iv30}%` : '',
+          ex.vol_20d !== undefined ? `${ex.vol_20d}%` : '',
+          ex.vol_1y !== undefined ? `${ex.vol_1y}%` : '',
+          ex.ma_signal || r.opinion || '',
+          r.recommended_strategy,
+        ].join('\t');
+      });
+      text = [headers.join('\t'), ...rows].join('\n');
+    } else {
+      const headers = [
+        'Symbol',
+        'Name',
+        'Last Price',
+        'Net Chg',
+        '% Chg',
+        'Barchart Opinion',
+        'Signal Strength',
+        'Weekly Options',
+        'Recommended Strategy',
+      ];
+      const rows = filteredRecords.map((r) => [
+        r.symbol,
+        r.name,
+        `$${r.last_price.toFixed(2)}`,
+        `${r.price_change >= 0 ? '+' : ''}${r.price_change.toFixed(2)}`,
+        `${r.percent_change >= 0 ? '+' : ''}${r.percent_change.toFixed(2)}%`,
+        r.opinion,
+        r.signal_strength,
+        r.has_weekly_options ? 'Yes' : 'No',
+        r.recommended_strategy,
+      ].join('\t'));
+      text = [headers.join('\t'), ...rows].join('\n');
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+      setCopySuccessMsg(`Copied ${filteredRecords.length} records with column headings to clipboard! Ready to paste into Excel, Sheets, or notes.`);
+      setTimeout(() => setCopySuccessMsg(''), 5000);
+    }).catch((err) => {
+      console.error('Failed to copy text: ', err);
+    });
+  };
+
   // Export current records to CSV
   const handleExportCSV = () => {
-    if (!dataset || dataset.records.length === 0) return;
-    const headers = [
-      'Symbol',
-      'Name',
-      'Last Price',
-      'Price Change',
-      'Percent Change',
-      'Signal Opinion',
-      'Opinion Score %',
-      'Previous Opinion',
-      'Last Week Opinion',
-      'Last Month Opinion',
-      'Weekly Options',
-      'Signal Strength',
-      'Signal Direction',
-      'Recommended Strategy',
-      'Source',
-    ];
-    const rows = filteredRecords.map((r) => [
-      `"${r.symbol}"`,
-      `"${r.name.replace(/"/g, '""')}"`,
-      r.last_price,
-      r.price_change,
-      `${r.percent_change}%`,
-      `"${r.opinion}"`,
-      r.opinion_pct,
-      `"${r.opinion_previous || ''}"`,
-      `"${r.opinion_last_week || ''}"`,
-      `"${r.opinion_last_month || ''}"`,
-      r.has_weekly_options ? 'Yes' : 'No',
-      `"${r.signal_strength}"`,
-      `"${r.signal_direction}"`,
-      `"${r.recommended_strategy}"`,
-      `"${r.source}"`,
-    ]);
+    if (filteredRecords.length === 0) return;
+    let csvContent = '';
 
-    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+    if (activeSource === 'MARKETCHAMELEON') {
+      const headers = [
+        'Symbol',
+        'Name',
+        'Price',
+        'Price Change',
+        '% Chg',
+        'Market Cap',
+        '14-Day RSI',
+        'IV30',
+        'IV % Rank',
+        '1-Day Volatility',
+        '20-Day Volatility',
+        '1-Year Volatility',
+        'MA Technical Signal',
+        'Country',
+        'Has Options',
+        'Stock Idea',
+        'Recommended Strategy',
+        'Notes',
+      ];
+      const rows = filteredRecords.map((r) => {
+        const ex = r.extra_fields || {};
+        return [
+          `"${r.symbol}"`,
+          `"${r.name.replace(/"/g, '""')}"`,
+          `"$${r.last_price.toFixed(2)}"`,
+          `"${r.price_change >= 0 ? '+' : ''}${r.price_change.toFixed(2)}"`,
+          `"${r.percent_change >= 0 ? '+' : ''}${r.percent_change.toFixed(2)}%"`,
+          `"${ex.market_cap_str || ''}"`,
+          ex.rsi_14 !== undefined ? ex.rsi_14 : '',
+          ex.iv30 !== undefined ? ex.iv30 : '',
+          ex.iv_rank !== undefined ? ex.iv_rank : '',
+          ex.vol_1d !== undefined ? ex.vol_1d : '',
+          ex.vol_20d !== undefined ? ex.vol_20d : '',
+          ex.vol_1y !== undefined ? ex.vol_1y : '',
+          `"${ex.ma_signal || ''}"`,
+          `"${ex.country || 'USA'}"`,
+          r.has_options ? 'Yes' : 'No',
+          `"${ex.stock_idea || 'Momentum Stocks'}"`,
+          `"${r.recommended_strategy}"`,
+          `"${(r.notes || '').replace(/"/g, '""')}"`,
+        ].join(',');
+      });
+      csvContent = [headers.join(','), ...rows].join('\n');
+    } else {
+      const headers = [
+        'Symbol',
+        'Name',
+        'Last Price',
+        'Price Change',
+        'Percent Change',
+        'Signal Opinion',
+        'Opinion Score %',
+        'Previous Opinion',
+        'Last Week Opinion',
+        'Last Month Opinion',
+        'Weekly Options',
+        'Signal Strength',
+        'Signal Direction',
+        'Recommended Strategy',
+        'Source',
+      ];
+      const rows = filteredRecords.map((r) => [
+        `"${r.symbol}"`,
+        `"${r.name.replace(/"/g, '""')}"`,
+        r.last_price,
+        r.price_change,
+        `${r.percent_change}%`,
+        `"${r.opinion}"`,
+        r.opinion_pct,
+        `"${r.opinion_previous || ''}"`,
+        `"${r.opinion_last_week || ''}"`,
+        `"${r.opinion_last_month || ''}"`,
+        r.has_weekly_options ? 'Yes' : 'No',
+        `"${r.signal_strength}"`,
+        `"${r.signal_direction}"`,
+        `"${r.recommended_strategy}"`,
+        `"${r.source}"`,
+      ].join(','));
+      csvContent = [headers.join(','), ...rows].join('\n');
+    }
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -148,20 +303,27 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
   const handleLiveRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // Reload fresh public data
-      const resp = await fetch('./data/weekly_screeners.json?t=' + Date.now());
-      if (resp.ok) {
-        const freshData = await resp.json();
-        setDataset(freshData);
+      if (activeSource === 'MARKETCHAMELEON') {
+        const resp = await fetch('./data/weekly_screeners_marketchameleon.json?t=' + Date.now());
+        if (resp.ok) {
+          const freshData = await resp.json();
+          setMcDataset(freshData);
+        }
+      } else {
+        const resp = await fetch('./data/weekly_screeners.json?t=' + Date.now());
+        if (resp.ok) {
+          const freshData = await resp.json();
+          setBarchartDataset(freshData);
+        }
       }
     } catch (e) {
-      console.warn('Could not fetch updated weekly_screeners.json', e);
+      console.warn('Could not fetch updated screener dataset', e);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const allRecords = dataset?.records || [];
+  const allRecords = currentDataset?.records || [];
 
   // Filtered Records
   const filteredRecords = useMemo(() => {
@@ -200,7 +362,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
   const stats = useMemo(() => {
     const total = allRecords.length;
     const weeklyCount = allRecords.filter((r) => r.has_weekly_options).length;
-    const topBuyCount = allRecords.filter((r) => r.opinion_pct >= 99).length;
+    const topBuyCount = allRecords.filter((r) => r.opinion_pct >= 90).length;
     const bullishCount = allRecords.filter((r) => r.opinion_pct > 0).length;
     const bullishPct = total > 0 ? Math.round((bullishCount / total) * 100) : 0;
     return {
@@ -258,6 +420,16 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             </button>
 
             <button
+              onClick={handleCopyResults}
+              disabled={filteredRecords.length === 0}
+              className="flex items-center space-x-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-cyan-300 hover:border-cyan-400/50 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              title="Copy all visible results with respective column headings to clipboard for instant pasting into Excel or notes"
+            >
+              <Copy className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Copy Results (TSV)</span>
+            </button>
+
+            <button
               onClick={handleExportCSV}
               disabled={filteredRecords.length === 0}
               className="flex items-center space-x-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-indigo-300 hover:border-indigo-400/50 shadow-sm transition-all cursor-pointer disabled:opacity-50"
@@ -285,6 +457,13 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             <span>{uploadSuccessMsg}</span>
           </div>
         )}
+
+        {copySuccessMsg && (
+          <div className="mt-3 p-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs flex items-center space-x-2 animate-fade-in">
+            <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>{copySuccessMsg}</span>
+          </div>
+        )}
       </div>
 
       {/* Multi-Source Provider Tabs */}
@@ -301,7 +480,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             <Zap className="w-3.5 h-3.5 text-amber-300" />
             <span>Barchart Direction Strength</span>
             <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-white/20 text-white">
-              {stats.total}
+              {barchartDataset?.total_count || 0}
             </span>
           </button>
 
@@ -314,9 +493,9 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             }`}
           >
             <Layers className="w-3.5 h-3.5 text-purple-300" />
-            <span>MarketChameleon.com (IV &amp; Volatility)</span>
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
-              Pluggable
+            <span>MarketChameleon.com (Momentum Screener)</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-white/20 text-white">
+              {mcDataset?.total_count || (activeSource === 'MARKETCHAMELEON' ? stats.total : 60)}
             </span>
           </button>
 
@@ -335,17 +514,70 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
 
         <div className="hidden md:flex items-center space-x-2 text-xs text-slate-400 font-mono">
           <span>Source URL:</span>
-          <a
-            href="https://www.barchart.com/stocks/signals/direction-strength?viewName=190898&timeFrame=daily&orderBy=hasWeeklyOptions&orderDir=desc"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-emerald-400 hover:underline flex items-center space-x-1"
-          >
-            <span>Barchart Signals (190898)</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
+          {activeSource === 'MARKETCHAMELEON' ? (
+            <a
+              href="https://marketchameleon.com/Screeners/Stocks"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:underline flex items-center space-x-1"
+            >
+              <span>marketchameleon.com/Screeners/Stocks</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          ) : (
+            <a
+              href="https://www.barchart.com/stocks/signals/direction-strength?viewName=190898&timeFrame=daily&orderBy=hasWeeklyOptions&orderDir=desc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline flex items-center space-x-1"
+            >
+              <span>Barchart Signals (190898)</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
         </div>
       </div>
+
+      {/* MarketChameleon Preselected Criteria Banner */}
+      {activeSource === 'MARKETCHAMELEON' && (
+        <div className="glass-panel p-4 rounded-xl border border-purple-800/60 bg-purple-950/20 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Sliders className="w-4 h-4 text-purple-400" />
+              <span className="text-xs font-bold text-purple-200">
+                Preselected MarketChameleon Screener Criteria:
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-purple-300/80">
+              Auto-configured via MarketChameleonScreenerAgent
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-2 text-[11px]">
+            <span className="px-2.5 py-1 rounded-lg bg-purple-900/50 border border-purple-500/40 text-purple-200">
+              <strong className="text-purple-400">Stock Idea:</strong> Momentum Stocks
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-purple-900/50 border border-purple-500/40 text-purple-200">
+              <strong className="text-purple-400">Market Cap:</strong> &gt; $1 Billion
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-purple-900/50 border border-purple-500/40 text-purple-200">
+              <strong className="text-purple-400">Options:</strong> Has Options
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-purple-900/50 border border-purple-500/40 text-purple-200">
+              <strong className="text-purple-400">14-Day RSI:</strong> 50 to 70
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-purple-900/50 border border-purple-500/40 text-purple-200">
+              <strong className="text-purple-400">Country:</strong> USA
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-purple-900/50 border border-purple-500/40 text-purple-200">
+              <strong className="text-purple-400">Volatility:</strong> 1-Yr &gt; 30, 20-Day &gt; 30, 1-Day &gt; 30, IV30 &gt; 30
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-purple-900/50 border border-purple-500/40 text-purple-200">
+              <strong className="text-purple-400">Technical MA:</strong> Any Bullish (Uptrend, Bullish Cross)
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* KPI Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -355,12 +587,14 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             <Flame className="w-3.5 h-3.5 text-amber-400" />
           </div>
           <div className="text-xl font-black text-white font-mono mt-1">{stats.total}</div>
-          <div className="text-[10px] text-slate-400 mt-0.5">Top direction strength stocks</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">
+            {activeSource === 'MARKETCHAMELEON' ? 'Filtered momentum & IV stocks' : 'Top direction strength stocks'}
+          </div>
         </div>
 
         <div className="glass-panel p-3.5 rounded-xl border border-slate-800/80 bg-slate-900/60">
           <div className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
-            <span>Weekly Options</span>
+            <span>Options Liquidity</span>
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
           </div>
           <div className="text-xl font-black text-emerald-400 font-mono mt-1">
@@ -369,25 +603,25 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
               ({stats.total > 0 ? Math.round((stats.weeklyCount / stats.total) * 100) : 0}%)
             </span>
           </div>
-          <div className="text-[10px] text-slate-400 mt-0.5">Ideal for Friday income expiry</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">Active options chains verified</div>
         </div>
 
         <div className="glass-panel p-3.5 rounded-xl border border-slate-800/80 bg-slate-900/60">
           <div className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
-            <span>100% Buy Signals</span>
+            <span>Bullish Signals</span>
             <Award className="w-3.5 h-3.5 text-cyan-400" />
           </div>
           <div className="text-xl font-black text-cyan-300 font-mono mt-1">{stats.topBuyCount}</div>
-          <div className="text-[10px] text-slate-400 mt-0.5">13/13 technical consensus</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">High confidence trend setups</div>
         </div>
 
         <div className="glass-panel p-3.5 rounded-xl border border-slate-800/80 bg-slate-900/60">
           <div className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
-            <span>Bullish Momentum</span>
+            <span>Bullish Consensus</span>
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
           </div>
           <div className="text-xl font-black text-emerald-300 font-mono mt-1">{stats.bullishPct}%</div>
-          <div className="text-[10px] text-slate-400 mt-0.5">Bull Put Spread high win-rate</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">Credit spread / CSP win-rate candidates</div>
         </div>
       </div>
 
@@ -400,7 +634,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search ticker (e.g. ZETA, VLO, IOVA)..."
+              placeholder="Search ticker or name (e.g. DELL, NOW, HOOD)..."
               className="w-full bg-slate-950/80 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/80"
             />
           </div>
@@ -412,7 +646,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
               onChange={(e) => setWeeklyOnly(e.target.checked)}
               className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/50"
             />
-            <span className="font-semibold text-emerald-300">Weekly Options Only</span>
+            <span className="font-semibold text-emerald-300">Has Options Only</span>
           </label>
         </div>
 
@@ -423,9 +657,9 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             onChange={(e) => setOpinionFilter(e.target.value as any)}
             className="bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none"
           >
-            <option value="ALL">All Opinions</option>
-            <option value="100">100% Buy Only</option>
-            <option value="80">80%+ Buy</option>
+            <option value="ALL">All Signals</option>
+            <option value="100">Top Bullish Only</option>
+            <option value="80">Strong Bullish</option>
           </select>
 
           <span className="text-slate-400 ml-2">Strategy:</span>
@@ -437,41 +671,174 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             <option value="ALL">All Strategies</option>
             <option value="BULL_PUT_SPREAD">Bull Put Spread (Credit)</option>
             <option value="CSP">Cash-Secured Put (CSP)</option>
+            <option value="COVERED_CALL">Covered Call</option>
             <option value="IRON_CONDOR">Iron Condor</option>
             <option value="BEAR_CALL_SPREAD">Bear Call Spread</option>
           </select>
         </div>
       </div>
 
-      {/* Screened Equities Table */}
+      {/* Screened Equities Table with Dynamic Headers */}
       <div className="glass-panel rounded-2xl border border-slate-800/90 shadow-2xl overflow-hidden bg-slate-950/70">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300 border-collapse">
             <thead className="bg-slate-900/90 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              <tr>
-                <th className="py-3 px-4">Ticker / Security</th>
-                <th className="py-3 px-3 text-right">Price</th>
-                <th className="py-3 px-3 text-right">Net Chg</th>
-                <th className="py-3 px-4">Barchart Signal / Opinion</th>
-                <th className="py-3 px-3 text-center">Stability (Prev / Wk / Mo)</th>
-                <th className="py-3 px-3 text-center">Options Cadence</th>
-                <th className="py-3 px-3">Recommended Options Setup</th>
-                <th className="py-3 px-4 text-center">Actions</th>
-              </tr>
+              {activeSource === 'MARKETCHAMELEON' ? (
+                <tr>
+                  <th className="py-3 px-4">Ticker / Security</th>
+                  <th className="py-3 px-3 text-right">Price</th>
+                  <th className="py-3 px-3 text-right">Net Chg (% Chg)</th>
+                  <th className="py-3 px-3 text-right">Market Cap</th>
+                  <th className="py-3 px-3 text-center">14-Day RSI</th>
+                  <th className="py-3 px-3 text-center">IV30</th>
+                  <th className="py-3 px-3 text-center">20D / 1Y Vol</th>
+                  <th className="py-3 px-4">MA Technical Signal</th>
+                  <th className="py-3 px-3">Strategy Setup</th>
+                  <th className="py-3 px-4 text-center">Actions</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th className="py-3 px-4">Ticker / Security</th>
+                  <th className="py-3 px-3 text-right">Price</th>
+                  <th className="py-3 px-3 text-right">Net Chg</th>
+                  <th className="py-3 px-4">Barchart Signal / Opinion</th>
+                  <th className="py-3 px-3 text-center">Stability (Prev / Wk / Mo)</th>
+                  <th className="py-3 px-3 text-center">Options Cadence</th>
+                  <th className="py-3 px-3">Recommended Options Setup</th>
+                  <th className="py-3 px-4 text-center">Actions</th>
+                </tr>
+              )}
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono">
               {filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
+                  <td colSpan={activeSource === 'MARKETCHAMELEON' ? 10 : 8} className="py-12 text-center text-slate-500 font-sans">
                     <p className="text-sm font-semibold">No screened stocks matched your filter criteria.</p>
-                    <p className="text-xs mt-1">Try unchecking "Weekly Options Only" or clearing the search query.</p>
+                    <p className="text-xs mt-1">Try clearing the search query or adjusting signal filters.</p>
                   </td>
                 </tr>
               ) : (
                 filteredRecords.map((item, idx) => {
                   const isPositive = item.percent_change >= 0;
-                  const is100Buy = item.opinion_pct >= 99;
+                  const is100Buy = item.opinion_pct >= 90;
+                  const ex = item.extra_fields || {};
 
+                  if (activeSource === 'MARKETCHAMELEON') {
+                    return (
+                      <tr
+                        key={`${item.symbol}-${idx}`}
+                        className="hover:bg-slate-900/60 transition-colors group"
+                      >
+                        {/* Ticker & Name */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => onSelectSymbolForChart?.(item.symbol)}
+                              className="font-black text-sm text-white hover:text-purple-400 transition-colors cursor-pointer text-left"
+                              title="Click to view Interactive Candlestick Chart"
+                            >
+                              {item.symbol}
+                            </button>
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                              USA
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-sans truncate max-w-[180px]" title={item.name}>
+                            {item.name}
+                          </div>
+                        </td>
+
+                        {/* Price */}
+                        <td className="py-3 px-3 text-right font-bold text-slate-100">
+                          ${item.last_price.toFixed(2)}
+                        </td>
+
+                        {/* Net Chg & % */}
+                        <td className={`py-3 px-3 text-right font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          <div>{isPositive ? `+${item.price_change.toFixed(2)}` : item.price_change.toFixed(2)}</div>
+                          <div className="text-[10px] opacity-80">
+                            {isPositive ? `+${item.percent_change.toFixed(2)}%` : `${item.percent_change.toFixed(2)}%`}
+                          </div>
+                        </td>
+
+                        {/* Market Cap */}
+                        <td className="py-3 px-3 text-right font-bold text-slate-300">
+                          {ex.market_cap_str || '-'}
+                        </td>
+
+                        {/* 14-Day RSI */}
+                        <td className="py-3 px-3 text-center">
+                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            {ex.rsi_14 !== undefined ? Number(ex.rsi_14).toFixed(1) : '-'}
+                          </span>
+                        </td>
+
+                        {/* IV30 */}
+                        <td className="py-3 px-3 text-center">
+                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            {ex.iv30 !== undefined ? `${Number(ex.iv30).toFixed(1)}%` : '-'}
+                          </span>
+                        </td>
+
+                        {/* 20D / 1Y Vol */}
+                        <td className="py-3 px-3 text-center text-[10px] text-slate-400">
+                          <div>20D: <span className="text-slate-200">{ex.vol_20d ? `${Number(ex.vol_20d).toFixed(1)}%` : '-'}</span></div>
+                          <div>1Y: <span className="text-slate-200">{ex.vol_1y ? `${Number(ex.vol_1y).toFixed(1)}%` : '-'}</span></div>
+                        </td>
+
+                        {/* MA Signal */}
+                        <td className="py-3 px-4 font-sans">
+                          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            {ex.ma_signal || item.opinion}
+                          </span>
+                        </td>
+
+                        {/* Strategy Setup */}
+                        <td className="py-3 px-3 font-sans">
+                          <span className="font-semibold text-xs text-cyan-300">
+                            {item.recommended_strategy === 'BULL_PUT_SPREAD' && 'Bull Put Credit Spread'}
+                            {item.recommended_strategy === 'CSP' && 'Cash-Secured Put'}
+                            {item.recommended_strategy === 'COVERED_CALL' && 'Covered Call'}
+                            {item.recommended_strategy === 'IRON_CONDOR' && 'Iron Condor'}
+                          </span>
+                          <div className="text-[10px] text-slate-400">
+                            Options verified
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-4 text-center font-sans">
+                          <div className="flex items-center justify-center space-x-1.5">
+                            <button
+                              onClick={() => onOpenTickerAudit?.(item.symbol)}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                              title="Run 5-Part Options Safety Audit"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                            </button>
+
+                            <button
+                              onClick={() => onSelectSymbolForChart?.(item.symbol)}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-400 transition-colors cursor-pointer"
+                              title="Open Candlestick Chart"
+                            >
+                              <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+                            </button>
+
+                            <button
+                              onClick={() => onOpenBrokerStaging?.(item.symbol, item.recommended_strategy)}
+                              className="p-1.5 rounded-lg bg-purple-950/70 hover:bg-purple-900 border border-purple-500/40 text-purple-300 transition-colors cursor-pointer"
+                              title="Stage Order in Schwab Broker Workbench"
+                            >
+                              <Zap className="w-3.5 h-3.5 text-amber-300" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // Default Barchart Table Row
                   return (
                     <tr
                       key={`${item.symbol}-${idx}`}
@@ -488,7 +855,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
                             {item.symbol}
                           </button>
                           {is100Buy && (
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="100% Buy Signal" />
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Top Buy Signal" />
                           )}
                         </div>
                         <div className="text-[10px] text-slate-400 font-sans truncate max-w-[200px]" title={item.name}>

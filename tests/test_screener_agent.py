@@ -81,9 +81,9 @@ MUFG,Mitsubishi Ufj Financial Group,24.09,-0.04,-0.17%,100% Buy,No
         self.assertEqual(records[2].recommended_strategy, "CSP")
 
     def test_marketchameleon_csv_parser(self):
-        sample_csv = """Symbol,Company,Price,Change,% Chg,IV Rank,Weeklys
-TSLA,Tesla Inc,240.50,5.20,2.21%,68,Yes
-SPY,SPDR S&P 500 ETF,580.10,1.20,0.21%,22,Yes
+        sample_csv = """Symbol,Company,Price,Change,% Chg,IV30,IV Rank,Weeklys
+TSLA,Tesla Inc,240.50,5.20,2.21%,45.0,68,Yes
+SPY,SPDR S&P 500 ETF,580.10,1.20,0.21%,22.0,22,Yes
 """
         agent = MarketChameleonScreenerAgent()
         records = agent.parse_csv(sample_csv)
@@ -95,7 +95,7 @@ SPY,SPDR S&P 500 ETF,580.10,1.20,0.21%,22,Yes
         self.assertEqual(records[0].recommended_strategy, "BULL_PUT_SPREAD")
 
         self.assertEqual(records[1].symbol, "SPY")
-        self.assertEqual(records[1].recommended_strategy, "COVERED_CALL")
+        self.assertEqual(records[1].recommended_strategy, "CSP")
 
     def test_export_and_save_dataset(self):
         agent = BarchartScreenerAgent()
@@ -129,6 +129,48 @@ SPY,SPDR S&P 500 ETF,580.10,1.20,0.21%,22,Yes
                 data = json.load(f)
             self.assertEqual(data["total_count"], 1)
             self.assertEqual(data["records"][0]["symbol"], "NVDA")
+
+    def test_marketchameleon_copy_paste_and_headings(self):
+        agent = MarketChameleonScreenerAgent()
+        records = [
+            ScreenerRecord(
+                symbol="DELL",
+                name="Dell Technologies",
+                last_price=524.14,
+                price_change=7.75,
+                percent_change=1.50,
+                opinion="Bullish (Uptrend)",
+                opinion_pct=95.0,
+                has_options=True,
+                has_weekly_options=True,
+                signal_strength="IV30: 61.4%",
+                signal_direction="Strong Bullish",
+                source="marketchameleon",
+                recommended_strategy="BULL_PUT_SPREAD",
+                extra_fields={
+                    "market_cap_str": "338.7 B",
+                    "rsi_14": 64.58,
+                    "iv30": 61.36,
+                    "vol_20d": 63.04,
+                    "vol_1y": 61.72,
+                    "ma_signal": "Uptrend",
+                },
+            )
+        ]
+
+        # Test copy-paste text generation
+        copy_text = agent.generate_copy_paste_text(records)
+        self.assertIn("Symbol\tName\tPrice\tChange\t% Chg\tMarket Cap\t14-Day RSI\tIV30\t20-Day Vol\t1-Yr Vol\tMA Signal\tRecommended Strategy", copy_text)
+        self.assertIn("DELL\tDell Technologies\t$524.14\t+7.75\t+1.50%\t338.7 B\t64.58\t61.36%\t63.04%\t61.72%\tUptrend\tBULL_PUT_SPREAD", copy_text)
+
+        # Test CSV export with full headings
+        with tempfile.TemporaryDirectory() as tmpdir:
+            csv_path = Path(tmpdir) / "mc_export.csv"
+            agent.export_csv(records, csv_path)
+            self.assertTrue(csv_path.exists())
+            content = csv_path.read_text(encoding="utf-8")
+            self.assertIn("Symbol,Name,Price,Price Change,% Chg,Volume,Avg Volume,Relative Volume,Market Cap", content)
+            self.assertIn("DELL,Dell Technologies,$524.14,+7.75,+1.50%", content)
 
 
 if __name__ == "__main__":

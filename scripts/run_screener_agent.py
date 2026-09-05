@@ -81,8 +81,17 @@ def main() -> int:
     screeners_dir = data_dir / "screeners"
     screeners_dir.mkdir(parents=True, exist_ok=True)
 
-    csv_path = Path(args.export_csv) if args.export_csv else screeners_dir / f"{args.source}_weekly_direction_strength.csv"
-    json_path = Path(args.export_json)
+    default_csv_name = (
+        f"{args.source}_momentum_screener.csv"
+        if args.source == "marketchameleon"
+        else f"{args.source}_weekly_direction_strength.csv"
+    )
+    csv_path = Path(args.export_csv) if args.export_csv else screeners_dir / default_csv_name
+    
+    if args.export_json == "data/weekly_screeners.json" and args.source != "barchart":
+        json_path = data_dir / f"weekly_screeners_{args.source}.json"
+    else:
+        json_path = Path(args.export_json)
 
     if args.import_csv:
         logger.info(f"Importing records from CSV: {args.import_csv}")
@@ -101,23 +110,38 @@ def main() -> int:
     saved_csv = agent.export_csv(records, csv_path)
     logger.info(f"✓ Exported CSV to: {saved_csv}")
 
+    # Also export copy-paste formatted TSV if supported
+    if hasattr(agent, "generate_copy_paste_text"):
+        tsv_path = screeners_dir / f"{args.source}_copy_paste.tsv"
+        copy_paste_txt = agent.generate_copy_paste_text(records)
+        with open(tsv_path, "w", encoding="utf-8") as f:
+            f.write(copy_paste_txt)
+        logger.info(f"✓ Exported Copy-Paste TSV with headings to: {tsv_path}")
+
     # 2. Save JSON for web
     saved_json = agent.save_dataset_json(records, json_path)
     logger.info(f"✓ Saved web dataset JSON to: {saved_json}")
 
-    # 3. Sync to web/public/data/weekly_screeners.json for frontend immediate use
+    # 3. Sync to web/public/data/ for frontend use
     web_public_data = PROJECT_ROOT / "web" / "public" / "data"
     web_public_data.mkdir(parents=True, exist_ok=True)
-    target_web_json = web_public_data / "weekly_screeners.json"
+    
+    target_web_json = web_public_data / f"weekly_screeners_{args.source}.json"
     shutil.copyfile(json_path, target_web_json)
     logger.info(f"✓ Synced to web public directory: {target_web_json}")
 
+    if args.source == "barchart":
+        shutil.copyfile(json_path, web_public_data / "weekly_screeners.json")
+
     # Also copy the CSV to web/public/data so web users can download it directly
-    target_web_csv = web_public_data / "weekly_screeners.csv"
+    target_web_csv = web_public_data / f"weekly_screeners_{args.source}.csv"
     shutil.copyfile(csv_path, target_web_csv)
     logger.info(f"✓ Synced CSV to web public directory: {target_web_csv}")
 
-    logger.info(f"Successfully processed {len(records)} stocks for Weekly Stock Screeners!")
+    if args.source == "barchart":
+        shutil.copyfile(csv_path, web_public_data / "weekly_screeners.csv")
+
+    logger.info(f"Successfully processed {len(records)} stocks for Weekly Stock Screeners ({agent.display_name})!")
     return 0
 
 
