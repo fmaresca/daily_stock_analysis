@@ -35,6 +35,9 @@ import { OptionsIncomeAnalyzer } from './components/OptionsIncomeAnalyzer';
 import { EconomicCalendarView } from './components/EconomicCalendarView';
 import { WeeklyPositionAuditView } from './components/WeeklyPositionAuditView';
 import { CascadingScreenerView } from './components/CascadingScreenerView';
+import { WeeklyCashLedgerView } from './components/WeeklyCashLedgerView';
+import { HoldingsCoveredCallView } from './components/HoldingsCoveredCallView';
+import { WeeklyExecutiveReportView } from './components/WeeklyExecutiveReportView';
 import { getStoredCapitalState } from './utils/capitalAndTaxLedger';
 import { WeeklyScreenerDataset } from './types/weeklyScreeners';
 import { startContinuousRiskSweeper, stopContinuousRiskSweeper } from './utils/continuousRiskSweeper';
@@ -1845,7 +1848,24 @@ export const App: React.FC = () => {
         ) : (
           /* Workflow & Options Engine Views */
           <div className="space-y-4">
-            {activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ? (
+            {activeOptionsTab === 'WEEKLY_CASH_LEDGER' ? (
+              /* Step 1: Cash, Disbursements & YTD Tax Ledger */
+              <WeeklyCashLedgerView
+                onNavigateToHoldings={() => setActiveOptionsTab('HOLDINGS_COVERED_CALLS')}
+                onNavigateToScreener={() => setActiveOptionsTab('CASCADING_SCREENER')}
+              />
+            ) : activeOptionsTab === 'HOLDINGS_COVERED_CALLS' ? (
+              /* Step 2: Long Stocks, Covered Calls & Open CSPs */
+              <HoldingsCoveredCallView
+                onStageOrder={handleStageOpportunity}
+                onNavigateToScreener={() => setActiveOptionsTab('CASCADING_SCREENER')}
+              />
+            ) : activeOptionsTab === 'WEEKLY_EXECUTIVE_REPORT' ? (
+              /* Step 5: Weekly Executive Master Report (Step 10) */
+              <WeeklyExecutiveReportView
+                onNavigateTab={(tab) => setActiveOptionsTab(tab)}
+              />
+            ) : activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ? (
               /* Step 1: Weekly Open Positions Audit, Capital Ledger & Tax Center */
               <WeeklyPositionAuditView
                 onNavigateToRollAssistant={(sym) => {

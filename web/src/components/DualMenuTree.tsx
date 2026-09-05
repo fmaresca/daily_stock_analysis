@@ -60,12 +60,14 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             onClick={() => {
               onSelectTree('WORKFLOW');
               if (
-                activeOptionsTab !== 'WEEKLY_POSITION_AUDIT' &&
+                activeOptionsTab !== 'WEEKLY_CASH_LEDGER' &&
+                activeOptionsTab !== 'HOLDINGS_COVERED_CALLS' &&
                 activeOptionsTab !== 'ECONOMIC_CALENDAR' &&
                 activeOptionsTab !== 'CASCADING_SCREENER' &&
+                activeOptionsTab !== 'WEEKLY_EXECUTIVE_REPORT' &&
                 activeOptionsTab !== 'BROKER_STAGING'
               ) {
-                onSelectOptionsTab('WEEKLY_POSITION_AUDIT');
+                onSelectOptionsTab('WEEKLY_CASH_LEDGER');
               }
             }}
             className={`flex items-center space-x-2.5 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
@@ -81,7 +83,7 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                 activeTree === 'WORKFLOW' ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-400'
               }`}
             >
-              4 Steps
+              Weekend Ritual
             </span>
           </button>
 
@@ -141,74 +143,100 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
       {/* Sub-Navigation Strip (Contextual by Mode) */}
       <div className="glass-panel py-2 px-3 rounded-xl border border-slate-800/90 overflow-x-auto min-h-[56px] flex items-center shadow-lg">
         {activeTree === 'WORKFLOW' ? (
-          /* WORKFLOW MODE: Guided 4-Step End-of-Week Ritual */
+          /* WORKFLOW MODE: Guided End-of-Week Ritual */
           <div className="flex items-center space-x-2 min-w-max w-full">
-            {/* Step 1 */}
+            {/* Step 1: Cash & Disbursements */}
             <button
-              onClick={() => onSelectOptionsTab('WEEKLY_POSITION_AUDIT')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer border ${
-                activeOptionsTab === 'WEEKLY_POSITION_AUDIT'
+              onClick={() => onSelectOptionsTab('WEEKLY_CASH_LEDGER')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
+                activeOptionsTab === 'WEEKLY_CASH_LEDGER'
                   ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-5 h-5 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">1</span>
-              <ShieldCheck className="w-4 h-4 text-emerald-300" />
-              <span>Step 1: Open Positions &amp; Capital</span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">1</span>
+              <DollarSign className="w-3.5 h-3.5 text-emerald-300" />
+              <span>1. Cash &amp; Disbursements</span>
             </button>
 
-            <span className="text-slate-600">➔</span>
+            <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 2 */}
+            {/* Step 2: Holdings & Covered Calls */}
+            <button
+              onClick={() => onSelectOptionsTab('HOLDINGS_COVERED_CALLS')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
+                activeOptionsTab === 'HOLDINGS_COVERED_CALLS'
+                  ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">2</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
+              <span>2. Holdings &amp; Covered Calls</span>
+            </button>
+
+            <span className="text-slate-600 text-xs">➔</span>
+
+            {/* Step 3: Macro & Catalysts */}
             <button
               onClick={() => onSelectOptionsTab('ECONOMIC_CALENDAR')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
                 activeOptionsTab === 'ECONOMIC_CALENDAR'
                   ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-5 h-5 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">2</span>
-              <Calendar className="w-4 h-4 text-blue-300" />
-              <span>Step 2: Macro &amp; Catalysts</span>
-              <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[10px] font-mono font-bold">
-                USD
-              </span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">3</span>
+              <Calendar className="w-3.5 h-3.5 text-blue-300" />
+              <span>3. Macro &amp; Catalysts</span>
             </button>
 
-            <span className="text-slate-600">➔</span>
+            <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 3 */}
+            {/* Step 4: Cascading Screener & Gemini */}
             <button
               onClick={() => onSelectOptionsTab('CASCADING_SCREENER')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
                 activeOptionsTab === 'CASCADING_SCREENER'
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-5 h-5 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">3</span>
-              <Filter className="w-4 h-4 text-emerald-300" />
-              <span>Step 3: Cascading Screener</span>
-              <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">
-                15–25Δ
-              </span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">4</span>
+              <Filter className="w-3.5 h-3.5 text-emerald-300" />
+              <span>4. Tri-Screen &amp; Gemini AI</span>
             </button>
 
-            <span className="text-slate-600">➔</span>
+            <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 4 */}
+            {/* Step 5: Weekly Executive Report */}
             <button
-              onClick={() => onSelectOptionsTab('BROKER_STAGING')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer border ${
-                activeOptionsTab === 'BROKER_STAGING'
+              onClick={() => onSelectOptionsTab('WEEKLY_EXECUTIVE_REPORT')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
+                activeOptionsTab === 'WEEKLY_EXECUTIVE_REPORT'
                   ? 'bg-amber-600 text-white border-amber-400 shadow-md shadow-amber-600/30 ring-1 ring-amber-400/50'
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-5 h-5 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">4</span>
-              <Zap className="w-4 h-4 text-amber-300" />
-              <span>Step 4: Sizing &amp; Broker Staging</span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">5</span>
+              <Award className="w-3.5 h-3.5 text-amber-300" />
+              <span>5. Master Report</span>
+            </button>
+
+            <span className="text-slate-600 text-xs">➔</span>
+
+            {/* Step 6: Broker Staging */}
+            <button
+              onClick={() => onSelectOptionsTab('BROKER_STAGING')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
+                activeOptionsTab === 'BROKER_STAGING'
+                  ? 'bg-cyan-600 text-white border-cyan-400 shadow-md shadow-cyan-600/30 ring-1 ring-cyan-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">6</span>
+              <Zap className="w-3.5 h-3.5 text-cyan-300" />
+              <span>6. Broker Staging</span>
             </button>
           </div>
         ) : activeTree === 'OPTIONS' ? (
