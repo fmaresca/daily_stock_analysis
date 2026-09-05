@@ -11,6 +11,7 @@ import {
   getStoredCapitalState,
   parseGeminiMarkdownTables,
 } from '../utils/capitalAndTaxLedger';
+import { generateInstitutionalGeminiPrompt } from '../utils/geminiPromptTemplates';
 import {
   ShieldCheck,
   TrendingUp,
@@ -238,56 +239,14 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     return Math.min(5, Math.floor(capitalState.freeCash / effectiveAlloc));
   }, [capitalState.freeCash, maxPositionCollateral]);
 
-  // Construct Exact Gemini AI Pro Extended Thinking Prompt (from steps.txt)
+  // Construct Institutional Gemini Pro Options Prompt natively populated from Screener + Cash Ledger
   const generateGeminiThinkingPrompt = () => {
-    const candidateList = finalCandidates.slice(0, 20).map((c, i) => {
-      const tMeta = tickers.find((t) => t.symbol === c.symbol);
-      const barchartText = tMeta?.barchart_opinion
-        ? `${tMeta.barchart_opinion.opinion_pct}% Buy (${tMeta.barchart_opinion.signal_strength})`
-        : '80% Buy';
-      const mcText = tMeta?.market_chameleon?.primary_trend || 'Uptrend';
-      const cushion = c.current_price > 0 ? (((c.current_price - c.strike) / c.current_price) * 100).toFixed(1) : '5.0';
-
-      return `${i + 1}. Ticker: ${c.symbol} | Spot: $${c.current_price.toFixed(2)} | Put Strike: $${c.strike.toFixed(2)} | Expiration: ${c.expiration} (${c.dte} DTE) | Delta: ${c.delta.toFixed(2)} | Bid/Ask: $${c.bid.toFixed(2)}/$${c.ask.toFixed(2)} | Net Premium: $${c.mid.toFixed(2)} ($${c.premium_total}) | Collateral: $${c.collateral_required.toLocaleString()} | Ann. ROC: ${c.annualized_roc.toFixed(1)}% | Cushion: ${cushion}% | IV Rank: ${c.iv_rank}% | RSI: ${c.rsi.toFixed(0)} | Trend: Price > 9 EMA > 18 EMA (${mcText}) | Barchart View 190898: ${barchartText} | Next Earnings: ${c.next_earnings_date || 'None in expiration cycle'}`;
-    }).join('\n');
-
-    const effectiveAlloc = Math.min(200000, maxPositionCollateral);
-
-    return `Act as a seasoned options trader specializing in high-probability, income-generating strategies (Cash-Secured Puts). Analyze the provided weekly options screener data and generate a prioritized list of the top trade recommendations.
-
-Available Cash & Position Sizing Gate:
-- Total Liquid Cash Balance: $${capitalState.totalCash.toLocaleString()}
-- Encumbered Disbursements: $${(capitalState.totalEncumberedDisbursements || 5000).toLocaleString()} (Weekly Living Expenses)
-- Committed CSP Collateral: $${capitalState.committedCollateral.toLocaleString()}
-- Deployable Free Cash: $${capitalState.freeCash.toLocaleString()}
-- Single Equity Position Limit: $200,000 STRICT LIMIT (No single equity security CSP collateral may exceed $200,000)
-- Target Position Allocation: $${effectiveAlloc.toLocaleString()}
-- Maximum Concurrent Positions Permitted: ${Math.max(1, Math.min(5, maxAffordablePositions))} (Capped at 5 max)
-
-Strict Filtering & Trade Criteria:
-1. Delta: -0.15 to -0.25 (Strict sweet spot).
-2. Days to Expiration (DTE): 5 to 7 days (Focus on aggressive weekend theta decay).
-3. Technicals: RSI < 70 (Not overbought), Stock Price > 9 EMA > 18 EMA (Short-term uptrend confirmation).
-4. Liquidity: Underlying Daily Volume > 500k shares, Option Open Interest > 500 contracts, Bid/Ask Spread < $0.10.
-5. Earnings: No earnings announcements within the expiration cycle (Strict avoid).
-
-Evaluation Process:
-1. Step 1: Eliminate any ticker failing the Earnings, Liquidity, or Trend criteria.
-2. Step 2: Score remaining candidates on IV Rank (higher is better for premium), Cushion to Strike (distance from current price), and Annualized Return on Capital (ROC).
-3. Step 3: Select the TOP 5 trades offering the highest risk-adjusted premium, strictly ensuring no single equity security CSP exceeds the $200,000 collateral limit (targeting up to $${effectiveAlloc.toLocaleString()} per position).
-
-Screened Weekly Options Screener Data:
-${candidateList || 'No candidates currently meeting preliminary filters.'}
-
-Output Format (Strictly Markdown Tables):
-TABLE 1: RECOMMENDED TRADES (FINAL 5)
-Columns: Ticker | Current Price | Put Strike | Expiration | DTE | Delta | Bid/Ask | Net Premium | Collateral | Ann. ROC (%) | Cushion (%) | Rationale / Key Support Level
-
-TABLE 2: BORDERLINE CANDIDATES (Missed top 5 due to lower ROC or closer support)
-Columns: Ticker | Strike | Delta | Reason for Demotion
-
-TABLE 3: EXCLUDED CANDIDATES (Failed hard filters)
-Columns: Ticker | Filter Failed (e.g., Earnings, RSI > 70, Illiquid)`;
+    return generateInstitutionalGeminiPrompt({
+      capitalState,
+      maxPositionCollateral,
+      opportunities: finalCandidates,
+      tickers,
+    });
   };
 
   const handleCopyPrompt = () => {
