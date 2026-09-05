@@ -155,6 +155,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
+      id: 'nav-economic-calendar',
+      title: 'Weekly US Economic Indicators & Macro Catalysts',
+      subtitle: 'USD macro releases, ET timestamps, sector transmission channels & proxy ETFs (Forex Factory feed)',
+      icon: <Calendar className="w-4 h-4 text-blue-400" />,
+      action: () => {
+        onNavigateTree('OPTIONS', 'ECONOMIC_CALENDAR');
+        onClose();
+      },
+    },
+    {
       id: 'nav-spreads',
       title: 'Multi-Leg Spreads & Iron Condors',
       subtitle: 'Bull Put Spreads, Bear Call Spreads, and Iron Condors with defined risk',

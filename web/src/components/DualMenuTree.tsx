@@ -206,6 +206,21 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             </button>
 
             <button
+              onClick={() => onSelectEquitiesTab('ECONOMIC_CALENDAR')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeEquitiesTab === 'ECONOMIC_CALENDAR'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <Calendar className="w-4 h-4 text-blue-400" />
+              <span>Economic Indicators &amp; Catalysts</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-300 font-mono font-bold">
+                USD
+              </span>
+            </button>
+
+            <button
               onClick={() => onSelectEquitiesTab('SECTOR_OVERVIEW')}
               className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
                 activeEquitiesTab === 'SECTOR_OVERVIEW'
@@ -259,6 +274,21 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
               <span>Options Income AI (Thinking)</span>
               <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-mono font-bold">
                 HIGH
+              </span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('ECONOMIC_CALENDAR')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'ECONOMIC_CALENDAR'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <Calendar className="w-4 h-4 text-blue-400" />
+              <span>Macro Economic Catalysts</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-300 font-mono font-bold">
+                USD
               </span>
             </button>
 

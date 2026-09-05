@@ -32,6 +32,7 @@ import { TaxAlphaOptimizerView } from './components/TaxAlphaOptimizerView';
 import { ExecutivePortfolioDigestView } from './components/ExecutivePortfolioDigestView';
 import { WeeklyStockScreenersView } from './components/WeeklyStockScreenersView';
 import { OptionsIncomeAnalyzer } from './components/OptionsIncomeAnalyzer';
+import { EconomicCalendarView } from './components/EconomicCalendarView';
 import { WeeklyScreenerDataset } from './types/weeklyScreeners';
 import { startContinuousRiskSweeper, stopContinuousRiskSweeper } from './utils/continuousRiskSweeper';
 import { OptionContractData } from './utils/optionChainMatrix';
@@ -1751,6 +1752,21 @@ export const App: React.FC = () => {
                 }}
               />
             </div>
+          ) : activeEquitiesTab === 'ECONOMIC_CALENDAR' ? (
+            /* Weekly US Economic Indicators & Macro Catalysts Radar */
+            <EconomicCalendarView
+              onSelectSymbolForChart={(sym) => {
+                setActiveChartSymbol(sym);
+                setActiveTree('EQUITIES');
+                setActiveEquitiesTab('INTERACTIVE_CHARTS');
+              }}
+              onOpenTickerAudit={(sym) => {
+                const target = universeTickers.find((t) => t.symbol === sym);
+                if (target) {
+                  setSelectedTicker(target);
+                }
+              }}
+            />
           ) : (
             /* Tree 1: US Equities Analysis (Primary Screener Table) */
             <div className="space-y-4">
@@ -1882,6 +1898,21 @@ export const App: React.FC = () => {
                       is_above_sma20: true,
                       price_history_50d: [],
                     } as any);
+                  }
+                }}
+              />
+            ) : activeOptionsTab === 'ECONOMIC_CALENDAR' ? (
+              /* Macro Economic Catalysts Radar */
+              <EconomicCalendarView
+                onSelectSymbolForChart={(sym) => {
+                  setActiveChartSymbol(sym);
+                  setActiveTree('EQUITIES');
+                  setActiveEquitiesTab('INTERACTIVE_CHARTS');
+                }}
+                onOpenTickerAudit={(sym) => {
+                  const target = universeTickers.find((t) => t.symbol === sym);
+                  if (target) {
+                    setSelectedTicker(target);
                   }
                 }}
               />
