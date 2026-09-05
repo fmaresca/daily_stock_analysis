@@ -31,6 +31,7 @@ import { DefensiveRollAssistantView } from './components/DefensiveRollAssistantV
 import { TaxAlphaOptimizerView } from './components/TaxAlphaOptimizerView';
 import { ExecutivePortfolioDigestView } from './components/ExecutivePortfolioDigestView';
 import { WeeklyStockScreenersView } from './components/WeeklyStockScreenersView';
+import { OptionsIncomeAnalyzer } from './components/OptionsIncomeAnalyzer';
 import { WeeklyScreenerDataset } from './types/weeklyScreeners';
 import { startContinuousRiskSweeper, stopContinuousRiskSweeper } from './utils/continuousRiskSweeper';
 import { OptionContractData } from './utils/optionChainMatrix';
@@ -1844,6 +1845,44 @@ export const App: React.FC = () => {
                 }}
                 onOpenBrokerStaging={(_sym, _strat) => {
                   setActiveOptionsTab('BROKER_STAGING');
+                }}
+              />
+            ) : activeOptionsTab === 'AI_OPTIONS_INCOME' ? (
+              /* Options Income Screener (Gemini Extended Thinking & Zero-Billing Bridge) */
+              <OptionsIncomeAnalyzer
+                onSelectSymbolForChart={(sym) => {
+                  setActiveChartSymbol(sym);
+                  setActiveTree('EQUITIES');
+                  setActiveEquitiesTab('INTERACTIVE_CHARTS');
+                }}
+                onOpenTickerAudit={(sym) => {
+                  const target = universeTickers.find((t) => t.symbol === sym);
+                  if (target) {
+                    setSelectedTicker(target);
+                  } else {
+                    setSelectedTicker({
+                      symbol: sym,
+                      name: sym,
+                      sector: 'Screened Candidate',
+                      spot_price: 100,
+                      sma_20: 100,
+                      upper_band: 105,
+                      lower_band: 95,
+                      rsi_14: 50,
+                      iv_rank: 50,
+                      has_weekly_options: true,
+                      liquidity_tier: 'Tier 1',
+                      earnings_alert: false,
+                      days_to_earnings: 45,
+                      dividend_yield_pct: 0,
+                      atr_14: 2,
+                      hv_20: 25,
+                      volume: 1000000,
+                      avg_volume_30: 1000000,
+                      is_above_sma20: true,
+                      price_history_50d: [],
+                    } as any);
+                  }
                 }}
               />
             ) : activeOptionsTab === 'MULTI_LEG_SPREADS' ? (

@@ -16,6 +16,7 @@ import {
   Printer,
   Key,
   Zap,
+  BrainCircuit,
 } from './icons';
 import { TickerMeta, MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 import { getSecurityIntelligence } from '../utils/securityIntelligence';
@@ -140,6 +141,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: <TrendingUp className="w-4 h-4 text-emerald-400" />,
       action: () => {
         onNavigateTree('OPTIONS', 'INCOME_SCREENER');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-ai-options-income',
+      title: 'Options Income Screener (AI Extended Thinking)',
+      subtitle: 'Institutional quantitative reasoning using Gemini Thinking Mode (HIGH) for CSPs and CCs',
+      icon: <BrainCircuit className="w-4 h-4 text-amber-400" />,
+      action: () => {
+        onNavigateTree('OPTIONS', 'AI_OPTIONS_INCOME');
         onClose();
       },
     },
