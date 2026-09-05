@@ -30,12 +30,32 @@ class TestWeeklyCashAndDisbursements(unittest.TestCase):
         self.assertEqual(true_free_cash, expected_free_cash)
         self.assertEqual(true_free_cash, 16500.0)
 
-    def test_affordable_new_positions_allocation_gate(self):
-        # User mandate: $15,000 per position maximum target allocation
-        max_per_position = 15000.0
-        free_cash = 32000.0
-        affordable = min(5, int(free_cash // max_per_position))
-        self.assertEqual(affordable, 2)
+    def test_dynamic_position_sizing_with_high_net_worth_free_cash(self):
+        # User scenario: Likely >$500,000 free cash each week for CSP
+        total_cash = 555000.0
+        weekly_living = 5000.0
+        free_cash = total_cash - weekly_living  # $550,000.0
+        self.assertEqual(free_cash, 550000.0)
+
+        # Single equity security CSP limit: No more than $200,000
+        single_equity_cap = 200000.0
+
+        # Dynamic target allocation: min(200000, max(25000, free_cash // 5)) -> $110,000 / pos
+        auto_target_allocation = min(single_equity_cap, max(25000.0, free_cash // 5))
+        self.assertEqual(auto_target_allocation, 110000.0)
+
+        # Max concurrent positions permitted: min(5, floor(free_cash / auto_target_allocation))
+        max_positions = min(5, max(1, int(free_cash // auto_target_allocation)))
+        self.assertEqual(max_positions, 5)
+
+        # Ensure single equity position limit is strictly capped at $200,000
+        custom_oversized_allocation = 250000.0
+        enforced_allocation = min(single_equity_cap, custom_oversized_allocation)
+        self.assertEqual(enforced_allocation, 200000.0)
+
+        # With maximum single position cap ($200,000), free cash of $550k yields floor(550k / 200k) = 2 positions
+        positions_at_max_cap = min(5, max(1, int(free_cash // enforced_allocation)))
+        self.assertEqual(positions_at_max_cap, 2)
 
     def test_calendar_ytd_premiums_addition(self):
         # Step 2: Prior YTD balance + Current week harvest

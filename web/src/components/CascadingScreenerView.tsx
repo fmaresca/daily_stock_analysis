@@ -234,7 +234,8 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
   // Sizing: Calculate how many candidates can be funded with free cash
   const maxAffordablePositions = useMemo(() => {
     if (capitalState.freeCash <= 0 || maxPositionCollateral <= 0) return 0;
-    return Math.min(5, Math.floor(capitalState.freeCash / maxPositionCollateral));
+    const effectiveAlloc = Math.min(200000, maxPositionCollateral);
+    return Math.min(5, Math.floor(capitalState.freeCash / effectiveAlloc));
   }, [capitalState.freeCash, maxPositionCollateral]);
 
   // Construct Exact Gemini AI Pro Extended Thinking Prompt (from steps.txt)
@@ -250,6 +251,8 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       return `${i + 1}. Ticker: ${c.symbol} | Spot: $${c.current_price.toFixed(2)} | Put Strike: $${c.strike.toFixed(2)} | Expiration: ${c.expiration} (${c.dte} DTE) | Delta: ${c.delta.toFixed(2)} | Bid/Ask: $${c.bid.toFixed(2)}/$${c.ask.toFixed(2)} | Net Premium: $${c.mid.toFixed(2)} ($${c.premium_total}) | Collateral: $${c.collateral_required.toLocaleString()} | Ann. ROC: ${c.annualized_roc.toFixed(1)}% | Cushion: ${cushion}% | IV Rank: ${c.iv_rank}% | RSI: ${c.rsi.toFixed(0)} | Trend: Price > 9 EMA > 18 EMA (${mcText}) | Barchart View 190898: ${barchartText} | Next Earnings: ${c.next_earnings_date || 'None in expiration cycle'}`;
     }).join('\n');
 
+    const effectiveAlloc = Math.min(200000, maxPositionCollateral);
+
     return `Act as a seasoned options trader specializing in high-probability, income-generating strategies (Cash-Secured Puts). Analyze the provided weekly options screener data and generate a prioritized list of the top trade recommendations.
 
 Available Cash & Position Sizing Gate:
@@ -257,8 +260,9 @@ Available Cash & Position Sizing Gate:
 - Encumbered Disbursements: $${(capitalState.totalEncumberedDisbursements || 5000).toLocaleString()} (Weekly Living Expenses)
 - Committed CSP Collateral: $${capitalState.committedCollateral.toLocaleString()}
 - Deployable Free Cash: $${capitalState.freeCash.toLocaleString()}
-- Max Collateral per Position: $${maxPositionCollateral.toLocaleString()}
-- Max Affordable New Positions: ${Math.max(1, Math.min(5, maxAffordablePositions))}
+- Single Equity Position Limit: $200,000 STRICT LIMIT (No single equity security CSP collateral may exceed $200,000)
+- Target Position Allocation: $${effectiveAlloc.toLocaleString()}
+- Maximum Concurrent Positions Permitted: ${Math.max(1, Math.min(5, maxAffordablePositions))} (Capped at 5 max)
 
 Strict Filtering & Trade Criteria:
 1. Delta: -0.15 to -0.25 (Strict sweet spot).
@@ -270,7 +274,7 @@ Strict Filtering & Trade Criteria:
 Evaluation Process:
 1. Step 1: Eliminate any ticker failing the Earnings, Liquidity, or Trend criteria.
 2. Step 2: Score remaining candidates on IV Rank (higher is better for premium), Cushion to Strike (distance from current price), and Annualized Return on Capital (ROC).
-3. Step 3: Select the TOP 5 trades offering the highest risk-adjusted premium within the $${maxPositionCollateral.toLocaleString()} collateral limit.
+3. Step 3: Select the TOP 5 trades offering the highest risk-adjusted premium, strictly ensuring no single equity security CSP exceeds the $200,000 collateral limit (targeting up to $${effectiveAlloc.toLocaleString()} per position).
 
 Screened Weekly Options Screener Data:
 ${candidateList || 'No candidates currently meeting preliminary filters.'}
@@ -482,11 +486,11 @@ Columns: Ticker | Filter Failed (e.g., Earnings, RSI > 70, Illiquid)`;
             <div className="flex items-center justify-between text-[11px] text-slate-400">
               <span className="font-bold text-slate-300">Stage 4: Capital Gate</span>
               <span className="font-mono text-amber-400 font-bold">
-                &le; ${maxPositionCollateral.toLocaleString()}
+                &le; ${Math.min(200000, maxPositionCollateral).toLocaleString()} (Cap: $200k)
               </span>
             </div>
             <p className="text-[11px] text-slate-400 leading-tight">
-              100% Cash-Secured (Zero Margin). Free Cash: ${capitalState.freeCash.toLocaleString()}.
+              100% Cash-Secured. Deployable Cash: ${capitalState.freeCash.toLocaleString()} (Max $200k/equity).
             </p>
             <div className="flex items-center justify-between pt-1 text-[10px]">
               <label className="flex items-center space-x-1 cursor-pointer text-slate-300">
@@ -496,10 +500,10 @@ Columns: Ticker | Filter Failed (e.g., Earnings, RSI > 70, Illiquid)`;
                   onChange={(e) => setOnlyWithinCashBudget(e.target.checked)}
                   className="rounded bg-slate-800 border-slate-700 text-emerald-500"
                 />
-                <span>Within Cash Budget</span>
+                <span>Filter by Position Budget</span>
               </label>
               <span className="font-mono font-bold text-emerald-400">
-                {maxAffordablePositions} positions affordable
+                {maxAffordablePositions} positions permitted (capped at 5)
               </span>
             </div>
           </div>
@@ -721,7 +725,7 @@ Columns: Ticker | Filter Failed (e.g., Earnings, RSI > 70, Illiquid)`;
           <span className="text-xs text-slate-400 font-mono">
             {maxAffordablePositions > 0 ? (
               <span>
-                Free Cash allows writing <strong className="text-emerald-400 font-bold">{maxAffordablePositions} positions</strong> ($15k each)
+                Free Cash allows writing <strong className="text-emerald-400 font-bold">{maxAffordablePositions} positions</strong> (up to ${Math.min(200000, maxPositionCollateral).toLocaleString()} each, max $200k/equity)
               </span>
             ) : (
               <span className="text-amber-400">Deployable cash reached limit</span>
@@ -946,7 +950,7 @@ Columns: Ticker | Filter Failed (e.g., Earnings, RSI > 70, Illiquid)`;
                     Gemini Extended Thinking Macro &amp; Candidate Evaluator
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Evaluates multi-source candidates (Barchart + MarketChameleon + Thinkorswim) to pick 1 to 5 top put-writing ideas constrained to ${maxPositionCollateral.toLocaleString()}/pos.
+                    Evaluates multi-source candidates (Barchart + MarketChameleon + Thinkorswim) to pick 1 to 5 top put-writing ideas constrained to no more than $200,000 per equity security.
                   </p>
                 </div>
               </div>
