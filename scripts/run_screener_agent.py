@@ -70,10 +70,38 @@ def main() -> int:
         default="data/weekly_screeners.json",
         help="Destination path for web JSON payload",
     )
+    parser.add_argument(
+        "--cboe-only",
+        action="store_true",
+        default=False,
+        help="Strictly filter to stocks registered in CBOE Weeklys directory or daily/multi-weekly cycles",
+    )
+    parser.add_argument(
+        "--filters-json",
+        type=str,
+        default=None,
+        help="Custom filter overrides in JSON format or path to JSON file (e.g. '{\"c8\":\"Over 20000000000\"}')",
+    )
 
     args = parser.parse_args()
 
+    custom_filters = None
+    if args.filters_json:
+        try:
+            if os.path.exists(args.filters_json):
+                with open(args.filters_json, "r", encoding="utf-8") as f:
+                    custom_filters = json.load(f)
+            else:
+                custom_filters = json.loads(args.filters_json)
+            logger.info(f"Loaded {len(custom_filters)} custom filter overrides.")
+        except Exception as e:
+            logger.error(f"Failed to parse --filters-json: {e}")
+            return 1
+
     agent = ScreenerRegistry.get_agent(args.source, target_url=args.url)
+    if custom_filters and hasattr(agent, "filters"):
+        agent.filters.update(custom_filters)
+
     logger.info(f"Initialized agent: {agent.display_name}")
 
     # Determine paths
@@ -97,8 +125,14 @@ def main() -> int:
         logger.info(f"Importing records from CSV: {args.import_csv}")
         records = agent.parse_csv(args.import_csv)
     else:
-        logger.info(f"Fetching live records from {agent.target_url} (limit={args.limit})...")
-        records = agent.fetch_records(limit=args.limit)
+        logger.info(f"Fetching live records from {agent.target_url} (limit={args.limit}, cboe_only={args.cboe_only})...")
+        if args.source == "marketchameleon":
+            records = agent.fetch_records(limit=args.limit, cboe_only=args.cboe_only)
+        else:
+            records = agent.fetch_records(limit=args.limit)
+
+    if args.cboe_only and args.source != "marketchameleon":
+        records = [r for r in records if r.has_weekly_options]
 
     logger.info(f"Retrieved {len(records)} standardized records.")
 

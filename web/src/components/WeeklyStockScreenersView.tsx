@@ -26,7 +26,10 @@ import {
   Plus,
   AlertTriangle,
   Copy,
+  Filter,
 } from './icons';
+import { MarketChameleonPrescreenModal } from './MarketChameleonPrescreenModal';
+import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescreen';
 
 interface WeeklyStockScreenersViewProps {
   initialDataset: WeeklyScreenerDataset | null;
@@ -54,6 +57,21 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
   const [copySuccessMsg, setCopySuccessMsg] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // MarketChameleon Prescreen Builder State
+  const [isPrescreenModalOpen, setIsPrescreenModalOpen] = useState<boolean>(false);
+  const [activePresetName, setActivePresetName] = useState<string>(DEFAULT_MARKET_CHAMELEON_PRESETS[0].name);
+  const [mcFilters, setMcFilters] = useState<Record<string, string>>(DEFAULT_MARKET_CHAMELEON_PRESETS[0].filters);
+  const [cboeOnlyGate, setCboeOnlyGate] = useState<boolean>(false);
+
+  // Apply prescreen preset or filter configuration from modal
+  const handleApplyPreset = (filters: Record<string, string>, cboeOnly: boolean, presetName?: string) => {
+    setMcFilters(filters);
+    setCboeOnlyGate(cboeOnly);
+    if (presetName) setActivePresetName(presetName);
+    setUploadSuccessMsg(`Prescreen Active: "${presetName || 'Custom Selection'}" ${cboeOnly ? '• Strict CBOE Weeklys Enforced' : '• All Options Chains'}`);
+    setTimeout(() => setUploadSuccessMsg(''), 5000);
+  };
 
   // Sync initial dataset
   useEffect(() => {
@@ -147,10 +165,14 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
         '20-Day Vol',
         '1-Yr Vol',
         'MA Signal',
+        'CBOE Weeklys',
+        'Options Cadence',
         'Recommended Strategy',
       ];
       const rows = filteredRecords.map((r) => {
         const ex = r.extra_fields || {};
+        const isCboe = Boolean(r.in_cboe_registry || ex.in_cboe_registry);
+        const cadence = r.expiration_cadence || ex.expiration_cadence || (isCboe ? 'Weekly' : 'Monthly Only');
         return [
           r.symbol,
           r.name,
@@ -163,6 +185,8 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
           ex.vol_20d !== undefined ? `${ex.vol_20d}%` : '',
           ex.vol_1y !== undefined ? `${ex.vol_1y}%` : '',
           ex.ma_signal || r.opinion || '',
+          isCboe ? 'Yes (CBOE)' : 'No (Monthly Only)',
+          cadence,
           r.recommended_strategy,
         ].join('\t');
       });
@@ -223,12 +247,16 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
         'MA Technical Signal',
         'Country',
         'Has Options',
+        'CBOE Weeklys',
+        'Options Cadence',
         'Stock Idea',
         'Recommended Strategy',
         'Notes',
       ];
       const rows = filteredRecords.map((r) => {
         const ex = r.extra_fields || {};
+        const isCboe = Boolean(r.in_cboe_registry || ex.in_cboe_registry);
+        const cadence = r.expiration_cadence || ex.expiration_cadence || (isCboe ? 'Weekly' : 'Monthly Only');
         return [
           `"${r.symbol}"`,
           `"${r.name.replace(/"/g, '""')}"`,
@@ -245,6 +273,8 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
           `"${ex.ma_signal || ''}"`,
           `"${ex.country || 'USA'}"`,
           r.has_options ? 'Yes' : 'No',
+          isCboe ? 'Yes' : 'No',
+          `"${cadence}"`,
           `"${ex.stock_idea || 'Momentum Stocks'}"`,
           `"${r.recommended_strategy}"`,
           `"${(r.notes || '').replace(/"/g, '""')}"`,
@@ -341,6 +371,14 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
         return false;
       }
 
+      // CBOE Weeklys Gate filter for MarketChameleon
+      if (activeSource === 'MARKETCHAMELEON' && cboeOnlyGate) {
+        const isCboe = Boolean(r.in_cboe_registry || (r.extra_fields && r.extra_fields.in_cboe_registry) || r.has_weekly_options);
+        if (!isCboe) {
+          return false;
+        }
+      }
+
       // Opinion filter
       if (opinionFilter === '100' && r.opinion_pct < 99) {
         return false;
@@ -356,7 +394,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
 
       return true;
     });
-  }, [allRecords, searchQuery, weeklyOnly, opinionFilter, strategyFilter]);
+  }, [allRecords, searchQuery, weeklyOnly, opinionFilter, strategyFilter, cboeOnlyGate, activeSource]);
 
   // KPI Calculations
   const stats = useMemo(() => {
@@ -540,17 +578,41 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
 
       {/* MarketChameleon Preselected Criteria Banner */}
       {activeSource === 'MARKETCHAMELEON' && (
-        <div className="glass-panel p-4 rounded-xl border border-purple-800/60 bg-purple-950/20 space-y-2.5">
-          <div className="flex items-center justify-between">
+        <div className="glass-panel p-4 rounded-xl border border-purple-800/60 bg-purple-950/20 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center space-x-2">
               <Sliders className="w-4 h-4 text-purple-400" />
               <span className="text-xs font-bold text-purple-200">
-                Preselected MarketChameleon Screener Criteria:
+                MarketChameleon Prescreen Preset:
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-600/30 text-purple-300 border border-purple-500/40">
+                {activePresetName}
               </span>
             </div>
-            <span className="text-[11px] font-mono text-purple-300/80">
-              Auto-configured via MarketChameleonScreenerAgent
-            </span>
+
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setCboeOnlyGate(!cboeOnlyGate)}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  cboeOnlyGate
+                    ? 'bg-emerald-950/60 text-emerald-300 border-emerald-400 shadow-sm shadow-emerald-500/20'
+                    : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200 hover:border-slate-600'
+                }`}
+                title="Toggle between strict CBOE weekly registered options or all optionable stocks"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{cboeOnlyGate ? 'Strict CBOE Weeklys (10)' : 'All Options Chains (60)'}</span>
+              </button>
+
+              <button
+                onClick={() => setIsPrescreenModalOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all cursor-pointer"
+                title="Customize native MarketChameleon prescreen criteria categories and save presets"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Prescreen Builder &amp; Presets</span>
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 text-[11px]">
@@ -573,7 +635,14 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
               <strong className="text-purple-400">Volatility:</strong> 1-Yr &gt; 30, 20-Day &gt; 30, 1-Day &gt; 30, IV30 &gt; 30
             </span>
             <span className="px-2.5 py-1 rounded-lg bg-purple-900/50 border border-purple-500/40 text-purple-200">
-              <strong className="text-purple-400">Technical MA:</strong> Any Bullish (Uptrend, Bullish Cross)
+              <strong className="text-purple-400">Technical MA:</strong> Any Bullish
+            </span>
+            <span className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold ${
+              cboeOnlyGate
+                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-400'
+                : 'bg-slate-900/60 text-slate-400 border-slate-700'
+            }`}>
+              <strong className={cboeOnlyGate ? 'text-emerald-400' : 'text-slate-400'}>CBOE Weeklys:</strong> {cboeOnlyGate ? 'Strict CBOE Verified' : 'All Chains'}
             </span>
           </div>
         </div>
@@ -648,6 +717,21 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             />
             <span className="font-semibold text-emerald-300">Has Options Only</span>
           </label>
+
+          {activeSource === 'MARKETCHAMELEON' && (
+            <button
+              onClick={() => setCboeOnlyGate(!cboeOnlyGate)}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                cboeOnlyGate
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+              }`}
+              title="Filter down to stocks verified in the CBOE weekly options directory"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>CBOE Weeklys</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center space-x-2 flex-wrap gap-y-1.5 text-xs">
@@ -693,6 +777,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
                   <th className="py-3 px-3 text-center">IV30</th>
                   <th className="py-3 px-3 text-center">20D / 1Y Vol</th>
                   <th className="py-3 px-4">MA Technical Signal</th>
+                  <th className="py-3 px-3 text-center">CBOE Weeklys</th>
                   <th className="py-3 px-3">Strategy Setup</th>
                   <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
@@ -712,7 +797,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             <tbody className="divide-y divide-slate-800/60 font-mono">
               {filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={activeSource === 'MARKETCHAMELEON' ? 10 : 8} className="py-12 text-center text-slate-500 font-sans">
+                  <td colSpan={activeSource === 'MARKETCHAMELEON' ? 11 : 8} className="py-12 text-center text-slate-500 font-sans">
                     <p className="text-sm font-semibold">No screened stocks matched your filter criteria.</p>
                     <p className="text-xs mt-1">Try clearing the search query or adjusting signal filters.</p>
                   </td>
@@ -722,6 +807,8 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
                   const isPositive = item.percent_change >= 0;
                   const is100Buy = item.opinion_pct >= 90;
                   const ex = item.extra_fields || {};
+                  const isCboe = Boolean(item.in_cboe_registry || ex.in_cboe_registry || item.has_weekly_options);
+                  const cadence = item.expiration_cadence || ex.expiration_cadence || (isCboe ? 'Weekly' : 'Monthly Only');
 
                   if (activeSource === 'MARKETCHAMELEON') {
                     return (
@@ -793,6 +880,29 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
                           </span>
                         </td>
 
+                        {/* CBOE Weeklys & Cadence */}
+                        <td className="py-3 px-3 text-center font-sans">
+                          {isCboe ? (
+                            <div className="inline-flex flex-col items-center">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
+                                CBOE Weekly
+                              </span>
+                              <span className="text-[9px] text-emerald-400 font-mono mt-0.5 whitespace-nowrap">
+                                {cadence}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="inline-flex flex-col items-center">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 whitespace-nowrap">
+                                Monthly Only
+                              </span>
+                              <span className="text-[9px] text-slate-500 font-mono mt-0.5 whitespace-nowrap">
+                                Standard 3rd Fri
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
                         {/* Strategy Setup */}
                         <td className="py-3 px-3 font-sans">
                           <span className="font-semibold text-xs text-cyan-300">
@@ -802,7 +912,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
                             {item.recommended_strategy === 'IRON_CONDOR' && 'Iron Condor'}
                           </span>
                           <div className="text-[10px] text-slate-400">
-                            Options verified
+                            {isCboe ? 'CBOE Weekly Verified' : 'Monthly Options Chain'}
                           </div>
                         </td>
 
@@ -994,6 +1104,15 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
           In addition to the active <strong>Barchart Direction Strength</strong> feed (view 190898), it includes out-of-the-box support for <strong>MarketChameleon.com</strong> and arbitrary custom CSV uploads. To ingest additional MarketChameleon screeners or custom feeds, simply upload their CSV export above or execute <code className="text-emerald-300 font-mono">python scripts/run_screener_agent.py --source marketchameleon</code>.
         </p>
       </div>
+
+      {/* MarketChameleon Prescreen & Preset Customization Modal */}
+      <MarketChameleonPrescreenModal
+        isOpen={isPrescreenModalOpen}
+        onClose={() => setIsPrescreenModalOpen(false)}
+        onApplyPreset={handleApplyPreset}
+        currentFilters={mcFilters}
+        currentCboeOnly={cboeOnlyGate}
+      />
     </div>
   );
 };

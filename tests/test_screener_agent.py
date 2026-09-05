@@ -154,14 +154,16 @@ SPY,SPDR S&P 500 ETF,580.10,1.20,0.21%,22.0,22,Yes
                     "vol_20d": 63.04,
                     "vol_1y": 61.72,
                     "ma_signal": "Uptrend",
+                    "in_cboe_registry": True,
+                    "expiration_cadence": "Weekly",
                 },
             )
         ]
 
-        # Test copy-paste text generation
+        # Test copy-paste text generation with CBOE Weeklys and Options Cadence
         copy_text = agent.generate_copy_paste_text(records)
-        self.assertIn("Symbol\tName\tPrice\tChange\t% Chg\tMarket Cap\t14-Day RSI\tIV30\t20-Day Vol\t1-Yr Vol\tMA Signal\tRecommended Strategy", copy_text)
-        self.assertIn("DELL\tDell Technologies\t$524.14\t+7.75\t+1.50%\t338.7 B\t64.58\t61.36%\t63.04%\t61.72%\tUptrend\tBULL_PUT_SPREAD", copy_text)
+        self.assertIn("Symbol\tName\tPrice\tChange\t% Chg\tMarket Cap\t14-Day RSI\tIV30\t20-Day Vol\t1-Yr Vol\tMA Signal\tCBOE Weeklys\tOptions Cadence\tRecommended Strategy", copy_text)
+        self.assertIn("DELL\tDell Technologies\t$524.14\t+7.75\t+1.50%\t338.7 B\t64.58\t61.36%\t63.04%\t61.72%\tUptrend\tYes (CBOE)\tWeekly\tBULL_PUT_SPREAD", copy_text)
 
         # Test CSV export with full headings
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -170,7 +172,20 @@ SPY,SPDR S&P 500 ETF,580.10,1.20,0.21%,22.0,22,Yes
             self.assertTrue(csv_path.exists())
             content = csv_path.read_text(encoding="utf-8")
             self.assertIn("Symbol,Name,Price,Price Change,% Chg,Volume,Avg Volume,Relative Volume,Market Cap", content)
+            self.assertIn("CBOE Weeklys,Options Cadence", content)
             self.assertIn("DELL,Dell Technologies,$524.14,+7.75,+1.50%", content)
+            self.assertIn("Yes (CBOE),Weekly", content)
+
+    def test_marketchameleon_cboe_filtering(self):
+        from src.screener_agents.marketchameleon_agent import get_cboe_weekly_directory
+        cboe_set = get_cboe_weekly_directory()
+        self.assertGreater(len(cboe_set), 500)
+        self.assertIn("DELL", cboe_set)
+        self.assertIn("NOW", cboe_set)
+        self.assertIn("SNOW", cboe_set)
+        # Verify non-weekly ticker is not in registry
+        self.assertNotIn("NAT", cboe_set)
+
 
 
 if __name__ == "__main__":
