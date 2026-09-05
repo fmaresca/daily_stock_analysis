@@ -87,6 +87,12 @@ import {
 } from './utils/exportImport';
 import { fetchClientSideLiveMarketData } from './utils/liveMarketFetcher';
 import { SECURITY_INTELLIGENCE_REGISTRY } from './utils/securityIntelligence';
+import {
+  loadAutoSyncSettings,
+  saveAutoSyncSettings,
+  isUsMarketOpen,
+  AutoSyncCadence,
+} from './utils/marketHoursAndAutoSync';
 
 const DEFAULT_UNIVERSE_SYMBOLS = [
   'SPY', 'QQQ', 'IWM', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'TSLA',
@@ -223,6 +229,28 @@ export const App: React.FC = () => {
 
   const [showWatchlistOnly, setShowWatchlistOnly] = useState<boolean>(false);
   const [customTickers, setCustomTickers] = useState<TickerMeta[]>([]);
+
+  // Auto-Sync & Rate Limit Safety State
+  const [autoSyncSettings, setAutoSyncSettings] = useState(() => loadAutoSyncSettings());
+  const [autoSyncCountdown, setAutoSyncCountdown] = useState<number>(autoSyncSettings.intervalSeconds);
+  const [isThrottled, setIsThrottled] = useState<boolean>(false);
+  const [isMarketOpen, setIsMarketOpen] = useState<boolean>(() => isUsMarketOpen());
+
+  const handleAutoSyncIntervalChange = (intervalSeconds: AutoSyncCadence) => {
+    const updated = { ...autoSyncSettings, intervalSeconds };
+    setAutoSyncSettings(updated);
+    saveAutoSyncSettings(updated);
+    setAutoSyncCountdown(intervalSeconds);
+    if (intervalSeconds > 0) {
+      setIsThrottled(false);
+    }
+  };
+
+  const handleToggleMarketHoursOnly = () => {
+    const updated = { ...autoSyncSettings, marketHoursOnly: !autoSyncSettings.marketHoursOnly };
+    setAutoSyncSettings(updated);
+    saveAutoSyncSettings(updated);
+  };
 
   // Theme State (Dark / Light Day-Night mode)
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -526,6 +554,42 @@ export const App: React.FC = () => {
 
     setIsRecalculating(false);
   };
+
+  // Auto-Sync countdown and market hours background timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // 1. Refresh market open status every tick
+      const marketOpen = isUsMarketOpen();
+      setIsMarketOpen(marketOpen);
+
+      // 2. If auto-sync is off or throttled, do nothing
+      if (autoSyncSettings.intervalSeconds <= 0 || isThrottled) {
+        return;
+      }
+
+      // 3. If marketHoursOnly is active and market is closed, don't decrement or trigger
+      if (autoSyncSettings.marketHoursOnly && !marketOpen) {
+        return;
+      }
+
+      // 4. If already fetching or recalculating, pause countdown
+      if (isLoading || isRecalculating) {
+        return;
+      }
+
+      // 5. Decrement countdown
+      setAutoSyncCountdown((prev) => {
+        if (prev <= 1) {
+          // Trigger sync
+          handleLiveRecalculate(currentWatchlistSymbols);
+          return autoSyncSettings.intervalSeconds;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [autoSyncSettings, isThrottled, isLoading, isRecalculating, currentWatchlistSymbols]);
 
   // Real-time WebSocket streaming listener (Active only in backend environments)
   useEffect(() => {
@@ -1260,6 +1324,13 @@ export const App: React.FC = () => {
         isLoading={isLoading}
         isRecalculating={isRecalculating}
         dataSource={dataSource}
+        autoSyncInterval={autoSyncSettings.intervalSeconds}
+        onChangeAutoSyncInterval={handleAutoSyncIntervalChange}
+        autoSyncCountdown={autoSyncCountdown}
+        marketHoursOnly={autoSyncSettings.marketHoursOnly}
+        onToggleMarketHoursOnly={handleToggleMarketHoursOnly}
+        isMarketOpen={isMarketOpen}
+        isThrottled={isThrottled}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onOpenHelp={() => setIsHelpModalOpen(true)}
         onOpenWatchlists={() => setIsWatchlistModalOpen(true)}

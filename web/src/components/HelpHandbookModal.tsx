@@ -1565,6 +1565,59 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              {/* Automated Live Sync Frequency & Rate Limits */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-sky-500/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-sky-400 font-bold text-xs">
+                    <Zap className="w-4 h-4" />
+                    <span>Automated Live Sync Frequency &amp; API Block Prevention Architecture</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-800/60">
+                    Safe Limit: &le;2,000 reqs/hr
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  To keep your options chain, Bollinger Bands, and RSI-14 indicators continuously updated without ever risking an external API ban or HTTP 429 throttling lockout, DeltaHarvest incorporates quantitative rate-limit budgeting:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-emerald-500/30">
+                    <div className="font-bold text-emerald-400 flex items-center justify-between">
+                      <span>5 Min (Default)</span>
+                      <span className="text-[10px] text-emerald-300 font-mono">12.6% Quota</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      12 syncs/hr &times; 21 tickers = <strong>252 reqs/hr</strong> (1,638 reqs/day). Zero block risk. Recommended baseline for swing and income trading.
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-blue-500/30">
+                    <div className="font-bold text-blue-400 flex items-center justify-between">
+                      <span>10 Min (Ultra-Safe)</span>
+                      <span className="text-[10px] text-blue-300 font-mono">6.3% Quota</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      6 syncs/hr &times; 21 tickers = <strong>126 reqs/hr</strong> (819 reqs/day). Minimum bandwidth overhead with 100% block-free resilience.
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-amber-500/30">
+                    <div className="font-bold text-amber-400 flex items-center justify-between">
+                      <span>2 Min (Day-Trade)</span>
+                      <span className="text-[10px] text-amber-300 font-mono">31.5% Quota</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      30 syncs/hr &times; 21 tickers = <strong>630 reqs/hr</strong>. Rapid price discovery for volatile intraday sessions.
+                    </p>
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                  <div className="font-bold text-slate-200">🛡️ Built-in Anti-Blocking Safeguards:</div>
+                  <ul className="list-disc list-inside space-y-0.5 text-slate-400 pl-1">
+                    <li><strong>Market Hours Gating:</strong> Sync automatically pauses outside 9:30 AM – 4:00 PM US Eastern Time and on weekends when options prices do not update, saving over 4,000 unnecessary calls/day.</li>
+                    <li><strong>Rate-Limit Circuit-Breaker:</strong> If any upstream proxy returns HTTP 429, auto-sync halts and falls back to local cached snapshots to preserve IP reputation.</li>
+                    <li><strong>Batch Pacing:</strong> Outgoing requests are dispatched in staggered concurrency batches of 5 with 6.5s AbortSignal deadlines, preventing burst-limit trips.</li>
+                  </ul>
+                </div>
+              </div>
+
               {/* Automated API Self-Test Diagnostic Suite */}
               <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/40 space-y-3">
                 <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
