@@ -15,6 +15,9 @@ import {
   Award,
   DollarSign,
   BrainCircuit,
+  Filter,
+  Clock,
+  CheckCircle2,
 } from './icons';
 import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 
@@ -30,6 +33,7 @@ interface DualMenuTreeProps {
   monthlyCount: number;
   highIvrCount: number;
   earningsAlertCount: number;
+  freeCashAmount?: number;
 }
 
 export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
@@ -44,23 +48,67 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
   monthlyCount,
   highIvrCount,
   earningsAlertCount,
+  freeCashAmount,
 }) => {
   return (
     <div className="space-y-3">
-      {/* Primary Tree Selector Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+      {/* Primary Top-Level Mode Selector */}
+      <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2.5 gap-3">
         <div className="flex items-center space-x-2">
-          {/* Tree 1 Switcher */}
+          {/* Mode 1: Weekly Workflow (Default) */}
           <button
-            onClick={() => onSelectTree('EQUITIES')}
-            className={`flex items-center space-x-2.5 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-              activeTree === 'EQUITIES'
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30'
-                : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+            onClick={() => {
+              onSelectTree('WORKFLOW');
+              if (
+                activeOptionsTab !== 'WEEKLY_POSITION_AUDIT' &&
+                activeOptionsTab !== 'ECONOMIC_CALENDAR' &&
+                activeOptionsTab !== 'CASCADING_SCREENER' &&
+                activeOptionsTab !== 'BROKER_STAGING'
+              ) {
+                onSelectOptionsTab('WEEKLY_POSITION_AUDIT');
+              }
+            }}
+            className={`flex items-center space-x-2.5 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+              activeTree === 'WORKFLOW'
+                ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-400/40'
+                : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
             }`}
           >
-            <BarChart2 className="w-4 h-4" />
-            <span>US Equities Analysis</span>
+            <Clock className="w-4 h-4 text-emerald-300" />
+            <span>📅 End-of-Week Workflow</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTree === 'WORKFLOW' ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-400'
+              }`}
+            >
+              4 Steps
+            </span>
+          </button>
+
+          {/* Mode 2: Strategy Labs */}
+          <button
+            onClick={() => onSelectTree('OPTIONS')}
+            className={`flex items-center space-x-2.5 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+              activeTree === 'OPTIONS'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30 ring-1 ring-indigo-400/40'
+                : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <Sliders className="w-4 h-4 text-indigo-300" />
+            <span>🔬 Strategy Labs</span>
+          </button>
+
+          {/* Mode 3: US Equities Universe */}
+          <button
+            onClick={() => onSelectTree('EQUITIES')}
+            className={`flex items-center space-x-2.5 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+              activeTree === 'EQUITIES'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-600/30 ring-1 ring-blue-400/40'
+                : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4 text-blue-300" />
+            <span>📊 US Equities Universe</span>
             <span
               className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
                 activeTree === 'EQUITIES' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
@@ -69,407 +117,332 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
               {totalTickersCount}
             </span>
           </button>
-
-          {/* Tree 2 Switcher */}
-          <button
-            onClick={() => onSelectTree('OPTIONS')}
-            className={`flex items-center space-x-2.5 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-              activeTree === 'OPTIONS'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30'
-                : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
-            }`}
-          >
-            <TrendingUp className="w-4 h-4" />
-            <span>Options &amp; Weekly Yield Engine</span>
-            <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
-                activeTree === 'OPTIONS' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
-              }`}
-            >
-              {weeklyCount} Wkly
-            </span>
-          </button>
         </div>
 
-        <div className="hidden md:flex items-center space-x-3 text-xs text-slate-400">
+        {/* Status Indicators */}
+        <div className="hidden lg:flex items-center space-x-4 text-xs font-mono text-slate-400">
+          {freeCashAmount !== undefined && (
+            <span className="flex items-center space-x-1.5 text-emerald-400 font-bold">
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>Free Cash: ${freeCashAmount.toLocaleString()}</span>
+            </span>
+          )}
           <span className="flex items-center space-x-1">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>{weeklyCount} Weeklys Active</span>
+            <span>{weeklyCount} Weeklys</span>
           </span>
           <span className="flex items-center space-x-1">
             <span className="w-2 h-2 rounded-full bg-slate-500" />
-            <span>{monthlyCount} Monthly Only</span>
+            <span>{monthlyCount} Monthly</span>
           </span>
         </div>
       </div>
 
-      {/* Sub-Navigation Level for Active Tree */}
-      <div className="glass-panel py-2.5 px-3 rounded-xl border border-slate-800/90 overflow-x-auto min-h-[58px] flex items-center shadow-lg">
-        {activeTree === 'EQUITIES' ? (
-          /* Tree 1: US Equities Sub-Navigation */
-          <div className="flex items-center space-x-2 min-w-max">
+      {/* Sub-Navigation Strip (Contextual by Mode) */}
+      <div className="glass-panel py-2 px-3 rounded-xl border border-slate-800/90 overflow-x-auto min-h-[56px] flex items-center shadow-lg">
+        {activeTree === 'WORKFLOW' ? (
+          /* WORKFLOW MODE: Guided 4-Step End-of-Week Ritual */
+          <div className="flex items-center space-x-2 min-w-max w-full">
+            {/* Step 1 */}
             <button
-              onClick={() => onSelectEquitiesTab('TECHNICAL_SCREENER')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeEquitiesTab === 'TECHNICAL_SCREENER'
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectOptionsTab('WEEKLY_POSITION_AUDIT')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer border ${
+                activeOptionsTab === 'WEEKLY_POSITION_AUDIT'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <Activity className="w-4 h-4" />
-              <span>Technical Screener</span>
+              <span className="w-5 h-5 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">1</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-300" />
+              <span>Step 1: Open Positions &amp; Capital</span>
             </button>
 
-            <button
-              onClick={() => onSelectEquitiesTab('WEEKLY_STOCK_SCREENERS')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeEquitiesTab === 'WEEKLY_STOCK_SCREENERS'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <Flame className="w-4 h-4 text-amber-400" />
-              <span>Weekly Stock Screeners</span>
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-mono font-bold">
-                Barchart Top 1%
-              </span>
-            </button>
+            <span className="text-slate-600">➔</span>
 
+            {/* Step 2 */}
             <button
-              onClick={() => onSelectEquitiesTab('INTERACTIVE_CHARTS')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeEquitiesTab === 'INTERACTIVE_CHARTS'
+              onClick={() => onSelectOptionsTab('ECONOMIC_CALENDAR')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer border ${
+                activeOptionsTab === 'ECONOMIC_CALENDAR'
                   ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <BarChart2 className="w-4 h-4 text-cyan-400" />
-              <span>Interactive Candlestick Charts &amp; BB Envelopes</span>
-            </button>
-
-            <button
-              onClick={() => onSelectEquitiesTab('FUNDAMENTAL_HEALTH')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeEquitiesTab === 'FUNDAMENTAL_HEALTH'
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Fundamental Health &amp; SEC EDGAR</span>
-            </button>
-
-            <button
-              onClick={() => onSelectEquitiesTab('TREND_SUPPORT')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeEquitiesTab === 'TREND_SUPPORT'
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <Compass className="w-4 h-4" />
-              <span>Trend &amp; Support Map</span>
-            </button>
-
-            <button
-              onClick={() => onSelectEquitiesTab('VOLATILITY_RISK')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeEquitiesTab === 'VOLATILITY_RISK'
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <Flame className="w-4 h-4 text-amber-400" />
-              <span>Volatility &amp; Risk Profiler</span>
-              {highIvrCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-mono">
-                  {highIvrCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => onSelectEquitiesTab('EARNINGS_CALENDAR')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeEquitiesTab === 'EARNINGS_CALENDAR'
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <Calendar className="w-4 h-4 text-rose-400" />
-              <span>Earnings Calendar &amp; Risk</span>
-              {earningsAlertCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-500/20 text-rose-300 font-mono">
-                  {earningsAlertCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => onSelectEquitiesTab('ECONOMIC_CALENDAR')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeEquitiesTab === 'ECONOMIC_CALENDAR'
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <Calendar className="w-4 h-4 text-blue-400" />
-              <span>Economic Indicators &amp; Catalysts</span>
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-300 font-mono font-bold">
+              <span className="w-5 h-5 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">2</span>
+              <Calendar className="w-4 h-4 text-blue-300" />
+              <span>Step 2: Macro &amp; Catalysts</span>
+              <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[10px] font-mono font-bold">
                 USD
               </span>
             </button>
 
+            <span className="text-slate-600">➔</span>
+
+            {/* Step 3 */}
             <button
-              onClick={() => onSelectEquitiesTab('SECTOR_OVERVIEW')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeEquitiesTab === 'SECTOR_OVERVIEW'
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectOptionsTab('CASCADING_SCREENER')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer border ${
+                activeOptionsTab === 'CASCADING_SCREENER'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <PieChart className="w-4 h-4" />
-              <span>Sector &amp; Universe Overview</span>
+              <span className="w-5 h-5 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">3</span>
+              <Filter className="w-4 h-4 text-emerald-300" />
+              <span>Step 3: Cascading Screener</span>
+              <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">
+                15–25Δ
+              </span>
+            </button>
+
+            <span className="text-slate-600">➔</span>
+
+            {/* Step 4 */}
+            <button
+              onClick={() => onSelectOptionsTab('BROKER_STAGING')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer border ${
+                activeOptionsTab === 'BROKER_STAGING'
+                  ? 'bg-amber-600 text-white border-amber-400 shadow-md shadow-amber-600/30 ring-1 ring-amber-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <span className="w-5 h-5 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">4</span>
+              <Zap className="w-4 h-4 text-amber-300" />
+              <span>Step 4: Sizing &amp; Broker Staging</span>
             </button>
           </div>
-        ) : (
-          /* Tree 2: Options & Weekly Engine Sub-Navigation */
+        ) : activeTree === 'OPTIONS' ? (
+          /* STRATEGY LABS MODE: Specialized Derivatives & Stress Labs */
           <div className="flex items-center space-x-2 min-w-max">
             <button
               onClick={() => onSelectOptionsTab('INCOME_SCREENER')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
                 activeOptionsTab === 'INCOME_SCREENER'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <TrendingUp className="w-4 h-4" />
+              <TrendingUp className="w-3.5 h-3.5" />
               <span>Conservative Income (CSPs &amp; CCs)</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('WEEKLY_STOCK_SCREENERS')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'WEEKLY_STOCK_SCREENERS'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <Flame className="w-4 h-4 text-amber-400" />
-              <span>Weekly Stock Screeners</span>
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-mono font-bold">
-                Barchart
-              </span>
-            </button>
-
-            <button
-              onClick={() => onSelectOptionsTab('AI_OPTIONS_INCOME')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'AI_OPTIONS_INCOME'
-                  ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white border-amber-400 shadow-md shadow-amber-600/30 ring-1 ring-amber-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <BrainCircuit className="w-4 h-4 text-amber-300" />
-              <span>Options Income AI (Thinking)</span>
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-mono font-bold">
-                HIGH
-              </span>
-            </button>
-
-            <button
-              onClick={() => onSelectOptionsTab('ECONOMIC_CALENDAR')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'ECONOMIC_CALENDAR'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <Calendar className="w-4 h-4 text-blue-400" />
-              <span>Macro Economic Catalysts</span>
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-300 font-mono font-bold">
-                USD
-              </span>
-            </button>
-
-            <button
               onClick={() => onSelectOptionsTab('MULTI_LEG_SPREADS')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
                 activeOptionsTab === 'MULTI_LEG_SPREADS'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>Multi-Leg Spreads &amp; Iron Condors</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('OPTION_CHAIN_MATRIX')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'OPTION_CHAIN_MATRIX'
-                  ? 'bg-cyan-600 text-white border-cyan-400 shadow-md shadow-cyan-600/30 ring-1 ring-cyan-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <Layers className="w-4 h-4 text-cyan-400" />
-              <span>Option Chain &amp; IV Smile</span>
-            </button>
-
-            <button
               onClick={() => onSelectOptionsTab('PMCC_SCREENER')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
                 activeOptionsTab === 'PMCC_SCREENER'
-                  ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/30 ring-1 ring-purple-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+                  ? 'bg-purple-600 text-white border-purple-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <TrendingUp className="w-4 h-4 text-purple-400" />
+              <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
               <span>Poor Man’s Covered Call (PMCC)</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('PORTFOLIO_MARGIN_SIM')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'PORTFOLIO_MARGIN_SIM'
-                  ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectOptionsTab('OPTION_CHAIN_MATRIX')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeOptionsTab === 'OPTION_CHAIN_MATRIX'
+                  ? 'bg-cyan-600 text-white border-cyan-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <Sliders className="w-4 h-4 text-indigo-400" />
-              <span>Portfolio Margin &amp; Stress Sim</span>
+              <Layers className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Option Chain &amp; Volatility Smile</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('MULTI_AGENT_AUDIT')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'MULTI_AGENT_AUDIT'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectOptionsTab('VOLATILITY_SKEW')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeOptionsTab === 'VOLATILITY_SKEW'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <Award className="w-4 h-4 text-emerald-400" />
-              <span>AI Multi-Agent Trade Structurer</span>
+              <Activity className="w-3.5 h-3.5 text-cyan-400" />
+              <span>25Δ Skew &amp; Term Structure</span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('PORTFOLIO_MARGIN_SIM')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeOptionsTab === 'PORTFOLIO_MARGIN_SIM'
+                  ? 'bg-indigo-600 text-white border-indigo-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Margin &amp; Shock Simulator</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('DEFENSIVE_ROLL_ASSISTANT')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
                 activeOptionsTab === 'DEFENSIVE_ROLL_ASSISTANT'
-                  ? 'bg-amber-600 text-white border-amber-400 shadow-md shadow-amber-600/30 ring-1 ring-amber-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+                  ? 'bg-amber-600 text-white border-amber-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
               <span>Defensive Rolling &amp; Repair</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('TAX_ALPHA_OPTIMIZER')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
                 activeOptionsTab === 'TAX_ALPHA_OPTIMIZER'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <DollarSign className="w-4 h-4 text-emerald-400" />
-              <span>Section 1256 Tax-Alpha &amp; Wash-Sale</span>
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Section 1256 Tax Alpha</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('EXECUTIVE_DIGEST')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'EXECUTIVE_DIGEST'
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectOptionsTab('AI_OPTIONS_INCOME')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeOptionsTab === 'AI_OPTIONS_INCOME'
+                  ? 'bg-amber-600 text-white border-amber-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <Award className="w-4 h-4 text-blue-400" />
-              <span>Executive Portfolio Health Digest</span>
-            </button>
-
-            <button
-              onClick={() => onSelectOptionsTab('VOLATILITY_SKEW')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'VOLATILITY_SKEW'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
-              }`}
-            >
-              <Activity className="w-4 h-4 text-cyan-400" />
-              <span>25Δ Volatility Skew &amp; Term Structure</span>
+              <BrainCircuit className="w-3.5 h-3.5 text-amber-300" />
+              <span>Options Income AI (Thinking)</span>
             </button>
 
             <button
               onClick={() => onSelectOptionsTab('BACKTEST_MARGIN')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
                 activeOptionsTab === 'BACKTEST_MARGIN'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <BarChart2 className="w-4 h-4 text-purple-400" />
-              <span>Backtester &amp; Margin Stress-Test</span>
+              <BarChart2 className="w-3.5 h-3.5 text-purple-400" />
+              <span>Systematic Backtester</span>
+            </button>
+          </div>
+        ) : (
+          /* EQUITIES MODE: Stock Screener, Charts & Fundamental Analysis */
+          <div className="flex items-center space-x-2 min-w-max">
+            <button
+              onClick={() => onSelectEquitiesTab('TECHNICAL_SCREENER')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'TECHNICAL_SCREENER'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>Technical Screener</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('BROKER_STAGING')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'BROKER_STAGING'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectEquitiesTab('WEEKLY_STOCK_SCREENERS')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'WEEKLY_STOCK_SCREENERS'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <Zap className="w-4 h-4 text-amber-400" />
-              <span>Broker Staging &amp; Order Payloads</span>
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
+              <span>Weekly Stock Screeners (Barchart)</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('EXPIRATION_CADENCE')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'EXPIRATION_CADENCE'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectEquitiesTab('INTERACTIVE_CHARTS')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'INTERACTIVE_CHARTS'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <Layers className="w-4 h-4" />
-              <span>Expiration Cadence &amp; CBOE Registry</span>
+              <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Interactive Candlestick Charts</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('DELTA_GREEKS')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'DELTA_GREEKS'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectEquitiesTab('FUNDAMENTAL_HEALTH')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'FUNDAMENTAL_HEALTH'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <Sliders className="w-4 h-4" />
-              <span>Delta Harvest &amp; Greeks Radar</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Fundamental Health &amp; SEC EDGAR</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('TICKER_AUDIT')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'TICKER_AUDIT'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectEquitiesTab('TREND_SUPPORT')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'TREND_SUPPORT'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>5-Part Options Safety Audit</span>
+              <Compass className="w-3.5 h-3.5" />
+              <span>Trend &amp; Support Map</span>
             </button>
 
             <button
-              onClick={() => onSelectOptionsTab('INCOME_CALCULATOR')}
-              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
-                activeOptionsTab === 'INCOME_CALCULATOR'
-                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              onClick={() => onSelectEquitiesTab('VOLATILITY_RISK')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'VOLATILITY_RISK'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <Calculator className="w-4 h-4 text-cyan-400" />
-              <span>Cash Income Calculator</span>
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
+              <span>Volatility &amp; Risk Profiler</span>
+            </button>
+
+            <button
+              onClick={() => onSelectEquitiesTab('EARNINGS_CALENDAR')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'EARNINGS_CALENDAR'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5 text-rose-400" />
+              <span>Earnings Calendar</span>
+            </button>
+
+            <button
+              onClick={() => onSelectEquitiesTab('ECONOMIC_CALENDAR')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'ECONOMIC_CALENDAR'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5 text-blue-400" />
+              <span>Economic Indicators (USD)</span>
+            </button>
+
+            <button
+              onClick={() => onSelectEquitiesTab('SECTOR_OVERVIEW')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'SECTOR_OVERVIEW'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <PieChart className="w-3.5 h-3.5" />
+              <span>Sector Overview</span>
             </button>
           </div>
         )}

@@ -135,6 +135,26 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
+      id: 'nav-weekly-audit',
+      title: 'End-of-Week Position Audit & Capital Center',
+      subtitle: 'Evaluate open CSPs, covered calls, 80% profit rules, threatened strikes, and cash ledger',
+      icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        onNavigateTree('WORKFLOW', 'WEEKLY_POSITION_AUDIT');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-cascading-screener',
+      title: 'Cascading Options Screener (15Δ–25Δ & Cash Gate)',
+      subtitle: 'Multi-stage funnel: Quality → IVR → 15-25Δ → $15k/pos Cash Gate → Gemini Thinking',
+      icon: <TrendingUp className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        onNavigateTree('WORKFLOW', 'CASCADING_SCREENER');
+        onClose();
+      },
+    },
+    {
       id: 'nav-options',
       title: 'Options Weekly Income Screener',
       subtitle: 'Conservative 0.15-0.20 Delta Cash-Secured Puts & Covered Calls',

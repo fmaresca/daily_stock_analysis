@@ -391,7 +391,13 @@ export interface FundamentalHealthData {
   roc_type?: 'CONSTRUCTIVE' | 'DESTRUCTIVE' | 'NONE';
 }
 
-export type MenuTreeType = 'EQUITIES' | 'OPTIONS';
+export type MenuTreeType = 'WORKFLOW' | 'OPTIONS' | 'EQUITIES';
+
+export type WorkflowStepType =
+  | 'WEEKLY_POSITION_AUDIT'
+  | 'ECONOMIC_CALENDAR'
+  | 'CASCADING_SCREENER'
+  | 'BROKER_STAGING';
 
 export type EquitiesTabType =
   | 'TECHNICAL_SCREENER'
@@ -405,6 +411,8 @@ export type EquitiesTabType =
   | 'SECTOR_OVERVIEW';
 
 export type OptionsTabType =
+  | 'WEEKLY_POSITION_AUDIT'
+  | 'CASCADING_SCREENER'
   | 'INCOME_SCREENER'
   | 'WEEKLY_STOCK_SCREENERS'
   | 'AI_OPTIONS_INCOME'
@@ -424,6 +432,34 @@ export type OptionsTabType =
   | 'DELTA_GREEKS'
   | 'TICKER_AUDIT'
   | 'INCOME_CALCULATOR';
+
+export interface AccountCapitalState {
+  totalCash: number;
+  committedCollateral: number;
+  freeCash: number;
+  maxPerPositionAllocation: number; // Defaults to $15,000 per user rule
+  maxAllowedPositions: number; // e.g. floor(freeCash / 15000)
+  lastUpdated: string;
+}
+
+export interface TaxLedgerRecord {
+  id: string;
+  date: string;
+  symbol: string;
+  type: 'PREMIUM_EARNED' | 'CAPITAL_GAIN' | 'CAPITAL_LOSS';
+  amount: number;
+  strategy: 'CSP' | 'COVERED_CALL' | 'STOCK' | 'SPREAD' | string;
+  note?: string;
+}
+
+export interface TaxLedgerState {
+  currentTaxYear: number;
+  priorYearLossCarryforward: number; // e.g. $3,000 or custom prior year carryforward
+  ytdPremiumsEarned: number;
+  ytdRealizedCapitalGains: number;
+  ytdRealizedCapitalLosses: number;
+  records: TaxLedgerRecord[];
+}
 
 
 
