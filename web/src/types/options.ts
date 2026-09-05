@@ -406,6 +406,7 @@ export type EquitiesTabType =
 export type OptionsTabType =
   | 'INCOME_SCREENER'
   | 'WEEKLY_STOCK_SCREENERS'
+  | 'AI_OPTIONS_INCOME'
   | 'MULTI_LEG_SPREADS'
   | 'VOLATILITY_SKEW'
   | 'OPTION_CHAIN_MATRIX'

@@ -14,6 +14,7 @@ import {
   Zap,
   Award,
   DollarSign,
+  BrainCircuit,
 } from './icons';
 import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 
@@ -243,6 +244,21 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
               <span>Weekly Stock Screeners</span>
               <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-mono font-bold">
                 Barchart
+              </span>
+            </button>
+
+            <button
+              onClick={() => onSelectOptionsTab('AI_OPTIONS_INCOME')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-bold flex items-center space-x-2 transition-all leading-normal border cursor-pointer ${
+                activeOptionsTab === 'AI_OPTIONS_INCOME'
+                  ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white border-amber-400 shadow-md shadow-amber-600/30 ring-1 ring-amber-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 shadow-sm'
+              }`}
+            >
+              <BrainCircuit className="w-4 h-4 text-amber-300" />
+              <span>Options Income AI (Thinking)</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-mono font-bold">
+                HIGH
               </span>
             </button>
 

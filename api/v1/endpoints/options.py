@@ -598,4 +598,169 @@ def analyze_barchart_watchlist(
     }
 
 
+class OptionsAnalyzeRequest(BaseModel):
+    screenerData: str = Field(..., description="Raw tabular or CSV screener data payload")
+    strategy: Optional[str] = Field("BOTH", description="Strategy filter: CSP, COVERED_CALL, or BOTH")
+    minAroc: Optional[float] = Field(15.0, description="Minimum annualized return on capital percentage")
+    modelOverride: Optional[str] = Field(None, description="Optional model override name")
+
+
+@router.post("/analyze-options")
+def analyze_options_screener(
+    request: OptionsAnalyzeRequest,
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Quantitative AI options analysis utilizing Gemini Extended Thinking.
+    Enforces institutional income discipline (5-10 DTE, earnings blackouts, delta 0.15-0.30, technical support/resistance anchors, min AROC).
+    """
+    import json
+    import os
+    import re
+    import urllib.request
+    import urllib.error
+
+    api_key = (
+        getattr(config, "gemini_api_key", None)
+        or os.environ.get("GEMINI_API_KEY")
+        or (getattr(config, "gemini_api_keys", [""])[0] if getattr(config, "gemini_api_keys", None) else "")
+    )
+
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Missing GEMINI_API_KEY. To analyze with zero billing, click 'Copy Prompt for Gemini Pro Plan' "
+                "in the Web UI to run directly in gemini.google.com with your consumer subscription."
+            ),
+        )
+
+    if not request.screenerData or not request.screenerData.strip():
+        raise HTTPException(status_code=400, detail="Screener data payload is empty.")
+
+    target_model = request.modelOverride or os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+
+    prompt_template = f"""You are an institutional derivatives portfolio manager and quantitative options analyst specializing in conservative weekly income generation through Cash-Secured Puts (CSPs) and Covered Calls (CCs).
+
+### OBJECTIVE
+Analyze the provided weekly stock screener data and generate an institutional shortlist of optimal weekly option candidates to write for immediate income, prioritizing capital preservation, probability of expiring out-of-the-money (PoP > 75%), and favorable risk-adjusted yield.
+
+### THINKING & REASONING MANDATE
+Activate deep quantitative thinking. Systematically evaluate cross-sectional volatility, moving average cushions (20-day and 50-day SMA), swing support/resistance levels, earnings announcement calendar risk, and annualized return on capital (AROC).
+
+### SCREENING RULES & CONSTRAINTS
+1. EXPIRATION: Focus strictly on the nearest weekly expiration (5 to 10 Days to Expiration [DTE]).
+2. EARNINGS RISK: STRICT BLACKOUT. If an earnings announcement occurs prior to or during the expiration cycle, immediately reject the candidate or flag it with a score of 0.
+3. CASH-SECURED PUTS (CSPs):
+   - Delta Range: -0.15 to -0.30 (approx. 70-85% out-of-the-money probability).
+   - Technical Anchor: Strike must be set AT or BELOW verified technical support (e.g., 20-day or 50-day SMA, recent swing low).
+   - Downside Cushion: Minimum 3.5% to 6.0% buffer between current underlying stock price and strike.
+   - IV Regime: Prefer elevated IV Rank (> 35th percentile) where option premium is rich relative to historical volatility, excluding binary events.
+4. COVERED CALLS (CCs):
+   - Delta Range: +0.15 to +0.30.
+   - Technical Anchor: Strike must be set AT or ABOVE overhead resistance (e.g., upper Bollinger Band, 50-day SMA, or major swing high).
+5. LIQUIDITY & SPREAD:
+   - Minimum Open Interest: > 100 contracts on the selected strike.
+   - Bid/Ask Spread: Bid/Ask spread must not exceed 10% of the bid price (favor penny/nickel tick spreads).
+6. ANNUALIZED RETURN FORMULA:
+   - Annualized Return on Capital (AROC) = ((Premium / Strike Price) * (365 / DTE)) * 100.
+   - Target Minimum AROC: >= {request.minAroc}% for puts; >= 12.0% for calls (excluding capital gain to strike).
+
+### INPUT DATA
+User Strategy Preference: {request.strategy}
+Target Minimum Annualized Yield: {request.minAroc}%
+Screener Payload:
+{request.screenerData}
+
+### REQUIRED JSON OUTPUT STRUCTURE
+Return ONLY a valid, raw JSON object (no surrounding Markdown wrappers, no ```json prefixes) adhering to this schema:
+{{
+  "market_regime_context": "Brief 2-sentence macro/volatility backdrop assessment",
+  "candidates": [
+    {{
+      "ticker": "AAPL",
+      "strategy": "CSP",
+      "current_price": 224.50,
+      "recommended_strike": 217.50,
+      "expiration_date": "YYYY-MM-DD",
+      "dte": 7,
+      "delta": -0.21,
+      "bid_ask": "1.15 / 1.18",
+      "expected_premium": 1.15,
+      "downside_cushion_pct": 3.12,
+      "annualized_yield_pct": 27.55,
+      "iv_rank": 42.0,
+      "technical_anchor": "Strike sits 1.2% below the 20-day SMA ($220.10) and above horizontal swing low support.",
+      "earnings_date": "None during cycle",
+      "selection_tier": "PRIMARY",
+      "risk_factors": "Potential tech sector beta drawdown if NDX breaks 50 SMA."
+    }}
+  ],
+  "rejected_candidates": [
+    {{
+      "ticker": "XYZ",
+      "reason": "Earnings announcement within 3 days; excessive binary gap risk."
+    }}
+  ]
+}}"""
+
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:generateContent?key={api_key}"
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": prompt_template}],
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.1,
+            "thinking_config": {
+                "thinking_level": "HIGH",
+            },
+            "response_mime_type": "application/json",
+        },
+    }
+
+    try:
+        req = urllib.request.Request(
+            gemini_url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=45) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        candidate_part = None
+        candidates_list = data.get("candidates", [])
+        if candidates_list:
+            parts = candidates_list[0].get("content", {}).get("parts", [])
+            for p in parts:
+                if "text" in p:
+                    candidate_part = p["text"]
+                    break
+
+        raw_text = candidate_part or "{}"
+        try:
+            return json.loads(raw_text)
+        except Exception:
+            sanitized = re.sub(r"```json\s*|```", "", raw_text).strip()
+            return json.loads(sanitized)
+
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="ignore")
+        if e.code == 429:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "Google AI Studio rate limit reached (HTTP 429). Zero billing protection active! "
+                    "Please use the 'Copy Prompt for Gemini Pro Plan' bridge to analyze inside gemini.google.com with your consumer subscription."
+                ),
+            )
+        raise HTTPException(status_code=e.code, detail=f"Gemini API returned HTTP {e.code}: {err_body}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Options analysis failed: {str(e)}")
+
+
+
 
