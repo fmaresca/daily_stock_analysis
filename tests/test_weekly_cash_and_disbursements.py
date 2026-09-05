@@ -148,6 +148,71 @@ TABLE 3: EXCLUDED CANDIDATES (Failed hard filters)
         self.assertEqual(t1_rows[0][2], "118.00")
         self.assertEqual(t1_rows[4][0], "GOOGL")
 
+    def test_gemini_institutional_15_column_table_parsing(self):
+        # Format matching the adapted prompt for Gemini Pro / Gemini Thinking
+        sample_markdown = """
+**Executive Summary:**
+Total Premium Captured: $4,850.00
+Portfolio Weekly ROC: 1.62% (84.2% Annualized)
+Remaining Deployable Cash: $120,500.00
+
+TABLE 1: RECOMMENDED TRADES (FINAL CANDIDATES)
+| Risk Rank | Stock Symbol | Current Price | IV | 14-Day RSI | Suggested Strike | Option Delta | OTM Cushion | Contracts | Collateral Committed | % of Pool | Est. Premium / Share | Total Premium | Weekly ROC | Annualized ROC |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 1 | NVDA | $125.50 | 38.2% | 58 | $118.00 | -0.18 | 6.0% | 10 | $118,000.00 | 39.3% | $1.45 | $1,450.00 | 1.23% | 63.9% |
+| 2 | MSFT | $445.00 | 22.5% | 52 | $425.00 | -0.19 | 4.5% | 1 | $42,500.00 | 14.2% | $2.15 | $215.00 | 0.51% | 26.3% |
+| 3 | AAPL | $225.00 | 21.0% | 61 | $215.00 | -0.20 | 4.4% | 1 | $21,500.00 | 7.2% | $1.85 | $185.00 | 0.86% | 44.7% |
+| TOTALS | - | - | - | - | - | - | - | 12 | $182,000.00 | 60.7% | - | $1,850.00 | 1.02% | 52.8% |
+| REMAINING UNALLOCATED CASH: $118,000.00 | - | - | - | - | - | - | - | - | - | - | - | - | - | - |
+
+TABLE 2: BORDERLINE CANDIDATES
+| Symbol | Current Price | Trend Str/Dir | 14D RSI | Earnings Date | Reason |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| TSLA | $210.00 | Up 80% | 68 | 2026-10-18 | Approaching 70 RSI overbought threshold |
+| AMD | $145.00 | Up 75% | 54 | 2026-10-25 | Lower IV Rank compared to NVDA |
+
+TABLE 3: EXCLUDED CANDIDATES
+| Symbol | Current Price | Specific Exclusion Rule Failed |
+| :---: | :---: | :---: |
+| NFLX | $680.00 | Earnings announcement within expiration week |
+| INTC | $22.00 | Failed 9/18-day EMA uptrend check (Bearish) |
+"""
+        # Verify section presence
+        self.assertIn("TABLE 1: RECOMMENDED TRADES", sample_markdown)
+        self.assertIn("TABLE 2: BORDERLINE CANDIDATES", sample_markdown)
+        self.assertIn("TABLE 3: EXCLUDED CANDIDATES", sample_markdown)
+
+        # Parse rows, ensuring TOTALS and REMAINING CASH rows are skipped
+        t1_trades = []
+        in_t1 = False
+        headers = []
+        for line in sample_markdown.splitlines():
+            line = line.strip()
+            if "TABLE 1" in line:
+                in_t1 = True
+                continue
+            if "TABLE 2" in line or "TABLE 3" in line:
+                in_t1 = False
+            if in_t1 and line.startswith("|") and not line.startswith("| :---"):
+                cols = [c.strip() for c in line.split("|")[1:-1]]
+                if not headers and ("Stock Symbol" in cols or "Risk Rank" in cols):
+                    headers = [c.lower() for c in cols]
+                    continue
+                first_col = cols[0].lower()
+                if "total" in first_col or "remaining" in first_col:
+                    continue
+                if len(cols) >= 10:
+                    t1_trades.append(cols)
+
+        # 3 recommended trade rows, totals excluded
+        self.assertEqual(len(t1_trades), 3)
+        self.assertEqual(t1_trades[0][1], "NVDA")
+        self.assertEqual(t1_trades[0][5], "$118.00")
+        self.assertEqual(t1_trades[0][8], "10")  # 10 contracts
+        self.assertEqual(t1_trades[0][9], "$118,000.00")  # under $200k limit!
+        self.assertEqual(t1_trades[1][1], "MSFT")
+        self.assertEqual(t1_trades[2][1], "AAPL")
+
 
 if __name__ == "__main__":
     unittest.main()
