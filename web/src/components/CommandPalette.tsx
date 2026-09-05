@@ -17,6 +17,8 @@ import {
   Key,
   Zap,
   BrainCircuit,
+  DollarSign,
+  Award,
 } from './icons';
 import { TickerMeta, MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 import { getSecurityIntelligence } from '../utils/securityIntelligence';
@@ -131,6 +133,36 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />,
       action: () => {
         onNavigateTree('EQUITIES', 'FUNDAMENTAL_HEALTH');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-weekly-cash-ledger',
+      title: 'Step 1: Cash, Disbursements & YTD Tax Ledger',
+      subtitle: 'Liquid cash balance, $5k living expense deduction, CSP collateral, and True Deployable Free Cash',
+      icon: <DollarSign className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        onNavigateTree('WORKFLOW', 'WEEKLY_CASH_LEDGER');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-holdings-covered-calls',
+      title: 'Step 2: Holdings & 20Δ Covered Calls Suggester',
+      subtitle: 'Long stock inventory, uncovered shares (≥100) detection, 20-Delta call generation, and CSP monitor',
+      icon: <ShieldCheck className="w-4 h-4 text-indigo-400" />,
+      action: () => {
+        onNavigateTree('WORKFLOW', 'HOLDINGS_COVERED_CALLS');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-weekly-executive-report',
+      title: 'Step 5: Weekly Executive Master Report',
+      subtitle: 'Consolidated master tabular report with CSV export and Print-to-PDF format',
+      icon: <Award className="w-4 h-4 text-amber-400" />,
+      action: () => {
+        onNavigateTree('WORKFLOW', 'WEEKLY_EXECUTIVE_REPORT');
         onClose();
       },
     },

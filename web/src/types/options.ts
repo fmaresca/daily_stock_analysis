@@ -394,9 +394,12 @@ export interface FundamentalHealthData {
 export type MenuTreeType = 'WORKFLOW' | 'OPTIONS' | 'EQUITIES';
 
 export type WorkflowStepType =
+  | 'WEEKLY_CASH_LEDGER'
+  | 'HOLDINGS_COVERED_CALLS'
+  | 'CASCADING_SCREENER'
+  | 'WEEKLY_EXECUTIVE_REPORT'
   | 'WEEKLY_POSITION_AUDIT'
   | 'ECONOMIC_CALENDAR'
-  | 'CASCADING_SCREENER'
   | 'BROKER_STAGING';
 
 export type EquitiesTabType =
@@ -411,6 +414,9 @@ export type EquitiesTabType =
   | 'SECTOR_OVERVIEW';
 
 export type OptionsTabType =
+  | 'WEEKLY_CASH_LEDGER'
+  | 'HOLDINGS_COVERED_CALLS'
+  | 'WEEKLY_EXECUTIVE_REPORT'
   | 'WEEKLY_POSITION_AUDIT'
   | 'CASCADING_SCREENER'
   | 'INCOME_SCREENER'
@@ -433,13 +439,106 @@ export type OptionsTabType =
   | 'TICKER_AUDIT'
   | 'INCOME_CALCULATOR';
 
+export interface DisbursementItem {
+  id: string;
+  description: string;
+  amount: number;
+  isRecurring: boolean;
+  frequency?: 'WEEKLY' | 'MONTHLY' | 'ONE_TIME';
+}
+
 export interface AccountCapitalState {
   totalCash: number;
+  plannedDisbursements: DisbursementItem[];
+  totalEncumberedDisbursements: number;
   committedCollateral: number;
   freeCash: number;
+  priorYtdPremiumBalance: number;
+  currentWeekPremiumsCollected: number;
+  ytdPremiumsEarned: number;
   maxPerPositionAllocation: number; // Defaults to $15,000 per user rule
   maxAllowedPositions: number; // e.g. floor(freeCash / 15000)
   lastUpdated: string;
+}
+
+export interface StockHoldingPair {
+  symbol: string;
+  companyName?: string;
+  shares: number;
+  sharesHeld?: number;
+  costBasis: number;
+  currentSpot: number;
+  currentSpotPrice?: number;
+  marketValue?: number;
+  activeCoveredCall?: {
+    strike: number;
+    expiration?: string;
+    dte: number;
+    delta: number;
+    premiumCollected: number;
+    currentPrice: number;
+    pnlPercent?: number;
+  };
+  activeCallOption?: {
+    strike: number;
+    expiration: string;
+    dte: number;
+    delta: number;
+    premiumCollected: number;
+    currentMark: number;
+  };
+  uncoveredShares: number;
+  marketChameleonIvr30?: number;
+  marketChameleonIvrRank?: number;
+  resistanceLevel?: number;
+  suggestedWeeklyCall20Delta?: {
+    strike: number;
+    delta: number;
+    dte: number;
+    expiration: string;
+    estPremium: number;
+    annualizedYield: number;
+    ivr30: number;
+    ivr30Rank: number;
+    technicalJustification: string;
+  };
+}
+
+export interface GeminiRecommendedTrade {
+  riskRank: number;
+  symbol: string;
+  currentPrice: number;
+  trendStrDir: string;
+  rsi14: number;
+  earningsDate: string;
+  suggestedStrike: number;
+  delta: number;
+  estPremiumAnnualized: string;
+  capitalCommitted: number;
+  sentimentFlags: string;
+  technicalJustification: string;
+}
+
+export interface GeminiBorderlineCandidate {
+  symbol: string;
+  currentPrice: number;
+  trendStrDir: string;
+  rsi14: number;
+  earningsDate: string;
+  borderlineReason: string;
+}
+
+export interface GeminiExcludedCandidate {
+  symbol: string;
+  currentPrice: number;
+  reasonForExclusion: string;
+}
+
+export interface GeminiScreenResult {
+  recommendedTrades: GeminiRecommendedTrade[];
+  borderlineCandidates: GeminiBorderlineCandidate[];
+  excludedCandidates: GeminiExcludedCandidate[];
+  rawMarkdown: string;
 }
 
 export interface TaxLedgerRecord {

@@ -384,74 +384,61 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             <div className="space-y-6">
               <div className="border-l-2 border-emerald-400 pl-4 py-1">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>📅 The Systematic End-of-Week Options Ritual (4-Step Workflow)</span>
+                  <span>📅 The Systematic End-of-Week Options Ritual (10-Step Production Workflow)</span>
                 </h3>
                 <p className="text-slate-300 mt-1">
-                  At the end of each trading week, systematic options income investors follow a disciplined 4-step process to manage risk on open positions, audit free cash (avoiding margin and overleverage), and screen high-conviction candidates.
+                  At the end of each trading week, systematic options income investors execute this strict 10-step ritual over the weekend to audit cash, encumber weekly disbursements ($5,000 living expenses), identify uncovered shares (&ge;100) for 20&Delta; covered calls, run the Tri-Screen funnel, and obtain Gemini AI Extended Thinking trade recommendations formatted in 3 markdown tables.
                 </p>
               </div>
 
-              {/* 4 Steps Grid */}
+              {/* 10 Steps Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-2">
                   <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">1</span>
-                    <span>Step 1: Open Positions &amp; Capital Audit</span>
+                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">1–3</span>
+                    <span>Steps 1–3: Premium Inflow, YTD Ledger &amp; Tax Alpha</span>
                   </div>
                   <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                    <li><strong className="text-white">80% Profit Rule:</strong> If an option has captured &ge; 80% of its initial premium, close it immediately to eliminate tail gamma risk.</li>
-                    <li><strong className="text-white">Threatened Strikes:</strong> If the underlying spot price drops to within 2.5% of your short put strike, trigger the Defensive Roll Assistant to roll down &amp; out for a net credit.</li>
-                    <li><strong className="text-white">Uncovered Shares Check:</strong> If you hold 100+ shares of stock without an active call, flag it to write a 15–25Δ Covered Call.</li>
-                    <li><strong className="text-white">100% Cash-Secured:</strong> Liquid cash minus committed CSP collateral equals your exact Free Deployable Cash. Never touch margin.</li>
+                    <li><strong className="text-white">Step 1 (Inflow):</strong> Friday expirations automatically tagged as 100% captured / expired worthless or rolled forward.</li>
+                    <li><strong className="text-white">Step 2 (Calendar YTD):</strong> Maintains prior-year starting YTD balance + current week intake with annual reset.</li>
+                    <li><strong className="text-white">Step 3 (Tax Loss Offset):</strong> Prior-year capital loss carryforward offsets current realized gains and options income.</li>
                   </ul>
                 </div>
 
-                <div className="bg-slate-950/70 p-4 rounded-xl border border-blue-500/30 space-y-2">
-                  <div className="flex items-center gap-2 text-blue-300 font-bold text-sm">
-                    <span className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-xs">2</span>
-                    <span>Step 2: Macro &amp; Catalyst Pre-Flight</span>
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-indigo-500/30 space-y-2">
+                  <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
+                    <span className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center text-xs">4–5</span>
+                    <span>Steps 4–5: Long Stocks, 20&Delta; CCs &amp; Open CSPs</span>
                   </div>
                   <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                    <li><strong className="text-white">Weekly Economic Releases:</strong> Check upcoming CPI, PPI, FOMC, and Non-Farm Payroll releases. Avoid writing puts into binary macro shocks.</li>
-                    <li><strong className="text-white">Earnings Buffer:</strong> Disqualify any candidate with earnings scheduled in the next 14 to 21 days unless deliberate earnings crush harvest.</li>
-                    <li><strong className="text-white">25-Delta Skew:</strong> Ensure the put volatility premium is elevated relative to calls, confirming option buyers are overpaying.</li>
-                  </ul>
-                </div>
-
-                <div className="bg-slate-950/70 p-4 rounded-xl border border-teal-500/30 space-y-2">
-                  <div className="flex items-center gap-2 text-teal-300 font-bold text-sm">
-                    <span className="w-5 h-5 rounded-full bg-teal-500/20 flex items-center justify-center text-xs">3</span>
-                    <span>Step 3: Cascading Screener (15Δ–25Δ Funnel)</span>
-                  </div>
-                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                    <li><strong className="text-white">Quality Gate:</strong> Barchart Opinion &ge; 70%–80% Buy / Top 1% Signal OR MarketChameleon Primary Uptrend + Thinkorswim watchlist.</li>
-                    <li><strong className="text-white">Volatility Gate:</strong> IV Rank &ge; 35%–50% to ensure adequate premium yield.</li>
-                    <li><strong className="text-white">15Δ–25Δ Sweet Spot:</strong> Position short strike at 0.15–0.25 delta (75%–85% POP), anchored outside the lower 2-SD Bollinger Band.</li>
-                    <li><strong className="text-white">Capital Allocation Gate:</strong> Maximum $15,000 cash collateral per position to prevent overconcentration.</li>
+                    <li><strong className="text-white">Step 4 (Holdings):</strong> Long stocks paired with calls; uncovered blocks (&ge;100 shares) flagged for weekly call writing.</li>
+                    <li><strong className="text-white">Step 5 (CSPs):</strong> Open put collateral tracked 100% cash-backed; 80% profit triggers and ITM roll warnings.</li>
                   </ul>
                 </div>
 
                 <div className="bg-slate-950/70 p-4 rounded-xl border border-amber-500/30 space-y-2">
                   <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
-                    <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs">4</span>
-                    <span>Step 4: AI Extended Thinking &amp; Sizing</span>
+                    <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs">6–7</span>
+                    <span>Steps 6–7: Cash Waterfall &amp; $5,000 Living Encumbrance</span>
                   </div>
                   <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                    <li><strong className="text-white">Gemini Extended Thinking:</strong> Generate a 1-click institutional prompt feeding all screened candidates and your exact cash budget to pick the top 1 to 5 put writes.</li>
-                    <li><strong className="text-white">Zero-Billing Bridge:</strong> 100% free with your personal Google Gemini web subscription (no API overage fees).</li>
-                    <li><strong className="text-white">Broker Staging:</strong> Stage exact limit orders directly into your Schwab or broker execution workbench.</li>
+                    <li><strong className="text-white">Total Liquid Cash:</strong> Real-time brokerage cash input.</li>
+                    <li><strong className="text-white">Disbursements Ledger:</strong> Default $5,000 weekly living expenses encumbered before sizing new trades.</li>
+                    <li><strong className="text-white">True Deployable Free Cash:</strong> Total Cash &minus; Disbursements &minus; Committed Collateral. Zero margin.</li>
                   </ul>
                 </div>
-              </div>
 
-              {/* Tax Alpha & Loss Carryforward section */}
-              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-                  📈 YTD Premium &amp; Capital Loss Carryforward Netting
-                </h4>
-                <p className="text-xs text-slate-300">
-                  Option premiums harvested are treated as short-term capital gains in the year closed (unless Section 1256 index options, which enjoy 60/40 tax treatment). DeltaHarvest tracks calendar-year YTD option premiums and capital gains, automatically applying any prior-year capital loss carryforwards (e.g. IRS $3,000 annual allowance or carried-over capital losses) to determine your true estimated taxable liability.
-                </p>
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-cyan-500/30 space-y-2">
+                  <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-xs">8–10</span>
+                    <span>Steps 8–10: Tri-Screen, Gemini AI &amp; Master Report</span>
+                  </div>
+                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                    <li><strong className="text-white">Step 8 (Tri-Screen):</strong> Dual ingestion (paste/file) for TOS + 1-click export to Barchart View 190898.</li>
+                    <li><strong className="text-white">Step 9 (Gemini AI Pro):</strong> Evaluates screened candidates into 3 markdown tables (Final 5, Borderline, Excluded) with 1-click stage order buttons.</li>
+                    <li><strong className="text-white">Step 10 (Master Output):</strong> Consolidated tabular digest with CSV export and Print-to-PDF.</li>
+                  </ul>
+                </div>
               </div>
             </div>
           )}
