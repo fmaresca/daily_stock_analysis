@@ -30,11 +30,27 @@ Primary Target URL:
    - Built-in `generate_copy_paste_text(records)` function producing tab-delimited text with respective column headings ready for 1-click clipboard copy-pasting into spreadsheets and documents.
    - Web UI integrates "Copy Results (TSV)" button with immediate visual toast feedback.
 
-3. **Web UI Section ("Weekly Stock Screeners")**:
+3. **CBOE Weeklys Directory & Expiration Cadence Validation**:
+   - Integrates the official CBOE Available Weeklys Directory (`https://www.cboe.com/available_weeklys/get_csv_download/`).
+   - Categorizes every candidate into an explicit expiration cycle:
+     - `Daily / Multi-Weekly`: SPY, QQQ, AAPL, DELL, etc.
+     - `Weekly`: Verified CBOE weekly registered options chains.
+     - `Monthly Only`: Standard 3rd-Friday options only.
+   - In CLI and Web UI, toggle `--cboe-only` / `Strict CBOE Weeklys` to immediately filter out monthly-only contracts.
+
+4. **MarketChameleon Prescreen Builder & Custom Presets**:
+   - Reverse-engineered catalog of all 103 native filter dropdown categories from MarketChameleon.
+   - Interactive Modal (`MarketChameleonPrescreenModal.tsx`) providing:
+     - Preset selector with built-in presets (`Default Momentum & Volatility (Strict CBOE Weeklys)`, `High IV Growth (Any Options)`, `Mega-Cap Momentum`).
+     - Category dropdown builders to prescreen any native MarketChameleon criteria.
+     - LocalStorage persistence for saving, overwriting, and deleting custom named presets.
+     - 1-click "Save & Run Screener" applying criteria to the view.
+
+5. **Web UI Section ("Weekly Stock Screeners")**:
    - Accessible from both the Equities and Options navigation menus, as well as the Ctrl+K Command Palette.
    - Real-time KPI summary (Total universe candidates, 100% direction strength count, weekly options percentage, bullish bias).
    - In-browser CSV Upload: Drag-and-drop or upload any Barchart or MarketChameleon CSV directly.
-   - CSV Export & 1-Click Clipboard Copy: Instantly copy or download screened candidates with all respective column headings.
+   - CSV Export & 1-Click Clipboard Copy: Instantly copy or download screened candidates with all respective column headings (including CBOE Weeklys and Options Cadence).
    - 1-Click navigation to Interactive Candlestick Charts, 5-Part Options Safety Audit, and Schwab Broker Staging.
 
 ## CLI Usage
@@ -44,9 +60,19 @@ Primary Target URL:
 python scripts/run_screener_agent.py --source barchart
 ```
 
-### Fetch live data from MarketChameleon (Preselected Momentum & Volatility Filters)
+### Fetch live data from MarketChameleon (All Optionable Candidates)
 ```bash
 python scripts/run_screener_agent.py --source marketchameleon
+```
+
+### Fetch live data from MarketChameleon (Strict CBOE Weeklys Only)
+```bash
+python scripts/run_screener_agent.py --source marketchameleon --cboe-only
+```
+
+### Run with Custom Category Filter Overrides (JSON)
+```bash
+python scripts/run_screener_agent.py --source marketchameleon --cboe-only --filters-json '{"c45": "60.0 To 70.0"}'
 ```
 
 ### Import an existing CSV file

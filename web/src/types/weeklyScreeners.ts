@@ -18,6 +18,8 @@ export interface WeeklyScreenerRecord {
   updated_at: string;
   recommended_strategy: string;
   notes?: string;
+  in_cboe_registry?: boolean;
+  expiration_cadence?: string;
   extra_fields?: Record<string, any>;
 }
 

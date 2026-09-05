@@ -2,7 +2,7 @@
   "source_id": "marketchameleon",
   "source_name": "MarketChameleon Momentum & Volatility Screener",
   "source_url": "https://marketchameleon.com/Screeners/Stocks",
-  "timestamp": "2026-09-04T22:53:25.938503+00:00",
+  "timestamp": "2026-09-05T01:12:34.631346+00:00",
   "total_count": 60,
   "records": [
     {
@@ -18,13 +18,13 @@
       "opinion_last_month": "1Y Vol 61.7%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 61.4%",
+      "signal_strength": "IV30: 61.4% (Daily / Multi-Weekly)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.917771+00:00",
+      "updated_at": "2026-09-05T01:12:34.617807+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 64.58 | IV30: 61.36% | MktCap: 338.7 B | Signal: Uptrend",
+      "notes": "RSI: 64.58 | IV30: 61.36% | Cadence: Daily / Multi-Weekly | MktCap: 338.7 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 64.58,
         "iv30": 61.36,
@@ -41,7 +41,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Daily / Multi-Weekly"
       }
     },
     {
@@ -57,13 +59,13 @@
       "opinion_last_month": "1Y Vol 52.8%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 51.6%",
+      "signal_strength": "IV30: 51.6% (Daily / Multi-Weekly)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.917928+00:00",
+      "updated_at": "2026-09-05T01:12:34.617915+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 62.44 | IV30: 51.62% | MktCap: 146.0 B | Signal: Bullish Crossover",
+      "notes": "RSI: 62.44 | IV30: 51.62% | Cadence: Daily / Multi-Weekly | MktCap: 146.0 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 62.44,
         "iv30": 51.62,
@@ -80,7 +82,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Daily / Multi-Weekly"
       }
     },
     {
@@ -96,13 +100,13 @@
       "opinion_last_month": "1Y Vol 53.8%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 43.5%",
+      "signal_strength": "IV30: 43.5% (Daily / Multi-Weekly)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.918023+00:00",
+      "updated_at": "2026-09-05T01:12:34.617981+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.44 | IV30: 43.47% | MktCap: 116.9 B | Signal: Uptrend",
+      "notes": "RSI: 59.44 | IV30: 43.47% | Cadence: Daily / Multi-Weekly | MktCap: 116.9 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 59.44,
         "iv30": 43.47,
@@ -119,7 +123,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Daily / Multi-Weekly"
       }
     },
     {
@@ -135,13 +141,13 @@
       "opinion_last_month": "1Y Vol 40.3%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 37.0%",
+      "signal_strength": "IV30: 37.0% (Daily / Multi-Weekly)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.918548+00:00",
+      "updated_at": "2026-09-05T01:12:34.618039+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 57.11 | IV30: 36.97% | MktCap: 111.6 B | Signal: Bullish Crossover",
+      "notes": "RSI: 57.11 | IV30: 36.97% | Cadence: Daily / Multi-Weekly | MktCap: 111.6 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 57.11,
         "iv30": 36.97,
@@ -158,7 +164,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Daily / Multi-Weekly"
       }
     },
     {
@@ -174,13 +182,13 @@
       "opinion_last_month": "1Y Vol 69.9%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 61.7%",
+      "signal_strength": "IV30: 61.7% (Daily / Multi-Weekly)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.918722+00:00",
+      "updated_at": "2026-09-05T01:12:34.618097+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 67.02 | IV30: 61.66% | MktCap: 109.8 B | Signal: Fast Bullish Crossover",
+      "notes": "RSI: 67.02 | IV30: 61.66% | Cadence: Daily / Multi-Weekly | MktCap: 109.8 B | Signal: Fast Bullish Crossover",
       "extra_fields": {
         "rsi_14": 67.02,
         "iv30": 61.66,
@@ -197,7 +205,9 @@
         "ma_signal": "Fast Bullish Crossover",
         "ma_desc": "When the moving averages are all crossed in a bearish downtrend, but the current stock price spikes in a bullish crossover before the moving average can catch up. Can be an early sign of a trend reversal or a dead cat bounce.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Daily / Multi-Weekly"
       }
     },
     {
@@ -213,13 +223,13 @@
       "opinion_last_month": "1Y Vol 41.6%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 39.6%",
+      "signal_strength": "IV30: 39.6% (Weekly)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.918873+00:00",
+      "updated_at": "2026-09-05T01:12:34.618159+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 68.64 | IV30: 39.56% | MktCap: 59.4 B | Signal: Uptrend",
+      "notes": "RSI: 68.64 | IV30: 39.56% | Cadence: Weekly | MktCap: 59.4 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 68.64,
         "iv30": 39.56,
@@ -236,7 +246,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Weekly"
       }
     },
     {
@@ -251,14 +263,14 @@
       "opinion_last_week": "IV30 37.2%",
       "opinion_last_month": "1Y Vol 41.0%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 37.2%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 37.2% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.919159+00:00",
+      "updated_at": "2026-09-05T01:12:34.618212+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 67.75 | IV30: 37.24% | MktCap: 44.5 B | Signal: Uptrend",
+      "notes": "RSI: 67.75 | IV30: 37.24% | Cadence: Monthly Only | MktCap: 44.5 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 67.75,
         "iv30": 37.24,
@@ -275,7 +287,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -291,13 +305,13 @@
       "opinion_last_month": "1Y Vol 41.5%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 31.5%",
+      "signal_strength": "IV30: 31.5% (Weekly)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.919276+00:00",
+      "updated_at": "2026-09-05T01:12:34.618265+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 68.36 | IV30: 31.49% | MktCap: 37.6 B | Signal: Bullish Crossover",
+      "notes": "RSI: 68.36 | IV30: 31.49% | Cadence: Weekly | MktCap: 37.6 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 68.36,
         "iv30": 31.49,
@@ -314,7 +328,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Weekly"
       }
     },
     {
@@ -329,14 +345,14 @@
       "opinion_last_week": "IV30 47.6%",
       "opinion_last_month": "1Y Vol 42.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 47.6%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 47.6% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.919380+00:00",
+      "updated_at": "2026-09-05T01:12:34.618317+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.71 | IV30: 47.6% | MktCap: 33.4 B | Signal: Uptrend",
+      "notes": "RSI: 59.71 | IV30: 47.6% | Cadence: Monthly Only | MktCap: 33.4 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 59.71,
         "iv30": 47.6,
@@ -353,7 +369,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -369,13 +387,13 @@
       "opinion_last_month": "1Y Vol 42.2%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 46.1%",
+      "signal_strength": "IV30: 46.1% (Weekly)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.919497+00:00",
+      "updated_at": "2026-09-05T01:12:34.618377+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 66.83 | IV30: 46.12% | MktCap: 29.4 B | Signal: Uptrend",
+      "notes": "RSI: 66.83 | IV30: 46.12% | Cadence: Weekly | MktCap: 29.4 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 66.83,
         "iv30": 46.12,
@@ -392,7 +410,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Weekly"
       }
     },
     {
@@ -407,14 +427,14 @@
       "opinion_last_week": "IV30 43.7%",
       "opinion_last_month": "1Y Vol 46.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 43.7%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 43.7% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.919669+00:00",
+      "updated_at": "2026-09-05T01:12:34.618452+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 61.58 | IV30: 43.73% | MktCap: 14.8 B | Signal: Uptrend",
+      "notes": "RSI: 61.58 | IV30: 43.73% | Cadence: Monthly Only | MktCap: 14.8 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 61.58,
         "iv30": 43.73,
@@ -431,7 +451,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -446,14 +468,14 @@
       "opinion_last_week": "IV30 40.4%",
       "opinion_last_month": "1Y Vol 43.9%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 40.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 40.4% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.919779+00:00",
+      "updated_at": "2026-09-05T01:12:34.618505+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 61.59 | IV30: 40.35% | MktCap: 12.5 B | Signal: Uptrend",
+      "notes": "RSI: 61.59 | IV30: 40.35% | Cadence: Monthly Only | MktCap: 12.5 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 61.59,
         "iv30": 40.35,
@@ -470,7 +492,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -485,14 +509,14 @@
       "opinion_last_week": "IV30 38.1%",
       "opinion_last_month": "1Y Vol 40.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 38.1%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 38.1% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.919897+00:00",
+      "updated_at": "2026-09-05T01:12:34.618563+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 68.65 | IV30: 38.14% | MktCap: 12.3 B | Signal: Uptrend",
+      "notes": "RSI: 68.65 | IV30: 38.14% | Cadence: Monthly Only | MktCap: 12.3 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 68.65,
         "iv30": 38.14,
@@ -509,7 +533,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -524,14 +550,14 @@
       "opinion_last_week": "IV30 47.2%",
       "opinion_last_month": "1Y Vol 44.3%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 47.2%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 47.2% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.920016+00:00",
+      "updated_at": "2026-09-05T01:12:34.618618+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 58.27 | IV30: 47.21% | MktCap: 11.3 B | Signal: Uptrend",
+      "notes": "RSI: 58.27 | IV30: 47.21% | Cadence: Monthly Only | MktCap: 11.3 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 58.27,
         "iv30": 47.21,
@@ -548,7 +574,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -563,14 +591,14 @@
       "opinion_last_week": "IV30 48.6%",
       "opinion_last_month": "1Y Vol 51.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 48.6%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 48.6% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.920167+00:00",
+      "updated_at": "2026-09-05T01:12:34.618675+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 62.74 | IV30: 48.61% | MktCap: 9.6 B | Signal: Uptrend",
+      "notes": "RSI: 62.74 | IV30: 48.61% | Cadence: Monthly Only | MktCap: 9.6 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 62.74,
         "iv30": 48.61,
@@ -587,7 +615,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -602,14 +632,14 @@
       "opinion_last_week": "IV30 70.1%",
       "opinion_last_month": "1Y Vol 67.9%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 70.1%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 70.1% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.920302+00:00",
+      "updated_at": "2026-09-05T01:12:34.618729+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 60.57 | IV30: 70.12% | MktCap: 8.8 B | Signal: Uptrend",
+      "notes": "RSI: 60.57 | IV30: 70.12% | Cadence: Monthly Only | MktCap: 8.8 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 60.57,
         "iv30": 70.12,
@@ -626,7 +656,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -641,14 +673,14 @@
       "opinion_last_week": "IV30 48.3%",
       "opinion_last_month": "1Y Vol 53.2%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 48.3%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 48.3% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.920406+00:00",
+      "updated_at": "2026-09-05T01:12:34.618785+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.82 | IV30: 48.29% | MktCap: 8.7 B | Signal: Uptrend",
+      "notes": "RSI: 59.82 | IV30: 48.29% | Cadence: Monthly Only | MktCap: 8.7 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 59.82,
         "iv30": 48.29,
@@ -665,7 +697,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -680,14 +714,14 @@
       "opinion_last_week": "IV30 72.7%",
       "opinion_last_month": "1Y Vol 71.8%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 72.7%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 72.7% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.920503+00:00",
+      "updated_at": "2026-09-05T01:12:34.618832+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 62.99 | IV30: 72.72% | MktCap: 8.2 B | Signal: Uptrend",
+      "notes": "RSI: 62.99 | IV30: 72.72% | Cadence: Monthly Only | MktCap: 8.2 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 62.99,
         "iv30": 72.72,
@@ -704,7 +738,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -719,14 +755,14 @@
       "opinion_last_week": "IV30 45.0%",
       "opinion_last_month": "1Y Vol 41.5%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 45.0%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 45.0% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.920604+00:00",
+      "updated_at": "2026-09-05T01:12:34.618880+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 58.09 | IV30: 44.99% | MktCap: 8.2 B | Signal: Uptrend",
+      "notes": "RSI: 58.09 | IV30: 44.99% | Cadence: Monthly Only | MktCap: 8.2 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 58.09,
         "iv30": 44.99,
@@ -743,7 +779,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -759,13 +797,13 @@
       "opinion_last_month": "1Y Vol 67.6%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 57.6%",
+      "signal_strength": "IV30: 57.6% (Daily / Multi-Weekly)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.920746+00:00",
+      "updated_at": "2026-09-05T01:12:34.618936+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 64.27 | IV30: 57.56% | MktCap: 7.8 B | Signal: Uptrend",
+      "notes": "RSI: 64.27 | IV30: 57.56% | Cadence: Daily / Multi-Weekly | MktCap: 7.8 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 64.27,
         "iv30": 57.56,
@@ -782,7 +820,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Daily / Multi-Weekly"
       }
     },
     {
@@ -797,14 +837,14 @@
       "opinion_last_week": "IV30 43.8%",
       "opinion_last_month": "1Y Vol 45.0%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 43.8%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 43.8% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.920867+00:00",
+      "updated_at": "2026-09-05T01:12:34.618994+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.58 | IV30: 43.81% | MktCap: 7.5 B | Signal: Uptrend",
+      "notes": "RSI: 59.58 | IV30: 43.81% | Cadence: Monthly Only | MktCap: 7.5 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 59.58,
         "iv30": 43.81,
@@ -821,7 +861,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -836,14 +878,14 @@
       "opinion_last_week": "IV30 50.8%",
       "opinion_last_month": "1Y Vol 56.0%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 50.8%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 50.8% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.920969+00:00",
+      "updated_at": "2026-09-05T01:12:34.619049+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 60.15 | IV30: 50.77% | MktCap: 7.1 B | Signal: Uptrend",
+      "notes": "RSI: 60.15 | IV30: 50.77% | Cadence: Monthly Only | MktCap: 7.1 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 60.15,
         "iv30": 50.77,
@@ -860,7 +902,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -875,14 +919,14 @@
       "opinion_last_week": "IV30 45.3%",
       "opinion_last_month": "1Y Vol 44.2%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 45.3%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 45.3% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921082+00:00",
+      "updated_at": "2026-09-05T01:12:34.619099+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 69.63 | IV30: 45.34% | MktCap: 5.6 B | Signal: Uptrend",
+      "notes": "RSI: 69.63 | IV30: 45.34% | Cadence: Monthly Only | MktCap: 5.6 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 69.63,
         "iv30": 45.34,
@@ -899,7 +943,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -914,14 +960,14 @@
       "opinion_last_week": "IV30 42.8%",
       "opinion_last_month": "1Y Vol 44.0%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 42.8%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 42.8% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921192+00:00",
+      "updated_at": "2026-09-05T01:12:34.619153+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 55.7 | IV30: 42.77% | MktCap: 5.5 B | Signal: Uptrend",
+      "notes": "RSI: 55.7 | IV30: 42.77% | Cadence: Monthly Only | MktCap: 5.5 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 55.7,
         "iv30": 42.77,
@@ -938,7 +984,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -954,13 +1002,13 @@
       "opinion_last_month": "1Y Vol 61.7%",
       "has_options": true,
       "has_weekly_options": true,
-      "signal_strength": "IV30: 60.3%",
+      "signal_strength": "IV30: 60.3% (Daily / Multi-Weekly)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921292+00:00",
+      "updated_at": "2026-09-05T01:12:34.619208+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 66.11 | IV30: 60.31% | MktCap: 5.3 B | Signal: Bullish Crossover",
+      "notes": "RSI: 66.11 | IV30: 60.31% | Cadence: Daily / Multi-Weekly | MktCap: 5.3 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 66.11,
         "iv30": 60.31,
@@ -977,7 +1025,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": true,
+        "expiration_cadence": "Daily / Multi-Weekly"
       }
     },
     {
@@ -992,14 +1042,14 @@
       "opinion_last_week": "IV30 48.7%",
       "opinion_last_month": "1Y Vol 40.0%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 48.7%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 48.7% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921410+00:00",
+      "updated_at": "2026-09-05T01:12:34.619259+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 67.6 | IV30: 48.73% | MktCap: 5.2 B | Signal: Uptrend",
+      "notes": "RSI: 67.6 | IV30: 48.73% | Cadence: Monthly Only | MktCap: 5.2 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 67.6,
         "iv30": 48.73,
@@ -1016,7 +1066,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1031,14 +1083,14 @@
       "opinion_last_week": "IV30 67.8%",
       "opinion_last_month": "1Y Vol 57.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 67.8%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 67.8% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921470+00:00",
+      "updated_at": "2026-09-05T01:12:34.619310+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.96 | IV30: 67.77% | MktCap: 4.4 B | Signal: Uptrend",
+      "notes": "RSI: 59.96 | IV30: 67.77% | Cadence: Monthly Only | MktCap: 4.4 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 59.96,
         "iv30": 67.77,
@@ -1055,7 +1107,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1070,14 +1124,14 @@
       "opinion_last_week": "IV30 50.4%",
       "opinion_last_month": "1Y Vol 47.1%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 50.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 50.4% (Monthly Only)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921523+00:00",
+      "updated_at": "2026-09-05T01:12:34.619364+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 63.71 | IV30: 50.36% | MktCap: 4.3 B | Signal: Bullish Crossover",
+      "notes": "RSI: 63.71 | IV30: 50.36% | Cadence: Monthly Only | MktCap: 4.3 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 63.71,
         "iv30": 50.36,
@@ -1094,7 +1148,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1109,14 +1165,14 @@
       "opinion_last_week": "IV30 42.6%",
       "opinion_last_month": "1Y Vol 43.0%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 42.6%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 42.6% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921575+00:00",
+      "updated_at": "2026-09-05T01:12:34.619412+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 54.97 | IV30: 42.57% | MktCap: 4.2 B | Signal: Uptrend",
+      "notes": "RSI: 54.97 | IV30: 42.57% | Cadence: Monthly Only | MktCap: 4.2 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 54.97,
         "iv30": 42.57,
@@ -1133,7 +1189,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1148,14 +1206,14 @@
       "opinion_last_week": "IV30 52.4%",
       "opinion_last_month": "1Y Vol 64.8%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 52.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 52.4% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921623+00:00",
+      "updated_at": "2026-09-05T01:12:34.619458+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 69.24 | IV30: 52.39% | MktCap: 3.8 B | Signal: Uptrend",
+      "notes": "RSI: 69.24 | IV30: 52.39% | Cadence: Monthly Only | MktCap: 3.8 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 69.24,
         "iv30": 52.39,
@@ -1172,7 +1230,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1187,14 +1247,14 @@
       "opinion_last_week": "IV30 95.0%",
       "opinion_last_month": "1Y Vol 67.1%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 95.0%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 95.0% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921671+00:00",
+      "updated_at": "2026-09-05T01:12:34.619507+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 60.03 | IV30: 94.96% | MktCap: 3.6 B | Signal: Uptrend",
+      "notes": "RSI: 60.03 | IV30: 94.96% | Cadence: Monthly Only | MktCap: 3.6 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 60.03,
         "iv30": 94.96,
@@ -1211,7 +1271,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1226,14 +1288,14 @@
       "opinion_last_week": "IV30 30.9%",
       "opinion_last_month": "1Y Vol 42.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 30.9%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 30.9% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921728+00:00",
+      "updated_at": "2026-09-05T01:12:34.619562+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 58.48 | IV30: 30.9% | MktCap: 3.3 B | Signal: Uptrend",
+      "notes": "RSI: 58.48 | IV30: 30.9% | Cadence: Monthly Only | MktCap: 3.3 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 58.48,
         "iv30": 30.9,
@@ -1250,7 +1312,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1265,14 +1329,14 @@
       "opinion_last_week": "IV30 54.3%",
       "opinion_last_month": "1Y Vol 57.2%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 54.3%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 54.3% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921777+00:00",
+      "updated_at": "2026-09-05T01:12:34.619609+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 62.72 | IV30: 54.31% | MktCap: 3.2 B | Signal: Uptrend",
+      "notes": "RSI: 62.72 | IV30: 54.31% | Cadence: Monthly Only | MktCap: 3.2 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 62.72,
         "iv30": 54.31,
@@ -1289,7 +1353,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1304,14 +1370,14 @@
       "opinion_last_week": "IV30 37.0%",
       "opinion_last_month": "1Y Vol 44.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 37.0%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 37.0% (Monthly Only)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921834+00:00",
+      "updated_at": "2026-09-05T01:12:34.619661+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 64.1 | IV30: 36.95% | MktCap: 3.0 B | Signal: Bullish Crossover",
+      "notes": "RSI: 64.1 | IV30: 36.95% | Cadence: Monthly Only | MktCap: 3.0 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 64.1,
         "iv30": 36.95,
@@ -1328,7 +1394,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1343,14 +1411,14 @@
       "opinion_last_week": "IV30 51.5%",
       "opinion_last_month": "1Y Vol 49.8%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 51.5%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 51.5% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921887+00:00",
+      "updated_at": "2026-09-05T01:12:34.619717+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 67.41 | IV30: 51.55% | MktCap: 2.9 B | Signal: Uptrend",
+      "notes": "RSI: 67.41 | IV30: 51.55% | Cadence: Monthly Only | MktCap: 2.9 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 67.41,
         "iv30": 51.55,
@@ -1367,7 +1435,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1382,14 +1452,14 @@
       "opinion_last_week": "IV30 58.9%",
       "opinion_last_month": "1Y Vol 56.8%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 58.9%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 58.9% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.921972+00:00",
+      "updated_at": "2026-09-05T01:12:34.619766+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.21 | IV30: 58.94% | MktCap: 2.7 B | Signal: Uptrend",
+      "notes": "RSI: 59.21 | IV30: 58.94% | Cadence: Monthly Only | MktCap: 2.7 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 59.21,
         "iv30": 58.94,
@@ -1406,7 +1476,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1421,14 +1493,14 @@
       "opinion_last_week": "IV30 40.8%",
       "opinion_last_month": "1Y Vol 55.6%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 40.8%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 40.8% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922037+00:00",
+      "updated_at": "2026-09-05T01:12:34.619813+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 67.51 | IV30: 40.76% | MktCap: 2.6 B | Signal: Uptrend",
+      "notes": "RSI: 67.51 | IV30: 40.76% | Cadence: Monthly Only | MktCap: 2.6 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 67.51,
         "iv30": 40.76,
@@ -1445,7 +1517,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1460,14 +1534,14 @@
       "opinion_last_week": "IV30 61.6%",
       "opinion_last_month": "1Y Vol 76.2%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 61.6%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 61.6% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922086+00:00",
+      "updated_at": "2026-09-05T01:12:34.619860+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.38 | IV30: 61.59% | MktCap: 2.5 B | Signal: Uptrend",
+      "notes": "RSI: 59.38 | IV30: 61.59% | Cadence: Monthly Only | MktCap: 2.5 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 59.38,
         "iv30": 61.59,
@@ -1484,7 +1558,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1499,14 +1575,14 @@
       "opinion_last_week": "IV30 58.2%",
       "opinion_last_month": "1Y Vol 62.3%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 58.2%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 58.2% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922137+00:00",
+      "updated_at": "2026-09-05T01:12:34.619908+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.09 | IV30: 58.25% | MktCap: 2.5 B | Signal: Uptrend",
+      "notes": "RSI: 59.09 | IV30: 58.25% | Cadence: Monthly Only | MktCap: 2.5 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 59.09,
         "iv30": 58.25,
@@ -1523,7 +1599,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1538,14 +1616,14 @@
       "opinion_last_week": "IV30 38.4%",
       "opinion_last_month": "1Y Vol 43.2%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 38.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 38.4% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922188+00:00",
+      "updated_at": "2026-09-05T01:12:34.619957+00:00",
       "recommended_strategy": "CSP",
-      "notes": "RSI: 53.7 | IV30: 38.35% | MktCap: 2.3 B | Signal: Uptrend",
+      "notes": "RSI: 53.7 | IV30: 38.35% | Cadence: Monthly Only | MktCap: 2.3 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 53.7,
         "iv30": 38.35,
@@ -1562,7 +1640,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1577,14 +1657,14 @@
       "opinion_last_week": "IV30 46.4%",
       "opinion_last_month": "1Y Vol 55.1%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 46.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 46.4% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922235+00:00",
+      "updated_at": "2026-09-05T01:12:34.620008+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.64 | IV30: 46.43% | MktCap: 2.2 B | Signal: Uptrend",
+      "notes": "RSI: 59.64 | IV30: 46.43% | Cadence: Monthly Only | MktCap: 2.2 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 59.64,
         "iv30": 46.43,
@@ -1601,7 +1681,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1616,14 +1698,14 @@
       "opinion_last_week": "IV30 51.4%",
       "opinion_last_month": "1Y Vol 63.1%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 51.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 51.4% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922288+00:00",
+      "updated_at": "2026-09-05T01:12:34.620055+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 66.96 | IV30: 51.41% | MktCap: 2.0 B | Signal: Uptrend",
+      "notes": "RSI: 66.96 | IV30: 51.41% | Cadence: Monthly Only | MktCap: 2.0 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 66.96,
         "iv30": 51.41,
@@ -1640,7 +1722,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1655,14 +1739,14 @@
       "opinion_last_week": "IV30 64.4%",
       "opinion_last_month": "1Y Vol 68.0%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 64.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 64.4% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922337+00:00",
+      "updated_at": "2026-09-05T01:12:34.620109+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 61.96 | IV30: 64.36% | MktCap: 2.0 B | Signal: Uptrend",
+      "notes": "RSI: 61.96 | IV30: 64.36% | Cadence: Monthly Only | MktCap: 2.0 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 61.96,
         "iv30": 64.36,
@@ -1679,7 +1763,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1694,14 +1780,14 @@
       "opinion_last_week": "IV30 61.2%",
       "opinion_last_month": "1Y Vol 74.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 61.2%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 61.2% (Monthly Only)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922392+00:00",
+      "updated_at": "2026-09-05T01:12:34.620161+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 62.86 | IV30: 61.25% | MktCap: 1.9 B | Signal: Bullish Crossover",
+      "notes": "RSI: 62.86 | IV30: 61.25% | Cadence: Monthly Only | MktCap: 1.9 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 62.86,
         "iv30": 61.25,
@@ -1718,7 +1804,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1733,14 +1821,14 @@
       "opinion_last_week": "IV30 43.4%",
       "opinion_last_month": "1Y Vol 48.6%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 43.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 43.4% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922446+00:00",
+      "updated_at": "2026-09-05T01:12:34.620207+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 54.01 | IV30: 43.39% | MktCap: 1.9 B | Signal: Uptrend",
+      "notes": "RSI: 54.01 | IV30: 43.39% | Cadence: Monthly Only | MktCap: 1.9 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 54.01,
         "iv30": 43.39,
@@ -1757,7 +1845,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1772,14 +1862,14 @@
       "opinion_last_week": "IV30 33.3%",
       "opinion_last_month": "1Y Vol 92.5%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 33.3%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 33.3% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922525+00:00",
+      "updated_at": "2026-09-05T01:12:34.620258+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 64.91 | IV30: 33.33% | MktCap: 1.8 B | Signal: Uptrend",
+      "notes": "RSI: 64.91 | IV30: 33.33% | Cadence: Monthly Only | MktCap: 1.8 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 64.91,
         "iv30": 33.33,
@@ -1796,7 +1886,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1811,14 +1903,14 @@
       "opinion_last_week": "IV30 36.6%",
       "opinion_last_month": "1Y Vol 49.4%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 36.6%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 36.6% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922592+00:00",
+      "updated_at": "2026-09-05T01:12:34.620313+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 55.51 | IV30: 36.6% | MktCap: 1.8 B | Signal: Uptrend",
+      "notes": "RSI: 55.51 | IV30: 36.6% | Cadence: Monthly Only | MktCap: 1.8 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 55.51,
         "iv30": 36.6,
@@ -1835,7 +1927,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1850,14 +1944,14 @@
       "opinion_last_week": "IV30 45.6%",
       "opinion_last_month": "1Y Vol 48.2%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 45.6%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 45.6% (Monthly Only)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922648+00:00",
+      "updated_at": "2026-09-05T01:12:34.620365+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 58.95 | IV30: 45.65% | MktCap: 1.7 B | Signal: Bullish Crossover",
+      "notes": "RSI: 58.95 | IV30: 45.65% | Cadence: Monthly Only | MktCap: 1.7 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 58.95,
         "iv30": 45.65,
@@ -1874,7 +1968,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1889,14 +1985,14 @@
       "opinion_last_week": "IV30 57.0%",
       "opinion_last_month": "1Y Vol 54.8%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 57.0%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 57.0% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922704+00:00",
+      "updated_at": "2026-09-05T01:12:34.620429+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 61.19 | IV30: 57.0% | MktCap: 1.7 B | Signal: Uptrend",
+      "notes": "RSI: 61.19 | IV30: 57.0% | Cadence: Monthly Only | MktCap: 1.7 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 61.19,
         "iv30": 57.0,
@@ -1913,7 +2009,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1928,14 +2026,14 @@
       "opinion_last_week": "IV30 50.0%",
       "opinion_last_month": "1Y Vol 79.2%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 50.0%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 50.0% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922756+00:00",
+      "updated_at": "2026-09-05T01:12:34.620477+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 64.41 | IV30: 50.02% | MktCap: 1.6 B | Signal: Uptrend",
+      "notes": "RSI: 64.41 | IV30: 50.02% | Cadence: Monthly Only | MktCap: 1.6 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 64.41,
         "iv30": 50.02,
@@ -1952,7 +2050,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -1967,14 +2067,14 @@
       "opinion_last_week": "IV30 43.4%",
       "opinion_last_month": "1Y Vol 44.0%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 43.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 43.4% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922815+00:00",
+      "updated_at": "2026-09-05T01:12:34.620531+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 66.94 | IV30: 43.44% | MktCap: 1.5 B | Signal: Uptrend",
+      "notes": "RSI: 66.94 | IV30: 43.44% | Cadence: Monthly Only | MktCap: 1.5 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 66.94,
         "iv30": 43.44,
@@ -1991,7 +2091,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -2006,14 +2108,14 @@
       "opinion_last_week": "IV30 55.1%",
       "opinion_last_month": "1Y Vol 57.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 55.1%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 55.1% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922863+00:00",
+      "updated_at": "2026-09-05T01:12:34.620583+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 60.79 | IV30: 55.1% | MktCap: 1.5 B | Signal: Uptrend",
+      "notes": "RSI: 60.79 | IV30: 55.1% | Cadence: Monthly Only | MktCap: 1.5 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 60.79,
         "iv30": 55.1,
@@ -2030,7 +2132,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -2045,14 +2149,14 @@
       "opinion_last_week": "IV30 72.8%",
       "opinion_last_month": "1Y Vol 105.6%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 72.8%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 72.8% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922912+00:00",
+      "updated_at": "2026-09-05T01:12:34.620635+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 65.01 | IV30: 72.76% | MktCap: 1.5 B | Signal: Uptrend",
+      "notes": "RSI: 65.01 | IV30: 72.76% | Cadence: Monthly Only | MktCap: 1.5 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 65.01,
         "iv30": 72.76,
@@ -2069,7 +2173,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -2084,14 +2190,14 @@
       "opinion_last_week": "IV30 35.3%",
       "opinion_last_month": "1Y Vol 48.8%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 35.3%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 35.3% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.922969+00:00",
+      "updated_at": "2026-09-05T01:12:34.620694+00:00",
       "recommended_strategy": "COVERED_CALL",
-      "notes": "RSI: 62.72 | IV30: 35.28% | MktCap: 1.3 B | Signal: Uptrend",
+      "notes": "RSI: 62.72 | IV30: 35.28% | Cadence: Monthly Only | MktCap: 1.3 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 62.72,
         "iv30": 35.28,
@@ -2108,7 +2214,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -2123,14 +2231,14 @@
       "opinion_last_week": "IV30 44.7%",
       "opinion_last_month": "1Y Vol 50.9%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 44.7%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 44.7% (Monthly Only)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.923022+00:00",
+      "updated_at": "2026-09-05T01:12:34.620741+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 68.69 | IV30: 44.7% | MktCap: 1.2 B | Signal: Bullish Crossover",
+      "notes": "RSI: 68.69 | IV30: 44.7% | Cadence: Monthly Only | MktCap: 1.2 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 68.69,
         "iv30": 44.7,
@@ -2147,7 +2255,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -2162,14 +2272,14 @@
       "opinion_last_week": "IV30 41.3%",
       "opinion_last_month": "1Y Vol 53.1%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 41.3%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 41.3% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.923070+00:00",
+      "updated_at": "2026-09-05T01:12:34.620792+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 62.98 | IV30: 41.33% | MktCap: 1.2 B | Signal: Uptrend",
+      "notes": "RSI: 62.98 | IV30: 41.33% | Cadence: Monthly Only | MktCap: 1.2 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 62.98,
         "iv30": 41.33,
@@ -2186,7 +2296,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -2201,14 +2313,14 @@
       "opinion_last_week": "IV30 55.3%",
       "opinion_last_month": "1Y Vol 63.6%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 55.3%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 55.3% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.923233+00:00",
+      "updated_at": "2026-09-05T01:12:34.620840+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 67.41 | IV30: 55.33% | MktCap: 1.2 B | Signal: Uptrend",
+      "notes": "RSI: 67.41 | IV30: 55.33% | Cadence: Monthly Only | MktCap: 1.2 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 67.41,
         "iv30": 55.33,
@@ -2225,7 +2337,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -2240,14 +2354,14 @@
       "opinion_last_week": "IV30 61.4%",
       "opinion_last_month": "1Y Vol 55.7%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 61.4%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 61.4% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.923287+00:00",
+      "updated_at": "2026-09-05T01:12:34.620889+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 66.3 | IV30: 61.44% | MktCap: 1.1 B | Signal: Uptrend",
+      "notes": "RSI: 66.3 | IV30: 61.44% | Cadence: Monthly Only | MktCap: 1.1 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 66.3,
         "iv30": 61.44,
@@ -2264,7 +2378,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -2279,14 +2395,14 @@
       "opinion_last_week": "IV30 44.3%",
       "opinion_last_month": "1Y Vol 36.8%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 44.3%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 44.3% (Monthly Only)",
       "signal_direction": "Strong Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.923335+00:00",
+      "updated_at": "2026-09-05T01:12:34.620943+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 63.66 | IV30: 44.29% | MktCap: 1.0 B | Signal: Uptrend",
+      "notes": "RSI: 63.66 | IV30: 44.29% | Cadence: Monthly Only | MktCap: 1.0 B | Signal: Uptrend",
       "extra_fields": {
         "rsi_14": 63.66,
         "iv30": 44.29,
@@ -2303,7 +2419,9 @@
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     },
     {
@@ -2318,14 +2436,14 @@
       "opinion_last_week": "IV30 46.2%",
       "opinion_last_month": "1Y Vol 51.2%",
       "has_options": true,
-      "has_weekly_options": true,
-      "signal_strength": "IV30: 46.2%",
+      "has_weekly_options": false,
+      "signal_strength": "IV30: 46.2% (Monthly Only)",
       "signal_direction": "Bullish",
       "source": "marketchameleon",
       "source_url": "https://marketchameleon.com/Screeners/Stocks",
-      "updated_at": "2026-09-04T22:53:25.923383+00:00",
+      "updated_at": "2026-09-05T01:12:34.620991+00:00",
       "recommended_strategy": "BULL_PUT_SPREAD",
-      "notes": "RSI: 59.87 | IV30: 46.17% | MktCap: 1.0 B | Signal: Bullish Crossover",
+      "notes": "RSI: 59.87 | IV30: 46.17% | Cadence: Monthly Only | MktCap: 1.0 B | Signal: Bullish Crossover",
       "extra_fields": {
         "rsi_14": 59.87,
         "iv30": 46.17,
@@ -2342,7 +2460,9 @@
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
-        "stock_idea": "Momentum Stocks"
+        "stock_idea": "Momentum Stocks",
+        "in_cboe_registry": false,
+        "expiration_cadence": "Monthly Only"
       }
     }
   ]

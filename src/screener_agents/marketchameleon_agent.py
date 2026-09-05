@@ -37,6 +37,8 @@ logger = logging.getLogger(__name__)
 MARKETCHAMELEON_URL = "https://marketchameleon.com/Screeners/Stocks"
 MARKETCHAMELEON_DATA_ENDPOINT = "https://marketchameleon.com/EquityScreener/EquityScreenerData"
 
+CBOE_WEEKLYS_CSV_URL = "https://www.cboe.com/available_weeklys/get_csv_download/"
+
 # Preselected filter values matching the user's requirements
 PRESELECTED_FILTERS: Dict[str, str] = {
     "StockIdeas": "Momentum",  # Stock Idea: Momentum Stocks
@@ -50,6 +52,207 @@ PRESELECTED_FILTERS: Dict[str, str] = {
     "c21": "Above 30.0",  # IV30: Above 30
     "c59": "Uptrend;Bullish Crossover;Fast Bullish Crossover",  # MA Technical: Any Bullish
 }
+
+# Native MarketChameleon Category Specifications and Available Options
+CATEGORY_DEFINITIONS: Dict[str, Dict[str, Any]] = {
+    "StockIdeas": {
+        "key": "StockIdeas",
+        "label": "Stock Ideas",
+        "category": "Stock Attributes",
+        "options": [
+            {"value": "-Any-", "label": "Any Ideas"},
+            {"value": "Momentum", "label": "Momentum Stocks"},
+            {"value": "MarketLeaders", "label": "Market Leaders"},
+            {"value": "MarketLaggers", "label": "Market Laggers"},
+        ],
+    },
+    "c8": {
+        "key": "c8",
+        "label": "Market Cap",
+        "category": "Stock Attributes",
+        "options": [
+            {"value": "-Any-", "label": "Any Market Cap"},
+            {"value": "Over 100000000000", "label": "Over $100B (Mega Cap)"},
+            {"value": "Over 50000000000", "label": "Over $50B"},
+            {"value": "Over 20000000000", "label": "Over $20B (Large Cap)"},
+            {"value": "Over 10000000000", "label": "Over $10B"},
+            {"value": "Over 5000000000", "label": "Over $5B"},
+            {"value": "Over 1000000000", "label": "Over $1B (Mid/Large Cap)"},
+            {"value": "1000000000 To 10000000000", "label": "$1B to $10B"},
+            {"value": "Under 1000000000", "label": "Under $1B (Small Cap)"},
+        ],
+    },
+    "c31": {
+        "key": "c31",
+        "label": "Options Listed",
+        "category": "Options Liquidity",
+        "options": [
+            {"value": "-Any-", "label": "Any"},
+            {"value": "true", "label": "Has Options Listed"},
+            {"value": "false", "label": "No Options"},
+        ],
+    },
+    "c45": {
+        "key": "c45",
+        "label": "14-Day RSI",
+        "category": "Technical",
+        "options": [
+            {"value": "-Any-", "label": "Any RSI"},
+            {"value": "50.0 To 70.0", "label": "50 to 70 (Bullish Momentum)"},
+            {"value": "30.0 To 70.0", "label": "30 to 70 (Normal Range)"},
+            {"value": "30.0 To 50.0", "label": "30 to 50 (Neutral to Weak)"},
+            {"value": "Above 70.0", "label": "Above 70 (Overbought)"},
+            {"value": "Below 30.0", "label": "Below 30 (Oversold)"},
+        ],
+    },
+    "c80": {
+        "key": "c80",
+        "label": "Country",
+        "category": "Stock Attributes",
+        "options": [
+            {"value": "-Any-", "label": "Any Country"},
+            {"value": "United States of America", "label": "United States (USA)"},
+            {"value": "China", "label": "China"},
+            {"value": "Canada", "label": "Canada"},
+            {"value": "United Kingdom of Great Britain and Northern Ireland", "label": "United Kingdom"},
+            {"value": "Israel", "label": "Israel"},
+        ],
+    },
+    "c50": {
+        "key": "c50",
+        "label": "1-Yr Volatility",
+        "category": "Volatility",
+        "options": [
+            {"value": "-Any-", "label": "Any"},
+            {"value": "Above 30.0", "label": "Above 30%"},
+            {"value": "Above 20.0", "label": "Above 20%"},
+            {"value": "Above 50.0", "label": "Above 50%"},
+            {"value": "Above 70.0", "label": "Above 70%"},
+            {"value": "Below 20.0", "label": "Below 20%"},
+        ],
+    },
+    "c49": {
+        "key": "c49",
+        "label": "20-Day Volatility",
+        "category": "Volatility",
+        "options": [
+            {"value": "-Any-", "label": "Any"},
+            {"value": "Above 30.0", "label": "Above 30%"},
+            {"value": "Above 20.0", "label": "Above 20%"},
+            {"value": "Above 50.0", "label": "Above 50%"},
+            {"value": "Above 70.0", "label": "Above 70%"},
+            {"value": "Below 20.0", "label": "Below 20%"},
+        ],
+    },
+    "c48": {
+        "key": "c48",
+        "label": "1-Day Volatility",
+        "category": "Volatility",
+        "options": [
+            {"value": "-Any-", "label": "Any"},
+            {"value": "Above 30.0", "label": "Above 30%"},
+            {"value": "Above 20.0", "label": "Above 20%"},
+            {"value": "Above 50.0", "label": "Above 50%"},
+            {"value": "Above 70.0", "label": "Above 70%"},
+            {"value": "Below 20.0", "label": "Below 20%"},
+        ],
+    },
+    "c21": {
+        "key": "c21",
+        "label": "IV30 (Implied Volatility)",
+        "category": "Volatility",
+        "options": [
+            {"value": "-Any-", "label": "Any"},
+            {"value": "Above 30.0", "label": "Above 30%"},
+            {"value": "Above 20.0", "label": "Above 20%"},
+            {"value": "Above 50.0", "label": "Above 50%"},
+            {"value": "Above 70.0", "label": "Above 70%"},
+            {"value": "Below 20.0", "label": "Below 20%"},
+        ],
+    },
+    "c25": {
+        "key": "c25",
+        "label": "IV % Rank",
+        "category": "Volatility",
+        "options": [
+            {"value": "-Any-", "label": "Any"},
+            {"value": "Above 0.70", "label": "Elevated (> 70%)"},
+            {"value": "0.300001 to 0.699999", "label": "Moderate (30% to 70%)"},
+            {"value": "Below 0.30", "label": "Subdued (< 30%)"},
+            {"value": "Above 0.5", "label": "Above 50%"},
+            {"value": "Above 0.25", "label": "Above 25%"},
+        ],
+    },
+    "c59": {
+        "key": "c59",
+        "label": "MA Technical",
+        "category": "Price, Volume & Technical",
+        "options": [
+            {"value": "-Any-", "label": "Any Signal"},
+            {"value": "Uptrend;Bullish Crossover;Fast Bullish Crossover", "label": "Any Bullish"},
+            {"value": "Uptrend", "label": "Uptrend"},
+            {"value": "Bullish Crossover", "label": "Bullish Crossover"},
+            {"value": "Fast Bullish Crossover", "label": "Fast Bullish Crossover"},
+            {"value": "Bottom Bounce", "label": "Bottom Bounce"},
+            {"value": "Top Pullback", "label": "Top Pullback"},
+            {"value": "Downtrend;Bearish Crossover;Fast Bearish Crossover", "label": "Any Bearish"},
+            {"value": "Downtrend", "label": "Downtrend"},
+        ],
+    },
+}
+
+# High frequency daily/multi-weekly symbols
+DAILY_MULTI_WEEKLY_SYMBOLS = {
+    "SPY", "QQQ", "IWM", "NVDA", "AAPL", "MSFT", "AMZN", "TSLA",
+    "GOOGL", "GOOG", "META", "AMD", "PLTR", "TLT", "GLD", "SLV", "USO", "UNG", "HYG", "LQD",
+    "BULL", "ZETA", "DELL", "NOW", "SNOW", "SPOT", "HOOD", "SCHD",
+}
+
+_CACHED_CBOE_SET: Optional[set[str]] = None
+
+
+def get_cboe_weekly_directory() -> set[str]:
+    """Fetch and cache official CBOE Available Weeklys Directory."""
+    global _CACHED_CBOE_SET
+    if _CACHED_CBOE_SET is not None and len(_CACHED_CBOE_SET) > 0:
+        return _CACHED_CBOE_SET
+
+    tickers: set[str] = set()
+    try:
+        from curl_cffi import requests
+        resp = requests.get(
+            CBOE_WEEKLYS_CSV_URL,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            for line in resp.text.splitlines():
+                tokens = [t.strip().strip('"') for t in line.split(",")]
+                for token in tokens:
+                    if re.match(r"^[A-Z]{1,5}$", token) and token not in {
+                        "SYMBOL", "NAME", "EXPIRES", "TYPE", "CBOE", "CLASS"
+                    }:
+                        tickers.add(token)
+            if tickers:
+                logger.info(f"Loaded {len(tickers)} official weekly optionable tickers from CBOE.")
+                _CACHED_CBOE_SET = tickers
+                return tickers
+    except Exception as e:
+        logger.warning(f"Could not load CBOE directory: {e}")
+
+    # Fallback to known active weekly tickers
+    fallback_cboe = {
+        "AAPL", "ABBV", "ABT", "ACN", "ADBE", "AIG", "AMD", "AMGN", "AMZN", "AXP", "BA", "BAC", "BBY", "BIIB", "BKNG",
+        "BMY", "C", "CAT", "CELG", "CL", "CMCSA", "COF", "COP", "COST", "CSCO", "CVS", "CVX", "DE", "DELL", "DHR",
+        "DIS", "DOW", "EBAY", "EL", "EMR", "F", "FDX", "GD", "GE", "GILD", "GM", "GOOG", "GOOGL", "GS", "HAL", "HD",
+        "HON", "HOOD", "HPQ", "IBM", "INTC", "ISRG", "JNJ", "JPM", "KMB", "KO", "LLY", "LMT", "LOW", "MA", "MCD",
+        "MDT", "MET", "MMM", "MO", "MRK", "MS", "MSFT", "MT", "MU", "NFLX", "NKE", "NOW", "NVDA", "ORCL", "OXY",
+        "PEP", "PFE", "PG", "PLTR", "PM", "PYPL", "QCOM", "RTX", "SBUX", "SCHD", "SLB", "SNOW", "SO", "SPG", "SPOT",
+        "SPY", "T", "TGT", "TJX", "TMO", "TSLA", "TXN", "UNH", "UNP", "UPS", "USB", "V", "VZ", "WBA", "WFC", "WMT",
+        "XOM", "ZETA", "BULL",
+    }
+    _CACHED_CBOE_SET = fallback_cboe
+    return fallback_cboe
 
 
 class MarketChameleonScreenerAgent(BaseScreenerAgent):
@@ -68,6 +271,8 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
         super().__init__(target_url or MARKETCHAMELEON_URL)
         self.filters: Dict[str, str] = {**PRESELECTED_FILTERS, **(custom_filters or {})}
         self.column_defs: List[Tuple[str, str]] = []
+        self.cboe_set: set[str] = get_cboe_weekly_directory()
+
 
     def _get_column_definitions(self, session: Any) -> List[Tuple[str, str]]:
         """Retrieve dynamic DataTables column definitions from MarketChameleon bundle."""
@@ -236,10 +441,21 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
         self.column_defs = fallback_defs
         return fallback_defs
 
-    def fetch_records(self, limit: int = 500, page_size: int = 100) -> List[ScreenerRecord]:
+    def fetch_records(
+        self,
+        limit: int = 500,
+        page_size: int = 100,
+        cboe_only: bool = False,
+    ) -> List[ScreenerRecord]:
         """
         Fetch all records across multiple pages from MarketChameleon Stock Screener
-        with the preselected criteria.
+        with the preselected or customized criteria.
+        
+        Args:
+            limit: Max total records to fetch across pages.
+            page_size: DataTables page length.
+            cboe_only: When True, further screens out monthly-only contracts and only returns
+                       stocks verified in the CBOE Weeklys Directory or daily/multi-weekly cycles.
         """
         try:
             from curl_cffi import requests
@@ -270,7 +486,7 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
         total_filtered = None
 
         logger.info(
-            f"Applying Preselected Filters: Momentum, MktCap > $1B, Has Options, RSI 50-70, USA, Vol > 30, MA Bullish..."
+            f"Applying Filters: {', '.join(f'{k}={v}' for k, v in self.filters.items() if v and v != '-Any-')} | CBOE Only: {cboe_only}..."
         )
 
         while True:
@@ -310,6 +526,8 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
             for r in raw_rows:
                 rec = self._parse_json_row(r)
                 if rec:
+                    if cboe_only and not rec.has_weekly_options:
+                        continue
                     all_records.append(rec)
 
             logger.info(f"Fetched page {draw} (records {start + 1} to {start + len(raw_rows)} of {total_filtered})")
@@ -319,11 +537,13 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
             if start >= total_filtered or len(all_records) >= limit:
                 break
 
-        logger.info(f"Successfully retrieved {len(all_records)} total MarketChameleon momentum stocks!")
+        logger.info(
+            f"Successfully retrieved {len(all_records)} MarketChameleon stocks (CBOE Weeklys Filter: {'Active' if cboe_only else 'Disabled'})!"
+        )
         return all_records
 
     def _parse_json_row(self, r: Dict[str, Any]) -> Optional[ScreenerRecord]:
-        """Map MarketChameleon raw row to ScreenerRecord."""
+        """Map MarketChameleon raw row to ScreenerRecord with CBOE Weeklys validation."""
         symbol = str(r.get("Symbol") or "").strip().upper()
         if not symbol:
             return None
@@ -371,6 +591,20 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
         country = str(bd.get("Country") or "USA").strip()
         has_options = bool(bd.get("HasOptions", True))
 
+        # Check official CBOE Available Weeklys Registry and expiration cadence
+        in_cboe = symbol in self.cboe_set
+        is_daily_multi_weekly = symbol in DAILY_MULTI_WEEKLY_SYMBOLS
+        has_weekly_options = in_cboe or is_daily_multi_weekly
+
+        if is_daily_multi_weekly:
+            cadence = "Daily / Multi-Weekly"
+        elif in_cboe:
+            cadence = "Weekly"
+        elif has_options:
+            cadence = "Monthly Only"
+        else:
+            cadence = "No Options"
+
         # Composite opinion based on MarketChameleon MA Signal + Momentum RSI
         opinion = f"Bullish ({ma_name})" if ma_name else "Bullish Momentum"
         opinion_pct = 95.0 if "uptrend" in ma_name.lower() else 85.0
@@ -383,7 +617,7 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
         else:
             recommended_strat = "COVERED_CALL"
 
-        notes = f"RSI: {rsi14} | IV30: {iv30}% | MktCap: {market_cap_str} | Signal: {ma_name}"
+        notes = f"RSI: {rsi14} | IV30: {iv30}% | Cadence: {cadence} | MktCap: {market_cap_str} | Signal: {ma_name}"
 
         return ScreenerRecord(
             symbol=symbol,
@@ -397,8 +631,8 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
             opinion_last_week=f"IV30 {iv30:.1f}%",
             opinion_last_month=f"1Y Vol {vol_1y:.1f}%",
             has_options=has_options,
-            has_weekly_options=True,
-            signal_strength=f"IV30: {iv30:.1f}%",
+            has_weekly_options=has_weekly_options,
+            signal_strength=f"IV30: {iv30:.1f}% ({cadence})",
             signal_direction="Strong Bullish" if "uptrend" in ma_name.lower() else "Bullish",
             source=self.source_id,
             source_url=self.target_url,
@@ -421,12 +655,14 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
                 "ma_desc": ma_desc,
                 "country": country,
                 "stock_idea": "Momentum Stocks",
+                "in_cboe_registry": in_cboe,
+                "expiration_cadence": cadence,
             },
         )
 
     def export_csv(self, records: List[ScreenerRecord], output_path: Union[str, Path]) -> str:
         """
-        Export all records including respective MarketChameleon column headings.
+        Export all records including respective MarketChameleon and CBOE weeklys column headings.
         """
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -450,7 +686,8 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
             "20-Day Volatility",
             "1-Year Volatility",
             "MA Technical Signal",
-            "MA Description",
+            "CBOE Weeklys",
+            "Options Cadence",
             "Country",
             "Has Options",
             "Stock Idea",
@@ -485,7 +722,8 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
                     ex.get("vol_20d", ""),
                     ex.get("vol_1y", ""),
                     ex.get("ma_signal", ""),
-                    ex.get("ma_desc", ""),
+                    "Yes (CBOE)" if ex.get("in_cboe_registry") else "No",
+                    ex.get("expiration_cadence", "Weekly" if r.has_weekly_options else "Monthly"),
                     ex.get("country", "USA"),
                     "Yes" if r.has_options else "No",
                     ex.get("stock_idea", "Momentum Stocks"),
@@ -500,7 +738,7 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
     def generate_copy_paste_text(self, records: List[ScreenerRecord]) -> str:
         """
         Generate tab-delimited text ready to copy and paste directly into spreadsheets or documents,
-        including respective column headings.
+        including respective column headings and CBOE weeklys validation.
         """
         output = io.StringIO()
         fieldnames = [
@@ -515,12 +753,17 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
             "20-Day Vol",
             "1-Yr Vol",
             "MA Signal",
+            "CBOE Weeklys",
+            "Options Cadence",
             "Recommended Strategy",
         ]
         output.write("\t".join(fieldnames) + "\n")
 
         for r in records:
             ex = r.extra_fields or {}
+            cboe_badge = "Yes (CBOE)" if ex.get("in_cboe_registry") else ("Yes" if r.has_weekly_options else "No")
+            cadence = str(ex.get("expiration_cadence") or ("Weekly" if r.has_weekly_options else "Monthly"))
+
             row = [
                 r.symbol,
                 r.name,
@@ -533,6 +776,8 @@ class MarketChameleonScreenerAgent(BaseScreenerAgent):
                 f"{ex.get('vol_20d', '')}%" if ex.get("vol_20d") else "",
                 f"{ex.get('vol_1y', '')}%" if ex.get("vol_1y") else "",
                 str(ex.get("ma_signal", "")),
+                cboe_badge,
+                cadence,
                 r.recommended_strategy,
             ]
             output.write("\t".join(row) + "\n")
