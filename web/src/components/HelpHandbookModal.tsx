@@ -492,15 +492,33 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </div>
               </div>
 
-              {/* MarketChameleon.com Extensibility */}
+              {/* MarketChameleon.com Screener & Copy-Paste Results */}
               <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
                 <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-1.5 text-purple-400">
                   <Layers className="w-4 h-4 text-purple-400" />
-                  <span>4. MarketChameleon.com &amp; Third-Party Source Extensibility</span>
+                  <span>4. MarketChameleon.com Screener &amp; 1-Click Copy-Paste Results</span>
                 </h4>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  The agent is built on an abstract provider architecture (<code className="text-emerald-300 font-mono">BaseScreenerAgent</code> and <code className="text-emerald-300 font-mono">ScreenerRegistry</code>).
-                  The <strong>MarketChameleon</strong> module is pre-wired to ingest IV Rank, Unusual Volume, and Volatility Screeners. Whenever specific instructions or credentials for MarketChameleon are supplied, the agent immediately connects and surfaces the data in the unified dashboard.
+                  The <strong>MarketChameleon Screener Agent</strong> (<code className="text-purple-300 font-mono">MarketChameleonScreenerAgent</code>) automatically queries <code className="text-purple-300 font-mono">marketchameleon.com/Screeners/Stocks</code> with the preselected criteria:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                    <span className="font-bold text-purple-300">Stock Idea:</span> Momentum Stocks<br />
+                    <span className="font-bold text-purple-300">Market Cap:</span> Over $1 Billion<br />
+                    <span className="font-bold text-purple-300">Options:</span> Has Options Listed
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                    <span className="font-bold text-purple-300">14-Day RSI:</span> 50 to 70 (Sweet Spot)<br />
+                    <span className="font-bold text-purple-300">Volatility:</span> 1-Yr, 20-Day, 1-Day, IV30 &gt; 30<br />
+                    <span className="font-bold text-purple-300">MA Technical:</span> Any Bullish (Uptrend / Cross)
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
+                  <div className="text-purple-400 font-bold"># CLI Run &amp; Sync:</div>
+                  <div>python scripts/run_screener_agent.py --source marketchameleon</div>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  <strong>1-Click Copy Results:</strong> Click <strong>Copy Results (TSV)</strong> in the top toolbar to copy all visible records along with their respective column headings directly to your clipboard, formatted for instant pasting into Excel, Google Sheets, or your trade log.
                 </p>
               </div>
             </div>
