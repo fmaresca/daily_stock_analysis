@@ -953,7 +953,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                   type="text"
                   value={taxRecordSymbol}
                   onChange={(e) => setTaxRecordSymbol(e.target.value)}
-                  placeholder="e.g. SPY, AAPL"
+                  placeholder="e.g. PANW, PLTR, TSLA, NET"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
                   required
                 />

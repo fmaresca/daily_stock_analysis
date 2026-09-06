@@ -113,9 +113,9 @@ export function getDefaultCapitalState(positions: PortfolioPosition[] = []): Acc
     totalEncumberedDisbursements: encumbered,
     committedCollateral: committed,
     freeCash: free,
-    priorYtdPremiumBalance: 3600.00,
-    currentWeekPremiumsCollected: 1250.00,
-    ytdPremiumsEarned: 4850.00,
+    priorYtdPremiumBalance: 45942.09,
+    currentWeekPremiumsCollected: 5572.02,
+    ytdPremiumsEarned: 51514.11,
     maxPerPositionAllocation: sizing.targetAllocationPerPosition,
     singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
     maxAllowedPositions: sizing.maxConcurrentPositions,
@@ -123,52 +123,114 @@ export function getDefaultCapitalState(positions: PortfolioPosition[] = []): Acc
   };
 }
 
+/**
+ * Authentic Options Transactions from Charles Schwab Live Account (Living Trust-Options ...609)
+ * Replaces dummy test entries (SPY / AAPL CSPs).
+ */
+export const SCHWAB_REAL_OPTIONS_RECORDS: TaxLedgerRecord[] = [
+  {
+    id: 'REC_SCHWAB_PANW_327_5P',
+    date: '2026-09-04',
+    symbol: 'PANW',
+    type: 'PREMIUM_EARNED',
+    amount: 1998.96, // 3 contracts @ $6.663
+    strategy: 'CSP',
+    note: 'Sold 3x 327.50P exp 09/11/26 (Cash Collateral: $98,250.00)',
+  },
+  {
+    id: 'REC_SCHWAB_PLTR_165P',
+    date: '2026-09-04',
+    symbol: 'PLTR',
+    type: 'PREMIUM_EARNED',
+    amount: 883.33, // 10 contracts @ $0.883
+    strategy: 'CSP',
+    note: 'Sold 10x 165.00P exp 09/11/26 (Cash Collateral: $165,000.00)',
+  },
+  {
+    id: 'REC_SCHWAB_TSLA_375C',
+    date: '2026-08-28',
+    symbol: 'TSLA',
+    type: 'PREMIUM_EARNED',
+    amount: 19886.25, // 20 contracts @ $9.943
+    strategy: 'COVERED_CALL',
+    note: 'Sold 20x 375.00C exp 09/11/26 (+85.27% profit target hit)',
+  },
+  {
+    id: 'REC_SCHWAB_AXTI_70C',
+    date: '2026-08-21',
+    symbol: 'AXTI',
+    type: 'PREMIUM_EARNED',
+    amount: 11464.76, // 15 contracts @ $7.643
+    strategy: 'COVERED_CALL',
+    note: 'Sold 15x 70.00C exp 09/18/26 (+70.56% profit captured)',
+  },
+  {
+    id: 'REC_SCHWAB_BLZE_17_5C',
+    date: '2026-08-21',
+    symbol: 'BLZE',
+    type: 'PREMIUM_EARNED',
+    amount: 10926.45, // 110 contracts @ $0.993
+    strategy: 'COVERED_CALL',
+    note: 'Sold 110x 17.50C exp 09/18/26 (+84.90% profit target hit)',
+  },
+  {
+    id: 'REC_SCHWAB_TSLA_370C',
+    date: '2026-09-02',
+    symbol: 'TSLA',
+    type: 'PREMIUM_EARNED',
+    amount: 2766.63, // 20 contracts @ $1.383
+    strategy: 'COVERED_CALL',
+    note: 'Sold 20x 370.00C exp 09/09/26 (+21.20% gain)',
+  },
+  {
+    id: 'REC_SCHWAB_NET_300C',
+    date: '2026-09-04',
+    symbol: 'NET',
+    type: 'PREMIUM_EARNED',
+    amount: 2071.31, // 13 contracts @ $1.593
+    strategy: 'COVERED_CALL',
+    note: 'Sold 13x 300.00C exp 09/11/26 (+14.02% gain)',
+  },
+  {
+    id: 'REC_SCHWAB_IONQ_43_5C',
+    date: '2026-09-04',
+    symbol: 'IONQ',
+    type: 'PREMIUM_EARNED',
+    amount: 635.01, // 15 contracts @ $0.423
+    strategy: 'COVERED_CALL',
+    note: 'Sold 15x 43.50C exp 09/11/26 (+13.78% gain)',
+  },
+  {
+    id: 'REC_SCHWAB_RTX_207_5C',
+    date: '2026-09-04',
+    symbol: 'RTX',
+    type: 'PREMIUM_EARNED',
+    amount: 464.68, // 17 contracts @ $0.273
+    strategy: 'COVERED_CALL',
+    note: 'Sold 17x 207.50C exp 09/11/26 (+1.22% gain)',
+  },
+  {
+    id: 'REC_SCHWAB_LUNR_16_5C',
+    date: '2026-09-04',
+    symbol: 'LUNR',
+    type: 'PREMIUM_EARNED',
+    amount: 416.73, // 50 contracts @ $0.083
+    strategy: 'COVERED_CALL',
+    note: 'Sold 50x 16.50C exp 09/11/26',
+  },
+];
+
 export function getDefaultTaxLedgerState(): TaxLedgerState {
   const currentYear = new Date().getFullYear();
+  const totalPremiums = SCHWAB_REAL_OPTIONS_RECORDS.reduce((sum, r) => sum + r.amount, 0);
+
   return {
     currentTaxYear: currentYear,
     priorYearLossCarryforward: 3000, // Standard IRS $3,000 capital loss deduction allowance or custom carryforward
-    ytdPremiumsEarned: 4850.00,
-    ytdRealizedCapitalGains: 2150.00,
-    ytdRealizedCapitalLosses: 800.00,
-    records: [
-      {
-        id: 'REC_001',
-        date: `${currentYear}-01-17`,
-        symbol: 'SPY',
-        type: 'PREMIUM_EARNED',
-        amount: 420.00,
-        strategy: 'CSP',
-        note: 'Expired worthless - 100% premium capture',
-      },
-      {
-        id: 'REC_002',
-        date: `${currentYear}-02-14`,
-        symbol: 'AAPL',
-        type: 'PREMIUM_EARNED',
-        amount: 350.00,
-        strategy: 'CSP',
-        note: 'Closed at 85% profit rule',
-      },
-      {
-        id: 'REC_003',
-        date: `${currentYear}-04-18`,
-        symbol: 'NVDA',
-        type: 'CAPITAL_GAIN',
-        amount: 1450.00,
-        strategy: 'COVERED_CALL',
-        note: 'Shares called away above cost basis',
-      },
-      {
-        id: 'REC_004',
-        date: `${currentYear}-05-16`,
-        symbol: 'IWM',
-        type: 'CAPITAL_LOSS',
-        amount: 800.00,
-        strategy: 'CSP',
-        note: 'Tax loss harvested defensively',
-      },
-    ],
+    ytdPremiumsEarned: totalPremiums,
+    ytdRealizedCapitalGains: 0.00,
+    ytdRealizedCapitalLosses: 0.00,
+    records: SCHWAB_REAL_OPTIONS_RECORDS,
   };
 }
 
@@ -245,12 +307,34 @@ export function getStoredTaxLedgerState(): TaxLedgerState {
     const raw = localStorage.getItem(TAX_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as TaxLedgerState;
-      if (parsed && typeof parsed.currentTaxYear === 'number') return parsed;
+      if (parsed && typeof parsed.currentTaxYear === 'number') {
+        // Auto-migrate away from legacy dummy test records (e.g. SPY, AAPL CSPs)
+        const hasLegacyTestRecords = Array.isArray(parsed.records) && parsed.records.some(
+          (r) => r.symbol === 'SPY' || r.symbol === 'AAPL' || r.id === 'REC_001' || r.id === 'REC_002'
+        );
+        if (hasLegacyTestRecords || !parsed.records || parsed.records.length === 0) {
+          const fresh = getDefaultTaxLedgerState();
+          // Preserve any custom user-added records while removing dummy test records
+          const userRecords = (parsed.records || []).filter(
+            (r) => r.symbol !== 'SPY' && r.symbol !== 'AAPL' && r.symbol !== 'IWM' && !r.id.startsWith('REC_00')
+          );
+          fresh.records = [...userRecords, ...SCHWAB_REAL_OPTIONS_RECORDS];
+          fresh.ytdPremiumsEarned = fresh.records
+            .filter((r) => r.type === 'PREMIUM_EARNED')
+            .reduce((sum, r) => sum + r.amount, 0);
+          fresh.priorYearLossCarryforward = parsed.priorYearLossCarryforward || 3000;
+          saveTaxLedgerState(fresh);
+          return fresh;
+        }
+        return parsed;
+      }
     }
   } catch (e) {
     console.warn('Failed to load tax ledger state:', e);
   }
-  return getDefaultTaxLedgerState();
+  const defaultState = getDefaultTaxLedgerState();
+  saveTaxLedgerState(defaultState);
+  return defaultState;
 }
 
 export function saveTaxLedgerState(state: TaxLedgerState): void {
@@ -259,6 +343,281 @@ export function saveTaxLedgerState(state: TaxLedgerState): void {
   } catch (e) {
     console.warn('Failed to save tax ledger state:', e);
   }
+}
+
+export interface LiveTransactionEntry {
+  category: 'PUT_WRITTEN' | 'CALL_WRITTEN' | 'STOCK_BUY' | 'STOCK_SELL';
+  symbol: string;
+  strike?: number;
+  expiration?: string;
+  dte?: number;
+  quantity: number; // contracts or shares
+  price: number; // premium per share for option, or price per share for stock
+  spotPrice?: number;
+  delta?: number;
+  costBasisPerShare?: number; // for stock sell
+  notes?: string;
+  date?: string;
+}
+
+/**
+ * Dynamically records mid-week transactions (equities, call and put options written)
+ * into deltaharvest_portfolio_book, deltaharvest_capital_ledger, and deltaharvest_tax_ledger.
+ * Automatically recalculates Free Cash, committed CSP collateral, and updates all views.
+ */
+export function recordLiveTransaction(tx: LiveTransactionEntry): {
+  success: boolean;
+  message: string;
+  updatedPositions: PortfolioPosition[];
+  updatedCapital: AccountCapitalState;
+  updatedTax: TaxLedgerState;
+} {
+  const sym = tx.symbol.toUpperCase().trim();
+  const txDate = tx.date || new Date().toISOString().split('T')[0];
+
+  // 1. Load active positions
+  let positions: PortfolioPosition[] = [];
+  try {
+    const raw = localStorage.getItem('deltaharvest_portfolio_book');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) positions = parsed;
+    }
+  } catch (e) {
+    console.warn('Failed to load positions for live transaction:', e);
+  }
+  if (positions.length === 0) {
+    positions = [...LIVING_TRUST_OPTIONS_POSITIONS];
+  }
+
+  // 2. Load Capital & Tax State
+  let capital = getStoredCapitalState(positions);
+  let taxLedger = getStoredTaxLedgerState();
+
+  let actionDesc = '';
+
+  if (tx.category === 'PUT_WRITTEN') {
+    // Put Option Written (Cash-Secured Put)
+    const strike = Number(tx.strike) || 100;
+    const contracts = Math.max(1, Number(tx.quantity) || 1);
+    const premium = Number(tx.price) || 1.0;
+    const collateral = strike * contracts * 100;
+    const totalPremium = premium * contracts * 100;
+    const spot = tx.spotPrice || strike * 1.02;
+    const dte = tx.dte || 6;
+    const expiration = tx.expiration || new Date(Date.now() + dte * 86400000).toISOString().split('T')[0];
+
+    const newPos: PortfolioPosition = {
+      id: `POS_${sym}_CSP_${Date.now()}`,
+      symbol: sym,
+      type: 'CSP',
+      quantity: contracts,
+      spotPrice: spot,
+      strike,
+      dte,
+      expiration,
+      entryPrice: premium,
+      currentOptionPrice: premium,
+      iv: 35,
+      delta: tx.delta || -0.20,
+      theta: 0.12,
+      vega: -0.15,
+      beta: 1.15,
+      gainDollar: 0,
+      gainPct: 0,
+      account: capital.accountName || DEFAULT_ACCOUNT_NAME,
+    };
+    positions = [newPos, ...positions];
+
+    const newTaxRec: TaxLedgerRecord = {
+      id: `REC_LIVE_${Date.now()}`,
+      date: txDate,
+      symbol: sym,
+      type: 'PREMIUM_EARNED',
+      amount: totalPremium,
+      strategy: 'CSP',
+      note: tx.notes || `Sold to Open ${contracts}x $${strike.toFixed(2)}P exp ${expiration} (+$${totalPremium.toFixed(2)})`,
+    };
+    taxLedger.records = [newTaxRec, ...taxLedger.records];
+    taxLedger.ytdPremiumsEarned += totalPremium;
+
+    // Update capital
+    capital.currentWeekPremiumsCollected = (capital.currentWeekPremiumsCollected || 0) + totalPremium;
+    capital.ytdPremiumsEarned = (capital.ytdPremiumsEarned || 0) + totalPremium;
+
+    actionDesc = `Wrote ${contracts}x ${sym} $${strike.toFixed(2)} Put (Collected +$${totalPremium.toFixed(2)} premium, locked $${collateral.toLocaleString()} collateral)`;
+
+  } else if (tx.category === 'CALL_WRITTEN') {
+    // Call Option Written (Covered Call)
+    const strike = Number(tx.strike) || 100;
+    const contracts = Math.max(1, Number(tx.quantity) || 1);
+    const premium = Number(tx.price) || 1.0;
+    const totalPremium = premium * contracts * 100;
+    const spot = tx.spotPrice || strike * 0.98;
+    const dte = tx.dte || 6;
+    const expiration = tx.expiration || new Date(Date.now() + dte * 86400000).toISOString().split('T')[0];
+
+    const newPos: PortfolioPosition = {
+      id: `POS_${sym}_CC_${Date.now()}`,
+      symbol: sym,
+      type: 'COVERED_CALL',
+      quantity: contracts,
+      spotPrice: spot,
+      strike,
+      dte,
+      expiration,
+      entryPrice: premium,
+      currentOptionPrice: premium,
+      iv: 40,
+      delta: tx.delta || -0.20,
+      theta: 0.18,
+      vega: -0.15,
+      beta: 1.15,
+      gainDollar: 0,
+      gainPct: 0,
+      account: capital.accountName || DEFAULT_ACCOUNT_NAME,
+    };
+    positions = [newPos, ...positions];
+
+    const newTaxRec: TaxLedgerRecord = {
+      id: `REC_LIVE_${Date.now()}`,
+      date: txDate,
+      symbol: sym,
+      type: 'PREMIUM_EARNED',
+      amount: totalPremium,
+      strategy: 'COVERED_CALL',
+      note: tx.notes || `Sold to Open ${contracts}x $${strike.toFixed(2)}C exp ${expiration} (+$${totalPremium.toFixed(2)})`,
+    };
+    taxLedger.records = [newTaxRec, ...taxLedger.records];
+    taxLedger.ytdPremiumsEarned += totalPremium;
+
+    capital.currentWeekPremiumsCollected = (capital.currentWeekPremiumsCollected || 0) + totalPremium;
+    capital.ytdPremiumsEarned = (capital.ytdPremiumsEarned || 0) + totalPremium;
+
+    actionDesc = `Wrote ${contracts}x ${sym} $${strike.toFixed(2)} Covered Call (Collected +$${totalPremium.toFixed(2)} premium)`;
+
+  } else if (tx.category === 'STOCK_BUY') {
+    // Equity Purchased
+    const shares = Math.max(1, Number(tx.quantity) || 100);
+    const price = Number(tx.price) || 100;
+    const existingIdx = positions.findIndex((p) => p.type === 'STOCK' && p.symbol.toUpperCase() === sym);
+
+    if (existingIdx >= 0) {
+      const existing = positions[existingIdx];
+      const newTotalShares = existing.quantity + shares;
+      const newCostBasis = ((existing.quantity * existing.entryPrice) + (shares * price)) / newTotalShares;
+      positions[existingIdx] = {
+        ...existing,
+        quantity: newTotalShares,
+        entryPrice: newCostBasis,
+        spotPrice: tx.spotPrice || price,
+      };
+    } else {
+      positions.push({
+        id: `POS_${sym}_STOCK_${Date.now()}`,
+        symbol: sym,
+        type: 'STOCK',
+        quantity: shares,
+        spotPrice: tx.spotPrice || price,
+        strike: 0,
+        dte: 0,
+        entryPrice: price,
+        currentOptionPrice: 0,
+        iv: 35,
+        delta: 1.0,
+        theta: 0,
+        vega: 0,
+        beta: 1.0,
+        account: capital.accountName || DEFAULT_ACCOUNT_NAME,
+      });
+    }
+
+    actionDesc = `Bought ${shares} shares of ${sym} @ $${price.toFixed(2)}/sh`;
+
+  } else if (tx.category === 'STOCK_SELL') {
+    // Equity Sold
+    const shares = Math.max(1, Number(tx.quantity) || 100);
+    const salePrice = Number(tx.price) || 100;
+    const existingIdx = positions.findIndex((p) => p.type === 'STOCK' && p.symbol.toUpperCase() === sym);
+
+    let costBasis = tx.costBasisPerShare || salePrice;
+    if (existingIdx >= 0) {
+      costBasis = positions[existingIdx].entryPrice;
+      const rem = positions[existingIdx].quantity - shares;
+      if (rem <= 0) {
+        positions.splice(existingIdx, 1);
+      } else {
+        positions[existingIdx].quantity = rem;
+      }
+    }
+
+    const pnl = (salePrice - costBasis) * shares;
+    const isGain = pnl >= 0;
+
+    const newTaxRec: TaxLedgerRecord = {
+      id: `REC_LIVE_${Date.now()}`,
+      date: txDate,
+      symbol: sym,
+      type: isGain ? 'CAPITAL_GAIN' : 'CAPITAL_LOSS',
+      amount: Math.abs(pnl),
+      strategy: 'STOCK',
+      note: tx.notes || `Sold ${shares} shares @ $${salePrice.toFixed(2)} (Cost: $${costBasis.toFixed(2)}, P&L: ${isGain ? '+' : ''}$${pnl.toFixed(2)})`,
+    };
+    taxLedger.records = [newTaxRec, ...taxLedger.records];
+
+    if (isGain) {
+      taxLedger.ytdRealizedCapitalGains += pnl;
+    } else {
+      taxLedger.ytdRealizedCapitalLosses += Math.abs(pnl);
+    }
+
+    // Add proceeds to cash
+    capital.totalCash += salePrice * shares;
+
+    actionDesc = `Sold ${shares} shares of ${sym} @ $${salePrice.toFixed(2)} (Realized ${isGain ? 'Gain' : 'Loss'}: $${Math.abs(pnl).toFixed(2)})`;
+  }
+
+  // Recalculate capital state waterfall
+  const encumbered = calculateEncumberedDisbursements(capital.plannedDisbursements);
+  const committed = calculateCommittedCspCollateral(positions);
+  const freeCash = Math.max(0, capital.totalCash - encumbered - committed);
+  const sizing = calculateDynamicPositionSizing(freeCash, capital.maxPerPositionAllocation);
+
+  capital = {
+    ...capital,
+    committedCollateral: committed,
+    freeCash,
+    maxPerPositionAllocation: sizing.targetAllocationPerPosition,
+    singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
+    maxAllowedPositions: sizing.maxConcurrentPositions,
+    lastUpdated: new Date().toISOString(),
+  };
+
+  // Commit all 3 states to localStorage
+  try {
+    localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(positions));
+    saveCapitalState(capital);
+    saveTaxLedgerState(taxLedger);
+  } catch (e) {
+    console.warn('Failed to save updated state to localStorage:', e);
+  }
+
+  // Dispatch global update event
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('deltaharvest_portfolio_updated', {
+        detail: { tx, actionDesc, positions, capital, taxLedger },
+      })
+    );
+  }
+
+  return {
+    success: true,
+    message: actionDesc,
+    updatedPositions: positions,
+    updatedCapital: capital,
+    updatedTax: taxLedger,
+  };
 }
 
 /**

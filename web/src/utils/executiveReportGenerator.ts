@@ -25,6 +25,12 @@ export interface ExecutiveDigestMetrics {
   upcomingEarningsCount: number;
 }
 
+import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest';
+import {
+  getStoredCapitalState,
+  DEFAULT_ACCOUNT_NET_VALUE,
+} from './capitalAndTaxLedger';
+
 export function getSampleExecutiveMetrics(): ExecutiveDigestMetrics {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', {
@@ -34,24 +40,65 @@ export function getSampleExecutiveMetrics(): ExecutiveDigestMetrics {
     day: 'numeric',
   });
 
+  try {
+    let positions: PortfolioPosition[] = LIVING_TRUST_OPTIONS_POSITIONS;
+    const rawPos = typeof localStorage !== 'undefined' ? localStorage.getItem('deltaharvest_portfolio_book') : null;
+    if (rawPos) {
+      const parsed = JSON.parse(rawPos);
+      if (Array.isArray(parsed) && parsed.length > 0) positions = parsed;
+    }
+    const capital = getStoredCapitalState(positions);
+    const stockVal = positions
+      .filter((p) => p.type === 'STOCK')
+      .reduce((sum, p) => sum + p.quantity * p.spotPrice, 0);
+    const netLiq = capital.totalCash + stockVal;
+    const freeCash = capital.freeCash;
+    const cashReservePct = netLiq > 0 ? parseFloat(((freeCash / netLiq) * 100).toFixed(1)) : 13.0;
+
+    const threatened = positions.filter((p) => Math.abs(p.delta) >= 0.40).length;
+    const safe = positions.length - threatened;
+
+    return {
+      dateStr,
+      netLiquidity: Math.round(netLiq || DEFAULT_ACCOUNT_NET_VALUE),
+      freeCash: Math.round(freeCash || 305570),
+      cashReservePct,
+      dailyTheta: 185.50,
+      projectedMonthlyCashflow: 5565.0,
+      betaWeightedDelta: 42.5,
+      directionalBias: 'NEUTRAL',
+      complianceHealthScore: 96,
+      totalPositions: positions.length,
+      safePositions: safe,
+      threatenedPositions: threatened,
+      regTMarginUsed: Math.round(capital.committedCollateral),
+      portfolioMarginUsed: Math.round(capital.committedCollateral * 0.4),
+      capitalReliefPct: 60.0,
+      winRatePct: 91.2,
+      upcomingEarningsCount: 0,
+    };
+  } catch (e) {
+    console.warn('Failed to calculate executive digest metrics from live state:', e);
+  }
+
   return {
     dateStr,
-    netLiquidity: 185420,
-    freeCash: 64200,
-    cashReservePct: 34.6,
-    dailyTheta: 142.50,
-    projectedMonthlyCashflow: 4275.0,
-    betaWeightedDelta: 48.2,
+    netLiquidity: DEFAULT_ACCOUNT_NET_VALUE,
+    freeCash: 305570,
+    cashReservePct: 13.0,
+    dailyTheta: 185.50,
+    projectedMonthlyCashflow: 5565.0,
+    betaWeightedDelta: 42.5,
     directionalBias: 'NEUTRAL',
-    complianceHealthScore: 94,
-    totalPositions: 8,
-    safePositions: 6,
+    complianceHealthScore: 96,
+    totalPositions: 17,
+    safePositions: 15,
     threatenedPositions: 2,
-    regTMarginUsed: 78500,
-    portfolioMarginUsed: 31400,
+    regTMarginUsed: 263250,
+    portfolioMarginUsed: 105300,
     capitalReliefPct: 60.0,
-    winRatePct: 88.5,
-    upcomingEarningsCount: 1,
+    winRatePct: 91.2,
+    upcomingEarningsCount: 0,
   };
 }
 

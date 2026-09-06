@@ -22,6 +22,7 @@ import {
   parseSchwabPositionsCsv,
   syncImportedEquitiesToWatchlist,
 } from '../utils/schwabPositionsParser';
+import { LiveTransactionModal } from './LiveTransactionModal';
 import {
   DollarSign,
   ShieldCheck,
@@ -34,12 +35,14 @@ import {
   Clock,
   AlertTriangle,
   Upload,
+  Zap,
 } from './icons';
 
 interface WeeklyCashLedgerViewProps {
   positions?: PortfolioPosition[];
   onNavigateToNextStep?: () => void;
   onNavigateToHoldings?: () => void;
+  onNavigateToStep2?: () => void;
   onNavigateToScreener?: () => void;
 }
 
@@ -47,6 +50,7 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
   positions,
   onNavigateToNextStep,
   onNavigateToHoldings,
+  onNavigateToStep2,
   onNavigateToScreener,
 }) => {
   // Load Capital State synced with positions
@@ -61,6 +65,8 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
 
   // Modals / Edit states
   const [isEditCashOpen, setIsEditCashOpen] = useState(false);
+  const [isLiveTxModalOpen, setIsLiveTxModalOpen] = useState(false);
+  const [liveTxSuccessMsg, setLiveTxSuccessMsg] = useState('');
   const [inputTotalCash, setInputTotalCash] = useState<number>(capitalState.totalCash);
   const [inputTargetAllocation, setInputTargetAllocation] = useState<number>(
     capitalState.maxPerPositionAllocation || DEFAULT_PER_POSITION_BUDGET
@@ -116,10 +122,29 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
         // Sync imported equities to Watchlist
         syncImportedEquitiesToWatchlist(parsed.equitySymbols, parsed.accountName);
 
+        // Sync authentic option tax records
+        if (parsed.taxRecords && parsed.taxRecords.length > 0) {
+          const currentTax = getStoredTaxLedgerState();
+          const freshTax: TaxLedgerState = {
+            ...currentTax,
+            records: parsed.taxRecords,
+            ytdPremiumsEarned: parsed.taxRecords.reduce((sum, r) => sum + r.amount, 0),
+          };
+          saveTaxLedgerState(freshTax);
+          setTaxState(freshTax);
+        }
+
         setImportSuccessMsg(
           `Imported ${parsed.accountName}: Total Cash $${parsed.capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })} (SNYXX + SNAXX + Sweep), -$${parsed.totalCommittedCspCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })} CSP Offset (PANW + PLTR), -$${parsed.encumberedLivingExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })} Living Exp -> $${parsed.netFreeCashForNewCsps.toLocaleString(undefined, { minimumFractionDigits: 2 })} Net Free Cash for new CSPs (${parsed.maxAllowedNewPositions} positions). ${parsed.equitySymbols.length} Equities synced to Watchlist: ${parsed.equitySymbols.join(', ')}!`
         );
         setTimeout(() => setImportSuccessMsg(''), 10000);
+
+        // Dispatch global update event
+        window.dispatchEvent(
+          new CustomEvent('deltaharvest_portfolio_updated', {
+            detail: { source: 'csv_upload', positions: parsed.portfolioPositions, capital: parsed.capitalState },
+          })
+        );
       } catch (err: any) {
         console.error('Failed to parse broker positions CSV:', err);
       }
@@ -127,13 +152,25 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     reader.readAsText(file);
   };
 
-  // Sync state whenever positions change
+  // Sync state whenever positions change or when live transactions occur mid-week
   useEffect(() => {
-    const updated = getStoredCapitalState(positions);
-    setCapitalState(updated);
-    setInputTotalCash(updated.totalCash);
-    setInlineCashValue(updated.totalCash);
-    setInputTargetAllocation(updated.maxPerPositionAllocation);
+    const handleSync = () => {
+      const updated = getStoredCapitalState(positions);
+      setCapitalState(updated);
+      setInputTotalCash(updated.totalCash);
+      setInlineCashValue(updated.totalCash);
+      setInputTargetAllocation(updated.maxPerPositionAllocation);
+      setTaxState(getStoredTaxLedgerState());
+    };
+
+    handleSync();
+
+    window.addEventListener('deltaharvest_portfolio_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('deltaharvest_portfolio_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
   }, [positions]);
 
   // Net Taxable calculations
@@ -374,6 +411,14 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setIsLiveTxModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-white shadow-md shadow-amber-600/20 flex items-center space-x-1.5 transition-all cursor-pointer"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Record Mid-Week Trade</span>
+            </button>
+
             <label className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 flex items-center space-x-1.5 transition-colors cursor-pointer">
               <Upload className="w-3.5 h-3.5" />
               <span>Import Positions CSV</span>
@@ -401,6 +446,13 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
             </button>
           </div>
         </div>
+
+        {liveTxSuccessMsg && (
+          <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs flex items-center space-x-2.5 animate-fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="font-mono text-[11px] leading-relaxed">{liveTxSuccessMsg}</span>
+          </div>
+        )}
 
         {importSuccessMsg && (
           <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs flex items-center space-x-2.5 animate-fade-in">
@@ -1041,7 +1093,7 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
                   type="text"
                   value={premSymbol}
                   onChange={(e) => setPremSymbol(e.target.value)}
-                  placeholder="e.g. SPY, AAPL"
+                  placeholder="e.g. PANW, PLTR, TSLA, NET"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
                   required
                 />
@@ -1102,6 +1154,16 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Live Mid-Week Transaction Entry Modal */}
+      <LiveTransactionModal
+        isOpen={isLiveTxModalOpen}
+        onClose={() => setIsLiveTxModalOpen(false)}
+        onSuccess={(msg) => {
+          setLiveTxSuccessMsg(msg);
+          setTimeout(() => setLiveTxSuccessMsg(''), 8000);
+        }}
+      />
     </div>
   );
 };

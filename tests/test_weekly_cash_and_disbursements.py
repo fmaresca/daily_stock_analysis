@@ -339,6 +339,54 @@ TABLE 3: EXCLUDED CANDIDATES
         net_cash = cash_pool - total_put_collateral - living_exp
         self.assertAlmostEqual(net_cash, 305570.76, places=2)
 
+    def test_schwab_real_options_and_live_transactions(self):
+        # 1. Real Schwab options inventory extracted from live positions CSV
+        schwab_options = [
+            {"symbol": "PANW", "type": "CSP", "strike": 327.50, "qty": 3, "premium": 1998.96},
+            {"symbol": "PLTR", "type": "CSP", "strike": 165.00, "qty": 10, "premium": 883.33},
+            {"symbol": "TSLA", "type": "COVERED_CALL", "strike": 375.00, "qty": 20, "premium": 19886.25},
+            {"symbol": "AXTI", "type": "COVERED_CALL", "strike": 70.00, "qty": 15, "premium": 11464.76},
+            {"symbol": "BLZE", "type": "COVERED_CALL", "strike": 17.50, "qty": 110, "premium": 10926.45},
+            {"symbol": "TSLA", "type": "COVERED_CALL", "strike": 370.00, "qty": 20, "premium": 2766.63},
+            {"symbol": "NET", "type": "COVERED_CALL", "strike": 300.00, "qty": 13, "premium": 2071.31},
+            {"symbol": "IONQ", "type": "COVERED_CALL", "strike": 43.50, "qty": 15, "premium": 635.01},
+            {"symbol": "RTX", "type": "COVERED_CALL", "strike": 207.50, "qty": 17, "premium": 464.68},
+            {"symbol": "LUNR", "type": "COVERED_CALL", "strike": 16.50, "qty": 50, "premium": 416.73},
+        ]
+
+        # Verify no dummy test tickers (SPY / AAPL CSPs)
+        symbols = [o["symbol"] for o in schwab_options]
+        self.assertNotIn("SPY", symbols)
+        self.assertNotIn("AAPL", symbols)
+
+        # Verify total option premiums written
+        total_premiums = sum(o["premium"] for o in schwab_options)
+        self.assertAlmostEqual(total_premiums, 51514.11, places=2)
+
+        # 2. Test live mid-week CSP transaction dynamic impact
+        starting_cash = 573820.76
+        disbursements = 5000.0
+        existing_csp_collateral = 263250.0  # PANW ($98,250) + PLTR ($165,000)
+        initial_free_cash = starting_cash - disbursements - existing_csp_collateral
+        self.assertAlmostEqual(initial_free_cash, 305570.76, places=2)
+
+        # User enters new mid-week transaction: Sell 5x NVDA $115 Puts @ $2.40
+        new_put_strike = 115.0
+        new_put_contracts = 5
+        new_put_premium_per_share = 2.40
+        new_collateral = new_put_strike * new_put_contracts * 100  # $57,500.00
+        new_premium_collected = new_put_premium_per_share * new_put_contracts * 100  # $1,200.00
+
+        updated_committed_collateral = existing_csp_collateral + new_collateral
+        updated_free_cash = starting_cash - disbursements - updated_committed_collateral
+        self.assertEqual(new_collateral, 57500.0)
+        self.assertEqual(new_premium_collected, 1200.0)
+        self.assertAlmostEqual(updated_free_cash, 248070.76, places=2)
+
+        # Verify single equity security CSP limit ($200,000 maximum)
+        max_single_limit = 200000.0
+        self.assertLessEqual(new_collateral, max_single_limit)
+
 
 if __name__ == "__main__":
     unittest.main()
