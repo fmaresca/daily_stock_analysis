@@ -7,13 +7,13 @@
 
 import { calculateBlackScholesOption } from './optionChainMatrix';
 
-export type PositionType = 'STOCK' | 'CSP' | 'COVERED_CALL' | 'CREDIT_SPREAD' | 'PMCC';
+export type PositionType = 'STOCK' | 'CSP' | 'COVERED_CALL' | 'CREDIT_SPREAD' | 'PMCC' | 'MMF' | 'CASH';
 
 export interface PortfolioPosition {
   id: string;
   symbol: string;
   type: PositionType;
-  quantity: number; // e.g. 100 for stock, 1 for 1 contract
+  quantity: number; // e.g. 100 for stock, 1 for 1 contract, or cash amount
   spotPrice: number;
   strike: number;
   strike2?: number; // Long leg for spread/PMCC
@@ -59,12 +59,82 @@ export interface PnlMatrixCell {
 /**
  * Real Institutional Portfolio Book: Living Trust-Options ...609
  * Extracted directly from live Charles Schwab export as of 2026/09/05.
- * Contains:
- * - 2 Open CSPs: PANW 327.50 P (-3 contracts) and PLTR 165.00 P (-10 contracts)
- * - 7 Long Equities: AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA
- * - 8 Active Covered Calls: AXTI 70C, BLZE 17.5C (84.9% profit), IONQ 43.5C, LUNR 16.5C, NET 300C, RTX 207.5C, TSLA 370C (09/09), TSLA 375C (09/11, 85.27% profit)
+ * Contains all 4 Core Asset Classes:
+ * 1. Cash & Money Market Funds: Bank Core Cash ($293,703.52), SNYXX ($202,775.94), SNAXX ($77,341.30) -> $573,820.76 Total Liquid Cash
+ * 2. 7 Long Equities: AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA -> $1,785,894.00 Total Stock Equity
+ * 3. 2 Open CSPs: PANW 327.50 P (-3 contracts) and PLTR 165.00 P (-10 contracts) -> $263,250.00 Collateral Committed
+ * 4. 8 Active Covered Calls: AXTI 70C, BLZE 17.5C (84.9% profit), IONQ 43.5C, LUNR 16.5C, NET 300C, RTX 207.5C, TSLA 370C (09/09), TSLA 375C (09/11, 85.27% profit)
+ * Total Net Liquidation Value: $2,343,519.76
  */
 export const LIVING_TRUST_OPTIONS_POSITIONS: PortfolioPosition[] = [
+  // --- CASH & MONEY MARKET FUNDS (Total Liquid Cash: $573,820.76) ---
+  {
+    id: 'POS_CASH_CORE',
+    symbol: 'Cash & Cash Investments',
+    companyName: 'Charles Schwab Bank Deposit Sweep (Liquid Core)',
+    type: 'CASH',
+    quantity: 293703.52,
+    spotPrice: 1.00,
+    strike: 0,
+    dte: 0,
+    entryPrice: 1.00,
+    currentOptionPrice: 0,
+    iv: 0,
+    delta: 0,
+    theta: 0,
+    vega: 0,
+    beta: 0,
+    costBasisTotal: 293703.52,
+    marketValueTotal: 293703.52,
+    gainDollar: 0,
+    gainPct: 0,
+    account: 'Living Trust-Options ...609',
+  },
+  {
+    id: 'POS_MMF_SNYXX',
+    symbol: 'SNYXX',
+    companyName: 'Schwab New York Municipal Money Fund Ultra',
+    type: 'MMF',
+    quantity: 202775.94,
+    spotPrice: 1.00,
+    strike: 0,
+    dte: 0,
+    entryPrice: 1.00,
+    currentOptionPrice: 0,
+    iv: 0,
+    delta: 0,
+    theta: 0,
+    vega: 0,
+    beta: 0,
+    costBasisTotal: 202775.94,
+    marketValueTotal: 202775.94,
+    gainDollar: 0,
+    gainPct: 0,
+    account: 'Living Trust-Options ...609',
+  },
+  {
+    id: 'POS_MMF_SNAXX',
+    symbol: 'SNAXX',
+    companyName: 'Schwab Prime Advantage Money Fund Ultra',
+    type: 'MMF',
+    quantity: 77341.30,
+    spotPrice: 1.00,
+    strike: 0,
+    dte: 0,
+    entryPrice: 1.00,
+    currentOptionPrice: 0,
+    iv: 0,
+    delta: 0,
+    theta: 0,
+    vega: 0,
+    beta: 0,
+    costBasisTotal: 77341.30,
+    marketValueTotal: 77341.30,
+    gainDollar: 0,
+    gainPct: 0,
+    account: 'Living Trust-Options ...609',
+  },
+
   // --- CASH-SECURED PUTS (Active Collateral Commitments: $263,250.00 Total) ---
   {
     id: 'POS_PANW_CSP_327_5',
@@ -444,7 +514,16 @@ export function simulatePosition(
   let regTMargin = 0;
   let pmMargin = 0;
 
-  if (pos.type === 'STOCK') {
+  if (pos.type === 'CASH' || pos.type === 'MMF') {
+    // Cash & Money Market Funds: $1.00 constant NAV, 100% principal preservation, zero market shock risk
+    currentValue = pos.marketValueTotal || pos.quantity * (pos.spotPrice || 1.0);
+    simulatedValue = currentValue;
+    delta = 0;
+    theta = 0;
+    vega = 0;
+    regTMargin = 0; // Does not consume margin, acts as 100% cash collateral backing
+    pmMargin = 0;
+  } else if (pos.type === 'STOCK') {
     currentValue = pos.quantity * currentSpot;
     simulatedValue = pos.quantity * newSpot;
     delta = pos.quantity * pos.beta;

@@ -263,9 +263,19 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
       state.totalCash = DEFAULT_TOTAL_AVAILABLE_CASH;
     }
 
+    const mmfCashTotal = activePositions
+      .filter((p) => p.type === 'CASH' || p.type === 'MMF')
+      .reduce((sum, p) => sum + (p.marketValueTotal || (p.quantity * (p.spotPrice || 1))), 0);
+
+    const snyxxVal = activePositions.find((p) => p.type === 'MMF' && p.symbol === 'SNYXX')?.marketValueTotal ?? DEFAULT_SNYXX_CASH;
+    const snaxxVal = activePositions.find((p) => p.type === 'MMF' && p.symbol === 'SNAXX')?.marketValueTotal ?? DEFAULT_SNAXX_CASH;
+    const coreVal = activePositions.find((p) => p.type === 'CASH')?.marketValueTotal ?? DEFAULT_CORE_CASH;
+
     const encumbered = calculateEncumberedDisbursements(state.plannedDisbursements);
     const committed = calculateCommittedCspCollateral(activePositions);
-    const totalCash = Number(state.totalCash) > 0 ? Number(state.totalCash) : DEFAULT_TOTAL_AVAILABLE_CASH;
+    const totalCash = mmfCashTotal > 0
+      ? mmfCashTotal
+      : (Number(state.totalCash) > 0 ? Number(state.totalCash) : DEFAULT_TOTAL_AVAILABLE_CASH);
     const free = Math.max(0, totalCash - encumbered - committed);
     const sizing = calculateDynamicPositionSizing(free, state.maxPerPositionAllocation || DEFAULT_PER_POSITION_BUDGET);
 
@@ -273,10 +283,10 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
       ...state,
       accountName: state.accountName || DEFAULT_ACCOUNT_NAME,
       totalAccountValue: state.totalAccountValue || DEFAULT_ACCOUNT_NET_VALUE,
-      cashBreakdown: state.cashBreakdown || {
-        snyxx: DEFAULT_SNYXX_CASH,
-        snaxx: DEFAULT_SNAXX_CASH,
-        coreCash: DEFAULT_CORE_CASH,
+      cashBreakdown: {
+        snyxx: snyxxVal,
+        snaxx: snaxxVal,
+        coreCash: coreVal,
       },
       totalCash,
       totalEncumberedDisbursements: encumbered,
@@ -936,6 +946,12 @@ export function auditPositionsWeeklyStatus(
   const callContractsMap = new Map<string, number>();
 
   for (const p of positions) {
+    if (p.type === 'CASH' || p.type === 'MMF') {
+      // Cash & Money Market Fund holdings are risk-free liquidity reserves backing CSPs
+      healthyPositions.push(p);
+      continue;
+    }
+
     if (p.type === 'STOCK') {
       const existing = shareMap.get(p.symbol) || { totalShares: 0, avgCost: p.entryPrice };
       shareMap.set(p.symbol, {

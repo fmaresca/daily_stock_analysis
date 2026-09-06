@@ -2187,6 +2187,25 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     DeltaHarvest links order execution, portfolio margin stress-testing, and defensive repair into a unified closed loop: (1) When an order is previewed or executed in the <em>Broker Workbench</em>, it automatically logs into your active <em>Portfolio Ledger</em>; (2) The <em>Defensive Rolling Engine</em> dynamically loads your active ledger positions so you can test and stage repair tactics on real holdings; (3) The <em>Option Chain Matrix</em> models true CBOE calendar Friday cycles (weekly, monthly 3rd Friday, and annual LEAPS); (4) The persistent <em>Top Header Risk Pulse</em> displays real-time health (e.g. 94/100 Health • +$142/d Theta) with global hotkeys (<code>?</code> for Handbook, <code>Alt+S</code> for Staging, <code>Alt+E</code> for Executive Digest).
                   </p>
                 </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span className="text-emerald-400">💼</span>
+                    <span>What asset classes are tracked in the Active Position Ledger (Living Trust-Options ...609)?</span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    The <strong>Active Position Ledger</strong> reflects the complete institutional inventory across all <strong>4 core asset classes</strong> in the target Charles Schwab trading account:
+                  </p>
+                  <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+                    <li><strong>Long Equities (7 lots):</strong> AXTI (1,500 shs), BLZE (11,000 shs), IONQ (1,500 shs), LUNR (5,000 shs), NET (1,300 shs), RTX (1,700 shs), TSLA (2,000 shs) totaling $1,785,894.00 equity.</li>
+                    <li><strong>Related Options (10 contracts/legs):</strong> 2 Cash-Secured Puts (PANW 327.50P x3, PLTR 165.00P x10 locking $263,250.00 collateral) and 8 Covered Calls across your equity lots (AXTI 70C, BLZE 17.5C, IONQ 43.5C, LUNR 16.5C, NET 300C, RTX 207.5C, TSLA 370C, TSLA 375C).</li>
+                    <li><strong>Bank Cash &amp; Sweep:</strong> $293,703.52 Core Bank Deposit Sweep (100% instant liquid purchasing power).</li>
+                    <li><strong>Money Market Funds (MMF):</strong> BNY Mellon NY AMT-Free MMF (SNYXX, $202,775.94) and Schwab Premier Advantage MMF (SNAXX, $77,341.30), bringing total cash/MMF coverage to $573,820.76.</li>
+                  </ul>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Use the <strong>Asset Class Filter Tabs</strong> (<em>All, Equities, CSPs, Covered Calls, Cash &amp; MMF</em>) to isolate holdings, or click <strong>&quot;Sync Schwab Baseline&quot;</strong> to re-synchronize live account holdings at any time.
+                  </p>
+                </div>
               </div>
             </div>
           )}
