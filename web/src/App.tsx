@@ -38,6 +38,7 @@ import { CascadingScreenerView } from './components/CascadingScreenerView';
 import { WeeklyCashLedgerView } from './components/WeeklyCashLedgerView';
 import { HoldingsCoveredCallView } from './components/HoldingsCoveredCallView';
 import { WeeklyExecutiveReportView } from './components/WeeklyExecutiveReportView';
+import { PortfolioPosition } from './utils/portfolioStressTest';
 import { getStoredCapitalState } from './utils/capitalAndTaxLedger';
 import { WeeklyScreenerDataset } from './types/weeklyScreeners';
 import { startContinuousRiskSweeper, stopContinuousRiskSweeper } from './utils/continuousRiskSweeper';
@@ -95,41 +96,16 @@ import {
 } from './utils/marketHoursAndAutoSync';
 
 const DEFAULT_UNIVERSE_SYMBOLS = [
-  'SPY', 'QQQ', 'IWM', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'TSLA',
-  'PLTR', 'IONQ', 'NET', 'RTX', 'JEPI', 'SCHD', 'SPCX', 'CLM', 'CRF', 'ZETA', 'BLZE', 'AXTI', 'LUNR',
+  'AXTI', 'BLZE', 'IONQ', 'LUNR', 'NET', 'RTX', 'TSLA',
 ];
 
 const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
   {
-    id: 'frank-favorites',
-    name: 'Frank Favorites',
-    description: "Frank's primary high-conviction watchlist of core ETFs, Mega-Caps, CEFs, and growth plays",
-    tickers: DEFAULT_UNIVERSE_SYMBOLS,
-    isDefault: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
     id: 'living-trust-equities',
     name: 'Living Trust Equities',
-    description: 'Equities imported from Living Trust-Options ...609 account (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA)',
-    tickers: ['AXTI', 'BLZE', 'IONQ', 'LUNR', 'NET', 'RTX', 'TSLA'],
-    isDefault: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'tier-1-liquid',
-    name: 'Tier 1 Ultra-Liquid',
-    description: 'Tightest penny-wide spreads and institutional depth',
-    tickers: ['SPY', 'QQQ', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'TSLA'],
-    isDefault: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'high-yield-etfs',
-    name: 'Dividend, CEFs & High-Yield',
-    description: 'Income ETFs, Closed-End Funds (CEFs), and covered-call vehicles',
-    tickers: ['JEPI', 'SCHD', 'SPCX', 'CLM', 'CRF'],
-    isDefault: false,
+    description: 'Equities in Living Trust-Options ...609 account (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA)',
+    tickers: DEFAULT_UNIVERSE_SYMBOLS,
+    isDefault: true,
     createdAt: new Date().toISOString(),
   },
 ];
@@ -144,7 +120,7 @@ export const App: React.FC = () => {
   const [activeTree, setActiveTree] = useState<MenuTreeType>('WORKFLOW');
   const [activeEquitiesTab, setActiveEquitiesTab] = useState<EquitiesTabType>('TECHNICAL_SCREENER');
   const [activeOptionsTab, setActiveOptionsTab] = useState<OptionsTabType>('WEEKLY_POSITION_AUDIT');
-  const [activeChartSymbol, setActiveChartSymbol] = useState<string>('SPY');
+  const [activeChartSymbol, setActiveChartSymbol] = useState<string>('TSLA');
 
   // Interactive Modal States
   const [selectedTicker, setSelectedTicker] = useState<TickerMeta | null>(null);
@@ -188,42 +164,33 @@ export const App: React.FC = () => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Automatic migration of legacy default watchlist to "Frank Favorites"
-          let migrated = false;
-          const updatedGroups: WatchlistGroup[] = parsed.map((g: WatchlistGroup, idx: number) => {
-            if (
-              g.id === 'core-universe' ||
-              g.id === 'core-18' ||
-              g.name === 'Core Universe' ||
-              (idx === 0 && (g.isDefault || !g.name || g.name === 'Default Watchlist'))
-            ) {
-              migrated = true;
-              return {
-                ...g,
-                id: 'frank-favorites',
-                name: 'Frank Favorites',
-                description: g.description || "Frank's primary high-conviction watchlist of core ETFs, Mega-Caps, CEFs, and growth plays",
-                isDefault: true,
-              };
+          // Eliminate legacy hardcoded groups (tier-1-liquid, high-yield-etfs, and old 22-ticker frank-favorites)
+          const filtered = parsed.filter((g: WatchlistGroup) => {
+            if (g.id === 'tier-1-liquid' || g.name === 'Tier 1 Ultra-Liquid') return false;
+            if (g.id === 'high-yield-etfs' || g.name === 'Dividend, CEFs & High-Yield') return false;
+            if (g.id === 'frank-favorites' || g.name === 'Frank Favorites') {
+              // Purge legacy 22-ticker list if present
+              const hasLegacy22 = g.tickers.includes('SPY') && g.tickers.includes('QQQ') && g.tickers.includes('JEPI');
+              if (hasLegacy22) return false;
             }
-            return g;
+            return true;
           });
 
-          // Ensure at least one Frank Favorites exists if none matched
-          if (!updatedGroups.some((g) => g.name === 'Frank Favorites' || g.id === 'frank-favorites')) {
+          // Ensure Living Trust Equities group exists as primary default
+          const hasLivingTrust = filtered.some(
+            (g: WatchlistGroup) => g.id === 'living-trust-equities' || g.name === 'Living Trust Equities'
+          );
+
+          let updatedGroups = [...filtered];
+          if (!hasLivingTrust) {
             updatedGroups.unshift(INITIAL_WATCHLIST_GROUPS[0]);
-            migrated = true;
+          } else {
+            updatedGroups = updatedGroups.map((g) =>
+              g.id === 'living-trust-equities' ? { ...g, isDefault: true } : g
+            );
           }
 
-          // Ensure Living Trust Equities group exists
-          if (!updatedGroups.some((g) => g.id === 'living-trust-equities' || g.name === 'Living Trust Equities')) {
-            updatedGroups.splice(1, 0, INITIAL_WATCHLIST_GROUPS[1]);
-            migrated = true;
-          }
-
-          if (migrated) {
-            localStorage.setItem('deltaharvest_watchlist_groups', JSON.stringify(updatedGroups));
-          }
+          localStorage.setItem('deltaharvest_watchlist_groups', JSON.stringify(updatedGroups));
           return updatedGroups;
         }
       }
@@ -235,14 +202,75 @@ export const App: React.FC = () => {
 
   const [activeGroupId, setActiveGroupId] = useState<string>(() => {
     const saved = localStorage.getItem('deltaharvest_active_group_id');
-    if (!saved || saved === 'core-18' || saved === 'core-universe') {
-      return 'frank-favorites';
+    if (
+      !saved ||
+      saved === 'core-18' ||
+      saved === 'core-universe' ||
+      saved === 'frank-favorites' ||
+      saved === 'tier-1-liquid' ||
+      saved === 'high-yield-etfs'
+    ) {
+      return 'living-trust-equities';
     }
     return saved;
   });
 
   const [showWatchlistOnly, setShowWatchlistOnly] = useState<boolean>(false);
   const [customTickers, setCustomTickers] = useState<TickerMeta[]>([]);
+
+  // Real-time dynamic tracking of equities:
+  // Strictly: Equities in options account (Living Trust-Options ...609) + Watchlists separately created
+  const [portfolioRefreshKey, setPortfolioRefreshKey] = useState<number>(0);
+
+  useEffect(() => {
+    const handlePortfolioUpdate = () => {
+      setPortfolioRefreshKey((prev) => prev + 1);
+    };
+    window.addEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+    window.addEventListener('storage', handlePortfolioUpdate);
+    return () => {
+      window.removeEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+      window.removeEventListener('storage', handlePortfolioUpdate);
+    };
+  }, []);
+
+  // 1. Equities in account (Living Trust-Options ...609)
+  const accountEquitySymbols = useMemo(() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('deltaharvest_portfolio_book') : null;
+      if (raw) {
+        const positions: PortfolioPosition[] = JSON.parse(raw);
+        if (Array.isArray(positions) && positions.length > 0) {
+          const stocks = positions
+            .filter((p) => p.type === 'STOCK')
+            .map((p) => p.symbol.toUpperCase().trim())
+            .filter(Boolean);
+          const unique = Array.from(new Set(stocks));
+          if (unique.length > 0) return unique;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse account equity positions from storage:', e);
+    }
+    return DEFAULT_UNIVERSE_SYMBOLS;
+  }, [portfolioRefreshKey]);
+
+  // 2. Equities in Watchlists separately created
+  const separatelyCreatedWatchlistSymbols = useMemo(() => {
+    const symbols = new Set<string>();
+    (watchlistGroups || []).forEach((g) => {
+      (g.tickers || []).forEach((t) => {
+        const clean = t.toUpperCase().trim();
+        if (clean) symbols.add(clean);
+      });
+    });
+    return Array.from(symbols);
+  }, [watchlistGroups]);
+
+  // 3. Dynamic Tracked Equities = Account Equities UNION Watchlist Equities
+  const trackedEquitySymbols = useMemo(() => {
+    return Array.from(new Set([...accountEquitySymbols, ...separatelyCreatedWatchlistSymbols]));
+  }, [accountEquitySymbols, separatelyCreatedWatchlistSymbols]);
 
   // Auto-Sync & Rate Limit Safety State
   const [autoSyncSettings, setAutoSyncSettings] = useState(() => loadAutoSyncSettings());
@@ -659,18 +687,57 @@ export const App: React.FC = () => {
     fetchData();
   }, []);
 
-  // Universe Tickers
+  // Universe Tickers: Strictly dynamic reflecting Account Equities + Separately Created Watchlists
   const universeTickers = useMemo(() => {
     const rawTickers = dataPayload?.tickers || [];
     const tickerMap = new Map<string, TickerMeta>();
 
-    rawTickers.forEach((t) => tickerMap.set(t.symbol, t));
+    rawTickers.forEach((t) => tickerMap.set(t.symbol.toUpperCase(), t));
     customTickers.forEach((t) => {
-      if (!tickerMap.has(t.symbol)) tickerMap.set(t.symbol, t);
+      if (!tickerMap.has(t.symbol.toUpperCase())) tickerMap.set(t.symbol.toUpperCase(), t);
     });
 
-    return Array.from(tickerMap.values());
-  }, [dataPayload, customTickers]);
+    const result: TickerMeta[] = [];
+    trackedEquitySymbols.forEach((sym) => {
+      const upper = sym.toUpperCase().trim();
+      if (tickerMap.has(upper)) {
+        result.push(tickerMap.get(upper)!);
+      } else {
+        const intel = SECURITY_INTELLIGENCE_REGISTRY[upper];
+        const initialSpot = intel?.keySupportPrice && intel?.keyResistancePrice
+          ? Math.round(((intel.keySupportPrice + intel.keyResistancePrice) / 2) * 100) / 100
+          : intel?.targetPrice ? Math.round(intel.targetPrice * 0.9 * 100) / 100 : 100.0;
+        const initialVol = intel?.liquidityScore && intel.liquidityScore >= 95 ? 25000000 : 1000000;
+        const initialName = intel?.name || `${upper} Equity`;
+        const initialSector = intel?.sector || 'Custom Watchlist';
+        const initialTier = intel?.liquidityScore && intel.liquidityScore >= 95 ? 'Tier 1 (Ultra-Liquid)' : 'Tier 2/3 (Moderate)';
+
+        result.push({
+          symbol: upper,
+          name: initialName,
+          sector: initialSector,
+          liquidity_tier: initialTier,
+          spot_price: initialSpot,
+          avg_volume_30: initialVol,
+          sma_20: initialSpot,
+          upper_bb: Math.round(initialSpot * 1.05 * 100) / 100,
+          lower_bb: Math.round(initialSpot * 0.95 * 100) / 100,
+          bb_width_pct: 10.0,
+          rsi_14: 50.0,
+          rsi_flag: 'NORMAL',
+          hv_30: 25.0,
+          iv_current: 25.0,
+          iv_rank: 30,
+          earnings_within_7d: false,
+          next_earnings_date: 'N/A',
+          has_weeklys: true,
+          expiration_cadence: 'Weekly',
+        });
+      }
+    });
+
+    return result;
+  }, [dataPayload, customTickers, trackedEquitySymbols]);
 
   // Staged Order Handlers
   const handleStageOpportunity = (opp: OptionOpportunity) => {
@@ -871,23 +938,26 @@ export const App: React.FC = () => {
     activeEquitiesTab,
   ]);
 
-  // All Available Opportunities (Combining Static + Dynamic Synthesis for newly added custom/watchlist tickers)
+  // All Available Opportunities (Filtered strictly to dynamically tracked equities)
   const allUniverseOpportunities = useMemo(() => {
     const rawOpps = dataPayload?.opportunities || [];
     const oppMap = new Map<string, OptionOpportunity>();
+    const trackedSymbolsSet = new Set(trackedEquitySymbols.map((s) => s.toUpperCase()));
 
-    // Index existing opportunities by unique id
+    // Index existing opportunities for tracked symbols only
     rawOpps.forEach((o) => {
-      const key = o.id || `${o.strategy}_${o.symbol}_${o.strike}`;
-      oppMap.set(key, o);
+      if (trackedSymbolsSet.has(o.symbol.toUpperCase())) {
+        const key = o.id || `${o.strategy}_${o.symbol}_${o.strike}`;
+        oppMap.set(key, o);
+      }
     });
 
     // Track symbols that have at least one opportunity
-    const coveredSymbols = new Set(rawOpps.map((o) => o.symbol));
+    const coveredSymbols = new Set(Array.from(oppMap.values()).map((o) => o.symbol.toUpperCase()));
 
     // For every ticker in universeTickers (including all custom and imported tickers), ensure CSP and CC exist
     universeTickers.forEach((t) => {
-      if (!coveredSymbols.has(t.symbol)) {
+      if (!coveredSymbols.has(t.symbol.toUpperCase())) {
         const spot = t.spot_price || 100.0;
         const lowerBb = t.lower_bb || spot * 0.94;
         const upperBb = t.upper_bb || spot * 1.06;

@@ -1949,9 +1949,16 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </div>
 
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white">How is the "Equities Tracked" count in the header calculated?</div>
+                  <p className="text-xs text-slate-400">
+                    The top header badge dynamically displays the exact number of equities in your options-writing account (Living Trust-Options ...609), plus any equities in Watchlists separately created. All originally hardcoded symbols have been eliminated. As you import Schwab positions, execute stock transactions, or add/remove tickers across custom watchlists, the tracked equities count dynamically updates in real time.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">How do Named Watchlists work (Create, Rename, Delete)?</div>
                   <p className="text-xs text-slate-400">
-                    You can create multiple custom-named watchlists by opening the Watchlist Manager (<code>W</code>) and clicking <strong>+ New List</strong>. To rename any watchlist (including your primary default <strong>Frank Favorites</strong>), click the <strong>Rename</strong> button next to the active list name, type the new name, and hit Save. To delete an unwanted watchlist, click <strong>Delete Watchlist</strong> and confirm the prompt (you must maintain at least one watchlist). You can also quickly switch between active watchlists using the dropdown selector in the screener Filter Bar.
+                    You can create multiple custom-named watchlists by opening the Watchlist Manager (<code>W</code>) and clicking <strong>+ New List</strong>. To rename any watchlist (including your primary default <strong>Living Trust Equities</strong>), click the <strong>Rename</strong> button next to the active list name, type the new name, and hit Save. To delete an unwanted watchlist, click <strong>Delete Watchlist</strong> and confirm the prompt (you must maintain at least one watchlist). You can also quickly switch between active watchlists using the dropdown selector in the screener Filter Bar.
                   </p>
                 </div>
 
