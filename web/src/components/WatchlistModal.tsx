@@ -125,12 +125,12 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
                 onClick={onSelectAllUniverse}
                 className="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
               >
-                Select All 18
+                Select All ({universeTickers.length})
               </button>
               <button
                 onClick={onResetWatchlist}
                 className="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center space-x-1"
-                title="Reset to default 18 universe tickers"
+                title="Reset to default account equities"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Reset Defaults</span>

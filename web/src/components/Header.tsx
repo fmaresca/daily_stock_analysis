@@ -76,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isAutoSyncMenuOpen, setIsAutoSyncMenuOpen] = useState(false);
 
   const rateAnalysis = useMemo(() => {
-    return analyzeSyncRateLimits(autoSyncInterval, totalTickers || 21);
+    return analyzeSyncRateLimits(autoSyncInterval, totalTickers || 7);
   }, [autoSyncInterval, totalTickers]);
 
   const countdownText = useMemo(() => {

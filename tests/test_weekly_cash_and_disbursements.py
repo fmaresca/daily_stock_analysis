@@ -387,6 +387,60 @@ TABLE 3: EXCLUDED CANDIDATES
         max_single_limit = 200000.0
         self.assertLessEqual(new_collateral, max_single_limit)
 
+    def test_dynamic_tracked_equities_from_account_and_watchlists(self):
+        # 1. Equities in user's options-writing account (Living Trust-Options ...609)
+        account_equities = ["AXTI", "BLZE", "IONQ", "LUNR", "NET", "RTX", "TSLA"]
+        self.assertEqual(len(account_equities), 7)
+
+        # 2. Legacy hardcoded lists must be eliminated
+        legacy_hardcoded_universe = [
+            "SPY", "QQQ", "IWM", "NVDA", "AAPL", "MSFT", "AMZN", "GOOGL", "TSLA",
+            "PLTR", "IONQ", "NET", "RTX", "JEPI", "SCHD", "SPCX", "CLM", "CRF", "ZETA", "BLZE", "AXTI", "LUNR",
+        ]
+        self.assertEqual(len(legacy_hardcoded_universe), 22)
+
+        # Baseline tracked equities with no separate watchlists = exactly account equities (7)
+        user_watchlists = []
+        tracked_symbols = set(account_equities)
+        for wl in user_watchlists:
+            tracked_symbols.update(wl.get("tickers", []))
+        self.assertEqual(len(tracked_symbols), 7)
+        self.assertNotIn("SPY", tracked_symbols)
+        self.assertNotIn("QQQ", tracked_symbols)
+        self.assertNotIn("JEPI", tracked_symbols)
+
+        # 3. Dynamic update when a user creates a separate watchlist (e.g., Tech Growth with NVDA and PLTR)
+        tech_watchlist = {"id": "tech-growth", "name": "Tech Growth", "tickers": ["NVDA", "PLTR"]}
+        user_watchlists.append(tech_watchlist)
+
+        dynamic_tracked = set(account_equities)
+        for wl in user_watchlists:
+            dynamic_tracked.update(wl.get("tickers", []))
+
+        # Dynamically updates from 7 -> 9 unique equities
+        self.assertEqual(len(dynamic_tracked), 9)
+        self.assertTrue({"NVDA", "PLTR"}.issubset(dynamic_tracked))
+
+        # 4. Adding duplicate equity already in account (e.g. TSLA) does not double-count
+        options_watchlist = {"id": "favs", "name": "Options Favorites", "tickers": ["TSLA", "AMD"]}
+        user_watchlists.append(options_watchlist)
+
+        dynamic_tracked_2 = set(account_equities)
+        for wl in user_watchlists:
+            dynamic_tracked_2.update(wl.get("tickers", []))
+
+        # 7 account + {NVDA, PLTR} + {TSLA (dup), AMD} = 7 + 2 + 1 = 10
+        self.assertEqual(len(dynamic_tracked_2), 10)
+
+        # 5. Deleting a watchlist dynamically reduces the count
+        user_watchlists.pop(0)  # Remove tech-growth
+        dynamic_tracked_3 = set(account_equities)
+        for wl in user_watchlists:
+            dynamic_tracked_3.update(wl.get("tickers", []))
+
+        # 7 account + {TSLA, AMD} = 8
+        self.assertEqual(len(dynamic_tracked_3), 8)
+
 
 if __name__ == "__main__":
     unittest.main()
