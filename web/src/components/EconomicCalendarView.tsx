@@ -20,6 +20,8 @@ import {
   IndicatorFilterTier,
   MacroSynthesisOutput,
 } from '../types/economicCalendar';
+import { SortableTh } from './ui/SortableTh';
+import { sortData } from '../utils/tableSort';
 
 interface EconomicCalendarViewProps {
   onSelectSymbolForChart?: (symbol: string) => void;
@@ -39,6 +41,18 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
   const [impactFilter, setImpactFilter] = useState<IndicatorFilterTier>('ALL');
   const [sectorFilter, setSectorFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Table Sorting
+  const [sortKey, setSortKey] = useState<string>('dateET');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
+  };
 
   // AI Macro Synthesis States
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
@@ -102,6 +116,11 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       return true;
     });
   }, [data, impactFilter, sectorFilter, searchQuery]);
+
+  // Sorted indicators
+  const sortedIndicators = useMemo(() => {
+    return sortData(filteredIndicators, sortKey, sortOrder);
+  }, [filteredIndicators, sortKey, sortOrder]);
 
   // Unique sector options for filter dropdown
   const sectorOptions = useMemo(() => {
@@ -448,20 +467,32 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
           </button>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-800 shadow-xl">
-          <table className="w-full text-left text-xs text-slate-300 border-collapse bg-slate-900/70">
+        <div className="overflow-x-auto max-h-[680px] overflow-y-auto table-scroll-container rounded-xl border border-slate-800 shadow-xl">
+          <table className="w-full text-left text-xs text-slate-300 border-collapse bg-slate-900/70 table-sticky-header">
             <thead>
-              <tr className="bg-slate-950/90 text-[11px] text-slate-400 uppercase font-mono tracking-wider border-b border-slate-800">
-                <th className="py-3 px-4">Date &amp; Time (ET)</th>
-                <th className="py-3 px-4">Economic Indicator</th>
-                <th className="py-3 px-4">Market Impact</th>
-                <th className="py-3 px-4">Consensus / Prior</th>
-                <th className="py-3 px-4">Vulnerable Sectors</th>
-                <th className="py-3 px-4">Proxy ETFs &amp; Securities</th>
+              <tr className="bg-slate-950/90 text-[11px] text-slate-400 uppercase font-mono tracking-wider border-b border-slate-800 sticky top-0 z-10">
+                <SortableTh columnKey="dateET" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                  Date &amp; Time (ET)
+                </SortableTh>
+                <SortableTh columnKey="title" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                  Economic Indicator
+                </SortableTh>
+                <SortableTh columnKey="impact" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                  Market Impact
+                </SortableTh>
+                <SortableTh columnKey="forecast" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                  Consensus / Prior
+                </SortableTh>
+                <SortableTh columnKey="sectors" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                  Vulnerable Sectors
+                </SortableTh>
+                <SortableTh columnKey="tickers" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                  Proxy ETFs &amp; Securities
+                </SortableTh>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-sans">
-              {filteredIndicators.map((item, index) => (
+              {sortedIndicators.map((item, index) => (
                 <tr
                   key={index}
                   className="hover:bg-slate-800/40 transition-colors group"

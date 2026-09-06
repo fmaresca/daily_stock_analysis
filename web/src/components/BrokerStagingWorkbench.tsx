@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { OptionOpportunity, MultiLegSpread } from '../types/options';
 import {
   getSubmittedOrders,
@@ -21,6 +21,8 @@ import {
   Trash2,
   RefreshCw,
 } from './icons';
+import { SortableTh } from './ui/SortableTh';
+import { sortData, SortOrder } from '../utils/tableSort';
 
 interface BrokerStagingWorkbenchProps {
   opportunities: OptionOpportunity[];
@@ -39,6 +41,33 @@ export const BrokerStagingWorkbench: React.FC<BrokerStagingWorkbenchProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<'ALL' | 'CSP' | 'SPREADS' | 'HISTORY'>('ALL');
   const [orderHistory, setOrderHistory] = useState<SubmittedOrderRecord[]>(() => getSubmittedOrders());
+
+  // Sorting for CSP opportunities
+  const [cspSortKey, setCspSortKey] = useState<string>('symbol');
+  const [cspSortOrder, setCspSortOrder] = useState<SortOrder>('asc');
+  const requestCspSort = (key: string) => {
+    if (cspSortKey === key) setCspSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    else { setCspSortKey(key); setCspSortOrder('asc'); }
+  };
+  const sortedCSPs = useMemo(() => sortData(opportunities, cspSortKey, cspSortOrder), [opportunities, cspSortKey, cspSortOrder]);
+
+  // Sorting for Spreads
+  const [spreadSortKey, setSpreadSortKey] = useState<string>('symbol');
+  const [spreadSortOrder, setSpreadSortOrder] = useState<SortOrder>('asc');
+  const requestSpreadSort = (key: string) => {
+    if (spreadSortKey === key) setSpreadSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    else { setSpreadSortKey(key); setSpreadSortOrder('asc'); }
+  };
+  const sortedSpreads = useMemo(() => sortData(spreads, spreadSortKey, spreadSortOrder), [spreads, spreadSortKey, spreadSortOrder]);
+
+  // Sorting for order history
+  const [histSortKey, setHistSortKey] = useState<string>('timestamp');
+  const [histSortOrder, setHistSortOrder] = useState<SortOrder>('desc');
+  const requestHistSort = (key: string) => {
+    if (histSortKey === key) setHistSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    else { setHistSortKey(key); setHistSortOrder('asc'); }
+  };
+  const sortedHistory = useMemo(() => sortData(orderHistory, histSortKey, histSortOrder), [orderHistory, histSortKey, histSortOrder]);
 
   // Reload history when entering HISTORY tab
   useEffect(() => {
@@ -223,23 +252,23 @@ export const BrokerStagingWorkbench: React.FC<BrokerStagingWorkbenchProps> = ({
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
+          <div className="overflow-x-auto max-h-[580px] 2xl:max-h-[680px] overflow-y-auto relative table-scroll-container">
+            <table className="w-full text-left border-collapse text-xs table-sticky-header">
+              <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
                 <tr className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="py-2.5 px-4">Symbol</th>
-                  <th className="py-2.5 px-3">Spot Price</th>
-                  <th className="py-2.5 px-3">Strike &amp; Delta</th>
-                  <th className="py-2.5 px-3">Expiration &amp; DTE</th>
-                  <th className="py-2.5 px-3 text-right">Limit Price (Mid)</th>
-                  <th className="py-2.5 px-3 text-right">80% Take-Profit</th>
-                  <th className="py-2.5 px-3 text-right">Ann. ROC</th>
-                  <th className="py-2.5 px-3 text-center">Safety</th>
-                  <th className="py-2.5 px-4 text-center">Action</th>
+                  <SortableTh label="Symbol" sortKey="symbol" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Spot Price" sortKey="current_price" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Strike & Delta" sortKey="strike" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Expiration & DTE" sortKey="dte" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Limit Price (Mid)" sortKey="mid" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} align="right" />
+                  <SortableTh label="80% Take-Profit" sortKey="mid" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} align="right" />
+                  <SortableTh label="Ann. ROC" sortKey="annualized_roc" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} align="right" />
+                  <SortableTh label="Safety" sortKey="safety_tier" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} align="center" />
+                  <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-4 text-center border-b border-slate-800">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
-                {topCSPs.map((opp) => {
+                {sortedCSPs.map((opp: OptionOpportunity) => {
                   const limitMid = opp.mid;
                   const takeProfitPrice = Math.max(0.01, Math.round(limitMid * 0.20 * 100) / 100);
 
@@ -309,23 +338,23 @@ export const BrokerStagingWorkbench: React.FC<BrokerStagingWorkbenchProps> = ({
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
+          <div className="overflow-x-auto max-h-[580px] 2xl:max-h-[680px] overflow-y-auto relative table-scroll-container">
+            <table className="w-full text-left border-collapse text-xs table-sticky-header">
+              <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
                 <tr className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="py-2.5 px-4">Symbol</th>
-                  <th className="py-2.5 px-3">Strategy</th>
-                  <th className="py-2.5 px-3">Short Leg (0.15–0.20Δ)</th>
-                  <th className="py-2.5 px-3">Long Protection</th>
-                  <th className="py-2.5 px-3 text-right">Net Credit</th>
-                  <th className="py-2.5 px-3 text-right">Max Risk</th>
-                  <th className="py-2.5 px-3 text-right">Ann. ROC</th>
-                  <th className="py-2.5 px-3 text-right">POP %</th>
-                  <th className="py-2.5 px-4 text-center">Action</th>
+                  <SortableTh label="Symbol" sortKey="symbol" currentSortKey={spreadSortKey} currentSortOrder={spreadSortOrder} onSort={requestSpreadSort} />
+                  <SortableTh label="Strategy" sortKey="strategy_name" currentSortKey={spreadSortKey} currentSortOrder={spreadSortOrder} onSort={requestSpreadSort} />
+                  <SortableTh label="Short Leg (0.15–0.20Δ)" sortKey="short_strike" currentSortKey={spreadSortKey} currentSortOrder={spreadSortOrder} onSort={requestSpreadSort} />
+                  <SortableTh label="Long Protection" sortKey="long_strike" currentSortKey={spreadSortKey} currentSortOrder={spreadSortOrder} onSort={requestSpreadSort} />
+                  <SortableTh label="Net Credit" sortKey="net_credit" currentSortKey={spreadSortKey} currentSortOrder={spreadSortOrder} onSort={requestSpreadSort} align="right" />
+                  <SortableTh label="Max Risk" sortKey="max_risk" currentSortKey={spreadSortKey} currentSortOrder={spreadSortOrder} onSort={requestSpreadSort} align="right" />
+                  <SortableTh label="Ann. ROC" sortKey="annualized_roc" currentSortKey={spreadSortKey} currentSortOrder={spreadSortOrder} onSort={requestSpreadSort} align="right" />
+                  <SortableTh label="POP %" sortKey="pop_pct" currentSortKey={spreadSortKey} currentSortOrder={spreadSortOrder} onSort={requestSpreadSort} align="right" />
+                  <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-4 text-center border-b border-slate-800">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
-                {topSpreads.map((spread) => {
+                {sortedSpreads.map((spread: MultiLegSpread) => {
                   return (
                     <tr key={spread.id} className="hover:bg-slate-900/40 transition-colors">
                       <td className="py-3 px-4 font-sans font-bold text-white">
@@ -428,24 +457,24 @@ export const BrokerStagingWorkbench: React.FC<BrokerStagingWorkbenchProps> = ({
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
+                <div className="overflow-x-auto max-h-[580px] 2xl:max-h-[680px] overflow-y-auto relative table-scroll-container">
+              <table className="w-full text-left border-collapse text-xs table-sticky-header">
+                <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
                   <tr className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    <th className="py-2.5 px-4">Timestamp</th>
-                    <th className="py-2.5 px-3">Symbol</th>
-                    <th className="py-2.5 px-3">Strategy</th>
-                    <th className="py-2.5 px-3">Broker</th>
-                    <th className="py-2.5 px-3 text-right">Qty</th>
-                    <th className="py-2.5 px-3 text-right">Limit Price</th>
-                    <th className="py-2.5 px-3 text-right">Net Credit</th>
-                    <th className="py-2.5 px-3 text-center">Mode</th>
-                    <th className="py-2.5 px-3 text-center">Status</th>
-                    <th className="py-2.5 px-4">Order ID / Notes</th>
+                    <SortableTh label="Timestamp" sortKey="timestamp" currentSortKey={histSortKey} currentSortOrder={histSortOrder} onSort={requestHistSort} />
+                    <SortableTh label="Symbol" sortKey="symbol" currentSortKey={histSortKey} currentSortOrder={histSortOrder} onSort={requestHistSort} />
+                    <SortableTh label="Strategy" sortKey="strategy" currentSortKey={histSortKey} currentSortOrder={histSortOrder} onSort={requestHistSort} />
+                    <SortableTh label="Broker" sortKey="broker" currentSortKey={histSortKey} currentSortOrder={histSortOrder} onSort={requestHistSort} />
+                    <SortableTh label="Qty" sortKey="contracts" currentSortKey={histSortKey} currentSortOrder={histSortOrder} onSort={requestHistSort} align="right" />
+                    <SortableTh label="Limit Price" sortKey="limitPrice" currentSortKey={histSortKey} currentSortOrder={histSortOrder} onSort={requestHistSort} align="right" />
+                    <SortableTh label="Net Credit" sortKey="netCreditTotal" currentSortKey={histSortKey} currentSortOrder={histSortOrder} onSort={requestHistSort} align="right" />
+                    <SortableTh label="Mode" sortKey="mode" currentSortKey={histSortKey} currentSortOrder={histSortOrder} onSort={requestHistSort} align="center" />
+                    <SortableTh label="Status" sortKey="status" currentSortKey={histSortKey} currentSortOrder={histSortOrder} onSort={requestHistSort} align="center" />
+                    <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-4 border-b border-slate-800">Order ID / Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
-                  {orderHistory.map((order) => {
+                  {sortedHistory.map((order: SubmittedOrderRecord) => {
                     const timeFormatted = new Date(order.timestamp).toLocaleString('en-US', {
                       month: 'short',
                       day: 'numeric',

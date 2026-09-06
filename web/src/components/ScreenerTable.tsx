@@ -43,10 +43,10 @@ export const ScreenerTable: React.FC<ScreenerTableProps> = ({
 
   return (
     <div className="glass-panel rounded-xl border border-slate-800/80 overflow-hidden shadow-2xl">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto max-h-[720px] overflow-y-auto table-scroll-container">
+        <table className="w-full text-left border-collapse table-sticky-header">
           <thead>
-            <tr className="border-b border-slate-800 bg-slate-900/90 text-[11px] font-semibold text-slate-400 uppercase tracking-wider select-none">
+            <tr className="border-b border-slate-800 bg-slate-900/90 text-[11px] font-semibold text-slate-400 uppercase tracking-wider select-none sticky top-0 z-10">
               <th
                 onClick={() => onSort('symbol')}
                 className="py-3 px-4 cursor-pointer hover:text-slate-200 transition-colors"

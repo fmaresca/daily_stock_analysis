@@ -28,6 +28,8 @@ import {
   Layers,
   ChevronRight,
 } from './icons';
+import { SortableTh } from './ui/SortableTh';
+import { sortData, SortOrder } from '../utils/tableSort';
 
 interface HoldingsCoveredCallViewProps {
   onStageOrder?: (order: any) => void;
@@ -131,12 +133,17 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
       const ivrRank = 40 + (stk.symbol.charCodeAt(1) % 45);
       const resistanceLevel = Math.round(stk.spotPrice * 1.05 * 100) / 100;
 
+      const marketValue = stk.quantity * stk.spotPrice;
+      const unrealizedPnl = stk.quantity * (stk.spotPrice - stk.entryPrice);
+
       return {
         symbol: stk.symbol,
         companyName: stk.companyName || stk.symbol,
         shares: stk.quantity,
         costBasis: stk.entryPrice,
         currentSpot: stk.spotPrice,
+        marketValue,
+        unrealizedPnl,
         uncoveredShares,
         activeCoveredCall: activeCallsList[0],
         activeCoveredCalls: activeCallsList,
@@ -146,18 +153,53 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
       };
     });
 
-    csps.forEach((p) => {
-      totalCspCash += p.strike * p.quantity * 100;
+    const enrichedCsps = csps.map((p) => {
+      const collateral = p.strike * p.quantity * 100;
+      totalCspCash += collateral;
+      return {
+        ...p,
+        collateral,
+      };
     });
 
     return {
       stockPairs: pairs,
-      openCSPs: csps,
+      openCSPs: enrichedCsps,
       totalStockEquity: totalEquity,
       totalCspCollateral: totalCspCash,
       totalActiveCcIncome: totalCcPrem,
     };
   }, [positions]);
+
+  // Sorting state for stockPairs (Table 1: Long Equities & Covered Calls)
+  const [stockSortKey, setStockSortKey] = useState<string>('symbol');
+  const [stockSortOrder, setStockSortOrder] = useState<SortOrder>('asc');
+  const requestStockSort = (key: string) => {
+    if (stockSortKey === key) {
+      setStockSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setStockSortKey(key);
+      setStockSortOrder('asc');
+    }
+  };
+  const sortedStockPairs = useMemo(() => {
+    return sortData(stockPairs, stockSortKey, stockSortOrder);
+  }, [stockPairs, stockSortKey, stockSortOrder]);
+
+  // Sorting state for openCSPs (Table 2: Active Cash-Secured Puts)
+  const [cspSortKey, setCspSortKey] = useState<string>('symbol');
+  const [cspSortOrder, setCspSortOrder] = useState<SortOrder>('asc');
+  const requestCspSort = (key: string) => {
+    if (cspSortKey === key) {
+      setCspSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setCspSortKey(key);
+      setCspSortOrder('asc');
+    }
+  };
+  const sortedOpenCSPs = useMemo(() => {
+    return sortData(openCSPs, cspSortKey, cspSortOrder);
+  }, [openCSPs, cspSortKey, cspSortOrder]);
 
   // Handler to remove a position
   const handleRemovePosition = (id: string) => {
@@ -320,23 +362,23 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
             No long stock positions recorded. Click "Add Position" above to add your equity holdings.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
+          <div className="overflow-x-auto max-h-[550px] 2xl:max-h-[650px] overflow-y-auto relative table-scroll-container">
+            <table className="w-full text-left text-xs border-collapse table-sticky-header">
+              <thead className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur">
                 <tr className="border-b border-slate-800 text-slate-400 font-medium">
-                  <th className="py-2.5 px-3">Symbol</th>
-                  <th className="py-2.5 px-3">Shares</th>
-                  <th className="py-2.5 px-3">Cost Basis</th>
-                  <th className="py-2.5 px-3">Spot Price</th>
-                  <th className="py-2.5 px-3">Market Value</th>
-                  <th className="py-2.5 px-3">Unrealized P&amp;L</th>
-                  <th className="py-2.5 px-3">Active Covered Call</th>
-                  <th className="py-2.5 px-3">Uncovered Status</th>
-                  <th className="py-2.5 px-3 text-right">Harvest Action</th>
+                  <SortableTh label="Symbol" sortKey="symbol" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
+                  <SortableTh label="Shares" sortKey="shares" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
+                  <SortableTh label="Cost Basis" sortKey="costBasis" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
+                  <SortableTh label="Spot Price" sortKey="currentSpot" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
+                  <SortableTh label="Market Value" sortKey="marketValue" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
+                  <SortableTh label="Unrealized P&L" sortKey="unrealizedPnl" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
+                  <th className="sticky top-0 z-10 bg-slate-900/98 backdrop-blur py-2.5 px-3 border-b border-slate-800">Active Covered Call</th>
+                  <SortableTh label="Uncovered Status" sortKey="uncoveredShares" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
+                  <th className="sticky top-0 z-10 bg-slate-900/98 backdrop-blur py-2.5 px-3 text-right border-b border-slate-800">Harvest Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
-                {stockPairs.map((stk) => {
+                {sortedStockPairs.map((stk) => {
                   const marketVal = stk.shares * stk.currentSpot;
                   const totalCost = stk.shares * stk.costBasis;
                   const pnlDollar = marketVal - totalCost;
@@ -495,26 +537,26 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
             No open cash-secured puts. You have full buying power available.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
+          <div className="overflow-x-auto max-h-[550px] 2xl:max-h-[650px] overflow-y-auto relative table-scroll-container">
+            <table className="w-full text-left text-xs border-collapse table-sticky-header">
+              <thead className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur">
                 <tr className="border-b border-slate-800 text-slate-400 font-medium">
-                  <th className="py-2.5 px-3">Symbol</th>
-                  <th className="py-2.5 px-3">Contracts</th>
-                  <th className="py-2.5 px-3">Strike</th>
-                  <th className="py-2.5 px-3">Spot Price</th>
-                  <th className="py-2.5 px-3">DTE</th>
-                  <th className="py-2.5 px-3">Delta</th>
-                  <th className="py-2.5 px-3">Entry Prem</th>
-                  <th className="py-2.5 px-3">Current</th>
-                  <th className="py-2.5 px-3">P&amp;L (%)</th>
-                  <th className="py-2.5 px-3">Committed Collateral</th>
-                  <th className="py-2.5 px-3">Trigger / Status</th>
-                  <th className="py-2.5 px-3 text-right">Actions</th>
+                  <SortableTh label="Symbol" sortKey="symbol" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Contracts" sortKey="quantity" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Strike" sortKey="strike" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Spot Price" sortKey="spotPrice" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="DTE" sortKey="dte" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Delta" sortKey="delta" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Entry Prem" sortKey="entryPrice" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Current" sortKey="currentOptionPrice" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="P&L (%)" sortKey="gainPercent" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Committed Collateral" sortKey="collateral" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <th className="sticky top-0 z-10 bg-slate-900/98 backdrop-blur py-2.5 px-3 border-b border-slate-800">Trigger / Status</th>
+                  <th className="sticky top-0 z-10 bg-slate-900/98 backdrop-blur py-2.5 px-3 text-right border-b border-slate-800">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
-                {openCSPs.map((pos) => {
+                {sortedOpenCSPs.map((pos) => {
                   const collateral = pos.strike * pos.quantity * 100;
                   const pnlDollar =
                     pos.gainDollar !== undefined

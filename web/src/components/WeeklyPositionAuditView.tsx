@@ -35,6 +35,8 @@ import {
   Award,
   Layers,
 } from './icons';
+import { SortableTh } from './ui/SortableTh';
+import { sortData, SortOrder } from '../utils/tableSort';
 
 interface WeeklyPositionAuditViewProps {
   onNavigateToRollAssistant?: (symbol: string) => void;
@@ -85,6 +87,22 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
     if (positionFilter === 'CASH_MMF') return positions.filter((p) => p.type === 'CASH' || p.type === 'MMF');
     return positions;
   }, [positions, positionFilter]);
+
+  // Sorting state for Active Positions Ledger
+  const [posSortKey, setPosSortKey] = useState<string>('symbol');
+  const [posSortOrder, setPosSortOrder] = useState<SortOrder>('asc');
+  const requestPosSort = (key: string) => {
+    if (posSortKey === key) {
+      setPosSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setPosSortKey(key);
+      setPosSortOrder('asc');
+    }
+  };
+
+  const sortedPositions = useMemo(() => {
+    return sortData(filteredPositions, posSortKey, posSortOrder);
+  }, [filteredPositions, posSortKey, posSortOrder]);
 
   // Reset to live Charles Schwab account baseline (7 equities, 2 CSPs, 8 CCs, 3 Cash/MMFs = 20 positions)
   const handleResetToLiveSchwabAccount = () => {
@@ -620,33 +638,33 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
+        <div className="overflow-x-auto max-h-[640px] 2xl:max-h-[740px] overflow-y-auto relative table-scroll-container">
+          <table className="w-full text-left border-collapse text-xs table-sticky-header">
+            <thead className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur">
               <tr className="border-b border-slate-800 bg-slate-900/90 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                <th className="py-3 px-4">Symbol / Asset Class</th>
-                <th className="py-3 px-3">Quantity</th>
-                <th className="py-3 px-3">Spot Price</th>
-                <th className="py-3 px-3">Strike / Coverage</th>
-                <th className="py-3 px-3">DTE (Exp)</th>
-                <th className="py-3 px-3">Delta</th>
-                <th className="py-3 px-3">Entry / Current</th>
-                <th className="py-3 px-3">Collateral / Market Val</th>
-                <th className="py-3 px-3">Profit / Yield</th>
-                <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+                <SortableTh label="Symbol / Asset Class" sortKey="symbol" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="Quantity" sortKey="quantity" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="Spot Price" sortKey="spotPrice" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="Strike / Coverage" sortKey="strike" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="DTE (Exp)" sortKey="dte" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="Delta" sortKey="delta" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="Entry / Current" sortKey="entryPrice" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="Collateral / Market Val" sortKey="marketValueTotal" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="Profit / Yield" sortKey="gainDollar" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="Status" sortKey="status" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <th className="sticky top-0 z-10 bg-slate-900/98 backdrop-blur py-3 px-4 text-center border-b border-slate-800">Actions</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-800/60">
-              {filteredPositions.length === 0 ? (
+              {sortedPositions.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="py-12 text-center text-slate-400">
                     No positions found for the selected filter tab. Click "+ Add Open Position" or "Sync Schwab Baseline".
                   </td>
                 </tr>
               ) : (
-                filteredPositions.map((p) => {
+                sortedPositions.map((p) => {
                   const isCsp = p.type === 'CSP';
                   const isCc = p.type === 'COVERED_CALL';
                   const isStock = p.type === 'STOCK';

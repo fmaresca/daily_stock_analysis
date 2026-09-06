@@ -495,6 +495,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              {/* Universal Table Navigation & Sorting Tip */}
+              <div className="bg-slate-900/90 border border-cyan-500/30 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center space-x-2.5">
+                  <div className="p-2 rounded-lg bg-cyan-500/20 text-cyan-300 shrink-0">
+                    <span className="text-base">↕️</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-white block">Universal Column Sorting &amp; Sticky Locked Headers</span>
+                    <span className="text-slate-300">
+                      All columnar data tables across the platform (Cascading Tri-Screen, Weekly Stock Screeners, Active Position Audits, Holdings &amp; CCs, Broker Staging, and Macro Calendar) feature interactive multi-type sorting. Click any header to toggle ascending/descending, with headers remaining locked and visible while scrolling.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Step-by-Step Production Guide with Explicit Manual Interventions */}
               <div className="space-y-4">
                 {/* Step 1 */}

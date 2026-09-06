@@ -394,9 +394,9 @@ export const OptionChainMatrixView: React.FC<OptionChainMatrixViewProps> = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
+        <div className="overflow-x-auto max-h-[680px] overflow-y-auto table-scroll-container">
+          <table className="w-full text-left border-collapse text-xs table-sticky-header">
+            <thead className="sticky top-0 z-20 bg-slate-950 shadow-md">
               {/* Top Level Group Header */}
               <tr className="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-center">
                 {(sideFilter === 'BOTH' || sideFilter === 'CALLS') && (

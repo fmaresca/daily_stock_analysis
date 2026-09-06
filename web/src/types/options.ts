@@ -480,6 +480,7 @@ export interface StockHoldingPair {
   currentSpot: number;
   currentSpotPrice?: number;
   marketValue?: number;
+  unrealizedPnl?: number;
   activeCoveredCall?: {
     strike: number;
     expiration?: string;

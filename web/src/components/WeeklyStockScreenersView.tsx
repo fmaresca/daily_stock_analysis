@@ -35,6 +35,8 @@ import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescr
 import { fetchTickerChartData } from '../utils/liveMarketFetcher';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
+import { SortableTh } from './ui/SortableTh';
+import { sortData, SortOrder } from '../utils/tableSort';
 
 interface WeeklyStockScreenersViewProps {
   initialDataset: WeeklyScreenerDataset | null;
@@ -719,6 +721,22 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
     });
   }, [allRecords, searchQuery, weeklyOnly, opinionFilter, strategyFilter, cboeOnlyGate, activeSource]);
 
+  // Universal Table Sorting State
+  const [screenerSortKey, setScreenerSortKey] = useState<string>('opinion_pct');
+  const [screenerSortOrder, setScreenerSortOrder] = useState<SortOrder>('desc');
+  const requestScreenerSort = (key: string) => {
+    if (screenerSortKey === key) {
+      setScreenerSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setScreenerSortKey(key);
+      setScreenerSortOrder('asc');
+    }
+  };
+
+  const sortedRecords = useMemo(() => {
+    return sortData(filteredRecords, screenerSortKey, screenerSortOrder);
+  }, [filteredRecords, screenerSortKey, screenerSortOrder]);
+
   // KPI Calculations
   const stats = useMemo(() => {
     const total = allRecords.length;
@@ -1272,38 +1290,38 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
 
       {/* Screened Equities Table with Dynamic Headers */}
       <div className="glass-panel rounded-2xl border border-slate-800/90 shadow-2xl overflow-hidden bg-slate-950/70">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300 border-collapse">
-            <thead className="bg-slate-900/90 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="overflow-x-auto max-h-[680px] 2xl:max-h-[780px] overflow-y-auto relative table-scroll-container">
+          <table className="w-full text-left text-xs text-slate-300 border-collapse table-sticky-header">
+            <thead className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               {activeSource === 'MARKETCHAMELEON' ? (
                 <tr>
-                  <th className="py-3 px-4">Ticker / Security</th>
-                  <th className="py-3 px-3 text-right">Price</th>
-                  <th className="py-3 px-3 text-right">Net Chg (% Chg)</th>
-                  <th className="py-3 px-3 text-right">Market Cap</th>
-                  <th className="py-3 px-3 text-center">14-Day RSI</th>
-                  <th className="py-3 px-3 text-center">IV30</th>
-                  <th className="py-3 px-3 text-center">20D / 1Y Vol</th>
-                  <th className="py-3 px-4">MA Technical Signal</th>
-                  <th className="py-3 px-3 text-center">CBOE Weeklys</th>
-                  <th className="py-3 px-3">Strategy Setup</th>
-                  <th className="py-3 px-4 text-center">Actions</th>
+                  <SortableTh label="Ticker / Security" sortKey="symbol" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} />
+                  <SortableTh label="Price" sortKey="last_price" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="right" />
+                  <SortableTh label="Net Chg (% Chg)" sortKey="percent_change" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="right" />
+                  <SortableTh label="Market Cap" sortKey="extra_fields.market_cap" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="right" />
+                  <SortableTh label="14-Day RSI" sortKey="extra_fields.rsi_14" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="center" />
+                  <SortableTh label="IV30" sortKey="extra_fields.iv30" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="center" />
+                  <SortableTh label="20D / 1Y Vol" sortKey="extra_fields.vol_20d" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="center" />
+                  <SortableTh label="MA Technical Signal" sortKey="extra_fields.ma_signal" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} />
+                  <SortableTh label="CBOE Weeklys" sortKey="has_weekly_options" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="center" />
+                  <SortableTh label="Strategy Setup" sortKey="recommended_strategy" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} />
+                  <th className="sticky top-0 z-10 bg-slate-900/98 backdrop-blur py-3 px-4 text-center border-b border-slate-800">Actions</th>
                 </tr>
               ) : (
                 <tr>
-                  <th className="py-3 px-4">Ticker / Security</th>
-                  <th className="py-3 px-3 text-right">Price</th>
-                  <th className="py-3 px-3 text-right">Net Chg</th>
-                  <th className="py-3 px-4">Barchart Signal / Opinion</th>
-                  <th className="py-3 px-3 text-center">Stability (Prev / Wk / Mo)</th>
-                  <th className="py-3 px-3 text-center">Options Cadence</th>
-                  <th className="py-3 px-3">Recommended Options Setup</th>
-                  <th className="py-3 px-4 text-center">Actions</th>
+                  <SortableTh label="Ticker / Security" sortKey="symbol" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} />
+                  <SortableTh label="Price" sortKey="last_price" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="right" />
+                  <SortableTh label="Net Chg (% Chg)" sortKey="percent_change" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="right" />
+                  <SortableTh label="Barchart Signal / Opinion" sortKey="opinion_pct" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} />
+                  <SortableTh label="Stability (Prev / Wk / Mo)" sortKey="stability_previous" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="center" />
+                  <SortableTh label="Options Cadence" sortKey="has_weekly_options" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} align="center" />
+                  <SortableTh label="Recommended Options Setup" sortKey="recommended_strategy" currentSortKey={screenerSortKey} currentSortOrder={screenerSortOrder} onSort={requestScreenerSort} />
+                  <th className="sticky top-0 z-10 bg-slate-900/98 backdrop-blur py-3 px-4 text-center border-b border-slate-800">Actions</th>
                 </tr>
               )}
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono">
-              {filteredRecords.length === 0 ? (
+              {sortedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={activeSource === 'MARKETCHAMELEON' ? 11 : 8} className="py-12 text-center text-slate-500 font-sans">
                     <p className="text-sm font-semibold">No screened stocks matched your filter criteria.</p>
@@ -1311,7 +1329,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
                   </td>
                 </tr>
               ) : (
-                filteredRecords.map((item, idx) => {
+                sortedRecords.map((item, idx) => {
                   const isPositive = item.percent_change >= 0;
                   const is100Buy = item.opinion_pct >= 90;
                   const ex = item.extra_fields || {};
