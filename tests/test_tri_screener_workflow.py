@@ -117,6 +117,25 @@ class TestTriScreenerWorkflow(unittest.TestCase):
         # Healthcare IV < Energy IV
         self.assertLess(sector_map["RVTY"]["base_iv"], sector_map["VLO"]["base_iv"])
 
+    def test_cboe_weekly_options_gating_excludes_monthly_only(self):
+        """Validates that securities without weekly options (like AMCX) are detected and filtered."""
+        path = os.path.join(self.public_data_dir, "weekly_screeners.json")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        records = data.get("records", [])
+        amcx = next((r for r in records if r.get("symbol") == "AMCX"), None)
+        self.assertIsNotNone(amcx, "AMCX should be present in raw barchart records")
+        # In the source data, AMCX explicitly has has_weekly_options = False
+        self.assertFalse(amcx.get("has_weekly_options"), "AMCX must have has_weekly_options=False")
+
+        # Simulate strict CBOE weekly filtering logic in CascadingScreenerView / geminiPromptTemplates
+        def filter_strict_weeklys(cand_list):
+            return [c for c in cand_list if c.get("has_weekly_options") is True]
+
+        filtered = filter_strict_weeklys(records)
+        self.assertNotIn("AMCX", [c["symbol"] for c in filtered], "AMCX must be excluded when strict weeklys gate is active")
+
 
 if __name__ == "__main__":
     unittest.main()

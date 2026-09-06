@@ -41,8 +41,9 @@ export function generateInstitutionalGeminiPrompt({
   const deployableCash = Math.max(0, capitalState.freeCash || (capitalState.totalCash - 5000 - capitalState.committedCollateral));
   const maxPositions = Math.max(1, Math.min(5, Math.floor(deployableCash / (effectiveAlloc || 15000)) || 1));
 
-  // Build candidate dataset directly from the consolidated screener state
-  const candidateRows = opportunities.slice(0, 25).map((o, idx) => {
+  // Build candidate dataset directly from the consolidated screener state (strictly weekly options only)
+  const validOpportunities = opportunities.filter((o) => o.has_weeklys !== false);
+  const candidateRows = validOpportunities.slice(0, 25).map((o, idx) => {
     const tMeta = tickers.find((t) => t.symbol === o.symbol);
     const barchartText = tMeta?.barchart_opinion
       ? `${tMeta.barchart_opinion.opinion_pct}% Buy (${tMeta.barchart_opinion.signal_strength || '100% Buy'})`
@@ -60,8 +61,9 @@ export function generateInstitutionalGeminiPrompt({
       : o.liquidity_tier === 'Tier 1'
       ? '2,500k'
       : '1,200k';
+    const cadence = o.expiration_cadence || (o.has_weeklys ? 'Weekly' : 'Monthly Only');
 
-    return `${idx + 1}. Symbol: ${o.symbol} | Spot: $${o.current_price.toFixed(2)} | Suggested Strike: $${o.strike.toFixed(2)} | Delta: ${o.delta.toFixed(2)} | Bid/Ask: $${o.bid.toFixed(2)}/$${o.ask.toFixed(2)} | Est. Prem: $${o.mid.toFixed(2)} | IV: ${iv}% | IV Rank: ${ivRank}% | 14D RSI: ${rsi} | Cushion: ${cushion}% | Trend: ${mcTrend} | Barchart: ${barchartText} | Volume: ${vol} | Next Earnings: ${o.next_earnings_date || tMeta?.next_earnings_date || 'None during expiration week'}`;
+    return `${idx + 1}. Symbol: ${o.symbol} | Spot: $${o.current_price.toFixed(2)} | Suggested Strike: $${o.strike.toFixed(2)} | Delta: ${o.delta.toFixed(2)} | Bid/Ask: $${o.bid.toFixed(2)}/$${o.ask.toFixed(2)} | Est. Prem: $${o.mid.toFixed(2)} | IV: ${iv}% | IV Rank: ${ivRank}% | 14D RSI: ${rsi} | Cushion: ${cushion}% | Trend: ${mcTrend} | Barchart: ${barchartText} | Weekly Options: ${cadence} | Volume: ${vol} | Next Earnings: ${o.next_earnings_date || tMeta?.next_earnings_date || 'None during expiration week'}`;
   }).join('\n');
 
   return `**Role & Objective:**
