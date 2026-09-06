@@ -52,6 +52,8 @@ import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { parseScreenerCSV } from '../utils/screenerCsvParser';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
 import { hydrateOptionOpportunity } from '../utils/screenerHydrator';
+import { SortableTh } from './ui/SortableTh';
+import { sortData, SortOrder } from '../utils/tableSort';
 
 export type CascadingSubTab = 'BARCHART' | 'MARKETCHAMELEON' | 'TOS_BARCHART' | 'GEMINI_DECISION_HUB';
 
@@ -787,6 +789,56 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     });
   }, [tosWatchlistDataset, searchQuery, weeklyOnlyFilter]);
 
+  // Universal Table Sorting States for Barchart, MarketChameleon, ThinkorSwim, and Gemini
+  const [bcSortKey, setBcSortKey] = useState<string>('opinion_pct');
+  const [bcSortOrder, setBcSortOrder] = useState<SortOrder>('desc');
+  const requestBcSort = (key: string) => {
+    if (bcSortKey === key) setBcSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    else { setBcSortKey(key); setBcSortOrder('asc'); }
+  };
+
+  const [mcSortKey, setMcSortKey] = useState<string>('opinion_pct');
+  const [mcSortOrder, setMcSortOrder] = useState<SortOrder>('desc');
+  const requestMcSort = (key: string) => {
+    if (mcSortKey === key) setMcSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    else { setMcSortKey(key); setMcSortOrder('asc'); }
+  };
+
+  const [tosSortKey, setTosSortKey] = useState<string>('opinion_pct');
+  const [tosSortOrder, setTosSortOrder] = useState<SortOrder>('desc');
+  const requestTosSort = (key: string) => {
+    if (tosSortKey === key) setTosSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    else { setTosSortKey(key); setTosSortOrder('asc'); }
+  };
+
+  const [geminiTradesSortKey, setGeminiTradesSortKey] = useState<string>('riskRank');
+  const [geminiTradesSortOrder, setGeminiTradesSortOrder] = useState<SortOrder>('asc');
+  const requestGeminiTradesSort = (key: string) => {
+    if (geminiTradesSortKey === key) setGeminiTradesSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    else { setGeminiTradesSortKey(key); setGeminiTradesSortOrder('asc'); }
+  };
+
+  const sortedBarchartRecords = useMemo(() => {
+    return sortData(filteredBarchartRecords, bcSortKey, bcSortOrder);
+  }, [filteredBarchartRecords, bcSortKey, bcSortOrder]);
+
+  const sortedMcRecords = useMemo(() => {
+    return sortData(filteredMcRecords, mcSortKey, mcSortOrder);
+  }, [filteredMcRecords, mcSortKey, mcSortOrder]);
+
+  const sortedTosRecords = useMemo(() => {
+    return sortData(filteredTosRecords, tosSortKey, tosSortOrder);
+  }, [filteredTosRecords, tosSortKey, tosSortOrder]);
+
+  const sortedGeminiTrades = useMemo(() => {
+    if (!parsedGeminiResult?.recommendedTrades) return [];
+    return sortData(parsedGeminiResult.recommendedTrades, geminiTradesSortKey, geminiTradesSortOrder);
+  }, [parsedGeminiResult?.recommendedTrades, geminiTradesSortKey, geminiTradesSortOrder]);
+
+  const sortedFinalCandidates = useMemo(() => {
+    return sortData(finalCandidates, sortBy, sortOrder);
+  }, [finalCandidates, sortBy, sortOrder]);
+
   return (
     <div className="space-y-6">
       {/* 1. Header & Live Cash Context Bar */}
@@ -1032,23 +1084,23 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
           </div>
 
           {/* Standardized Barchart Top 1% Table */}
-          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl">
-            <table className="w-full text-left text-xs font-mono">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[11px]">
-                  <th className="py-2.5 px-3">Rank &amp; Symbol</th>
-                  <th className="py-2.5 px-3">Company Name</th>
-                  <th className="py-2.5 px-3 text-right">Last Price</th>
-                  <th className="py-2.5 px-3 text-right">Change (% Chg)</th>
-                  <th className="py-2.5 px-3">Barchart Consensus Opinion</th>
-                  <th className="py-2.5 px-3 text-center">Stability (Prev &rarr; LW &rarr; LM)</th>
-                  <th className="py-2.5 px-3 text-center">Options Cadence</th>
-                  <th className="py-2.5 px-3">Recommended Strategy</th>
-                  <th className="py-2.5 px-3 text-center">Actions</th>
+          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl max-h-[620px] 2xl:max-h-[720px] overflow-y-auto relative table-scroll-container">
+            <table className="w-full text-left text-xs font-mono border-collapse table-sticky-header">
+              <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
+                <tr className="border-b border-slate-800 bg-slate-950/90 text-slate-400 text-[11px]">
+                  <SortableTh label="Rank & Symbol" sortKey="symbol" currentSortKey={bcSortKey} currentSortOrder={bcSortOrder} onSort={requestBcSort} />
+                  <SortableTh label="Company Name" sortKey="name" currentSortKey={bcSortKey} currentSortOrder={bcSortOrder} onSort={requestBcSort} />
+                  <SortableTh label="Last Price" sortKey="last_price" currentSortKey={bcSortKey} currentSortOrder={bcSortOrder} onSort={requestBcSort} align="right" />
+                  <SortableTh label="Change (% Chg)" sortKey="percent_change" currentSortKey={bcSortKey} currentSortOrder={bcSortOrder} onSort={requestBcSort} align="right" />
+                  <SortableTh label="Barchart Consensus Opinion" sortKey="opinion_pct" currentSortKey={bcSortKey} currentSortOrder={bcSortOrder} onSort={requestBcSort} />
+                  <SortableTh label="Stability (Prev → LW → LM)" sortKey="stability_previous" currentSortKey={bcSortKey} currentSortOrder={bcSortOrder} onSort={requestBcSort} align="center" />
+                  <SortableTh label="Options Cadence" sortKey="has_weekly_options" currentSortKey={bcSortKey} currentSortOrder={bcSortOrder} onSort={requestBcSort} align="center" />
+                  <SortableTh label="Recommended Strategy" sortKey="recommended_strategy" currentSortKey={bcSortKey} currentSortOrder={bcSortOrder} onSort={requestBcSort} />
+                  <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-3 text-center text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {filteredBarchartRecords.map((item, idx) => {
+                {sortedBarchartRecords.map((item, idx) => {
                   const isPositive = item.price_change >= 0;
                   return (
                     <tr key={item.symbol} className="hover:bg-slate-800/40 transition-colors">
@@ -1262,24 +1314,24 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
           </div>
 
           {/* Standardized MarketChameleon Table */}
-          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl">
-            <table className="w-full text-left text-xs font-mono">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[11px]">
-                  <th className="py-2.5 px-3">Symbol</th>
-                  <th className="py-2.5 px-3">Company Name</th>
-                  <th className="py-2.5 px-3 text-right">Price</th>
-                  <th className="py-2.5 px-3 text-right">Change (% Chg)</th>
-                  <th className="py-2.5 px-3 text-right">Market Cap</th>
-                  <th className="py-2.5 px-3 text-right">14D RSI</th>
-                  <th className="py-2.5 px-3 text-right">IV30 (Vol 20D/1Y)</th>
-                  <th className="py-2.5 px-3 text-center">Options Cadence</th>
-                  <th className="py-2.5 px-3">Recommended Strategy</th>
-                  <th className="py-2.5 px-3 text-center">Actions</th>
+          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl max-h-[620px] 2xl:max-h-[720px] overflow-y-auto relative table-scroll-container">
+            <table className="w-full text-left text-xs font-mono border-collapse table-sticky-header">
+              <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
+                <tr className="border-b border-slate-800 bg-slate-950/90 text-slate-400 text-[11px]">
+                  <SortableTh label="Symbol" sortKey="symbol" currentSortKey={mcSortKey} currentSortOrder={mcSortOrder} onSort={requestMcSort} />
+                  <SortableTh label="Company Name" sortKey="name" currentSortKey={mcSortKey} currentSortOrder={mcSortOrder} onSort={requestMcSort} />
+                  <SortableTh label="Price" sortKey="last_price" currentSortKey={mcSortKey} currentSortOrder={mcSortOrder} onSort={requestMcSort} align="right" />
+                  <SortableTh label="Change (% Chg)" sortKey="percent_change" currentSortKey={mcSortKey} currentSortOrder={mcSortOrder} onSort={requestMcSort} align="right" />
+                  <SortableTh label="Market Cap" sortKey="extra_fields.market_cap" currentSortKey={mcSortKey} currentSortOrder={mcSortOrder} onSort={requestMcSort} align="right" />
+                  <SortableTh label="14D RSI" sortKey="extra_fields.rsi_14" currentSortKey={mcSortKey} currentSortOrder={mcSortOrder} onSort={requestMcSort} align="right" />
+                  <SortableTh label="IV30" sortKey="extra_fields.iv30" currentSortKey={mcSortKey} currentSortOrder={mcSortOrder} onSort={requestMcSort} align="right" />
+                  <SortableTh label="Options Cadence" sortKey="has_weekly_options" currentSortKey={mcSortKey} currentSortOrder={mcSortOrder} onSort={requestMcSort} align="center" />
+                  <SortableTh label="Recommended Strategy" sortKey="recommended_strategy" currentSortKey={mcSortKey} currentSortOrder={mcSortOrder} onSort={requestMcSort} />
+                  <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-3 text-center text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {filteredMcRecords.map((item) => {
+                {sortedMcRecords.map((item) => {
                   const isPositive = item.price_change >= 0;
                   const isCboe = item.extra_fields?.in_cboe_registry ?? item.has_weekly_options;
                   return (
@@ -1613,23 +1665,23 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
               </div>
 
               {/* Standardized Table matching Barchart Top 1% format */}
-              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[11px]">
-                      <th className="py-2.5 px-3">Symbol</th>
-                      <th className="py-2.5 px-3">Company Name</th>
-                      <th className="py-2.5 px-3 text-right">Last Price</th>
-                      <th className="py-2.5 px-3 text-right">Change (% Chg)</th>
-                      <th className="py-2.5 px-3">Barchart Consensus Opinion</th>
-                      <th className="py-2.5 px-3 text-center">Stability (Prev &rarr; LW &rarr; LM)</th>
-                      <th className="py-2.5 px-3 text-center">Options Cadence</th>
-                      <th className="py-2.5 px-3">Recommended Strategy</th>
-                      <th className="py-2.5 px-3 text-center">Actions</th>
+              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl max-h-[620px] 2xl:max-h-[720px] overflow-y-auto relative table-scroll-container">
+                <table className="w-full text-left text-xs font-mono border-collapse table-sticky-header">
+                  <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
+                    <tr className="border-b border-slate-800 bg-slate-950/90 text-slate-400 text-[11px]">
+                      <SortableTh label="Symbol" sortKey="symbol" currentSortKey={tosSortKey} currentSortOrder={tosSortOrder} onSort={requestTosSort} />
+                      <SortableTh label="Company Name" sortKey="name" currentSortKey={tosSortKey} currentSortOrder={tosSortOrder} onSort={requestTosSort} />
+                      <SortableTh label="Last Price" sortKey="last_price" currentSortKey={tosSortKey} currentSortOrder={tosSortOrder} onSort={requestTosSort} align="right" />
+                      <SortableTh label="Change (% Chg)" sortKey="percent_change" currentSortKey={tosSortKey} currentSortOrder={tosSortOrder} onSort={requestTosSort} align="right" />
+                      <SortableTh label="Barchart Consensus Opinion" sortKey="opinion_pct" currentSortKey={tosSortKey} currentSortOrder={tosSortOrder} onSort={requestTosSort} />
+                      <SortableTh label="Stability (Prev → LW → LM)" sortKey="stability_previous" currentSortKey={tosSortKey} currentSortOrder={tosSortOrder} onSort={requestTosSort} align="center" />
+                      <SortableTh label="Options Cadence" sortKey="has_weekly_options" currentSortKey={tosSortKey} currentSortOrder={tosSortOrder} onSort={requestTosSort} align="center" />
+                      <SortableTh label="Recommended Strategy" sortKey="recommended_strategy" currentSortKey={tosSortKey} currentSortOrder={tosSortOrder} onSort={requestTosSort} />
+                      <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-3 text-center text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {filteredTosRecords.map((item) => {
+                    {sortedTosRecords.map((item) => {
                       const isPositive = item.price_change >= 0;
                       return (
                         <tr key={item.symbol} className="hover:bg-slate-800/40 transition-colors">
@@ -1881,23 +1933,23 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead>
+              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl max-h-[620px] 2xl:max-h-[720px] overflow-y-auto relative table-scroll-container">
+                <table className="w-full text-left text-xs font-mono border-collapse table-sticky-header">
+                  <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
                     <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
-                      <th className="py-2.5 px-3">Rank</th>
-                      <th className="py-2.5 px-3">Ticker</th>
-                      <th className="py-2.5 px-3">Current Spot</th>
-                      <th className="py-2.5 px-3">Put Strike</th>
-                      <th className="py-2.5 px-3">Delta</th>
-                      <th className="py-2.5 px-3">Est. Premium</th>
-                      <th className="py-2.5 px-3">Cash Collateral</th>
-                      <th className="py-2.5 px-3">Rationale &amp; Support Level</th>
-                      <th className="py-2.5 px-3 text-right">Workbench Action</th>
+                      <SortableTh label="Rank" sortKey="riskRank" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
+                      <SortableTh label="Ticker" sortKey="symbol" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
+                      <SortableTh label="Current Spot" sortKey="currentPrice" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
+                      <SortableTh label="Put Strike" sortKey="suggestedStrike" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
+                      <SortableTh label="Delta" sortKey="delta" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
+                      <SortableTh label="Est. Premium" sortKey="estPremiumAnnualized" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
+                      <SortableTh label="Cash Collateral" sortKey="capitalCommitted" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
+                      <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-3 text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">Rationale &amp; Support Level</th>
+                      <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-3 text-right text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">Workbench Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {parsedGeminiResult.recommendedTrades.map((trade, idx) => (
+                    {sortedGeminiTrades.map((trade, idx) => (
                       <tr key={`${trade.symbol}-${idx}`} className="hover:bg-slate-800/40 transition-colors">
                         <td className="py-3 px-3 text-slate-400 font-bold">#{trade.riskRank || idx + 1}</td>
                         <td className="py-3 px-3 font-bold text-white text-sm">{trade.symbol}</td>
@@ -1992,57 +2044,25 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
           </div>
 
           {/* Approved Contracts Table */}
-          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl">
-            <table className="w-full text-left text-xs font-mono">
-              <thead>
+          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl max-h-[620px] 2xl:max-h-[720px] overflow-y-auto relative table-scroll-container">
+            <table className="w-full text-left text-xs font-mono border-collapse table-sticky-header">
+              <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
                 <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[11px]">
-                  <th className="py-3 px-4">Symbol &amp; Tier</th>
-                  <th
-                    onClick={() => {
-                      setSortBy('current_price');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                    className="py-3 px-3 cursor-pointer hover:text-white"
-                  >
-                    Spot Price
-                  </th>
-                  <th
-                    onClick={() => {
-                      setSortBy('strike');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                    className="py-3 px-3 cursor-pointer hover:text-white"
-                  >
-                    Strike (Cushion)
-                  </th>
-                  <th className="py-3 px-3">DTE (Exp)</th>
-                  <th
-                    onClick={() => {
-                      setSortBy('abs_delta');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                    className="py-3 px-3 cursor-pointer hover:text-white"
-                  >
-                    Delta (POP)
-                  </th>
-                  <th className="py-3 px-3">Premium (Cash)</th>
-                  <th className="py-3 px-3">Collateral</th>
-                  <th
-                    onClick={() => {
-                      setSortBy('annualized_roc');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                    className="py-3 px-3 cursor-pointer hover:text-white text-right"
-                  >
-                    Annualized ROC
-                  </th>
-                  <th className="py-3 px-3 text-center">Affordable</th>
-                  <th className="py-3 px-4 text-center">Stage Order</th>
+                  <SortableTh label="Symbol & Tier" sortKey="symbol" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={(k) => { if (sortBy === k) setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); else { setSortBy(k as any); setSortOrder('asc'); } }} />
+                  <SortableTh label="Spot Price" sortKey="current_price" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={(k) => { if (sortBy === k) setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); else { setSortBy(k as any); setSortOrder('asc'); } }} />
+                  <SortableTh label="Strike (Cushion)" sortKey="strike" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={(k) => { if (sortBy === k) setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); else { setSortBy(k as any); setSortOrder('asc'); } }} />
+                  <SortableTh label="DTE (Exp)" sortKey="dte" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={(k) => { if (sortBy === k) setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); else { setSortBy(k as any); setSortOrder('asc'); } }} />
+                  <SortableTh label="Delta (POP)" sortKey="abs_delta" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={(k) => { if (sortBy === k) setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); else { setSortBy(k as any); setSortOrder('asc'); } }} />
+                  <SortableTh label="Premium (Cash)" sortKey="mid" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={(k) => { if (sortBy === k) setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); else { setSortBy(k as any); setSortOrder('asc'); } }} />
+                  <SortableTh label="Collateral" sortKey="collateral_required" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={(k) => { if (sortBy === k) setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); else { setSortBy(k as any); setSortOrder('asc'); } }} />
+                  <SortableTh label="Annualized ROC" sortKey="annualized_roc" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={(k) => { if (sortBy === k) setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); else { setSortBy(k as any); setSortOrder('asc'); } }} align="right" />
+                  <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-3 px-3 text-center text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">Affordable</th>
+                  <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-3 px-4 text-center text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">Stage Order</th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-slate-800/60">
-                {finalCandidates.length === 0 ? (
+                {sortedFinalCandidates.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="py-12 text-center text-slate-400">
                       <div className="max-w-md mx-auto space-y-2">

@@ -175,8 +175,8 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
         </div>
       </div>
 
-      <div className="overflow-x-auto max-h-[72vh] overflow-y-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto max-h-[72vh] overflow-y-auto table-scroll-container">
+        <table className="w-full text-left border-collapse table-sticky-header">
           <thead className="sticky top-0 z-20 bg-slate-950 border-b border-slate-800 shadow-md">
             <tr className="border-b border-slate-800 bg-slate-950 text-[11px] font-semibold text-slate-400 uppercase tracking-wider select-none">
               <th

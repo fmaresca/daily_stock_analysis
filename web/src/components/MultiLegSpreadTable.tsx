@@ -202,8 +202,8 @@ export const MultiLegSpreadTable: React.FC<MultiLegSpreadTableProps> = ({
 
       {/* Spreads Table */}
       <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto max-h-[72vh] overflow-y-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto max-h-[72vh] overflow-y-auto table-scroll-container">
+          <table className="w-full text-left border-collapse text-xs table-sticky-header">
             <thead className="sticky top-0 z-20 bg-slate-950 border-b border-slate-800 shadow-md">
               <tr className="border-b border-slate-800 bg-slate-950 text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
                 <th onClick={() => handleSort('symbol')} className="sticky top-0 bg-slate-950/95 backdrop-blur-md py-3.5 px-3.5 cursor-pointer hover:text-white z-20">

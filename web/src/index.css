@@ -157,6 +157,37 @@ html.light * {
   scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
+/* ==========================================================================
+   Universal Sticky Table Header & Scroll Locking
+   ========================================================================== */
+.table-sticky-header th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background-color: #0b1120 !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  box-shadow: 0 1px 0 0 #1e293b, 0 4px 6px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.light .table-sticky-header th {
+  background-color: #f8fafc !important;
+  box-shadow: 0 1px 0 0 #e2e8f0, 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.table-scroll-container {
+  overflow-y: auto;
+  overflow-x: auto;
+  max-height: 680px;
+  position: relative;
+}
+
+@media (min-width: 1536px) {
+  .table-scroll-container {
+    max-height: 760px;
+  }
+}
+
 /* Print Optimization & High-Contrast PDF Stylesheet */
 @media print {
   @page {

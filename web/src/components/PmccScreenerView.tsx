@@ -228,10 +228,10 @@ export const PmccScreenerView: React.FC<PmccScreenerViewProps> = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto max-h-[680px] overflow-y-auto table-scroll-container">
+          <table className="w-full text-left border-collapse text-xs table-sticky-header">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/90 text-[10px] font-bold text-slate-400 uppercase font-mono">
+              <tr className="border-b border-slate-800 bg-slate-950/90 text-[10px] font-bold text-slate-400 uppercase font-mono sticky top-0 z-10">
                 <th className="py-3 px-4">Symbol</th>
                 <th className="py-3 px-3">Spot Price</th>
                 <th className="py-3 px-3">Long LEAPS ($0.85\Delta$)</th>
