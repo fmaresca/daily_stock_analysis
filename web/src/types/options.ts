@@ -461,6 +461,13 @@ export interface AccountCapitalState {
   maxPerPositionAllocation: number; // Target allocation per position (strictly capped at $200,000 per equity security)
   singleEquityPositionLimit: number; // Hard ceiling: $200,000 max per single equity security CSP
   maxAllowedPositions: number; // Dynamically calculated: min(5, floor(freeCash / maxPerPositionAllocation))
+  accountName?: string; // e.g. "Living Trust-Options ...609"
+  totalAccountValue?: number; // Total account liquidation value, e.g. $2,343,519.76
+  cashBreakdown?: {
+    snyxx: number; // Schwab NY Municipal Money Ultra, e.g. $202,775.94
+    snaxx: number; // Schwab Prime Advantage Money Ultra, e.g. $77,341.30
+    coreCash: number; // Cash & Cash Investments sweep, e.g. $293,703.52
+  };
   lastUpdated: string;
 }
 
@@ -481,7 +488,23 @@ export interface StockHoldingPair {
     premiumCollected: number;
     currentPrice: number;
     pnlPercent?: number;
+    gainDollar?: number;
+    gainPct?: number;
+    quantity?: number;
   };
+  activeCoveredCalls?: Array<{
+    id?: string;
+    strike: number;
+    expiration?: string;
+    dte: number;
+    delta: number;
+    premiumCollected: number;
+    currentPrice: number;
+    pnlPercent?: number;
+    gainDollar?: number;
+    gainPct?: number;
+    quantity?: number;
+  }>;
   activeCallOption?: {
     strike: number;
     expiration: string;

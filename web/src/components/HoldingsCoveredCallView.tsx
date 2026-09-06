@@ -96,29 +96,35 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
       const currentVal = stk.quantity * stk.spotPrice;
       totalEquity += currentVal;
 
-      // Find any linked covered call for this symbol
-      const linkedCc = coveredCalls.find((cc) => cc.symbol.toUpperCase() === stk.symbol.toUpperCase());
-      const ccContracts = linkedCc ? linkedCc.quantity : 0;
-      const coveredShares = ccContracts * 100;
+      // Find all linked covered calls for this symbol (e.g. TSLA has two short call tranches)
+      const linkedCcs = coveredCalls.filter((cc) => cc.symbol.toUpperCase() === stk.symbol.toUpperCase());
+      const totalCoveredContracts = linkedCcs.reduce((acc, cc) => acc + cc.quantity, 0);
+      const coveredShares = totalCoveredContracts * 100;
       const uncoveredShares = Math.max(0, stk.quantity - coveredShares);
 
-      let activeCc;
-      if (linkedCc) {
-        const pnlPct = linkedCc.entryPrice > 0
-          ? ((linkedCc.entryPrice - linkedCc.currentOptionPrice) / linkedCc.entryPrice) * 100
-          : 0;
+      const activeCallsList = linkedCcs.map((linkedCc) => {
+        const pnlPct = linkedCc.gainPct !== undefined
+          ? linkedCc.gainPct
+          : (linkedCc.entryPrice > 0
+              ? ((linkedCc.entryPrice - linkedCc.currentOptionPrice) / linkedCc.entryPrice) * 100
+              : 0);
         const totalPremium = linkedCc.entryPrice * linkedCc.quantity * 100;
         totalCcPrem += totalPremium;
 
-        activeCc = {
+        return {
+          id: linkedCc.id,
           strike: linkedCc.strike,
+          expiration: linkedCc.expiration,
           dte: linkedCc.dte,
           delta: linkedCc.delta,
           premiumCollected: linkedCc.entryPrice,
           currentPrice: linkedCc.currentOptionPrice,
           pnlPercent: pnlPct,
+          gainDollar: linkedCc.gainDollar,
+          gainPct: linkedCc.gainPct ?? pnlPct,
+          quantity: linkedCc.quantity,
         };
-      }
+      });
 
       // Default mock IVR and resistance for intelligence
       const ivr30 = 32 + (stk.symbol.charCodeAt(0) % 25);
@@ -127,11 +133,13 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
 
       return {
         symbol: stk.symbol,
+        companyName: stk.companyName || stk.symbol,
         shares: stk.quantity,
         costBasis: stk.entryPrice,
         currentSpot: stk.spotPrice,
         uncoveredShares,
-        activeCoveredCall: activeCc,
+        activeCoveredCall: activeCallsList[0],
+        activeCoveredCalls: activeCallsList,
         marketChameleonIvr30: ivr30,
         marketChameleonIvrRank: ivrRank,
         resistanceLevel,
@@ -199,20 +207,38 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
               <Layers className="w-5 h-5" />
             </span>
             <div>
-              <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
-                Holdings, Covered Calls &amp; Cash-Secured Puts
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-black tracking-tight text-white">
+                  Holdings, Covered Calls &amp; Cash-Secured Puts
+                </h2>
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   Step 4 &amp; 5 Ledger
                 </span>
-              </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold">
+                  Living Trust-Options ...609
+                </span>
+              </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Audit long stocks, identify uncovered lots (&ge;100 shares), generate 20&Delta; covered calls, and monitor open CSP collateral.
+                Real account audit: 7 long equity holdings, 7 covered call tranches (with 80% profit close triggers on BLZE &amp; TSLA), and 2 open CSPs (PANW &amp; PLTR).
               </p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => {
+              const fresh = getSamplePortfolioBook();
+              setPositions(fresh);
+              localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(fresh));
+            }}
+            className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Reset positions to Living Trust-Options ...609 Schwab ground truth"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Reset to Living Trust Account</span>
+          </button>
+
           <button
             onClick={() => setIsAddPositionModalOpen(true)}
             className="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
@@ -340,7 +366,56 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                         </span>
                       </td>
                       <td className="py-3 px-3">
-                        {stk.activeCoveredCall ? (
+                        {stk.activeCoveredCalls && stk.activeCoveredCalls.length > 0 ? (
+                          <div className="space-y-1.5 text-[11px]">
+                            {stk.activeCoveredCalls.map((cc, idx) => {
+                              const is80PctProfit =
+                                (cc.gainPct !== undefined && cc.gainPct >= 80) ||
+                                (cc.pnlPercent !== undefined && cc.pnlPercent >= 80);
+                              return (
+                                <div
+                                  key={cc.id || idx}
+                                  className="p-1.5 rounded bg-slate-900/90 border border-slate-800 space-y-0.5"
+                                >
+                                  <div className="flex items-center justify-between gap-1">
+                                    <div className="flex items-center gap-1.5 font-bold text-emerald-300">
+                                      <span>{cc.quantity ? `-${cc.quantity}x` : ''} ${cc.strike} C</span>
+                                      {cc.expiration && (
+                                        <span className="text-[10px] text-slate-400 font-mono font-normal">
+                                          {cc.expiration}
+                                        </span>
+                                      )}
+                                      <span className="text-slate-500 font-normal">({cc.dte}d)</span>
+                                    </div>
+                                    {is80PctProfit && (
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
+                                        🎯 80% Capture! Close
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-slate-400 flex items-center justify-between text-[10px]">
+                                    <span>
+                                      Prem: ${cc.premiumCollected.toFixed(2)} &rarr; Mark: ${cc.currentPrice.toFixed(2)}
+                                    </span>
+                                    <span
+                                      className={`font-bold ${
+                                        (cc.gainPct ?? cc.pnlPercent ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                                      }`}
+                                    >
+                                      {cc.gainDollar !== undefined
+                                        ? cc.gainDollar >= 0
+                                          ? `+$${cc.gainDollar.toFixed(0)}`
+                                          : `-$${Math.abs(cc.gainDollar).toFixed(0)}`
+                                        : ''}{' '}
+                                      ({(cc.gainPct ?? cc.pnlPercent ?? 0) >= 0 ? '+' : ''}
+                                      {(cc.gainPct ?? cc.pnlPercent ?? 0).toFixed(1)}%)
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : stk.activeCoveredCall ? (
                           <div className="space-y-0.5 text-[11px]">
                             <div className="flex items-center gap-1.5 font-bold text-emerald-300">
                               <span>${stk.activeCoveredCall.strike} C</span>
@@ -441,10 +516,16 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {openCSPs.map((pos) => {
                   const collateral = pos.strike * pos.quantity * 100;
-                  const pnlDollar = (pos.entryPrice - pos.currentOptionPrice) * pos.quantity * 100;
-                  const pnlPct = pos.entryPrice > 0
-                    ? ((pos.entryPrice - pos.currentOptionPrice) / pos.entryPrice) * 100
-                    : 0;
+                  const pnlDollar =
+                    pos.gainDollar !== undefined
+                      ? pos.gainDollar
+                      : (pos.entryPrice - pos.currentOptionPrice) * pos.quantity * 100;
+                  const pnlPct =
+                    pos.gainPct !== undefined
+                      ? pos.gainPct
+                      : pos.entryPrice > 0
+                      ? ((pos.entryPrice - pos.currentOptionPrice) / pos.entryPrice) * 100
+                      : 0;
                   const isTested = pos.spotPrice <= pos.strike;
                   const is80PctProfit = pnlPct >= 80;
 

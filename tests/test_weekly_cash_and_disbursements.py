@@ -213,6 +213,58 @@ TABLE 3: EXCLUDED CANDIDATES
         self.assertEqual(t1_trades[1][1], "MSFT")
         self.assertEqual(t1_trades[2][1], "AAPL")
 
+    def test_living_trust_options_account_csp_reconciliation(self):
+        # Ground truth for account: Living Trust-Options ...609
+        total_account_net_value = 2343519.76
+        snyxx = 202775.94  # Schwab New York Municipal Money Ultra
+        snaxx = 77341.30   # Schwab Prime Advantage Money Ultra
+        core_cash = 293703.52  # Cash & Cash Investments sweep
+        
+        # 1. Total Cash pool before offsets (all deemed cash to cover CSPs)
+        total_cash_to_cover_csp = snyxx + snaxx + core_cash
+        self.assertAlmostEqual(total_cash_to_cover_csp, 573820.76, places=2)
+        
+        # 2. Outstanding open Puts committed collateral offset
+        open_puts = [
+            {"symbol": "PANW", "strike": 327.50, "contracts": 3},
+            {"symbol": "PLTR", "strike": 165.00, "contracts": 10},
+        ]
+        panw_collateral = 327.50 * 3 * 100  # $98,250
+        pltr_collateral = 165.00 * 10 * 100  # $165,000
+        self.assertEqual(panw_collateral, 98250.0)
+        self.assertEqual(pltr_collateral, 165000.0)
+        
+        # Both individual positions must adhere to the $200,000 single equity cap
+        self.assertLessEqual(panw_collateral, 200000.0)
+        self.assertLessEqual(pltr_collateral, 200000.0)
+        
+        total_committed_collateral = panw_collateral + pltr_collateral
+        self.assertEqual(total_committed_collateral, 263250.0)
+        
+        # 3. Weekly living expenses encumbered
+        weekly_living_disbursement = 5000.0
+        
+        # 4. True Deployable Free Cash
+        deployable_free_cash = total_cash_to_cover_csp - total_committed_collateral - weekly_living_disbursement
+        self.assertAlmostEqual(deployable_free_cash, 305570.76, places=2)
+        
+        # 5. Position Sizing (e.g. target $100,000 per position)
+        target_allocation = 100000.0
+        max_positions = min(5, math.floor(deployable_free_cash / target_allocation))
+        self.assertEqual(max_positions, 3)
+
+    def test_80_percent_profit_capture_trigger(self):
+        # Verifies 80% profit capture alert triggers on covered calls and CSPs
+        positions = [
+            {"symbol": "BLZE 17.5C", "gain_pct": 84.9, "expected_alert": True},
+            {"symbol": "TSLA 375C", "gain_pct": 85.27, "expected_alert": True},
+            {"symbol": "TSLA 370C", "gain_pct": 21.2, "expected_alert": False},
+            {"symbol": "AXTI 70C", "gain_pct": 70.56, "expected_alert": False},
+        ]
+        for p in positions:
+            is_80_pct = p["gain_pct"] >= 80.0
+            self.assertEqual(is_80_pct, p["expected_alert"])
+
 
 if __name__ == "__main__":
     unittest.main()

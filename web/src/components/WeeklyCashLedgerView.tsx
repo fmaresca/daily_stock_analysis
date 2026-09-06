@@ -7,6 +7,7 @@ import {
 import { PortfolioPosition } from '../utils/portfolioStressTest';
 import {
   getStoredCapitalState,
+  getDefaultCapitalState,
   saveCapitalState,
   getStoredTaxLedgerState,
   saveTaxLedgerState,
@@ -301,6 +302,90 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
               <span>Next: Step 2 Holdings &rarr;</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Account Profile & Money Market Fund (MMF) Collateral Banner */}
+      <div className="glass-panel p-4 rounded-2xl border border-cyan-500/30 shadow-xl bg-gradient-to-r from-slate-950 via-slate-900 to-cyan-950/40 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <span className="p-2 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300">
+              <ShieldCheck className="w-5 h-5" />
+            </span>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-black text-white tracking-wide">
+                  Account: {capitalState.accountName || 'Living Trust-Options ...609'}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30">
+                  Primary CSP Account
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Total Net Liquidation Value:{' '}
+                <strong className="text-white font-mono">
+                  ${(capitalState.totalAccountValue || 2343519.76).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                  })}
+                </strong>{' '}
+                &bull; Cash &amp; Money Market Funds (SNYXX + SNAXX) are deemed 100% cash to cover CSPs before offsets.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => {
+                const fresh = getDefaultCapitalState(positions || []);
+                setCapitalState(fresh);
+                saveCapitalState(fresh);
+                setInputTotalCash(fresh.totalCash);
+                setInlineCashValue(fresh.totalCash);
+                setInputTargetAllocation(fresh.maxPerPositionAllocation);
+              }}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 flex items-center space-x-1.5 transition-colors cursor-pointer"
+              title="Reset capital state and MMF breakdown to Living Trust-Options ...609 baseline"
+            >
+              <span>Reset to Living Trust Baseline</span>
+            </button>
+          </div>
+        </div>
+
+        {/* MMF & Cash Breakdown Strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 border-t border-slate-800/80">
+          <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span className="text-[10px] text-slate-400 block font-semibold">SNYXX (Schwab NY Muni Money)</span>
+            <span className="text-sm font-bold font-mono text-cyan-300 block">
+              ${(capitalState.cashBreakdown?.snyxx ?? 202775.94).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+            <span className="text-[9px] text-slate-500">Deemed cash to cover CSP</span>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span className="text-[10px] text-slate-400 block font-semibold">SNAXX (Schwab Prime Adv Money)</span>
+            <span className="text-sm font-bold font-mono text-cyan-300 block">
+              ${(capitalState.cashBreakdown?.snaxx ?? 77341.30).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+            <span className="text-[9px] text-slate-500">Deemed cash to cover CSP</span>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span className="text-[10px] text-slate-400 block font-semibold">Core Cash &amp; Sweep</span>
+            <span className="text-sm font-bold font-mono text-cyan-300 block">
+              ${(capitalState.cashBreakdown?.coreCash ?? 293703.52).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+            <span className="text-[9px] text-slate-500">Cash investments sweep</span>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/40">
+            <span className="text-[10px] text-emerald-400 block font-bold">Total Cash to Cover CSPs</span>
+            <span className="text-sm font-bold font-mono text-emerald-300 block">
+              ${capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+            <span className="text-[9px] text-emerald-400/70 font-mono">
+              PANW + PLTR Offsets: -${capitalState.committedCollateral.toLocaleString()}
+            </span>
+          </div>
         </div>
       </div>
 
