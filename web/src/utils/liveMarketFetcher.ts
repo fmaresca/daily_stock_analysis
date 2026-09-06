@@ -107,7 +107,7 @@ function calculateRsi(closes: number[], period: number = 14): number {
  * Uses 1-year lookback to allow Wilder's 14-day RSI and 200 SMA indicators to fully converge.
  * Uses redundant CORS proxies with individual timeouts and registry fallback.
  */
-async function fetchTickerChartData(symbol: string): Promise<{
+export async function fetchTickerChartData(symbol: string): Promise<{
   spotPrice: number;
   closes: number[];
   volumes: number[];

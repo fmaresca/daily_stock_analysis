@@ -265,6 +265,80 @@ TABLE 3: EXCLUDED CANDIDATES
             is_80_pct = p["gain_pct"] >= 80.0
             self.assertEqual(is_80_pct, p["expected_alert"])
 
+    def test_schwab_csv_parsing_and_barchart_closing_prices(self):
+        # Sample Schwab positions CSV text
+        sample_csv = '''"Positions for account Living Trust-Options ...609 as of 09:04 PM ET, 2026/09/05"
+
+"Symbol","Description","Qty (Quantity)","Price","Price Chng % (Price Change %)","Price Chng $ (Price Change $)","Mkt Val (Market Value)","Cost Basis","Day Chng $ (Day Change $)","Day Chng % (Day Change %)","Gain $ (Gain/Loss $)","Gain % (Gain/Loss %)","Ratings","Reinvest?","Reinvest Capital Gains?","% of Acct (% of Account)","Asset Type",
+"AXTI","AXT INC","1,500","61.64","9.68%","5.44","$92,460.00","$180,160.13","$8,160.00","9.68%","-$87,700.13","-48.68%","D","No","N/A","3.92%","Equity",
+"BLZE","BACKBLAZE INC CLASS A","11,000","13.455","1.09%","0.145","$148,005.00","$188,173.41","$1,595.00","1.09%","-$40,168.41","-21.35%","C","No","N/A","6.27%","Equity",
+"IONQ","IONQ INC","1,500","39.52","1.28%","0.50","$59,280.00","$88,315.08","$750.00","1.28%","-$29,035.08","-32.88%","F","No","N/A","2.51%","Equity",
+"LUNR","INTUITIVE MACHS INC CLASS A","5,000","14.81","0.75%","0.11","$74,050.00","$143,934.00","$550.00","0.75%","-$69,884.00","-48.55%","F","No","N/A","3.14%","Equity",
+"NET","CLOUDFLARE INC CLASS A","1,300","278.92","-1.96%","-5.59","$362,596.00","$380,583.72","-$7,267.00","-1.96%","-$17,987.72","-4.73%","C","No","N/A","15.37%","Equity",
+"RTX","RTX CORP","1,700","200.79","-0.66%","-1.34","$341,343.00","$372,209.38","-$2,278.00","-0.66%","-$30,866.38","-8.29%","A","No","N/A","14.47%","Equity",
+"TSLA","TESLA INC","2,000","354.08","-5.92%","-22.285","$708,160.00","$786,234.08","-$44,570.00","-5.92%","-$78,074.08","-9.93%","F","Yes","N/A","30.01%","Equity",
+"PANW 09/11/2026 327.50 P","PUT PALO ALTO NETWORKS I$327.5 EXP 09/11/26","-3","5.375","-22.38%","-1.55","-$1,612.50","-$1,998.96","$465.00","22.38%","$386.46","19.33%","-","N/A","N/A","-","Option",
+"PLTR 09/11/2026 165.00 P","PUT PALANTIR TECHNOLOGIE$165 EXP 09/11/26","-10","1.01","83.64%","0.46","-$1,010.00","-$883.33","-$460.00","-83.64%","-$126.67","-14.34%","-","N/A","N/A","-","Option",
+"SNYXX","SCHWAB NEW YORK MUNICIPAL MONEY ULTRA","202,775.94","1.00","0%","0.00","$202,775.94","$202,775.94","$0.00","0%","$0.00","0%","-","Yes","Yes","8.59%","Cash and Money Market",
+"SNAXX","SCHWAB PRIME ADVANTAGE MONEY ULTRA","77,341.3","1.00","0%","0.00","$77,341.30","$77,341.30","$0.00","0%","$0.00","0%","-","Yes","Yes","3.28%","Cash and Money Market",
+"Cash & Cash Investments","--","--","--","--","--","$293,703.52","--","$0.00","0%","--","--","--","--","--","12.45%","Cash and Money Market",
+"Positions Total","","--","--","--","--","$2,343,519.76","$2,368,212.93","-$1,222.69","-0.05%","-$318,396.69","-13.44%","--","--","--","--","--",
+'''
+        # Parse CSV lines
+        lines = [l.strip() for l in sample_csv.strip().splitlines() if l.strip()]
+        equities = []
+        short_puts = []
+        cash_pool = 0.0
+
+        for line in lines:
+            if "Positions for account" in line or "Symbol" in line:
+                continue
+            parts = [p.strip().strip('"') for p in line.split('","')]
+            if len(parts) < 17:
+                continue
+            sym = parts[0]
+            qty_str = parts[2].replace(",", "")
+            price_str = parts[3].replace(",", "")
+            asset_type = parts[16]
+
+            if "Cash and Money Market" in asset_type:
+                mkt_val = float(parts[6].replace("$", "").replace(",", "")) if "$" in parts[6] else float(qty_str) if qty_str != "--" else 0.0
+                cash_pool += mkt_val
+            elif "Equity" in asset_type:
+                equities.append({
+                    "symbol": sym,
+                    "price": float(price_str),
+                    "shares": float(qty_str),
+                })
+            elif "Option" in asset_type and sym.endswith(" P"):
+                qty = float(qty_str)
+                if qty < 0:
+                    strike = float(sym.split()[2])
+                    short_puts.append({
+                        "symbol": sym.split()[0],
+                        "strike": strike,
+                        "contracts": abs(qty),
+                        "collateral": strike * abs(qty) * 100,
+                    })
+
+        self.assertAlmostEqual(cash_pool, 573820.76, places=2)
+        self.assertEqual(len(equities), 7)
+        self.assertEqual([e["symbol"] for e in equities], ["AXTI", "BLZE", "IONQ", "LUNR", "NET", "RTX", "TSLA"])
+        
+        # Verify none of the imported equities default to 150.0
+        for eq in equities:
+            self.assertNotEqual(eq["price"], 150.0)
+            self.assertGreater(eq["price"], 0)
+
+        # Verify short puts collateral
+        total_put_collateral = sum(p["collateral"] for p in short_puts)
+        self.assertEqual(total_put_collateral, 263250.0)
+
+        # Net cash for new CSPs
+        living_exp = 5000.0
+        net_cash = cash_pool - total_put_collateral - living_exp
+        self.assertAlmostEqual(net_cash, 305570.76, places=2)
+
 
 if __name__ == "__main__":
     unittest.main()
