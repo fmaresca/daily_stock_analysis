@@ -46,13 +46,20 @@ export function generateInstitutionalGeminiPrompt({
     const tMeta = tickers.find((t) => t.symbol === o.symbol);
     const barchartText = tMeta?.barchart_opinion
       ? `${tMeta.barchart_opinion.opinion_pct}% Buy (${tMeta.barchart_opinion.signal_strength || '100% Buy'})`
+      : o.rating
+      ? `${o.rating}% Buy (${o.safety_tier || 'Strong'})`
       : '100% Buy';
-    const mcTrend = tMeta?.market_chameleon?.primary_trend || 'Uptrend';
-    const rsi = (o.rsi || tMeta?.rsi_14 || 50).toFixed(0);
-    const iv = ((o.iv || tMeta?.iv_current || 0.35) * 100).toFixed(1);
-    const ivRank = o.iv_rank ?? tMeta?.iv_rank ?? 45;
+    const mcTrend = o.trend || tMeta?.market_chameleon?.primary_trend || (o.rating >= 80 ? 'Strong Uptrend' : 'Uptrend');
+    const rsi = (o.rsi !== undefined ? o.rsi : (tMeta?.rsi_14 ?? 50)).toFixed(1);
+    const rawIv = o.iv !== undefined ? o.iv : (tMeta?.iv_current ?? 0.35);
+    const iv = (rawIv * 100).toFixed(1);
+    const ivRank = o.iv_rank !== undefined ? o.iv_rank : (tMeta?.iv_rank ?? 45);
     const cushion = o.cushion_pct ? o.cushion_pct.toFixed(1) : (((o.current_price - o.strike) / o.current_price) * 100).toFixed(1);
-    const vol = tMeta?.avg_volume_30 ? `${(tMeta.avg_volume_30 / 1000).toFixed(0)}k` : '1,200k';
+    const vol = tMeta?.avg_volume_30
+      ? `${(tMeta.avg_volume_30 / 1000).toFixed(0)}k`
+      : o.liquidity_tier === 'Tier 1'
+      ? '2,500k'
+      : '1,200k';
 
     return `${idx + 1}. Symbol: ${o.symbol} | Spot: $${o.current_price.toFixed(2)} | Suggested Strike: $${o.strike.toFixed(2)} | Delta: ${o.delta.toFixed(2)} | Bid/Ask: $${o.bid.toFixed(2)}/$${o.ask.toFixed(2)} | Est. Prem: $${o.mid.toFixed(2)} | IV: ${iv}% | IV Rank: ${ivRank}% | 14D RSI: ${rsi} | Cushion: ${cushion}% | Trend: ${mcTrend} | Barchart: ${barchartText} | Volume: ${vol} | Next Earnings: ${o.next_earnings_date || tMeta?.next_earnings_date || 'None during expiration week'}`;
   }).join('\n');
