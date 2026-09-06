@@ -53,13 +53,51 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
       const saved = localStorage.getItem('deltaharvest_portfolio_book');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // If cached positions don't have CASH or MMF yet, auto-merge fresh cash/MMF positions
+          const hasCashOrMmf = parsed.some((p: PortfolioPosition) => p.type === 'CASH' || p.type === 'MMF');
+          if (!hasCashOrMmf) {
+            const sampleBook = getSamplePortfolioBook();
+            const cashPositions = sampleBook.filter((p) => p.type === 'CASH' || p.type === 'MMF');
+            const merged = [...cashPositions, ...parsed];
+            try {
+              localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          }
+          return parsed;
+        }
       }
     } catch (e) {
       console.warn('Failed to load portfolio book:', e);
     }
     return getSamplePortfolioBook();
   });
+
+  // Filter state for Active Position Ledger
+  const [positionFilter, setPositionFilter] = useState<'ALL' | 'EQUITY' | 'CSP' | 'COVERED_CALL' | 'CASH_MMF'>('ALL');
+
+  // Filtered positions based on selected tab
+  const filteredPositions = useMemo(() => {
+    if (positionFilter === 'EQUITY') return positions.filter((p) => p.type === 'STOCK');
+    if (positionFilter === 'CSP') return positions.filter((p) => p.type === 'CSP');
+    if (positionFilter === 'COVERED_CALL') return positions.filter((p) => p.type === 'COVERED_CALL');
+    if (positionFilter === 'CASH_MMF') return positions.filter((p) => p.type === 'CASH' || p.type === 'MMF');
+    return positions;
+  }, [positions, positionFilter]);
+
+  // Reset to live Charles Schwab account baseline (7 equities, 2 CSPs, 8 CCs, 3 Cash/MMFs = 20 positions)
+  const handleResetToLiveSchwabAccount = () => {
+    const fresh = getSamplePortfolioBook();
+    setPositions(fresh);
+    try {
+      localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(fresh));
+      const updatedCap = getStoredCapitalState(fresh);
+      setCapitalState(updatedCap);
+    } catch (e) {
+      console.warn('Failed to reset positions:', e);
+    }
+  };
 
   // 2. Capital Ledger state
   const [capitalState, setCapitalState] = useState<AccountCapitalState>(() =>
@@ -150,21 +188,26 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
   const handleAddPosition = (e: React.FormEvent) => {
     e.preventDefault();
     const sym = newSymbol.toUpperCase().trim();
+    const isLiquid = newType === 'CASH' || newType === 'MMF';
+    const isStock = newType === 'STOCK';
     const pos: PortfolioPosition = {
       id: `POS_${sym}_${Date.now().toString().slice(-4)}`,
       symbol: sym,
       type: newType,
       quantity: Number(newQuantity),
-      spotPrice: Number(newSpot),
-      strike: newType === 'STOCK' ? 0 : Number(newStrike),
-      dte: newType === 'STOCK' ? 0 : Number(newDte),
-      entryPrice: Number(newEntryPrice),
-      currentOptionPrice: Number(newEntryPrice),
-      iv: 22,
-      delta: newType === 'CSP' ? -Math.abs(Number(newDelta)) : Number(newDelta),
-      theta: 0.12,
-      vega: -0.15,
-      beta: 1.0,
+      spotPrice: isLiquid ? 1.0 : Number(newSpot),
+      strike: isLiquid || isStock ? 0 : Number(newStrike),
+      dte: isLiquid || isStock ? 0 : Number(newDte),
+      entryPrice: isLiquid ? 1.0 : Number(newEntryPrice),
+      currentOptionPrice: isLiquid || isStock ? 0 : Number(newEntryPrice),
+      iv: isLiquid ? 0 : 22,
+      delta: isLiquid ? 0 : newType === 'CSP' ? -Math.abs(Number(newDelta)) : isStock ? 1.0 : Number(newDelta),
+      theta: isLiquid ? 0 : 0.12,
+      vega: isLiquid ? 0 : -0.15,
+      beta: isLiquid ? 0 : 1.0,
+      costBasisTotal: isLiquid ? Number(newQuantity) : undefined,
+      marketValueTotal: isLiquid ? Number(newQuantity) : undefined,
+      account: 'Living Trust-Options ...609',
     };
     setPositions((prev) => [pos, ...prev]);
     setIsAddPositionOpen(false);
@@ -495,53 +538,128 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
 
       {/* 4. Active Portfolio Positions Table */}
       <div className="glass-panel rounded-2xl border border-slate-800/90 shadow-2xl overflow-hidden">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
-          <div className="flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-sm font-bold text-white">Active Positions Ledger ({positions.length})</h3>
+        <div className="p-4 border-b border-slate-800 bg-slate-900/70 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-sm font-bold text-white">Active Positions Ledger ({positions.length})</h3>
+              <span className="text-[11px] font-mono text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                Living Trust-Options ...609
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleResetToLiveSchwabAccount}
+                title="Reset/sync baseline Charles Schwab account positions (Equities, Options, Cash & MMFs)"
+                className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Sync Schwab Baseline</span>
+              </button>
+              <span className="text-xs text-slate-400 font-mono hidden md:inline">
+                {positions.filter((p) => p.type === 'CSP').length} CSPs •{' '}
+                {positions.filter((p) => p.type === 'COVERED_CALL').length} CCs •{' '}
+                {positions.filter((p) => p.type === 'STOCK').length} Equities •{' '}
+                {positions.filter((p) => p.type === 'CASH' || p.type === 'MMF').length} Cash &amp; MMF
+              </span>
+            </div>
           </div>
-          <span className="text-xs text-slate-400 font-mono">
-            {positions.filter((p) => p.type === 'CSP').length} CSPs •{' '}
-            {positions.filter((p) => p.type === 'COVERED_CALL').length} CCs •{' '}
-            {positions.filter((p) => p.type === 'STOCK').length} Equity Lots
-          </span>
+
+          {/* Asset Class Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <button
+              onClick={() => setPositionFilter('ALL')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                positionFilter === 'ALL'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/70'
+              }`}
+            >
+              All Positions ({positions.length})
+            </button>
+            <button
+              onClick={() => setPositionFilter('EQUITY')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                positionFilter === 'EQUITY'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/70'
+              }`}
+            >
+              Equities ({positions.filter((p) => p.type === 'STOCK').length})
+            </button>
+            <button
+              onClick={() => setPositionFilter('CSP')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                positionFilter === 'CSP'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/70'
+              }`}
+            >
+              Cash-Secured Puts ({positions.filter((p) => p.type === 'CSP').length})
+            </button>
+            <button
+              onClick={() => setPositionFilter('COVERED_CALL')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                positionFilter === 'COVERED_CALL'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/70'
+              }`}
+            >
+              Covered Calls ({positions.filter((p) => p.type === 'COVERED_CALL').length})
+            </button>
+            <button
+              onClick={() => setPositionFilter('CASH_MMF')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                positionFilter === 'CASH_MMF'
+                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
+                  : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/70'
+              }`}
+            >
+              Cash &amp; Money Market Funds ({positions.filter((p) => p.type === 'CASH' || p.type === 'MMF').length})
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/90 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                <th className="py-3 px-4">Symbol / Type</th>
+                <th className="py-3 px-4">Symbol / Asset Class</th>
                 <th className="py-3 px-3">Quantity</th>
                 <th className="py-3 px-3">Spot Price</th>
-                <th className="py-3 px-3">Strike (Cushion)</th>
+                <th className="py-3 px-3">Strike / Coverage</th>
                 <th className="py-3 px-3">DTE (Exp)</th>
                 <th className="py-3 px-3">Delta</th>
-                <th className="py-3 px-3">Entry / Mid</th>
-                <th className="py-3 px-3">Collateral Locked</th>
-                <th className="py-3 px-3">Profit Captured</th>
+                <th className="py-3 px-3">Entry / Current</th>
+                <th className="py-3 px-3">Collateral / Market Val</th>
+                <th className="py-3 px-3">Profit / Yield</th>
                 <th className="py-3 px-3">Status</th>
                 <th className="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-800/60">
-              {positions.length === 0 ? (
+              {filteredPositions.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="py-12 text-center text-slate-400">
-                    No active positions currently logged. Click "+ Add Open Position" to begin tracking.
+                    No positions found for the selected filter tab. Click "+ Add Open Position" or "Sync Schwab Baseline".
                   </td>
                 </tr>
               ) : (
-                positions.map((p) => {
+                filteredPositions.map((p) => {
                   const isCsp = p.type === 'CSP';
                   const isCc = p.type === 'COVERED_CALL';
                   const isStock = p.type === 'STOCK';
+                  const isCash = p.type === 'CASH';
+                  const isMmf = p.type === 'MMF';
+                  const isLiquid = isCash || isMmf;
 
                   const collateral = isCsp
                     ? p.strike * 100 * (p.quantity || 1)
                     : isStock
-                    ? p.spotPrice * p.quantity
+                    ? (p.marketValueTotal || p.spotPrice * p.quantity)
+                    : isLiquid
+                    ? (p.marketValueTotal || p.quantity)
                     : p.spotPrice * 100 * (p.quantity || 1);
 
                   const profitPct =
@@ -559,22 +677,39 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                   return (
                     <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-3 px-4 font-mono">
-                        <span className="font-bold text-white text-sm block">{p.symbol}</span>
-                        <span
-                          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                            isCsp
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : isCc
-                              ? 'bg-blue-500/20 text-blue-300'
-                              : 'bg-purple-500/20 text-purple-300'
-                          }`}
-                        >
-                          {p.type.replace(/_/g, ' ')}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-white text-sm block">{p.symbol}</span>
+                          {isCash && <span className="text-[10px] text-emerald-400 font-normal">Core Sweep</span>}
+                          {isMmf && <span className="text-[10px] text-cyan-400 font-normal">{p.symbol === 'SNYXX' ? 'NY Municipal' : 'Premier Ultra'}</span>}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span
+                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                              isCsp
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : isCc
+                                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                : isStock
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                : isMmf
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            }`}
+                          >
+                            {isMmf ? 'MONEY MARKET' : isCash ? 'BANK CASH' : p.type.replace(/_/g, ' ')}
+                          </span>
+                          {p.companyName && (
+                            <span className="text-[10px] text-slate-400 truncate max-w-[180px]" title={p.companyName}>
+                              {p.companyName}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3 px-3 font-mono text-slate-300">
-                        {p.quantity} {isStock ? 'shs' : 'cts'}
+                        {isLiquid
+                          ? `$${p.quantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : `${p.quantity.toLocaleString()} ${isStock ? 'shs' : 'cts'}`}
                       </td>
 
                       <td className="py-3 px-3 font-mono text-slate-200">
@@ -582,7 +717,9 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                       </td>
 
                       <td className="py-3 px-3 font-mono">
-                        {isStock ? (
+                        {isLiquid ? (
+                          <span className="text-cyan-400 text-[11px] font-semibold">100% Cash Collateral</span>
+                        ) : isStock ? (
                           <span className="text-slate-500">—</span>
                         ) : (
                           <div>
@@ -601,7 +738,9 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                       </td>
 
                       <td className="py-3 px-3 font-mono">
-                        {isStock ? (
+                        {isLiquid ? (
+                          <span className="text-emerald-400 font-semibold">{isCash ? 'Instant Sweep' : 'T+1 Daily'}</span>
+                        ) : isStock ? (
                           <span className="text-slate-500">Hold</span>
                         ) : (
                           <span
@@ -615,7 +754,9 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                       </td>
 
                       <td className="py-3 px-3 font-mono">
-                        {isStock ? (
+                        {isLiquid ? (
+                          <span className="text-slate-500">0.00</span>
+                        ) : isStock ? (
                           <span className="text-slate-400">1.00</span>
                         ) : (
                           <span
@@ -633,15 +774,22 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                       </td>
 
                       <td className="py-3 px-3 font-mono text-slate-300">
-                        ${p.entryPrice.toFixed(2)} / ${(p.currentOptionPrice || p.entryPrice).toFixed(2)}
+                        {isLiquid
+                          ? '$1.00 / $1.00'
+                          : `$${p.entryPrice.toFixed(2)} / ${(p.currentOptionPrice || p.entryPrice).toFixed(2)}`}
                       </td>
 
                       <td className="py-3 px-3 font-mono text-slate-300">
-                        ${collateral.toLocaleString()}
+                        <div className="font-bold text-white">${collateral.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        {isLiquid && <span className="text-[10px] text-emerald-400 block font-normal">Liquid Cash Pool</span>}
                       </td>
 
                       <td className="py-3 px-3 font-mono">
-                        {isStock ? (
+                        {isLiquid ? (
+                          <span className="text-cyan-300 text-[11px] font-medium">
+                            {p.symbol === 'SNYXX' ? 'Municipal Tax-Free' : 'Yield Accrual'}
+                          </span>
+                        ) : isStock ? (
                           <span className="text-slate-500">—</span>
                         ) : (
                           <span
@@ -659,7 +807,11 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                       </td>
 
                       <td className="py-3 px-3">
-                        {profitPct >= 80 ? (
+                        {isLiquid ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                            Cash Reserve
+                          </span>
+                        ) : profitPct >= 80 ? (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                             80% Hit
                           </span>
@@ -832,6 +984,8 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                   <option value="CSP">Cash-Secured Put (CSP)</option>
                   <option value="COVERED_CALL">Covered Call (CC)</option>
                   <option value="STOCK">Stock (Long Shares)</option>
+                  <option value="MMF">Money Market Fund (MMF)</option>
+                  <option value="CASH">Bank Cash Sweep (CASH)</option>
                 </select>
               </div>
 

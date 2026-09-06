@@ -441,6 +441,71 @@ TABLE 3: EXCLUDED CANDIDATES
         # 7 account + {TSLA, AMD} = 8
         self.assertEqual(len(dynamic_tracked_3), 8)
 
+    def test_active_position_ledger_four_asset_classes_reconciliation(self):
+        # Target Account: Living Trust-Options ...609
+        # The Active Position Ledger tracks all 4 core asset classes:
+        # 1. Equities (7 long lots)
+        equities = [
+            {"symbol": "AXTI", "shares": 1500, "price": 61.64, "mkt_val": 92460.00},
+            {"symbol": "BLZE", "shares": 11000, "price": 13.455, "mkt_val": 148005.00},
+            {"symbol": "IONQ", "shares": 1500, "price": 39.52, "mkt_val": 59280.00},
+            {"symbol": "LUNR", "shares": 5000, "price": 14.81, "mkt_val": 74050.00},
+            {"symbol": "NET", "shares": 1300, "price": 278.92, "mkt_val": 362596.00},
+            {"symbol": "RTX", "shares": 1700, "price": 200.79, "mkt_val": 341343.00},
+            {"symbol": "TSLA", "shares": 2000, "price": 354.08, "mkt_val": 708160.00},
+        ]
+        total_equity_value = sum(e["mkt_val"] for e in equities)
+        self.assertEqual(len(equities), 7)
+        self.assertEqual(total_equity_value, 1785894.00)
+
+        # 2. Related Options (2 CSPs + 8 CCs = 10 contracts/legs)
+        csps = [
+            {"symbol": "PANW", "strike": 327.50, "contracts": 3, "premium": 5.375, "collateral": 98250.00, "liability": 1612.50},
+            {"symbol": "PLTR", "strike": 165.00, "contracts": 10, "premium": 1.01, "collateral": 165000.00, "liability": 1010.00},
+        ]
+        total_csp_collateral = sum(c["collateral"] for c in csps)
+        self.assertEqual(len(csps), 2)
+        self.assertEqual(total_csp_collateral, 263250.00)
+
+        covered_calls = [
+            {"symbol": "AXTI", "strike": 70.00, "contracts": 15, "mid": 2.25, "liability": 3375.00},
+            {"symbol": "BLZE", "strike": 17.50, "contracts": 110, "mid": 0.15, "liability": 1650.00},
+            {"symbol": "IONQ", "strike": 43.50, "contracts": 15, "mid": 0.365, "liability": 547.50},
+            {"symbol": "LUNR", "strike": 16.50, "contracts": 50, "mid": 0.13, "liability": 650.00},
+            {"symbol": "NET", "strike": 300.00, "contracts": 13, "mid": 1.37, "liability": 1781.00},
+            {"symbol": "RTX", "strike": 207.50, "contracts": 17, "mid": 0.27, "liability": 459.00},
+            {"symbol": "TSLA", "strike": 370.00, "contracts": 20, "mid": 1.09, "liability": 2180.00},
+            {"symbol": "TSLA", "strike": 375.00, "contracts": 20, "mid": 1.465, "liability": 2930.00},
+        ]
+        self.assertEqual(len(covered_calls), 8)
+
+        total_option_liability = sum(c["liability"] for c in csps) + sum(cc["liability"] for cc in covered_calls)
+        self.assertEqual(total_option_liability, 16195.00)
+
+        # 3. Cash and Money Market Funds (3 positions)
+        cash_and_mmfs = [
+            {"symbol": "Cash & Cash Investments", "type": "CASH", "amount": 293703.52},
+            {"symbol": "SNYXX", "type": "MMF", "amount": 202775.94},
+            {"symbol": "SNAXX", "type": "MMF", "amount": 77341.30},
+        ]
+        total_cash_pool = sum(c["amount"] for c in cash_and_mmfs)
+        self.assertEqual(len(cash_and_mmfs), 3)
+        self.assertAlmostEqual(total_cash_pool, 573820.76, places=2)
+
+        # Total Active Ledger Items = 7 Equities + 10 Options + 3 Cash/MMF = 20 positions
+        total_ledger_positions_count = len(equities) + len(csps) + len(covered_calls) + len(cash_and_mmfs)
+        self.assertEqual(total_ledger_positions_count, 20)
+
+        # Total Net Liquidation Value Dollar-for-Dollar Check
+        net_liquidation_value = (total_equity_value + total_cash_pool) - total_option_liability
+        self.assertAlmostEqual(net_liquidation_value, 2343519.76, places=2)
+
+        # Deployable Free Cash Check
+        weekly_living_disbursement = 5000.00
+        deployable_free_cash = total_cash_pool - total_csp_collateral - weekly_living_disbursement
+        self.assertAlmostEqual(deployable_free_cash, 305570.76, places=2)
+
 
 if __name__ == "__main__":
     unittest.main()
+

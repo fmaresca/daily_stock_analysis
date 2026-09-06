@@ -232,6 +232,82 @@ export function parseSchwabPositionsCsv(
   // Convert to PortfolioPosition[]
   const portfolioPositions: PortfolioPosition[] = [];
 
+  // Add Cash & Money Market Funds (All 3 Liquidity Reserve Tiers)
+  if (coreCash > 0) {
+    portfolioPositions.push({
+      id: 'POS_CASH_CORE',
+      symbol: 'Cash & Cash Investments',
+      companyName: 'Charles Schwab Bank Deposit Sweep (Liquid Core)',
+      type: 'CASH',
+      quantity: coreCash,
+      spotPrice: 1.0,
+      strike: 0,
+      dte: 0,
+      entryPrice: 1.0,
+      currentOptionPrice: 0,
+      iv: 0,
+      delta: 0,
+      theta: 0,
+      vega: 0,
+      beta: 0,
+      costBasisTotal: coreCash,
+      marketValueTotal: coreCash,
+      gainDollar: 0,
+      gainPct: 0,
+      account: accountName,
+    });
+  }
+
+  if (snyxx > 0) {
+    portfolioPositions.push({
+      id: 'POS_MMF_SNYXX',
+      symbol: 'SNYXX',
+      companyName: 'Schwab New York Municipal Money Fund Ultra',
+      type: 'MMF',
+      quantity: snyxx,
+      spotPrice: 1.0,
+      strike: 0,
+      dte: 0,
+      entryPrice: 1.0,
+      currentOptionPrice: 0,
+      iv: 0,
+      delta: 0,
+      theta: 0,
+      vega: 0,
+      beta: 0,
+      costBasisTotal: snyxx,
+      marketValueTotal: snyxx,
+      gainDollar: 0,
+      gainPct: 0,
+      account: accountName,
+    });
+  }
+
+  if (snaxx > 0) {
+    portfolioPositions.push({
+      id: 'POS_MMF_SNAXX',
+      symbol: 'SNAXX',
+      companyName: 'Schwab Prime Advantage Money Fund Ultra',
+      type: 'MMF',
+      quantity: snaxx,
+      spotPrice: 1.0,
+      strike: 0,
+      dte: 0,
+      entryPrice: 1.0,
+      currentOptionPrice: 0,
+      iv: 0,
+      delta: 0,
+      theta: 0,
+      vega: 0,
+      beta: 0,
+      costBasisTotal: snaxx,
+      marketValueTotal: snaxx,
+      gainDollar: 0,
+      gainPct: 0,
+      account: accountName,
+    });
+  }
+
   // Add equities
   equities.forEach((eq) => {
     portfolioPositions.push({

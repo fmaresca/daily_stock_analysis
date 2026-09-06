@@ -27,7 +27,15 @@ export const PortfolioMarginSimulatorView: React.FC = () => {
       const saved = localStorage.getItem('deltaharvest_portfolio_book');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasCashOrMmf = parsed.some((p: PortfolioPosition) => p.type === 'CASH' || p.type === 'MMF');
+          if (!hasCashOrMmf) {
+            const sample = getSamplePortfolioBook();
+            const cashRows = sample.filter((p) => p.type === 'CASH' || p.type === 'MMF');
+            return [...cashRows, ...parsed];
+          }
+          return parsed;
+        }
       }
     } catch {
       // Fallback
@@ -398,11 +406,14 @@ export const PortfolioMarginSimulatorView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
             <h2 className="text-sm font-bold text-white tracking-wide">
-              Active Derivatives Position Ledger ({positions.length} Open Positions)
+              Active Position Ledger ({positions.length} Positions: Equities, Options, Cash &amp; MMF)
             </h2>
           </div>
           <span className="text-xs text-slate-400 font-mono">
-            Auto-persisted in local browser storage
+            {positions.filter((p) => p.type === 'CSP').length} CSPs •{' '}
+            {positions.filter((p) => p.type === 'COVERED_CALL').length} CCs •{' '}
+            {positions.filter((p) => p.type === 'STOCK').length} Equities •{' '}
+            {positions.filter((p) => p.type === 'CASH' || p.type === 'MMF').length} Cash &amp; MMF
           </span>
         </div>
 
@@ -435,26 +446,37 @@ export const PortfolioMarginSimulatorView: React.FC = () => {
                   <tr key={p.id} className="hover:bg-slate-900/40 transition-colors">
                     <td className="py-3 px-4 font-sans font-bold text-white">
                       {p.symbol}
+                      {p.companyName && (
+                        <span className="block font-normal text-[10px] text-slate-400 truncate max-w-[160px]" title={p.companyName}>
+                          {p.companyName}
+                        </span>
+                      )}
                     </td>
 
                     <td className="py-3 px-3">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         p.type === 'STOCK'
-                          ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                          ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
                           : p.type === 'CSP'
                           ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                           : p.type === 'COVERED_CALL'
+                          ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                          : p.type === 'CASH'
                           ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                          : p.type === 'MMF'
+                          ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
                           : p.type === 'PMCC'
-                          ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                          ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
                           : 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
                       }`}>
-                        {p.type.replace('_', ' ')}
+                        {p.type === 'CASH' ? 'CASH' : p.type === 'MMF' ? 'MMF' : p.type.replace('_', ' ')}
                       </span>
                     </td>
 
                     <td className="py-3 px-3 text-right text-slate-200">
-                      {p.quantity} {p.type === 'STOCK' ? 'sh' : 'ct'}
+                      {p.type === 'CASH' || p.type === 'MMF'
+                        ? `$${p.quantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : `${p.quantity} ${p.type === 'STOCK' ? 'sh' : 'ct'}`}
                     </td>
 
                     <td className="py-3 px-3 text-right text-slate-300">
@@ -462,12 +484,16 @@ export const PortfolioMarginSimulatorView: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-3 text-right text-white font-bold">
-                      {p.strike > 0 ? `$${p.strike}` : '—'}
+                      {p.type === 'CASH' || p.type === 'MMF'
+                        ? <span className="text-cyan-400 font-normal text-[10px]">100% Cash Backed</span>
+                        : p.strike > 0 ? `$${p.strike}` : '—'}
                       {p.strike2 ? ` / $${p.strike2}` : ''}
                     </td>
 
                     <td className="py-3 px-3 text-right text-slate-400">
-                      {p.dte > 0 ? `${p.dte}d` : '—'}
+                      {p.type === 'CASH' || p.type === 'MMF'
+                        ? <span className="text-emerald-400 text-[10px]">Liquid</span>
+                        : p.dte > 0 ? `${p.dte}d` : '—'}
                     </td>
 
                     <td className="py-3 px-3 text-right text-slate-200">
@@ -475,11 +501,11 @@ export const PortfolioMarginSimulatorView: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-3 text-right font-bold text-cyan-400">
-                      {p.delta.toFixed(2)}
+                      {p.type === 'CASH' || p.type === 'MMF' ? '0.00' : p.delta.toFixed(2)}
                     </td>
 
                     <td className="py-3 px-3 text-right font-bold text-emerald-400">
-                      +${p.theta.toFixed(2)}
+                      {p.type === 'CASH' || p.type === 'MMF' ? '—' : `+$${p.theta.toFixed(2)}`}
                     </td>
 
                     <td className="py-3 px-4 text-center">
@@ -532,6 +558,8 @@ export const PortfolioMarginSimulatorView: React.FC = () => {
                     <option value="CREDIT_SPREAD">Bull Put Spread</option>
                     <option value="PMCC">Poor Man’s Covered Call</option>
                     <option value="STOCK">Stock (Long Shares)</option>
+                    <option value="MMF">Money Market Fund (MMF)</option>
+                    <option value="CASH">Bank Cash Sweep (CASH)</option>
                   </select>
                 </div>
               </div>
