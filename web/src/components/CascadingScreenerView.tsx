@@ -137,6 +137,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
   const [minBarchartScore, setMinBarchartScore] = useState<number>(70);
   const [onlyTop1Pct, setOnlyTop1Pct] = useState<boolean>(false);
   const [onlyMcUptrend, setOnlyMcUptrend] = useState<boolean>(false);
+  const [strictCboeWeeklysOnly, setStrictCboeWeeklysOnly] = useState<boolean>(true);
   const [minIvRank, setMinIvRank] = useState<number>(35);
   const [strictDeltaRange, setStrictDeltaRange] = useState<boolean>(true);
   const [minDelta, setMinDelta] = useState<number>(0.15);
@@ -680,6 +681,9 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
   // Stage 1-4 Filtered Opportunities for Gemini AI
   const finalCandidates = useMemo(() => {
     const opps = synthesizedCandidateOpps.filter((o) => {
+      // Stage 1 Gate: Strict CBOE Weeklys Enforcement
+      if (strictCboeWeeklysOnly && !o.has_weeklys) return false;
+
       // Must match strategy
       if (o.strategy !== strategyMode) return false;
 
@@ -712,6 +716,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     });
   }, [
     synthesizedCandidateOpps,
+    strictCboeWeeklysOnly,
     strategyMode,
     minIvRank,
     strictDeltaRange,
@@ -1832,9 +1837,22 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
                 <option value="MC">MarketChameleon Momentum Only (60)</option>
                 <option value="TOS">ThinkorSwim View 190898 Only</option>
               </select>
-              <div className="text-[10px] text-slate-400">
-                Consensus Score &ge; {minBarchartScore}% Buy threshold.
-              </div>
+              <button
+                type="button"
+                onClick={() => setStrictCboeWeeklysOnly(!strictCboeWeeklysOnly)}
+                className={`w-full py-1 px-2 rounded-lg text-[10px] font-bold border flex items-center justify-between transition-all cursor-pointer ${
+                  strictCboeWeeklysOnly
+                    ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
+                    : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300'
+                }`}
+                title="When active, strictly eliminates any equities without weekly options (like monthly-only stocks AMCX, MUFG, NMM) from the Gemini AI prompt"
+              >
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                  <span>CBOE Weeklys Gate</span>
+                </span>
+                <span className="font-mono">{strictCboeWeeklysOnly ? 'Strict (Enforced)' : 'All Chains'}</span>
+              </button>
             </div>
 
             {/* Funnel Stage 2: IV Rank */}

@@ -636,7 +636,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                         <li><strong>Tab 1 (Barchart Top 1%):</strong> Loads 53 screened equities with 100% buy consensus across 13 technical moving averages and MACDs.</li>
                         <li><strong>Tab 2 (MarketChameleon Momentum):</strong> Loads 60 momentum equities with RSI 50–70, IV30 &gt; 30%, and CBOE weekly registry verification.</li>
                         <li><strong>Tab 3 (ThinkorSwim View 190898):</strong> Automatically computes 13-indicator Barchart opinion consensus, stability arrows, and options cadence for any custom or TOS tickers.</li>
-                        <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Ingests liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), filters candidate contracts within 0.15–0.25&Delta;, formats institutional prompt, and parses 3 markdown tables.</li>
+                        <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Ingests liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), strictly eliminates non-weekly options (e.g. AMCX monthly-only) via CBOE Weeklys Gate, filters candidate contracts within 0.15–0.25&Delta;, formats institutional prompt, and parses 3 markdown tables.</li>
                       </ul>
                     </div>
 
