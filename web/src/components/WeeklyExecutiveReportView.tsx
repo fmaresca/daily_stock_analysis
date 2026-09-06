@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   PortfolioPosition,
   getSamplePortfolioBook,
@@ -15,6 +15,7 @@ import {
   OptionsTabType,
 } from '../types/options';
 import { downloadFile } from '../utils/exportImport';
+import { LiveTransactionModal } from './LiveTransactionModal';
 import {
   DollarSign,
   ShieldCheck,
@@ -29,6 +30,7 @@ import {
   Sparkles,
   Layers,
   ArrowRight,
+  Plus,
 } from './icons';
 
 interface WeeklyExecutiveReportViewProps {
@@ -38,6 +40,23 @@ interface WeeklyExecutiveReportViewProps {
 export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps> = ({
   onNavigateTab,
 }) => {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isLiveTxModalOpen, setIsLiveTxModalOpen] = useState(false);
+  const [successToast, setSuccessToast] = useState('');
+
+  // Listen for live transaction updates across the app during the trading week
+  useEffect(() => {
+    const handleUpdate = () => {
+      setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener('deltaharvest_portfolio_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('deltaharvest_portfolio_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
   // 1. Load Portfolio Positions
   const positions: PortfolioPosition[] = useMemo(() => {
     try {
@@ -50,17 +69,17 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
       console.warn('Failed to load portfolio book:', e);
     }
     return getSamplePortfolioBook();
-  }, []);
+  }, [refreshKey]);
 
   // 2. Load Capital Ledger State
   const capitalState: AccountCapitalState = useMemo(() => {
     return getStoredCapitalState(positions);
-  }, [positions]);
+  }, [positions, refreshKey]);
 
   // 3. Load Tax Ledger State
   const taxState: TaxLedgerState = useMemo(() => {
     return getStoredTaxLedgerState();
-  }, []);
+  }, [refreshKey]);
 
   // 4. Load Parsed Gemini AI Pro Recommendations
   const parsedGeminiResult: GeminiScreenResult | null = useMemo(() => {
@@ -71,7 +90,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
       console.warn('Failed to load parsed gemini result:', e);
     }
     return null;
-  }, []);
+  }, [refreshKey]);
 
   // Breakdown positions
   const stockPositions = useMemo(() => positions.filter((p) => p.type === 'STOCK'), [positions]);
@@ -127,6 +146,13 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
     lines.push(`Prior-Year Loss Carryforward Applied,-$${taxMetrics.carryforwardApplied.toFixed(2)}`);
     lines.push(`Estimated Net Taxable Income,$${taxMetrics.netTaxableIncome.toFixed(2)}`);
     lines.push(`Remaining Capital Loss Carryforward,$${taxMetrics.remainingCarryforward.toFixed(2)}`);
+    lines.push('');
+
+    lines.push(`2.1 OPTIONS & DERIVATIVE INCOME AUDIT TRAIL (SCHWAB & LIVE TRADES)`);
+    lines.push(`Date,Symbol,Strategy,Type,Amount,Notes`);
+    taxState.records.forEach((r) => {
+      lines.push(`${r.date},${r.symbol},${r.strategy},${r.type},$${r.amount.toFixed(2)},"${(r.note || '').replace(/"/g, '""')}"`);
+    });
     lines.push('');
 
     lines.push(`3. LONG STOCKS & COVERED CALLS INVENTORY`);
@@ -194,6 +220,14 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
 
         <div className="flex items-center gap-2.5">
           <button
+            onClick={() => setIsLiveTxModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-white shadow-lg shadow-amber-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Record Live Trade</span>
+          </button>
+
+          <button
             onClick={handleExportCSV}
             className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow"
           >
@@ -211,6 +245,14 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
         </div>
       </div>
 
+      {/* Success Notification Banner */}
+      {successToast && (
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-center space-x-2 animate-fadeIn print:hidden">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span>{successToast}</span>
+        </div>
+      )}
+
       {/* Printable Master Report Body */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 print:border-none print:bg-white print:text-black print:p-0">
         {/* Printable Header */}
@@ -221,7 +263,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
                 DELTAHARVEST OPTIONS INCOME MASTER DIGEST
               </h1>
               <span className="text-xs text-slate-400 font-mono print:text-gray-600">
-                Audit Cycle: {reportDate} • 100% Cash-Secured Mandate
+                Audit Cycle: {reportDate} • 100% Cash-Secured Mandate • Living Trust-Options ...609
               </span>
             </div>
             <div className="text-right font-mono">
@@ -261,7 +303,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
               <span className="text-base font-bold text-amber-400 mt-0.5 block print:text-amber-700">
                 -${totalCspCollateral.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
-              <span className="text-[10px] text-slate-500 block print:text-gray-500">100% Cash-Backed</span>
+              <span className="text-[10px] text-slate-500 block print:text-gray-500">100% Cash-Backed (PANW + PLTR)</span>
             </div>
 
             <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/40 print:bg-emerald-50 print:border-emerald-300">
@@ -278,10 +320,19 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
 
         {/* SECTION 2: Calendar YTD Premiums & Tax Ledger */}
         <div className="space-y-3 pt-2 border-t border-slate-800 print:border-gray-300">
-          <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 print:text-black">
-            <TrendingUp className="w-4 h-4 text-indigo-400" />
-            2. Calendar YTD Premiums &amp; Tax Alpha Ledger
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 print:text-black">
+              <TrendingUp className="w-4 h-4 text-indigo-400" />
+              2. Calendar YTD Premiums &amp; Tax Alpha Ledger
+            </h3>
+            <button
+              onClick={() => setIsLiveTxModalOpen(true)}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer print:hidden"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Log Transaction</span>
+            </button>
+          </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
             <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-700/40 print:bg-gray-100 print:border-gray-300">
@@ -310,6 +361,72 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
               <span className="text-base font-bold text-white mt-0.5 block print:text-black">
                 ${taxMetrics.netTaxableIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
+            </div>
+          </div>
+
+          {/* SUBSECTION 2.1: Live Options & Equity Transactions Audit Trail */}
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5 print:text-black">
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                2.1 Live Options &amp; Equity Transactions Audit Trail ({taxState.records.length} Recorded Entries)
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono print:text-gray-600">
+                Schwab Real Positions &amp; Mid-Week Live Writes
+              </span>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60 print:bg-white print:border-gray-300">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/80 print:border-black print:text-black print:bg-gray-100">
+                    <th className="py-2 px-2.5">Date</th>
+                    <th className="py-2 px-2.5">Symbol</th>
+                    <th className="py-2 px-2.5">Strategy</th>
+                    <th className="py-2 px-2.5">Type</th>
+                    <th className="py-2 px-2.5">Amount</th>
+                    <th className="py-2 px-2.5">Execution Details / Note</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 print:divide-gray-300">
+                  {taxState.records.map((rec) => (
+                    <tr key={rec.id} className="hover:bg-slate-900/40">
+                      <td className="py-2 px-2.5 text-slate-400 print:text-gray-600">{rec.date}</td>
+                      <td className="py-2 px-2.5 font-bold text-white print:text-black">{rec.symbol}</td>
+                      <td className="py-2 px-2.5">
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            rec.strategy === 'CSP'
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              : rec.strategy === 'COVERED_CALL'
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          }`}
+                        >
+                          {rec.strategy === 'CSP' ? 'Cash-Secured Put' : rec.strategy === 'COVERED_CALL' ? 'Covered Call' : 'Stock'}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2.5 text-slate-300 print:text-black">
+                        {rec.type === 'PREMIUM_EARNED' ? (
+                          <span className="text-emerald-400 font-bold">Premium Harvest</span>
+                        ) : rec.type === 'CAPITAL_GAIN' ? (
+                          <span className="text-cyan-400 font-bold">Capital Gain</span>
+                        ) : (
+                          <span className="text-rose-400 font-bold">Capital Loss</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2.5 font-bold font-mono">
+                        <span className={rec.type === 'CAPITAL_LOSS' ? 'text-rose-400' : 'text-emerald-400'}>
+                          {rec.type === 'CAPITAL_LOSS' ? '-' : '+'}${rec.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2.5 text-slate-300 text-[11px] print:text-black">
+                        {rec.note}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -483,6 +600,16 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
           </div>
         )}
       </div>
+
+      {/* Live Mid-Week Transaction Entry Modal */}
+      <LiveTransactionModal
+        isOpen={isLiveTxModalOpen}
+        onClose={() => setIsLiveTxModalOpen(false)}
+        onSuccess={(msg) => {
+          setSuccessToast(msg);
+          setTimeout(() => setSuccessToast(''), 8000);
+        }}
+      />
     </div>
   );
 };
