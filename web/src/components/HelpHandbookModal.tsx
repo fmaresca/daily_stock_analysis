@@ -384,60 +384,223 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
             <div className="space-y-6">
               <div className="border-l-2 border-emerald-400 pl-4 py-1">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>📅 The Systematic End-of-Week Options Ritual (10-Step Production Workflow)</span>
+                  <span>📅 The Systematic End-of-Week Options Ritual (6-Step Guided Workflow)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    Production Standard
+                  </span>
                 </h3>
-                <p className="text-slate-300 mt-1">
-                  At the end of each trading week, systematic options income investors execute this strict 10-step ritual over the weekend to audit cash, encumber weekly disbursements ($5,000 living expenses), identify uncovered shares (&ge;100) for 20&Delta; covered calls, run the Tri-Screen funnel, and obtain Gemini AI Extended Thinking trade recommendations formatted in 3 markdown tables.
+                <p className="text-slate-300 mt-1 text-xs leading-relaxed">
+                  Every weekend, systematic options income investors execute this strict 6-step ritual to audit cash, encumber weekly living disbursements ($5,000), manage holdings and 80% profit triggers, evaluate macro catalysts, run the Tri-Screen quant engine, obtain Gemini AI Extended Thinking trade selections in 3 markdown tables, and stage bracket orders in the broker workbench.
                 </p>
               </div>
 
-              {/* 10 Steps Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">1–3</span>
-                    <span>Steps 1–3: Premium Inflow, YTD Ledger &amp; Tax Alpha</span>
+              {/* Step-by-Step Production Guide with Explicit Manual Interventions */}
+              <div className="space-y-4">
+                {/* Step 1 */}
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-emerald-500/30 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold flex items-center justify-center text-xs">
+                        1
+                      </span>
+                      <span className="font-bold text-emerald-300 text-sm">Step 1: Cash &amp; Disbursements Ledger (WeeklyCashLedgerView)</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
+                      Route: WORKFLOW &rarr; WEEKLY_CASH_LEDGER
+                    </span>
                   </div>
-                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                    <li><strong className="text-white">Step 1 (Inflow):</strong> Friday expirations automatically tagged as 100% captured / expired worthless or rolled forward.</li>
-                    <li><strong className="text-white">Step 2 (Calendar YTD):</strong> Maintains prior-year starting YTD balance + current week intake with annual reset.</li>
-                    <li><strong className="text-white">Step 3 (Tax Loss Offset):</strong> Prior-year capital loss carryforward offsets current realized gains and options income.</li>
-                  </ul>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1.5">
+                      <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
+                      <ul className="text-slate-300 space-y-1 list-disc list-inside">
+                        <li><strong>Cash &amp; MMF Aggregation:</strong> Combines bank cash ($293,703.52) with Charles Schwab money market funds (SNYXX $202,775.94 + SNAXX $77,341.30) to yield $573,820.76 total collateral-backing liquidity.</li>
+                        <li><strong>Living Expense Encumbrance:</strong> Automatically subtracts $5,000 upfront weekly living disbursements before any options sizing occurs.</li>
+                        <li><strong>Committed Collateral Deduction:</strong> Automatically nets -$263,250.00 in active CSP collateral (PANW 327.50P + PLTR 165.00P) to output $305,570.76 True Deployable Free Cash.</li>
+                        <li><strong>Position Limits:</strong> Strictly enforces $200,000 single equity security position limit and dynamically sizes concurrent trades: <code className="text-emerald-400 font-mono">min(5, floor(Free Cash / Target Allocation))</code>.</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+                      <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
+                      <ol className="text-slate-300 space-y-1 list-decimal list-inside">
+                        <li><strong>Verify Liquid Cash:</strong> Review the &quot;1. Total Available Cash&quot; box. If bank or MMF balances changed, click to edit inline or select a quick chip (<strong>$250k</strong>, <strong>$500k</strong>, <strong>$750k</strong>, <strong>$1M</strong>).</li>
+                        <li><strong>Set Living Expenses:</strong> Verify the weekly disbursement ($5,000 default). Adjust if extraordinary tax or capital distributions are planned.</li>
+                        <li><strong>Position Allocation Target:</strong> Select your target allocation (Auto, $50k, $100k, or $200k max cap) to calibrate position sizing.</li>
+                      </ol>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="bg-slate-950/70 p-4 rounded-xl border border-indigo-500/30 space-y-2">
-                  <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
-                    <span className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center text-xs">4–5</span>
-                    <span>Steps 4–5: Long Stocks, 20&Delta; CCs &amp; Open CSPs</span>
+                {/* Step 2 */}
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-indigo-500/30 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 font-mono font-bold flex items-center justify-center text-xs">
+                        2
+                      </span>
+                      <span className="font-bold text-indigo-300 text-sm">Step 2: Holdings &amp; Covered Calls (HoldingsCoveredCallView)</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
+                      Route: WORKFLOW &rarr; HOLDINGS_COVERED_CALLS
+                    </span>
                   </div>
-                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                    <li><strong className="text-white">Step 4 (Holdings):</strong> Long stocks paired with calls; uncovered blocks (&ge;100 shares) flagged for weekly call writing.</li>
-                    <li><strong className="text-white">Step 5 (CSPs):</strong> Open put collateral tracked 100% cash-backed; 80% profit triggers and ITM roll warnings.</li>
-                  </ul>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1.5">
+                      <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
+                      <ul className="text-slate-300 space-y-1 list-disc list-inside">
+                        <li><strong>Multi-Leg Pairing:</strong> Pairs 7 equity holdings (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA) with active covered calls.</li>
+                        <li><strong>80% Profit Triggers:</strong> Flags profitable covered calls that have captured &ge;80% of max premium (e.g. BLZE 17.5C at +84.9% and TSLA 375C at +85.3%) to eliminate gamma tail risk.</li>
+                        <li><strong>Uncovered Block Detection:</strong> Identifies unhedged 100-share blocks and calculates 20&Delta; strike suggestions anchored above resistance.</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+                      <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
+                      <ol className="text-slate-300 space-y-1 list-decimal list-inside">
+                        <li><strong>Check Profit Triggers:</strong> Review positions highlighted in emerald (&ge;80% profit). Click <strong>&quot;Stage BTC Order&quot;</strong> to buy-to-close or roll out and up.</li>
+                        <li><strong>Write Covered Calls:</strong> On any unhedged shares, review the recommended 20&Delta; strikes and click <strong>&quot;1-Click Stage CC&quot;</strong> to send to the broker workbench.</li>
+                      </ol>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="bg-slate-950/70 p-4 rounded-xl border border-amber-500/30 space-y-2">
-                  <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
-                    <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs">6–7</span>
-                    <span>Steps 6–7: Cash Waterfall &amp; $5,000 Living Encumbrance</span>
+                {/* Step 3 */}
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-blue-500/30 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 font-mono font-bold flex items-center justify-center text-xs">
+                        3
+                      </span>
+                      <span className="font-bold text-blue-300 text-sm">Step 3: Macro &amp; Catalysts Radar (EconomicCalendarView)</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
+                      Route: WORKFLOW &rarr; ECONOMIC_CALENDAR
+                    </span>
                   </div>
-                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                    <li><strong className="text-white">Total Liquid Cash:</strong> Real-time brokerage cash input.</li>
-                    <li><strong className="text-white">Disbursements Ledger:</strong> Default $5,000 weekly living expenses encumbered before sizing new trades.</li>
-                    <li><strong className="text-white">True Deployable Free Cash:</strong> Total Cash &minus; Disbursements &minus; Committed Collateral. Zero margin.</li>
-                  </ul>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1.5">
+                      <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
+                      <ul className="text-slate-300 space-y-1 list-disc list-inside">
+                        <li><strong>Live Schedule Sync:</strong> Ingests live US macroeconomic calendar events (Forex Factory / FairEconomy API) and filters strictly for USD high-impact releases.</li>
+                        <li><strong>Transmission Matrix:</strong> Maps events to affected sectors (e.g. CPI/PCE &rarr; QQQ/XLF/TLT, FOMC &rarr; Broad Market, NFP &rarr; IWM, Crude Oil &rarr; XLE).</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+                      <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
+                      <ol className="text-slate-300 space-y-1 list-decimal list-inside">
+                        <li><strong>Review Weekly Catalysts:</strong> Check the calendar for high-impact releases scheduled during the upcoming expiration week.</li>
+                        <li><strong>Evaluate Sector Exposure:</strong> If CPI or FOMC falls mid-week, verify you widen safety cushions (&ge;5.0% cushion, &le;0.18&Delta;) on sensitive growth equities.</li>
+                      </ol>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="bg-slate-950/70 p-4 rounded-xl border border-cyan-500/30 space-y-2">
-                  <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm">
-                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-xs">8–10</span>
-                    <span>Steps 8–10: Tri-Screen, Gemini AI &amp; Master Report</span>
+                {/* Step 4 */}
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-cyan-500/30 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 font-mono font-bold flex items-center justify-center text-xs">
+                        4
+                      </span>
+                      <span className="font-bold text-cyan-300 text-sm">Step 4: Tri-Screen &amp; Gemini AI Decision Hub (CascadingScreenerView)</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
+                      Route: WORKFLOW &rarr; CASCADING_SCREENER
+                    </span>
                   </div>
-                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                    <li><strong className="text-white">Step 8 (Tri-Screen):</strong> Dual ingestion (paste/file) for TOS + 1-click export to Barchart View 190898.</li>
-                    <li><strong className="text-white">Step 9 (Gemini AI Pro):</strong> Evaluates screened candidates into 3 markdown tables (Final 5, Borderline, Excluded) with 1-click stage order buttons.</li>
-                    <li><strong className="text-white">Step 10 (Master Output):</strong> Consolidated tabular digest with CSV export and Print-to-PDF.</li>
-                  </ul>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1.5">
+                      <strong className="text-white block font-semibold">⚙️ Automated System Calculations &amp; Tri-Screen Engine:</strong>
+                      <ul className="text-slate-300 space-y-1 list-disc list-inside">
+                        <li><strong>Tab 1 (Barchart Top 1%):</strong> Loads 53 screened equities with 100% buy consensus across 13 technical moving averages and MACDs.</li>
+                        <li><strong>Tab 2 (MarketChameleon Momentum):</strong> Loads 60 momentum equities with RSI 50–70, IV30 &gt; 30%, and CBOE weekly registry verification.</li>
+                        <li><strong>Tab 3 (ThinkorSwim View 190898):</strong> Automatically computes 13-indicator Barchart opinion consensus, stability arrows, and options cadence for any custom or TOS tickers.</li>
+                        <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Ingests liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), filters candidate contracts within 0.15–0.25&Delta;, formats institutional prompt, and parses 3 markdown tables.</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+                      <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
+                      <ol className="text-slate-300 space-y-1 list-decimal list-inside">
+                        <li><strong>Run TOS Screen (Tab 3):</strong> Paste your ThinkorSwim scan tickers or click a preset (e.g. Living Trust Equities 7, Mag 7, Semis) and click <strong>&quot;▶ Run Barchart View 190898 Analysis&quot;</strong>.</li>
+                        <li><strong>Send to Gemini Hub:</strong> Click <strong>&quot;📥 Send Screened Stocks to Gemini Decision Hub&quot;</strong> on any of the screens.</li>
+                        <li><strong>Generate &amp; Run Prompt:</strong> On Tab 4, click <strong>&quot;1-Click Copy Prompt&quot;</strong>. Open <strong>gemini.google.com</strong> (select Gemini Pro with Extended Thinking HIGH), paste the prompt, and execute.</li>
+                        <li><strong>Import &amp; Stage:</strong> Copy Gemini&apos;s markdown response, paste it into the DeltaHarvest parser box, and click <strong>&quot;1-Click Stage&quot;</strong> on Table 1 recommended trades.</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 5 */}
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-amber-500/30 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold flex items-center justify-center text-xs">
+                        5
+                      </span>
+                      <span className="font-bold text-amber-300 text-sm">Step 5: Master Report (WeeklyExecutiveReportView)</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
+                      Route: WORKFLOW &rarr; WEEKLY_EXECUTIVE_REPORT
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1.5">
+                      <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
+                      <ul className="text-slate-300 space-y-1 list-disc list-inside">
+                        <li><strong>Executive Digest Synthesis:</strong> Integrates portfolio health score, daily Theta cash flow, SPY Beta-weighted Delta, and capital utilization.</li>
+                        <li><strong>Live Transaction Audit Trail:</strong> Summarizes mid-week live transactions, real Schwab options premium captured ($51,514.11), and IRS Section 1256 tax alpha.</li>
+                        <li><strong>Action Plan Compilation:</strong> Collates staged trades, rolls, and profit-taking orders into an executive checklist.</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+                      <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
+                      <ol className="text-slate-300 space-y-1 list-decimal list-inside">
+                        <li><strong>Review Synthesis:</strong> Verify overall portfolio health score and capital allocation metrics.</li>
+                        <li><strong>Export Audit Records:</strong> Click <strong>&quot;Download CSV&quot;</strong> or <strong>&quot;Print-to-PDF&quot;</strong> for weekly compliance and archival records.</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 6 */}
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-teal-500/30 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-6 h-6 rounded-full bg-teal-500/20 text-teal-300 font-mono font-bold flex items-center justify-center text-xs">
+                        6
+                      </span>
+                      <span className="font-bold text-teal-300 text-sm">Step 6: Broker Order Execution (BrokerStagingWorkbench)</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
+                      Route: WORKFLOW &rarr; BROKER_STAGING
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1.5">
+                      <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
+                      <ul className="text-slate-300 space-y-1 list-disc list-inside">
+                        <li><strong>Bracket Order Synthesis:</strong> Automatically structures limit entry price, 80% GTC profit-taking order, and 0.50&Delta; defensive roll trigger.</li>
+                        <li><strong>Collateral Verification:</strong> Re-verifies required collateral against free cash before trade confirmation.</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+                      <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
+                      <ol className="text-slate-300 space-y-1 list-decimal list-inside">
+                        <li><strong>Review Staged Orders:</strong> Inspect limit prices and contracts count.</li>
+                        <li><strong>Execute in Broker:</strong> Submit orders to Charles Schwab or Interactive Brokers (Live Capital or Simulation mode) at Monday market open.</li>
+                      </ol>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

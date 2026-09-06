@@ -2071,15 +2071,49 @@ export const App: React.FC = () => {
                 }}
               />
             ) : activeOptionsTab === 'CASCADING_SCREENER' ? (
-              /* Step 3: Cascading Screener (15Δ–25Δ, Barchart, MC, TOS, Cash Budget Gate) */
+              /* Step 4: Tri-Screen & Gemini AI (Barchart Top 1%, MC Momentum, TOS View 190898, Cash Budget Gate) */
               <CascadingScreenerView
                 tickers={universeTickers}
                 allOpportunities={allUniverseOpportunities}
+                initialWeeklyDataset={weeklyScreenersDataset}
                 onStageOpportunity={handleStageOpportunity}
                 onSelectSymbolForChart={(sym) => {
                   setActiveChartSymbol(sym);
                   setActiveTree('EQUITIES');
                   setActiveEquitiesTab('INTERACTIVE_CHARTS');
+                }}
+                onOpenTickerAudit={(sym) => {
+                  const target = universeTickers.find((t) => t.symbol === sym);
+                  if (target) {
+                    setSelectedTicker(target);
+                  } else {
+                    setSelectedTicker({
+                      symbol: sym,
+                      name: sym,
+                      sector: 'Screened Candidate',
+                      spot_price: 100,
+                      sma_20: 100,
+                      upper_band: 105,
+                      lower_band: 95,
+                      rsi_14: 50,
+                      iv_rank: 50,
+                      has_weekly_options: true,
+                      liquidity_tier: 'Tier 1',
+                      earnings_alert: false,
+                      days_to_earnings: 45,
+                      dividend_yield_pct: 0,
+                      atr_14: 2,
+                      hv_20: 25,
+                      volume: 1000000,
+                      avg_volume_30: 1000000,
+                      is_above_sma20: true,
+                      price_history_50d: [],
+                    } as any);
+                  }
+                }}
+                onOpenBrokerStaging={(_sym, _strat) => {
+                  setActiveTree('OPTIONS');
+                  setActiveOptionsTab('BROKER_STAGING');
                 }}
               />
             ) : activeOptionsTab === 'WEEKLY_STOCK_SCREENERS' ? (
