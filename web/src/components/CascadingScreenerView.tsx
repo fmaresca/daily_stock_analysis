@@ -51,6 +51,7 @@ import { fetchTickerChartData } from '../utils/liveMarketFetcher';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { parseScreenerCSV } from '../utils/screenerCsvParser';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
+import { hydrateOptionOpportunity } from '../utils/screenerHydrator';
 
 export type CascadingSubTab = 'BARCHART' | 'MARKETCHAMELEON' | 'TOS_BARCHART' | 'GEMINI_DECISION_HUB';
 
@@ -83,6 +84,19 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
 
   // Strategy Mode: CSP vs CC
   const [strategyMode, setStrategyMode] = useState<'CSP' | 'CC'>('CSP');
+
+  // Fast lookup for Universe Ticker metadata
+  const tickerMetaMap = useMemo(() => {
+    const map = new Map<string, TickerMeta>();
+    if (tickers && Array.isArray(tickers)) {
+      for (const t of tickers) {
+        if (t?.symbol) {
+          map.set(t.symbol.toUpperCase(), t);
+        }
+      }
+    }
+    return map;
+  }, [tickers]);
 
   // Multi-Source Datasets
   const [barchartDataset, setBarchartDataset] = useState<WeeklyScreenerDataset | null>(initialWeeklyDataset || null);
@@ -484,47 +498,9 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
 
   // Convert a WeeklyScreenerRecord into an OptionOpportunity and stage in broker workbench
   const handleStageScreenerRecord = (item: WeeklyScreenerRecord) => {
-    const strike = Math.round(item.last_price * 0.95 * 2) / 2;
-    const nextFriday = new Date();
-    nextFriday.setDate(nextFriday.getDate() + ((5 + 7 - nextFriday.getDay()) % 7 || 7));
-    const expStr = nextFriday.toISOString().split('T')[0];
-
-    const opp: OptionOpportunity = {
-      id: `SCREENED_${item.symbol}_${strike}_PUT`,
-      symbol: item.symbol,
-      name: item.name,
-      category: 'Equities',
-      sector: 'Screened Candidate',
-      liquidity_tier: item.has_weekly_options ? 'Tier 1' : 'Tier 2',
-      current_price: item.last_price,
-      strategy: 'CSP',
-      strategy_name: 'Cash-Secured Put',
-      expiration: expStr,
-      dte: 6,
-      strike: strike,
-      type: 'put',
-      bid: Math.max(0.20, Math.round(item.last_price * 0.012 * 100) / 100),
-      ask: Math.max(0.35, Math.round(item.last_price * 0.015 * 100) / 100),
-      mid: Math.max(0.25, Math.round(item.last_price * 0.0135 * 100) / 100),
-      iv: 0.35,
-      iv_rank: 45,
-      delta: -0.18,
-      abs_delta: 0.18,
-      theta: 0.08,
-      pop_pct: 82,
-      cushion_pct: item.last_price > 0 ? ((item.last_price - strike) / item.last_price) * 100 : 5.0,
-      collateral_required: strike * 100,
-      premium_total: Math.round(strike * 1.35),
-      breakeven: strike - 1.35,
-      roc_pct: 1.35,
-      annualized_roc: 23.5,
-      rsi: 52,
-      safety_tier: 'Screened Candidate',
-      tier_color: 'emerald',
-      tags: [item.source.toUpperCase(), 'WEEKLY_CSP'],
-      rating: item.opinion_pct || 90,
-      earnings_within_7d: false,
-    };
+    const tMeta = tickerMetaMap.get(item.symbol.toUpperCase());
+    const opp = hydrateOptionOpportunity(item, tMeta);
+    opp.id = `SCREENED_${item.symbol}_${opp.strike}_PUT`;
 
     if (onStageOpportunity) {
       onStageOpportunity(opp);
@@ -532,7 +508,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     if (onOpenBrokerStaging) {
       onOpenBrokerStaging(item.symbol, 'CSP');
     }
-    showToast(`Staged ${item.symbol} $${strike} Put in Broker Order Workbench!`);
+    showToast(`Staged ${item.symbol} $${opp.strike} Put in Broker Order Workbench!`);
   };
 
   // Bridge screened stocks to Gemini Decision Hub
@@ -692,51 +668,12 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     for (const item of candidateRecords) {
       if (!existingSymbols.has(item.symbol)) {
         existingSymbols.add(item.symbol);
-        const strike = Math.round(item.last_price * 0.95 * 2) / 2;
-        const nextFriday = new Date();
-        nextFriday.setDate(nextFriday.getDate() + ((5 + 7 - nextFriday.getDay()) % 7 || 7));
-        const expStr = nextFriday.toISOString().split('T')[0];
-
-        opps.push({
-          id: `CANDIDATE_${item.symbol}_${strike}_PUT`,
-          symbol: item.symbol,
-          name: item.name,
-          category: 'Equities',
-          sector: 'Screened Candidate',
-          liquidity_tier: item.has_weekly_options ? 'Tier 1' : 'Tier 2',
-          current_price: item.last_price,
-          strategy: 'CSP',
-          strategy_name: 'Cash-Secured Put',
-          expiration: expStr,
-          dte: 6,
-          strike: strike,
-          type: 'put',
-          bid: Math.max(0.20, Math.round(item.last_price * 0.012 * 100) / 100),
-          ask: Math.max(0.35, Math.round(item.last_price * 0.015 * 100) / 100),
-          mid: Math.max(0.25, Math.round(item.last_price * 0.0135 * 100) / 100),
-          iv: 0.35,
-          iv_rank: 45,
-          delta: -0.18,
-          abs_delta: 0.18,
-          theta: 0.08,
-          pop_pct: 82,
-          cushion_pct: item.last_price > 0 ? ((item.last_price - strike) / item.last_price) * 100 : 5.0,
-          collateral_required: strike * 100,
-          premium_total: Math.round(strike * 1.35),
-          breakeven: strike - 1.35,
-          roc_pct: 1.35,
-          annualized_roc: 23.5,
-          rsi: 52,
-          safety_tier: 'Screened Candidate',
-          tier_color: 'emerald',
-          tags: [item.source.toUpperCase(), 'WEEKLY_CSP'],
-          rating: item.opinion_pct || 90,
-          earnings_within_7d: false,
-        });
+        const tMeta = tickerMetaMap.get(item.symbol.toUpperCase());
+        opps.push(hydrateOptionOpportunity(item, tMeta));
       }
     }
     return opps;
-  }, [allOpportunities, geminiCandidateSource, barchartDataset, mcDataset, tosWatchlistDataset]);
+  }, [allOpportunities, geminiCandidateSource, barchartDataset, mcDataset, tosWatchlistDataset, tickerMetaMap]);
 
   // Stage 1-4 Filtered Opportunities for Gemini AI
   const finalCandidates = useMemo(() => {
