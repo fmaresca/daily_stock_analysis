@@ -17,6 +17,7 @@ interface ScreenerTableProps {
   onSelectOpportunity: (opportunity: OptionOpportunity) => void;
   onOpenCalculator: (opportunity: OptionOpportunity) => void;
   onStageOrder?: (opportunity: OptionOpportunity) => void;
+  onOpenSimulator?: (opportunity: OptionOpportunity) => void;
 }
 
 export const ScreenerTable: React.FC<ScreenerTableProps> = ({
@@ -27,6 +28,7 @@ export const ScreenerTable: React.FC<ScreenerTableProps> = ({
   onSelectOpportunity,
   onOpenCalculator,
   onStageOrder,
+  onOpenSimulator,
 }) => {
   const renderSortArrow = (column: keyof OptionOpportunity | 'annualized_roc') => {
     if (sortBy !== column) {
@@ -316,13 +318,22 @@ export const ScreenerTable: React.FC<ScreenerTableProps> = ({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-center space-x-1">
+                        {onOpenSimulator && (
+                          <button
+                            onClick={() => onOpenSimulator(opp)}
+                            title="Simulate Trade Quality (100-pt Quantitative Model)"
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 transition-colors border border-slate-700/60"
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         {onStageOrder && (
                           <button
                             onClick={() => onStageOrder(opp)}
                             title="Stage Broker Order (Schwab / IBKR / ToS)"
                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 transition-colors border border-slate-700/60"
                           >
-                            <Zap className="w-3.5 h-3.5 text-amber-400" />
+                            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                           </button>
                         )}
                         <button

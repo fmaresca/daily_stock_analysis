@@ -35,6 +35,7 @@ interface HeaderProps {
   onOpenAlerts?: () => void;
   onOpenDiagnostics?: () => void;
   onOpenExecutiveDigest?: () => void;
+  onOpenSimulator?: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
   autoSyncInterval?: number;
@@ -63,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAlerts,
   onOpenDiagnostics,
   onOpenExecutiveDigest,
+  onOpenSimulator,
   theme = 'dark',
   onToggleTheme,
   autoSyncInterval = 300,
@@ -217,6 +219,18 @@ export const Header: React.FC<HeaderProps> = ({
             <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-400" />
             <span>Reports</span>
           </button>
+
+          {/* Trade Quality Simulator Button (Image-based UI Widget) */}
+          {onOpenSimulator && (
+            <button
+              onClick={onOpenSimulator}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-400 hover:border-emerald-400 shadow-sm shadow-emerald-500/20 transition-all cursor-pointer whitespace-nowrap"
+              title="Open Options Trade Quality Simulator (Weekly CSP/CC)"
+            >
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Simulator</span>
+            </button>
+          )}
 
           {/* Help Handbook Button */}
           <button
