@@ -42,12 +42,15 @@ import {
   ListFilter,
   ChevronRight,
   Plus,
+  Trash2,
+  XCircle,
 } from './icons';
 import { MarketChameleonPrescreenModal } from './MarketChameleonPrescreenModal';
 import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescreen';
 import { fetchTickerChartData } from '../utils/liveMarketFetcher';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { parseScreenerCSV } from '../utils/screenerCsvParser';
+import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
 
 export type CascadingSubTab = 'BARCHART' | 'MARKETCHAMELEON' | 'TOS_BARCHART' | 'GEMINI_DECISION_HUB';
 
@@ -195,33 +198,103 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     }
   }, [tosWatchlistDataset]);
 
-  // Parse custom TOS tickers
+  // Parse custom TOS tickers using strict sanitizer
   const tosSymbols = useMemo(() => {
     if (!tosTickersInput.trim()) return [];
-    return tosTickersInput
-      .toUpperCase()
-      .split(/[\s,;\n]+/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0 && s.length <= 6);
+    return sanitizeTickerList(tosTickersInput).validSymbols;
   }, [tosTickersInput]);
 
-  // Handler for ThinkorSwim file upload
+  // Handler for ThinkorSwim file upload with CSV column header safeguards & symbol auditing
   const handleTosFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = (event.target?.result as string) || '';
-      const matches = content.match(/[A-Za-z]{1,5}/g) || [];
-      const unique = Array.from(new Set(matches.map((s) => s.toUpperCase()))).filter(
-        (s) => s.length <= 5 && !['SYMBOL', 'PRICE', 'STRIKE', 'VOL', 'EXP', 'CALL', 'PUT', 'NAME', 'LAST'].includes(s)
-      );
-      if (unique.length > 0) {
-        setTosTickersInput(unique.join(', '));
-        showToast(`Imported ${unique.length} symbols from file!`);
+
+      // 1. Check if uploaded file is already a full standardized screener CSV (e.g. exported Barchart View 190898)
+      const parsedFullRecords = parseScreenerCSV(content, 'BARCHART');
+      if (parsedFullRecords.length > 0 && parsedFullRecords.some((r) => r.opinion_pct !== 0 || r.last_price > 0)) {
+        const newDataset: WeeklyScreenerDataset = {
+          source_id: 'barchart_custom',
+          source_name: 'Barchart Watchlist (View 190898)',
+          source_url: 'https://www.barchart.com/my/watchlist?viewName=190898',
+          timestamp: new Date().toISOString(),
+          total_count: parsedFullRecords.length,
+          records: parsedFullRecords,
+        };
+        setTosWatchlistDataset(newDataset);
+        try {
+          localStorage.setItem('deltaharvest_tos_barchart_watchlist', JSON.stringify(newDataset));
+        } catch {
+          // ignore
+        }
+        const cleanSymbols = parsedFullRecords.map((r) => r.symbol);
+        setTosTickersInput(cleanSymbols.join(', '));
+        showToast(
+          `Audit Safeguard: Detected full Barchart View 190898 CSV. Loaded ${parsedFullRecords.length} analyzed symbols and populated tickers!`
+        );
+        return;
+      }
+
+      // 2. Otherwise extract symbols using column-aware CSV detection and strict audit engine
+      const audit = extractSymbolsFromTextOrCsv(content);
+      if (audit.validSymbols.length > 0) {
+        setTosTickersInput(audit.validSymbols.join(', '));
+        setTosError('');
+        showToast(audit.auditMessage);
+      } else {
+        setTosError(
+          `No valid stock symbols found in ${file.name}. ${
+            audit.rejectedTokens.length > 0
+              ? `Filtered out ${audit.rejectedTokens.length} non-ticker headers/words.`
+              : 'File was empty or unrecognized.'
+          }`
+        );
       }
     };
     reader.readAsText(file);
+    // Reset file input value so re-uploading the same file triggers onChange
+    e.target.value = '';
+  };
+
+  // Bulk clear Returned Screen
+  const handleClearReturnedScreen = () => {
+    const count = tosWatchlistDataset?.records.length || 0;
+    const emptyDataset: WeeklyScreenerDataset = {
+      source_id: 'barchart_custom',
+      source_name: 'Barchart Watchlist (View 190898)',
+      source_url: 'https://www.barchart.com/my/watchlist?viewName=190898',
+      timestamp: new Date().toISOString(),
+      total_count: 0,
+      records: [],
+    };
+    setTosWatchlistDataset(emptyDataset);
+    try {
+      localStorage.setItem('deltaharvest_tos_barchart_watchlist', JSON.stringify(emptyDataset));
+    } catch {
+      // ignore
+    }
+    showToast(`Cleared all ${count} symbols from Returned Screen.`);
+  };
+
+  // Individually remove symbol from Returned Screen
+  const handleRemoveSymbolFromScreen = (symbolToRemove: string) => {
+    if (!tosWatchlistDataset) return;
+    const updatedRecords = tosWatchlistDataset.records.filter((r) => r.symbol !== symbolToRemove);
+    const updatedDataset: WeeklyScreenerDataset = {
+      ...tosWatchlistDataset,
+      records: updatedRecords,
+      total_count: updatedRecords.length,
+      timestamp: new Date().toISOString(),
+    };
+    setTosWatchlistDataset(updatedDataset);
+    try {
+      localStorage.setItem('deltaharvest_tos_barchart_watchlist', JSON.stringify(updatedDataset));
+    } catch {
+      // ignore
+    }
+    showToast(`Removed ${symbolToRemove} from Returned Screen (${updatedRecords.length} remaining).`);
   };
 
   // Handler to copy tickers and open Barchart Watchlist View 190898
@@ -243,11 +316,28 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       setTosError('Please enter at least one stock symbol to analyze.');
       return;
     }
+
+    // Strict symbol sanitization & stoplist audit
+    const { validSymbols, rejectedTokens } = sanitizeTickerList(raw);
+    if (validSymbols.length === 0) {
+      setTosError(
+        rejectedTokens.length > 0
+          ? `No valid stock symbols found. Disallowed non-ticker words/headers: ${rejectedTokens.slice(0, 6).join(', ')}`
+          : 'Please enter valid 1-5 letter stock symbols (e.g. AAPL, NVDA, TSLA).'
+      );
+      return;
+    }
+
+    if (rejectedTokens.length > 0) {
+      showToast(
+        `Audit Notice: Filtered out ${rejectedTokens.length} non-ticker words/headers (${rejectedTokens.slice(0, 3).join(', ')}...). Analyzing ${validSymbols.length} valid symbols.`
+      );
+    }
+
     setTosError('');
     setIsAnalyzingTos(true);
 
-    const cleanList = raw.replace(/[,;\t\n]/g, ' ').split(/\s+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
-    const uniqueSymbols = Array.from(new Set(cleanList));
+    const uniqueSymbols = validSymbols;
 
     try {
       // 1. Try backend API endpoint first
@@ -1347,7 +1437,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       {activeSubTab === 'TOS_BARCHART' && (
         <div className="space-y-4 animate-fade-in">
           {/* Thinkorswim Ticker Ingestion & Analysis Box */}
-          <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/30 space-y-3 text-xs shadow-xl">
+          <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/30 space-y-3.5 text-xs shadow-xl">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-2">
                 <span className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300">
@@ -1358,7 +1448,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
                     ThinkorSwim Screen &amp; Barchart View 190898 Workflow
                   </span>
                   <span className="text-[11px] text-slate-400">
-                    Paste TOS tickers, upload scan CSV/TXT, or click presets. Click &quot;▶ Run Barchart View 190898 Analysis&quot; to generate the full standardized screen.
+                    Standardize any custom or ThinkorSwim scan into 13-indicator Barchart consensus opinions.
                   </span>
                 </div>
               </div>
@@ -1395,11 +1485,52 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
                 {tosTickersInput && (
                   <button
                     onClick={() => setTosTickersInput('')}
-                    className="text-slate-400 hover:text-white text-xs px-2 py-1"
+                    className="px-2.5 py-2 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center space-x-1"
+                    title="Clear ticker input"
                   >
-                    Clear
+                    <XCircle className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Clear Tickers</span>
                   </button>
                 )}
+              </div>
+            </div>
+
+            {/* Concise 3-Step Workflow Guidance */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px]">
+              <div className="flex items-start space-x-2">
+                <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold flex items-center justify-center shrink-0 border border-cyan-500/40 text-[10px]">
+                  1
+                </span>
+                <div>
+                  <div className="font-semibold text-slate-200">Select or Input Tickers</div>
+                  <div className="text-slate-400 text-[10px] leading-tight mt-0.5">
+                    Click a <strong>Quick Preset</strong> below, paste <strong>TOS tickers</strong>, or click <strong>Upload File</strong> (.csv/.txt). <span className="text-cyan-400">CSV headers are auto-audited &amp; filtered.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold flex items-center justify-center shrink-0 border border-cyan-500/40 text-[10px]">
+                  2
+                </span>
+                <div>
+                  <div className="font-semibold text-slate-200">Run Barchart Analysis</div>
+                  <div className="text-slate-400 text-[10px] leading-tight mt-0.5">
+                    Click <strong className="text-cyan-300">▶ Run Barchart View 190898 Analysis</strong> to calculate consensus opinions, stability trends, and weekly options cadence.
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold flex items-center justify-center shrink-0 border border-cyan-500/40 text-[10px]">
+                  3
+                </span>
+                <div>
+                  <div className="font-semibold text-slate-200">Manage &amp; Formulate Trades</div>
+                  <div className="text-slate-400 text-[10px] leading-tight mt-0.5">
+                    Review the Returned Screen below. Remove symbols with <strong className="text-rose-400">Trash</strong>, click <strong className="text-rose-400">Clear Screen</strong> to wipe, or <strong className="text-emerald-400">Send to Gemini AI Hub</strong>.
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1479,6 +1610,19 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
             )}
           </div>
 
+          {/* Empty State Card when Returned Screen is empty */}
+          {tosWatchlistDataset && tosWatchlistDataset.records.length === 0 && (
+            <div className="p-8 rounded-xl bg-slate-900/50 border border-slate-800 text-center space-y-3">
+              <div className="inline-flex p-3 rounded-full bg-slate-800/80 text-slate-400 border border-slate-700">
+                <Trash2 className="w-6 h-6 text-slate-400" />
+              </div>
+              <div className="font-bold text-slate-200 text-sm">Returned Screen is Empty</div>
+              <p className="max-w-md mx-auto text-xs text-slate-400">
+                All screened symbols have been cleared. Select a preset chip above, paste ThinkorSwim scan tickers, or upload a scan file, then click <span className="text-cyan-300 font-semibold">&quot;▶ Run Barchart View 190898 Analysis&quot;</span> to generate a fresh screen.
+              </p>
+            </div>
+          )}
+
           {/* Return Screen Section in Barchart Top 1% Format */}
           {tosWatchlistDataset && tosWatchlistDataset.records.length > 0 && (
             <div className="space-y-3">
@@ -1518,6 +1662,15 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>CSV</span>
+                  </button>
+
+                  <button
+                    onClick={handleClearReturnedScreen}
+                    className="px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-rose-100 border border-rose-800/50 font-semibold transition-all flex items-center space-x-1.5 cursor-pointer"
+                    title="Bulk clear all symbols from Returned Screen"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Clear Screen ({tosWatchlistDataset.records.length})</span>
                   </button>
                 </div>
               </div>
@@ -1641,6 +1794,13 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
                                 title="Stage Order in Broker Workbench"
                               >
                                 <Zap className="w-3.5 h-3.5 text-amber-300" />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveSymbolFromScreen(item.symbol)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/70 border border-slate-700 hover:border-rose-500/50 text-slate-400 hover:text-rose-300 transition-colors cursor-pointer"
+                                title={`Remove ${item.symbol} from Returned Screen`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                               </button>
                             </div>
                           </td>

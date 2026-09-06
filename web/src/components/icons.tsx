@@ -526,6 +526,3 @@ export const BrainCircuit: React.FC<IconProps> = ({ className = "w-4 h-4", ...pr
     <circle cx="20" cy="8" r=".5" fill="currentColor" />
   </svg>
 );
-
-
-

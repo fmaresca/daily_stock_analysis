@@ -28,11 +28,13 @@ import {
   Copy,
   Filter,
   ListFilter,
+  Trash2,
 } from './icons';
 import { MarketChameleonPrescreenModal } from './MarketChameleonPrescreenModal';
 import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescreen';
 import { fetchTickerChartData } from '../utils/liveMarketFetcher';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
+import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
 
 interface WeeklyStockScreenersViewProps {
   initialDataset: WeeklyScreenerDataset | null;
@@ -146,11 +148,28 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
       setWatchlistError('Please enter at least one stock symbol to analyze.');
       return;
     }
+    // Strict symbol sanitization & stoplist audit
+    const { validSymbols, rejectedTokens } = sanitizeTickerList(raw);
+    if (validSymbols.length === 0) {
+      setWatchlistError(
+        rejectedTokens.length > 0
+          ? `No valid stock symbols found. Disallowed non-ticker words/headers: ${rejectedTokens.slice(0, 6).join(', ')}`
+          : 'Please enter valid 1-5 letter stock symbols (e.g. AAPL, NVDA, TSLA).'
+      );
+      return;
+    }
+
+    if (rejectedTokens.length > 0) {
+      setUploadSuccessMsg(
+        `Audit Notice: Filtered out ${rejectedTokens.length} non-ticker words/headers (${rejectedTokens.slice(0, 3).join(', ')}...). Analyzing ${validSymbols.length} valid symbols.`
+      );
+      setTimeout(() => setUploadSuccessMsg(''), 6000);
+    }
+
     setWatchlistError('');
     setIsAnalyzingWatchlist(true);
 
-    const cleanList = raw.replace(/[,;\t\n]/g, ' ').split(/\s+/).map(s => s.trim().toUpperCase()).filter(Boolean);
-    const uniqueSymbols = Array.from(new Set(cleanList));
+    const uniqueSymbols = validSymbols;
 
     try {
       // 1. Try backend API endpoint first
@@ -325,19 +344,23 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             return;
           }
 
-          // Otherwise extract symbols from lines or columns and trigger Barchart analysis
-          const rawTokens = text.split(/[\r\n,;\t]+/);
-          const extractedSymbols = Array.from(new Set(
-            rawTokens
-              .map(s => s.trim().replace(/^["']|["']$/g, '').toUpperCase())
-              .filter(s => s && /^[A-Z0-9.\-_]{1,10}$/.test(s) && !['SYMBOL', 'TICKER', 'NAME', 'PRICE', 'LAST', 'HEADER', 'SECURITY'].includes(s))
-          ));
-
-          if (extractedSymbols.length > 0) {
-            setWatchlistInputText(extractedSymbols.join(', '));
-            setUploadSuccessMsg(`Imported ${extractedSymbols.length} symbols from ${file.name}. Triggering Barchart View 190898 analysis...`);
+          // Extract symbols using column-aware CSV detection and strict audit engine
+          const audit = extractSymbolsFromTextOrCsv(text);
+          if (audit.validSymbols.length > 0) {
+            setWatchlistInputText(audit.validSymbols.join(', '));
+            setUploadSuccessMsg(audit.auditMessage);
             setTimeout(() => setUploadSuccessMsg(''), 6000);
-            handleRunBarchartWatchlist(extractedSymbols);
+            handleRunBarchartWatchlist(audit.validSymbols);
+            return;
+          } else {
+            setWatchlistError(
+              `No valid stock symbols found in ${file.name}. ${
+                audit.rejectedTokens.length > 0
+                  ? `Filtered out ${audit.rejectedTokens.length} non-ticker headers/words.`
+                  : 'File was empty or unrecognized.'
+              }`
+            );
+            setIsUploading(false);
             return;
           }
         }
