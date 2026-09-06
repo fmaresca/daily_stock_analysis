@@ -34,6 +34,7 @@ interface CommandPaletteProps {
   onOpenReports: () => void;
   onOpenSchwab?: () => void;
   onOpenDiagnostics?: () => void;
+  onOpenSimulator?: () => void;
   onExportCSV: () => void;
   onExportExcel: () => void;
   onTriggerPrint: () => void;
@@ -50,6 +51,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenReports,
   onOpenSchwab,
   onOpenDiagnostics,
+  onOpenSimulator,
   onExportCSV,
   onExportExcel,
   onTriggerPrint,
@@ -193,6 +195,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: <TrendingUp className="w-4 h-4 text-emerald-400" />,
       action: () => {
         onNavigateTree('OPTIONS', 'INCOME_SCREENER');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-simulator',
+      title: 'Options Trade Quality Simulator (Weekly CSP/CC)',
+      subtitle: '100-Point Quantitative Scoring Simulator with dynamic sliders for IV Rank, Delta, and 50 SMA distance',
+      icon: <Zap className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        if (onOpenSimulator) onOpenSimulator();
         onClose();
       },
     },

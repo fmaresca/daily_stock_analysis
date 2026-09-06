@@ -26,6 +26,7 @@ interface HelpHandbookModalProps {
 
 type HandbookTab =
   | 'LAYPERSON_PRIMER'
+  | 'TRADE_QUALITY_SCORING'
   | 'WEEKLY_WORKFLOW_GUIDE'
   | 'AI_OPTIONS_INCOME'
   | 'ECONOMIC_CALENDAR'
@@ -97,11 +98,23 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
           </button>
 
           <button
+            onClick={() => setActiveTab('TRADE_QUALITY_SCORING')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'TRADE_QUALITY_SCORING'
+                ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                : 'text-emerald-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Zap className="w-4 h-4 text-emerald-400" />
+            <span>Options Trade Quality Simulator (100 Pts)</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('WEEKLY_WORKFLOW_GUIDE')}
             className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
               activeTab === 'WEEKLY_WORKFLOW_GUIDE'
                 ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
-                : 'text-emerald-400 hover:text-white hover:bg-slate-800/60'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <span>📅</span>
@@ -374,6 +387,94 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   <p className="text-xs text-slate-300">
                     Implied Volatility (IV) measures market panic or excitement. When IV Rank is high (&ge; 45%), option buyers overpay for insurance, allowing conservative option sellers to harvest unusually high cash yields.
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 1.5: 100-Point Quantitative Options Trade Quality Scoring Model */}
+          {activeTab === 'TRADE_QUALITY_SCORING' && (
+            <div className="space-y-6">
+              <div className="border-l-2 border-emerald-400 pl-4 py-1">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-emerald-400" />
+                  <span>100-Point Quantitative Trade Quality Scoring Model (Weekly CSP/CC)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    Institutional Standard
+                  </span>
+                </h3>
+                <p className="text-slate-300 mt-1 text-xs leading-relaxed">
+                  Evaluates weekly Cash-Secured Puts (CSPs) and Covered Calls (CCs) using a rigorous 100-point composite model rewarding elevated implied volatility, optimal delta positioning (0.15–0.25Δ), moving average support buffers, and tight liquidity, while penalizing earnings binary event risks and assignment hazards.
+                </p>
+              </div>
+
+              {/* 5 Scoring Dimensions Table */}
+              <div className="glass-panel rounded-xl border border-slate-800 overflow-hidden text-xs">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-950/80 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Dimension</th>
+                      <th className="py-2.5 px-2 text-center">Weight</th>
+                      <th className="py-2.5 px-3">Optimal Target Range</th>
+                      <th className="py-2.5 px-4">Evaluation Criteria &amp; Penalty Triggers</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-300 font-sans">
+                    <tr className="hover:bg-slate-800/30">
+                      <td className="py-2.5 px-3 font-semibold text-white">IV Rank / Percentile</td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400">25% (25 pts)</td>
+                      <td className="py-2.5 px-3 text-emerald-300 font-mono">35% &ndash; 70%</td>
+                      <td className="py-2.5 px-4 text-[11px]">Maximizes volatility premium capture while avoiding binary distress. Linear scale 0&ndash;35; max score 35&ndash;70; slight haircut &gt;70% unless verified.</td>
+                    </tr>
+                    <tr className="hover:bg-slate-800/30">
+                      <td className="py-2.5 px-3 font-semibold text-white">Option Delta (PoP)</td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400">25% (25 pts)</td>
+                      <td className="py-2.5 px-3 text-emerald-300 font-mono">0.15 &ndash; 0.25Δ (CSP)<br/>0.20 &ndash; 0.30Δ (CC)</td>
+                      <td className="py-2.5 px-4 text-[11px]">Targets 75%&ndash;85% probability of expiring OTM. Steep penalties for deltas &lt;0.10 (low yield) or &gt;0.35 (high assignment risk).</td>
+                    </tr>
+                    <tr className="hover:bg-slate-800/30">
+                      <td className="py-2.5 px-3 font-semibold text-white">Technical &amp; MA Alignment</td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400">25% (25 pts)</td>
+                      <td className="py-2.5 px-3 text-emerald-300 font-mono">Strike &lt; 20/50 SMA (Puts)<br/>Strike &ge; 20/50 SMA (Calls)</td>
+                      <td className="py-2.5 px-4 text-[11px]">Puts: Price &gt; 50 SMA and strike placed below key moving average dynamic support. Calls: Underlying in healthy trend, strike placed above resistance.</td>
+                    </tr>
+                    <tr className="hover:bg-slate-800/30">
+                      <td className="py-2.5 px-3 font-semibold text-white">Annualized RoC (%)</td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400">15% (15 pts)</td>
+                      <td className="py-2.5 px-3 text-emerald-300 font-mono">18% &ndash; 35%+ Annualized</td>
+                      <td className="py-2.5 px-4 text-[11px]">Calculated using cash collateral (CSP = Strike &times; 100) or stock spot price (CC). Zero points if annualized yield is under 10%.</td>
+                    </tr>
+                    <tr className="hover:bg-slate-800/30">
+                      <td className="py-2.5 px-3 font-semibold text-white">Liquidity &amp; Execution</td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400">10% (10 pts)</td>
+                      <td className="py-2.5 px-3 text-emerald-300 font-mono">Spread &le; 5% of mid<br/>OI &ge; 500 contracts</td>
+                      <td className="py-2.5 px-4 text-[11px]">Penalizes wide bid/ask slippage and illiquid strikes with low market maker participation.</td>
+                    </tr>
+                    <tr className="bg-rose-950/20">
+                      <td className="py-2.5 px-3 font-bold text-rose-300">Hard Risk Filter (Gate)</td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-400">Gate</td>
+                      <td className="py-2.5 px-3 text-rose-300 font-mono">No earnings before DTE</td>
+                      <td className="py-2.5 px-4 text-[11px] text-rose-300 font-medium">Drops composite score by 40 points and marks trade as DISQUALIFIED if an earnings announcement falls inside the weekly expiration window. Disqualifies if spread &gt; 15%.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Reference Execution Example */}
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+                <div className="font-bold text-emerald-400 flex items-center justify-between">
+                  <span>Reference Candidate Execution (XYZ Weekly Put &ndash; 96.0 Score)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Very High Trade Quality</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px] text-slate-300 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                  <div>Spot: $184.50</div>
+                  <div>Strike: $175.00P</div>
+                  <div>IV Rank: 48% (25.0 pts)</div>
+                  <div>Delta: 0.18Δ (25.0 pts)</div>
+                  <div>50 SMA: $177.25 (25.0 pts)</div>
+                  <div>Bid/Ask: $1.15 / $1.20</div>
+                  <div>RoC: 47.9% Ann. (15.0 pts)</div>
+                  <div>OI: 2,400 (10.0 pts)</div>
                 </div>
               </div>
             </div>

@@ -22,6 +22,7 @@ const SchwabSettingsModal = lazy(() => import('./components/SchwabSettingsModal'
 const ApiDiagnosticsModal = lazy(() => import('./components/ApiDiagnosticsModal').then(m => ({ default: m.ApiDiagnosticsModal })));
 const BrokerOrderStagingModal = lazy(() => import('./components/BrokerOrderStagingModal').then(m => ({ default: m.BrokerOrderStagingModal })));
 const AlertSettingsModal = lazy(() => import('./components/AlertSettingsModal').then(m => ({ default: m.AlertSettingsModal })));
+const OptionsTradeQualityModal = lazy(() => import('./components/screener/OptionsTradeQualityModal').then(m => ({ default: m.OptionsTradeQualityModal })));
 
 // Code-split heavy views & tabs
 const InteractiveChart = lazy(() => import('./components/InteractiveChart').then(m => ({ default: m.InteractiveChart })));
@@ -140,6 +141,13 @@ export const App: React.FC = () => {
   const [isSchwabModalOpen, setIsSchwabModalOpen] = useState<boolean>(false);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState<boolean>(false);
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState<boolean>(false);
+  const [isSimulatorModalOpen, setIsSimulatorModalOpen] = useState<boolean>(false);
+  const [simulatorInitialData, setSimulatorInitialData] = useState<{
+    ivRank?: number;
+    delta?: number;
+    distTo50Sma?: number;
+    strategy?: 'CASH_SECURED_PUT' | 'COVERED_CALL';
+  }>({});
   const [lastLiveFetchTime, setLastLiveFetchTime] = useState<string>(() => {
     return localStorage.getItem('deltaharvest_last_live_fetch') || '';
   });
@@ -1429,6 +1437,7 @@ export const App: React.FC = () => {
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
         onOpenAlerts={() => setIsAlertsModalOpen(true)}
         onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
+        onOpenSimulator={() => setIsSimulatorModalOpen(true)}
         onOpenExecutiveDigest={() => {
           setActiveTree('OPTIONS');
           setActiveOptionsTab('EXECUTIVE_DIGEST');
@@ -2303,6 +2312,18 @@ export const App: React.FC = () => {
                   onSelectOpportunity={(opp) => setSelectedOpportunity(opp)}
                   onOpenCalculator={(opp) => setCalculatorOpportunity(opp)}
                   onStageOrder={handleStageOpportunity}
+                  onOpenSimulator={(opp) => {
+                    const dist50 = opp.current_price > 0 && opp.strike > 0
+                      ? ((opp.strike - opp.current_price) / opp.current_price) * 100
+                      : -5.1;
+                    setSimulatorInitialData({
+                      ivRank: opp.iv_rank || 48,
+                      delta: Math.abs(opp.delta || 0.18),
+                      distTo50Sma: dist50,
+                      strategy: opp.strategy === 'CSP' ? 'CASH_SECURED_PUT' : 'COVERED_CALL',
+                    });
+                    setIsSimulatorModalOpen(true);
+                  }}
                 />
               </div>
             )}
@@ -2331,6 +2352,7 @@ export const App: React.FC = () => {
         onOpenReports={() => setIsReportQueryModalOpen(true)}
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
         onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
+        onOpenSimulator={() => setIsSimulatorModalOpen(true)}
         onExportCSV={handleExportCSV}
         onExportExcel={handleExportExcel}
         onTriggerPrint={triggerPrintReport}
@@ -2449,6 +2471,18 @@ export const App: React.FC = () => {
           onClose={() => setIsAlertsModalOpen(false)}
           tickers={universeTickers}
           opportunities={allUniverseOpportunities}
+        />
+      )}
+
+      {/* 10. Quantitative Options Trade Quality Simulator Modal (Image_1 Reference Model) */}
+      {isSimulatorModalOpen && (
+        <OptionsTradeQualityModal
+          isOpen={isSimulatorModalOpen}
+          onClose={() => setIsSimulatorModalOpen(false)}
+          initialIvRank={simulatorInitialData.ivRank || 48}
+          initialDelta={simulatorInitialData.delta || 0.18}
+          initialDistTo50Sma={simulatorInitialData.distTo50Sma || -5.1}
+          initialStrategy={simulatorInitialData.strategy || 'CASH_SECURED_PUT'}
         />
       )}
       </Suspense>
