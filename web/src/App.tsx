@@ -1,49 +1,56 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
 import { KPICards } from './components/KPICards';
 import { DualMenuTree } from './components/DualMenuTree';
 import { CommandPalette } from './components/CommandPalette';
-import { HelpHandbookModal } from './components/HelpHandbookModal';
-import { WatchlistManagerModal } from './components/WatchlistManagerModal';
-import { ReportQueryModal } from './components/ReportQueryModal';
+import { LoadingSkeleton } from './components/ui/LoadingSkeleton';
+
+// Core primary tables
 import { PrimaryScreenerTable } from './components/PrimaryScreenerTable';
 import { ScreenerTable } from './components/ScreenerTable';
-import { TickerAuditModal } from './components/TickerAuditModal';
-import { OptionDetailModal } from './components/OptionDetailModal';
-import { IncomeCalculatorModal } from './components/IncomeCalculatorModal';
-import { InteractiveChart } from './components/InteractiveChart';
-import { MultiLegSpreadTable } from './components/MultiLegSpreadTable';
-import { VolatilitySkewRadar } from './components/VolatilitySkewRadar';
-import { SchwabSettingsModal } from './components/SchwabSettingsModal';
-import { ApiDiagnosticsModal } from './components/ApiDiagnosticsModal';
-import { FundamentalHealthTable } from './components/FundamentalHealthTable';
-import { OptionsBacktestView } from './components/OptionsBacktestView';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
-import { BrokerOrderStagingModal } from './components/BrokerOrderStagingModal';
-import { BrokerStagingWorkbench } from './components/BrokerStagingWorkbench';
-import { AlertSettingsModal } from './components/AlertSettingsModal';
-import { evaluateAndDispatchAlerts } from './utils/alertDispatcher';
-import { OptionChainMatrixView } from './components/OptionChainMatrixView';
-import { PmccScreenerView } from './components/PmccScreenerView';
-import { PortfolioMarginSimulatorView } from './components/PortfolioMarginSimulatorView';
-import { MultiAgentTradeAuditorView } from './components/MultiAgentTradeAuditorView';
-import { DefensiveRollAssistantView } from './components/DefensiveRollAssistantView';
-import { TaxAlphaOptimizerView } from './components/TaxAlphaOptimizerView';
-import { ExecutivePortfolioDigestView } from './components/ExecutivePortfolioDigestView';
-import { WeeklyStockScreenersView } from './components/WeeklyStockScreenersView';
-import { OptionsIncomeAnalyzer } from './components/OptionsIncomeAnalyzer';
-import { EconomicCalendarView } from './components/EconomicCalendarView';
-import { WeeklyPositionAuditView } from './components/WeeklyPositionAuditView';
-import { CascadingScreenerView } from './components/CascadingScreenerView';
-import { WeeklyCashLedgerView } from './components/WeeklyCashLedgerView';
-import { HoldingsCoveredCallView } from './components/HoldingsCoveredCallView';
-import { WeeklyExecutiveReportView } from './components/WeeklyExecutiveReportView';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Code-split heavy modals (loaded on-demand when triggered by user)
+const HelpHandbookModal = lazy(() => import('./components/HelpHandbookModal').then(m => ({ default: m.HelpHandbookModal })));
+const WatchlistManagerModal = lazy(() => import('./components/WatchlistManagerModal').then(m => ({ default: m.WatchlistManagerModal })));
+const ReportQueryModal = lazy(() => import('./components/ReportQueryModal').then(m => ({ default: m.ReportQueryModal })));
+const TickerAuditModal = lazy(() => import('./components/TickerAuditModal').then(m => ({ default: m.TickerAuditModal })));
+const OptionDetailModal = lazy(() => import('./components/OptionDetailModal').then(m => ({ default: m.OptionDetailModal })));
+const IncomeCalculatorModal = lazy(() => import('./components/IncomeCalculatorModal').then(m => ({ default: m.IncomeCalculatorModal })));
+const SchwabSettingsModal = lazy(() => import('./components/SchwabSettingsModal').then(m => ({ default: m.SchwabSettingsModal })));
+const ApiDiagnosticsModal = lazy(() => import('./components/ApiDiagnosticsModal').then(m => ({ default: m.ApiDiagnosticsModal })));
+const BrokerOrderStagingModal = lazy(() => import('./components/BrokerOrderStagingModal').then(m => ({ default: m.BrokerOrderStagingModal })));
+const AlertSettingsModal = lazy(() => import('./components/AlertSettingsModal').then(m => ({ default: m.AlertSettingsModal })));
+
+// Code-split heavy views & tabs
+const InteractiveChart = lazy(() => import('./components/InteractiveChart').then(m => ({ default: m.InteractiveChart })));
+const MultiLegSpreadTable = lazy(() => import('./components/MultiLegSpreadTable').then(m => ({ default: m.MultiLegSpreadTable })));
+const VolatilitySkewRadar = lazy(() => import('./components/VolatilitySkewRadar').then(m => ({ default: m.VolatilitySkewRadar })));
+const FundamentalHealthTable = lazy(() => import('./components/FundamentalHealthTable').then(m => ({ default: m.FundamentalHealthTable })));
+const OptionsBacktestView = lazy(() => import('./components/OptionsBacktestView').then(m => ({ default: m.OptionsBacktestView })));
+const BrokerStagingWorkbench = lazy(() => import('./components/BrokerStagingWorkbench').then(m => ({ default: m.BrokerStagingWorkbench })));
+const OptionChainMatrixView = lazy(() => import('./components/OptionChainMatrixView').then(m => ({ default: m.OptionChainMatrixView })));
+const PmccScreenerView = lazy(() => import('./components/PmccScreenerView').then(m => ({ default: m.PmccScreenerView })));
+const PortfolioMarginSimulatorView = lazy(() => import('./components/PortfolioMarginSimulatorView').then(m => ({ default: m.PortfolioMarginSimulatorView })));
+const MultiAgentTradeAuditorView = lazy(() => import('./components/MultiAgentTradeAuditorView').then(m => ({ default: m.MultiAgentTradeAuditorView })));
+const DefensiveRollAssistantView = lazy(() => import('./components/DefensiveRollAssistantView').then(m => ({ default: m.DefensiveRollAssistantView })));
+const TaxAlphaOptimizerView = lazy(() => import('./components/TaxAlphaOptimizerView').then(m => ({ default: m.TaxAlphaOptimizerView })));
+const ExecutivePortfolioDigestView = lazy(() => import('./components/ExecutivePortfolioDigestView').then(m => ({ default: m.ExecutivePortfolioDigestView })));
+const WeeklyStockScreenersView = lazy(() => import('./components/WeeklyStockScreenersView').then(m => ({ default: m.WeeklyStockScreenersView })));
+const OptionsIncomeAnalyzer = lazy(() => import('./components/OptionsIncomeAnalyzer').then(m => ({ default: m.OptionsIncomeAnalyzer })));
+const EconomicCalendarView = lazy(() => import('./components/EconomicCalendarView').then(m => ({ default: m.EconomicCalendarView })));
+const WeeklyPositionAuditView = lazy(() => import('./components/WeeklyPositionAuditView').then(m => ({ default: m.WeeklyPositionAuditView })));
+const CascadingScreenerView = lazy(() => import('./components/CascadingScreenerView').then(m => ({ default: m.CascadingScreenerView })));
+const WeeklyCashLedgerView = lazy(() => import('./components/WeeklyCashLedgerView').then(m => ({ default: m.WeeklyCashLedgerView })));
+const HoldingsCoveredCallView = lazy(() => import('./components/HoldingsCoveredCallView').then(m => ({ default: m.HoldingsCoveredCallView })));
+const WeeklyExecutiveReportView = lazy(() => import('./components/WeeklyExecutiveReportView').then(m => ({ default: m.WeeklyExecutiveReportView })));
 import { PortfolioPosition } from './utils/portfolioStressTest';
 import { getStoredCapitalState } from './utils/capitalAndTaxLedger';
 import { WeeklyScreenerDataset } from './types/weeklyScreeners';
 import { startContinuousRiskSweeper, stopContinuousRiskSweeper } from './utils/continuousRiskSweeper';
 import { OptionContractData } from './utils/optionChainMatrix';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { evaluateAndDispatchAlerts } from './utils/alertDispatcher';
 import {
   stageSingleLegOrder,
   stageMultiLegSpreadOrder,
@@ -1817,6 +1824,7 @@ export const App: React.FC = () => {
       )}
 
         {/* Primary Content View Switcher */}
+        <Suspense fallback={<LoadingSkeleton rows={8} className="p-4" />}>
         {activeTree === 'EQUITIES' ? (
           activeEquitiesTab === 'WEEKLY_STOCK_SCREENERS' ? (
             /* Weekly Stock Screeners (Barchart Direction Strength & Multi-Source Engine) */
@@ -2300,9 +2308,11 @@ export const App: React.FC = () => {
             )}
           </div>
         )}
+        </Suspense>
       </main>
 
-      {/* Modals Suite */}
+      {/* Modals Suite (Lazy Loaded on demand) */}
+      <Suspense fallback={null}>
       {/* 1. Global Command Palette (Ctrl+K) */}
       <CommandPalette
         isOpen={isCommandPaletteOpen}
@@ -2365,7 +2375,6 @@ export const App: React.FC = () => {
         onRecalculateTickers={handleLiveRecalculate}
         isRecalculating={isRecalculating}
       />
-
 
       {/* 5. Report Queries & Multi-Format Exports (R) */}
       {isReportQueryModalOpen && (
@@ -2442,6 +2451,7 @@ export const App: React.FC = () => {
           opportunities={allUniverseOpportunities}
         />
       )}
+      </Suspense>
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-400">
