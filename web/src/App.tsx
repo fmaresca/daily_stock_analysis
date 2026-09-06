@@ -96,7 +96,7 @@ import {
 
 const DEFAULT_UNIVERSE_SYMBOLS = [
   'SPY', 'QQQ', 'IWM', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'TSLA',
-  'PLTR', 'IONQ', 'NET', 'RTX', 'JEPI', 'SCHD', 'SPCX', 'CLM', 'CRF', 'ZETA', 'BLZE', 'AXTI',
+  'PLTR', 'IONQ', 'NET', 'RTX', 'JEPI', 'SCHD', 'SPCX', 'CLM', 'CRF', 'ZETA', 'BLZE', 'AXTI', 'LUNR',
 ];
 
 const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
@@ -106,6 +106,14 @@ const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
     description: "Frank's primary high-conviction watchlist of core ETFs, Mega-Caps, CEFs, and growth plays",
     tickers: DEFAULT_UNIVERSE_SYMBOLS,
     isDefault: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'living-trust-equities',
+    name: 'Living Trust Equities',
+    description: 'Equities imported from Living Trust-Options ...609 account (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA)',
+    tickers: ['AXTI', 'BLZE', 'IONQ', 'LUNR', 'NET', 'RTX', 'TSLA'],
+    isDefault: false,
     createdAt: new Date().toISOString(),
   },
   {
@@ -204,6 +212,12 @@ export const App: React.FC = () => {
           // Ensure at least one Frank Favorites exists if none matched
           if (!updatedGroups.some((g) => g.name === 'Frank Favorites' || g.id === 'frank-favorites')) {
             updatedGroups.unshift(INITIAL_WATCHLIST_GROUPS[0]);
+            migrated = true;
+          }
+
+          // Ensure Living Trust Equities group exists
+          if (!updatedGroups.some((g) => g.id === 'living-trust-equities' || g.name === 'Living Trust Equities')) {
+            updatedGroups.splice(1, 0, INITIAL_WATCHLIST_GROUPS[1]);
             migrated = true;
           }
 

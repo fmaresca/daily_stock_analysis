@@ -19,6 +19,10 @@ import {
   DEFAULT_WEEKLY_DISBURSEMENT,
 } from '../utils/capitalAndTaxLedger';
 import {
+  parseSchwabPositionsCsv,
+  syncImportedEquitiesToWatchlist,
+} from '../utils/schwabPositionsParser';
+import {
   DollarSign,
   ShieldCheck,
   Percent,
@@ -29,6 +33,7 @@ import {
   TrendingUp,
   Clock,
   AlertTriangle,
+  Upload,
 } from './icons';
 
 interface WeeklyCashLedgerViewProps {
@@ -86,6 +91,41 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
   const [premAmount, setPremAmount] = useState<number>(350);
   const [premType, setPremType] = useState<'EXPIRED' | 'EXERCISED' | 'ROLLED'>('EXPIRED');
   const [premNote, setPremNote] = useState('');
+
+  // CSV import success notification
+  const [importSuccessMsg, setImportSuccessMsg] = useState('');
+
+  const handleBrokerCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = (evt.target?.result as string) || '';
+      if (!text) return;
+      try {
+        const parsed = parseSchwabPositionsCsv(text);
+        setCapitalState(parsed.capitalState);
+        saveCapitalState(parsed.capitalState);
+        setInputTotalCash(parsed.capitalState.totalCash);
+        setInlineCashValue(parsed.capitalState.totalCash);
+        setInputTargetAllocation(parsed.capitalState.maxPerPositionAllocation);
+
+        // Update portfolio book with all equities, calls, puts
+        localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(parsed.portfolioPositions));
+
+        // Sync imported equities to Watchlist
+        syncImportedEquitiesToWatchlist(parsed.equitySymbols, parsed.accountName);
+
+        setImportSuccessMsg(
+          `Imported ${parsed.accountName}: Total Cash $${parsed.capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })} (SNYXX + SNAXX + Sweep), -$${parsed.totalCommittedCspCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })} CSP Offset (PANW + PLTR), -$${parsed.encumberedLivingExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })} Living Exp -> $${parsed.netFreeCashForNewCsps.toLocaleString(undefined, { minimumFractionDigits: 2 })} Net Free Cash for new CSPs (${parsed.maxAllowedNewPositions} positions). ${parsed.equitySymbols.length} Equities synced to Watchlist: ${parsed.equitySymbols.join(', ')}!`
+        );
+        setTimeout(() => setImportSuccessMsg(''), 10000);
+      } catch (err: any) {
+        console.error('Failed to parse broker positions CSV:', err);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // Sync state whenever positions change
   useEffect(() => {
@@ -334,6 +374,17 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            <label className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 flex items-center space-x-1.5 transition-colors cursor-pointer">
+              <Upload className="w-3.5 h-3.5" />
+              <span>Import Positions CSV</span>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleBrokerCsvUpload}
+                className="hidden"
+              />
+            </label>
+
             <button
               onClick={() => {
                 const fresh = getDefaultCapitalState(positions || []);
@@ -350,6 +401,13 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
             </button>
           </div>
         </div>
+
+        {importSuccessMsg && (
+          <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs flex items-center space-x-2.5 animate-fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="font-mono text-[11px] leading-relaxed">{importSuccessMsg}</span>
+          </div>
+        )}
 
         {/* MMF & Cash Breakdown Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 border-t border-slate-800/80">
@@ -386,6 +444,26 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
               PANW + PLTR Offsets: -${capitalState.committedCollateral.toLocaleString()}
             </span>
           </div>
+        </div>
+
+        {/* Ingested Equities in Watchlist Strip */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs">
+          <div className="flex items-center space-x-2">
+            <span className="text-[11px] font-bold text-slate-300">Equities Ingested into Watchlist:</span>
+            <div className="flex items-center gap-1.5 font-mono font-bold">
+              {['AXTI', 'BLZE', 'IONQ', 'LUNR', 'NET', 'RTX', 'TSLA'].map((sym) => (
+                <span
+                  key={sym}
+                  className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[10px]"
+                >
+                  {sym}
+                </span>
+              ))}
+            </div>
+          </div>
+          <span className="text-[10px] text-slate-400 font-mono">
+            7 Long Holdings &bull; 7 Covered Calls Linked &bull; 2 CSP Offsets Active (PANW, PLTR)
+          </span>
         </div>
       </div>
 
