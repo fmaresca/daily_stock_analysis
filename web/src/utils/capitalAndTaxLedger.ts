@@ -17,13 +17,20 @@ import {
   GeminiBorderlineCandidate,
   GeminiExcludedCandidate,
 } from '../types/options';
-import { PortfolioPosition } from './portfolioStressTest';
+import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest';
 
 const CAPITAL_STORAGE_KEY = 'deltaharvest_capital_ledger';
 const TAX_STORAGE_KEY = 'deltaharvest_tax_ledger';
 
 export const MAX_SINGLE_EQUITY_POSITION_LIMIT = 200000; // $200,000 maximum collateral on any one equity security CSP
-export const DEFAULT_TOTAL_AVAILABLE_CASH = 550000; // $550,000 default total available liquid cash
+
+// Real Account Profile: Living Trust-Options ...609
+export const DEFAULT_ACCOUNT_NAME = 'Living Trust-Options ...609';
+export const DEFAULT_ACCOUNT_NET_VALUE = 2343519.76; // Total account liquidation value
+export const DEFAULT_SNYXX_CASH = 202775.94; // Schwab New York Municipal Money Ultra
+export const DEFAULT_SNAXX_CASH = 77341.30; // Schwab Prime Advantage Money Ultra
+export const DEFAULT_CORE_CASH = 293703.52; // Cash & Cash Investments sweep
+export const DEFAULT_TOTAL_AVAILABLE_CASH = 573820.76; // Total liquid cash to cover CSP before offsets (SNYXX + SNAXX + Core Cash)
 export const DEFAULT_WEEKLY_DISBURSEMENT = 5000; // $5,000 weekly living expenses rule
 export const DEFAULT_PER_POSITION_BUDGET = 100000; // Default target allocation per position (strictly capped at $200,000)
 
@@ -75,7 +82,7 @@ export function calculateDynamicPositionSizing(
   };
 }
 
-export function getDefaultCapitalState(): AccountCapitalState {
+export function getDefaultCapitalState(positions: PortfolioPosition[] = []): AccountCapitalState {
   const defaultDisbursements: DisbursementItem[] = [
     {
       id: 'DISB_DEFAULT_001',
@@ -87,12 +94,20 @@ export function getDefaultCapitalState(): AccountCapitalState {
   ];
 
   const totalCash = DEFAULT_TOTAL_AVAILABLE_CASH;
-  const committed = 0;
+  const activePositions = positions && positions.length > 0 ? positions : LIVING_TRUST_OPTIONS_POSITIONS;
+  const committed = calculateCommittedCspCollateral(activePositions);
   const encumbered = DEFAULT_WEEKLY_DISBURSEMENT;
   const free = Math.max(0, totalCash - encumbered - committed);
-  const sizing = calculateDynamicPositionSizing(free);
+  const sizing = calculateDynamicPositionSizing(free, DEFAULT_PER_POSITION_BUDGET);
 
   return {
+    accountName: DEFAULT_ACCOUNT_NAME,
+    totalAccountValue: DEFAULT_ACCOUNT_NET_VALUE,
+    cashBreakdown: {
+      snyxx: DEFAULT_SNYXX_CASH,
+      snaxx: DEFAULT_SNAXX_CASH,
+      coreCash: DEFAULT_CORE_CASH,
+    },
     totalCash,
     plannedDisbursements: defaultDisbursements,
     totalEncumberedDisbursements: encumbered,
@@ -164,20 +179,43 @@ export function calculateEncumberedDisbursements(disbursements: DisbursementItem
 export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []): AccountCapitalState {
   try {
     const raw = localStorage.getItem(CAPITAL_STORAGE_KEY);
-    let state = raw ? (JSON.parse(raw) as AccountCapitalState) : getDefaultCapitalState();
+    const activePositions = currentPositions && currentPositions.length > 0
+      ? currentPositions
+      : LIVING_TRUST_OPTIONS_POSITIONS;
+
+    let state = raw ? (JSON.parse(raw) as AccountCapitalState) : getDefaultCapitalState(activePositions);
 
     if (!Array.isArray(state.plannedDisbursements)) {
-      state.plannedDisbursements = getDefaultCapitalState().plannedDisbursements;
+      state.plannedDisbursements = getDefaultCapitalState(activePositions).plannedDisbursements;
+    }
+
+    // Auto-migrate to real Living Trust-Options account values if default/legacy $550,000 is present
+    if (!state.cashBreakdown || state.totalCash === 550000) {
+      state.accountName = DEFAULT_ACCOUNT_NAME;
+      state.totalAccountValue = DEFAULT_ACCOUNT_NET_VALUE;
+      state.cashBreakdown = {
+        snyxx: DEFAULT_SNYXX_CASH,
+        snaxx: DEFAULT_SNAXX_CASH,
+        coreCash: DEFAULT_CORE_CASH,
+      };
+      state.totalCash = DEFAULT_TOTAL_AVAILABLE_CASH;
     }
 
     const encumbered = calculateEncumberedDisbursements(state.plannedDisbursements);
-    const committed = calculateCommittedCspCollateral(currentPositions);
+    const committed = calculateCommittedCspCollateral(activePositions);
     const totalCash = Number(state.totalCash) > 0 ? Number(state.totalCash) : DEFAULT_TOTAL_AVAILABLE_CASH;
     const free = Math.max(0, totalCash - encumbered - committed);
-    const sizing = calculateDynamicPositionSizing(free, state.maxPerPositionAllocation);
+    const sizing = calculateDynamicPositionSizing(free, state.maxPerPositionAllocation || DEFAULT_PER_POSITION_BUDGET);
 
     state = {
       ...state,
+      accountName: state.accountName || DEFAULT_ACCOUNT_NAME,
+      totalAccountValue: state.totalAccountValue || DEFAULT_ACCOUNT_NET_VALUE,
+      cashBreakdown: state.cashBreakdown || {
+        snyxx: DEFAULT_SNYXX_CASH,
+        snaxx: DEFAULT_SNAXX_CASH,
+        coreCash: DEFAULT_CORE_CASH,
+      },
       totalCash,
       totalEncumberedDisbursements: encumbered,
       committedCollateral: committed,
@@ -190,7 +228,7 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
     return state;
   } catch (e) {
     console.warn('Failed to load capital ledger state:', e);
-    return getDefaultCapitalState();
+    return getDefaultCapitalState(currentPositions);
   }
 }
 
