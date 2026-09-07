@@ -6,7 +6,16 @@ import { calculateBarchartOpinion } from '../../utils/barchartEngine';
 import { calculateSMA, calculateRSI } from '../../utils/technicalIndicators';
 import { SECURITY_INTELLIGENCE_REGISTRY } from '../../utils/securityIntelligence';
 import { classifySectorAndBaseVol } from '../../utils/screenerHydrator';
-import { RefreshCw, Zap, TrendingUp, ShieldCheck, ExternalLink, CheckCircle2, AlertTriangle, Search, Target } from '../icons';
+import { RefreshCw, Zap, TrendingUp, ShieldCheck, ExternalLink, CheckCircle2, AlertTriangle, Search, Target, Calendar } from '../icons';
+import {
+  getNextWeeklyExpiration,
+  getClosestFridayDteExpiration,
+  calculateOptionsDte,
+  isNyseHoliday,
+  adjustExpirationForNyseHolidays,
+  parseDateYMD,
+  formatDateYMD,
+} from '../../utils/nyseHolidayCalendar';
 
 export interface OptionsTradeQualitySimulatorProps {
   initialTicker?: string;
@@ -61,21 +70,7 @@ export interface PulledTechnicalData {
   updatedAt: string;
 }
 
-function getNextFriday(): string {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = (5 - day + 7) % 7 || 7;
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
-}
 
-function calculateDte(expirationDate: string): number {
-  if (!expirationDate) return 5;
-  const target = new Date(expirationDate).getTime();
-  const now = new Date().setHours(0, 0, 0, 0);
-  const diffDays = Math.round((target - now) / 86400000);
-  return Math.max(1, diffDays);
-}
 
 function normCdf(x: number): number {
   const b1 = 0.31938153;
@@ -177,7 +172,9 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
 }) => {
   // Input Controls
   const [ticker, setTicker] = useState<string>(initialTicker.toUpperCase());
-  const [expirationDate, setExpirationDate] = useState<string>(initialExpiration || getNextFriday());
+  const [expirationDate, setExpirationDate] = useState<string>(
+    () => initialExpiration || getNextWeeklyExpiration().dateString
+  );
   const [dataSource, setDataSource] = useState<'BARCHART' | 'MARKETCHAMELEON'>(initialDataSource);
 
   // Interactive Slider States
@@ -198,7 +195,44 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [pulledData, setPulledData] = useState<PulledTechnicalData | null>(null);
 
-  const dte = useMemo(() => calculateDte(expirationDate), [expirationDate]);
+  const dte = useMemo(() => calculateOptionsDte(expirationDate), [expirationDate]);
+
+  // Live quick expiration targets based on NYSE holiday calendar
+  const quickExpirations = useMemo(() => {
+    return {
+      nextWeekly: getNextWeeklyExpiration(),
+      dte14: getClosestFridayDteExpiration(14),
+      dte30: getClosestFridayDteExpiration(30),
+      dte45: getClosestFridayDteExpiration(45),
+    };
+  }, []);
+
+  // Analyze whether the selected expiration date is a trading day, weekend, or NYSE holiday
+  const expirationAnalysis = useMemo(() => {
+    if (!expirationDate) return null;
+    const parsed = parseDateYMD(expirationDate);
+    const dayOfWeek = parsed.getDay(); // 0 = Sun, 5 = Fri, 6 = Sat
+    const isFri = dayOfWeek === 5;
+    const holiday = isNyseHoliday(parsed);
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = weekdayNames[dayOfWeek];
+
+    const adjusted = adjustExpirationForNyseHolidays(parsed);
+    const adjustedStr = formatDateYMD(adjusted.adjustedDate);
+    const needsAdjustment = adjusted.wasHolidayAdjusted || isWeekend;
+
+    return {
+      dayName,
+      isFriday: isFri,
+      isWeekend,
+      holiday,
+      needsAdjustment,
+      suggestedDateStr: adjustedStr,
+      suggestedDayName: weekdayNames[adjusted.adjustedDate.getDay()],
+      adjustmentReason: holiday.isHoliday ? holiday.holidayName : isWeekend ? 'Weekend (Market Closed)' : undefined,
+    };
+  }, [expirationDate]);
 
   // Dynamically calculate nearest strike price and contract economics based on simulation inputs
   const simulatedContract = useMemo(() => {
@@ -437,7 +471,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       }
 
       // 4. Options Expiration & Strike Delta Formulation
-      const effectiveDte = Math.max(1, calculateDte(expirationDate));
+      const effectiveDte = Math.max(1, calculateOptionsDte(expirationDate));
       const t = effectiveDte / 365.0;
       const v = ivCurrent;
 
@@ -632,7 +666,8 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
           <div className="md:col-span-3">
             <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
               <span>Expiration Date</span>
-              <span className="text-cyan-400 font-mono text-[10px] font-semibold">
+              <span className="text-cyan-400 font-mono text-[10px] font-semibold flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
                 {dte} DTE
               </span>
             </label>
@@ -641,9 +676,36 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
                 type="date"
                 value={expirationDate}
                 onChange={(e) => setExpirationDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                className={`w-full bg-slate-950 border rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none ${
+                  expirationAnalysis?.needsAdjustment
+                    ? 'border-amber-500/80 focus:border-amber-400'
+                    : 'border-slate-700/80 focus:border-emerald-500'
+                }`}
               />
             </div>
+            {/* Status indicator under date input */}
+            {expirationAnalysis && (
+              <div className="mt-1 flex items-center justify-between text-[10px]">
+                {expirationAnalysis.needsAdjustment ? (
+                  <div className="flex items-center gap-1 text-amber-400">
+                    <span>⚠️ {expirationAnalysis.dayName} ({expirationAnalysis.adjustmentReason})</span>
+                    <button
+                      type="button"
+                      onClick={() => setExpirationDate(expirationAnalysis.suggestedDateStr)}
+                      className="underline font-bold text-amber-300 hover:text-white cursor-pointer ml-1"
+                      title="Snap to preceding open NYSE trading day"
+                    >
+                      Snap to {expirationAnalysis.suggestedDayName} ({expirationAnalysis.suggestedDateStr})
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-emerald-400 font-medium">
+                    ✓ {expirationAnalysis.dayName} Expiration
+                    {expirationAnalysis.holiday.isHoliday && ` (${expirationAnalysis.holiday.holidayName})`}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Data Source Switcher: Barchart.com vs MarketChameleon.com */}
@@ -702,46 +764,85 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
 
         {/* Quick Expiration Shortcuts */}
         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-800/80 text-[11px] overflow-x-auto">
-          <span className="text-slate-400 font-semibold">Quick Expirations:</span>
+          <span className="text-slate-400 font-semibold flex items-center gap-1 whitespace-nowrap">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            Quick Expirations:
+          </span>
           <button
             type="button"
-            onClick={() => setExpirationDate(getNextFriday())}
-            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+            onClick={() => setExpirationDate(quickExpirations.nextWeekly.dateString)}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border whitespace-nowrap ${
+              expirationDate === quickExpirations.nextWeekly.dateString
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm shadow-emerald-500/10 font-bold'
+                : 'bg-slate-900 border-slate-800 hover:border-emerald-500/30 text-slate-300 hover:text-emerald-300'
+            }`}
           >
-            Next Friday (Weekly)
+            <span>Next Weekly ({quickExpirations.nextWeekly.dayOfWeekName})</span>
+            <span className="font-mono text-[10px] text-emerald-400 font-bold">
+              {quickExpirations.nextWeekly.dateString}
+            </span>
+            {quickExpirations.nextWeekly.wasHolidayAdjusted && (
+              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded border border-amber-500/30" title={`Holiday: ${quickExpirations.nextWeekly.holidayName}`}>
+                Adj
+              </span>
+            )}
           </button>
           <button
             type="button"
-            onClick={() => {
-              const d = new Date();
-              d.setDate(d.getDate() + 14);
-              setExpirationDate(d.toISOString().split('T')[0]);
-            }}
-            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+            onClick={() => setExpirationDate(quickExpirations.dte14.dateString)}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border whitespace-nowrap ${
+              expirationDate === quickExpirations.dte14.dateString
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-sm shadow-cyan-500/10 font-bold'
+                : 'bg-slate-900 border-slate-800 hover:border-cyan-500/30 text-slate-300 hover:text-cyan-300'
+            }`}
           >
-            14 DTE
+            <span>14 DTE ({quickExpirations.dte14.dayOfWeekName})</span>
+            <span className="font-mono text-[10px] text-cyan-400 font-bold">
+              {quickExpirations.dte14.dateString}
+            </span>
+            {quickExpirations.dte14.wasHolidayAdjusted && (
+              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded border border-amber-500/30" title={`Holiday: ${quickExpirations.dte14.holidayName}`}>
+                Adj
+              </span>
+            )}
           </button>
           <button
             type="button"
-            onClick={() => {
-              const d = new Date();
-              d.setDate(d.getDate() + 30);
-              setExpirationDate(d.toISOString().split('T')[0]);
-            }}
-            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+            onClick={() => setExpirationDate(quickExpirations.dte30.dateString)}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border whitespace-nowrap ${
+              expirationDate === quickExpirations.dte30.dateString
+                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-sm shadow-indigo-500/10 font-bold'
+                : 'bg-slate-900 border-slate-800 hover:border-indigo-500/30 text-slate-300 hover:text-indigo-300'
+            }`}
           >
-            30 DTE (Monthly)
+            <span>30 DTE (Monthly {quickExpirations.dte30.dayOfWeekName})</span>
+            <span className="font-mono text-[10px] text-indigo-400 font-bold">
+              {quickExpirations.dte30.dateString}
+            </span>
+            {quickExpirations.dte30.wasHolidayAdjusted && (
+              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded border border-amber-500/30" title={`Holiday: ${quickExpirations.dte30.holidayName}`}>
+                Adj
+              </span>
+            )}
           </button>
           <button
             type="button"
-            onClick={() => {
-              const d = new Date();
-              d.setDate(d.getDate() + 45);
-              setExpirationDate(d.toISOString().split('T')[0]);
-            }}
-            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+            onClick={() => setExpirationDate(quickExpirations.dte45.dateString)}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border whitespace-nowrap ${
+              expirationDate === quickExpirations.dte45.dateString
+                ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-sm shadow-purple-500/10 font-bold'
+                : 'bg-slate-900 border-slate-800 hover:border-purple-500/30 text-slate-300 hover:text-purple-300'
+            }`}
           >
-            45 DTE (Theta Sweet Spot)
+            <span>45 DTE (Theta Sweet Spot)</span>
+            <span className="font-mono text-[10px] text-purple-400 font-bold">
+              {quickExpirations.dte45.dateString}
+            </span>
+            {quickExpirations.dte45.wasHolidayAdjusted && (
+              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded border border-amber-500/30" title={`Holiday: ${quickExpirations.dte45.holidayName}`}>
+                Adj
+              </span>
+            )}
           </button>
         </div>
 
