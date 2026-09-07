@@ -143,10 +143,13 @@ export const App: React.FC = () => {
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState<boolean>(false);
   const [isSimulatorModalOpen, setIsSimulatorModalOpen] = useState<boolean>(false);
   const [simulatorInitialData, setSimulatorInitialData] = useState<{
+    ticker?: string;
+    expiration?: string;
     ivRank?: number;
     delta?: number;
     distTo50Sma?: number;
     strategy?: 'CASH_SECURED_PUT' | 'COVERED_CALL';
+    dataSource?: 'BARCHART' | 'MARKETCHAMELEON';
   }>({});
   const [lastLiveFetchTime, setLastLiveFetchTime] = useState<string>(() => {
     return localStorage.getItem('deltaharvest_last_live_fetch') || '';
@@ -2316,11 +2319,15 @@ export const App: React.FC = () => {
                     const dist50 = opp.current_price > 0 && opp.strike > 0
                       ? ((opp.strike - opp.current_price) / opp.current_price) * 100
                       : -5.1;
+                    const isMcSource = opp.tags?.some((t) => t.includes('CHAMELEON') || t.includes('MC_')) || false;
                     setSimulatorInitialData({
+                      ticker: opp.symbol,
+                      expiration: opp.expiration,
                       ivRank: opp.iv_rank || 48,
                       delta: Math.abs(opp.delta || 0.18),
                       distTo50Sma: dist50,
                       strategy: opp.strategy === 'CSP' ? 'CASH_SECURED_PUT' : 'COVERED_CALL',
+                      dataSource: isMcSource ? 'MARKETCHAMELEON' : 'BARCHART',
                     });
                     setIsSimulatorModalOpen(true);
                   }}
@@ -2479,10 +2486,13 @@ export const App: React.FC = () => {
         <OptionsTradeQualityModal
           isOpen={isSimulatorModalOpen}
           onClose={() => setIsSimulatorModalOpen(false)}
+          initialTicker={simulatorInitialData.ticker || ''}
+          initialExpiration={simulatorInitialData.expiration || ''}
           initialIvRank={simulatorInitialData.ivRank || 48}
           initialDelta={simulatorInitialData.delta || 0.18}
           initialDistTo50Sma={simulatorInitialData.distTo50Sma || -5.1}
           initialStrategy={simulatorInitialData.strategy || 'CASH_SECURED_PUT'}
+          initialDataSource={simulatorInitialData.dataSource || 'BARCHART'}
         />
       )}
       </Suspense>
