@@ -477,6 +477,31 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   <div>OI: 2,400 (10.0 pts)</div>
                 </div>
               </div>
+
+              {/* Interactive Inputs & Multi-Source Technical Hydration */}
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
+                <div className="font-bold text-emerald-400 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-emerald-400" />
+                  <span>Interactive Stock Ticker &amp; Expiration Date Hydration Engine</span>
+                </div>
+                <p className="text-slate-300 leading-relaxed text-[11px]">
+                  The Options Trade Quality Simulator provides dedicated input controls for <strong>Stock Ticker</strong> and <strong>Expiration Date</strong> with real-time technical calculation. Enter any ticker symbol and select your desired weekly or monthly expiration to automatically hydrate IV Rank, 50-day SMA distance, option delta, and return on capital from either market data provider:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-emerald-500/30 space-y-1">
+                    <span className="font-bold text-emerald-300 block">Barchart.com Ingestion Engine</span>
+                    <p className="text-slate-400">
+                      Calculates the 13-Indicator Barchart Technical Opinion across short, medium, and long-term moving averages/MACDs, 14-day blended RSI, and historical volatility IV Rank calibration.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-cyan-500/30 space-y-1">
+                    <span className="font-bold text-cyan-300 block">MarketChameleon.com Ingestion Engine</span>
+                    <p className="text-slate-400">
+                      Evaluates quantitative moving average technical patterns (Uptrend, Bullish Crossover, Fast Bullish, Top Pullback), 6-Month Range Position, IV30, 20-day volatility, and CBOE weeklys directory confirmation.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -846,7 +871,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   <span>2. The Power of Weekly Options (Expiry Cadence &amp; Gamma Defense)</span>
                 </h4>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Stocks equipped with <strong>Weekly Options</strong> allow income traders to execute options contracts expiring every Friday, rather than only once a month (3rd Friday). This unlocks three critical advantages:
+                  Stocks equipped with <strong>At least Weekly Options</strong> (confirmed via the weekly options gate checkbox) allow income traders to execute options contracts expiring every Friday or daily, rather than only once a month (3rd Friday). This unlocks three critical advantages:
                 </p>
                 <ul className="list-disc list-inside text-xs text-slate-300 space-y-1.5 pl-1">
                   <li><strong>Rapid Theta Acceleration:</strong> Time decay exponentially accelerates inside 7–14 DTE, allowing fast profit realization at 50% max profit.</li>

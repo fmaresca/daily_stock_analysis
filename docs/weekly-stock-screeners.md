@@ -63,6 +63,8 @@ Primary Target URL:
 6. **Web UI Section ("Weekly Stock Screeners")**:
    - Accessible from both the Equities and Options navigation menus, as well as the Ctrl+K Command Palette.
    - Real-time KPI summary (Total universe candidates, 100% direction strength count, weekly options percentage, bullish bias).
+   - "At least Weekly Options" gate checkbox: Filters strictly to securities that feature at least weekly options expiration cadence.
+   - Integration with Options Trade Quality Simulator: Tickers from screeners can be loaded directly or typed with expiration dates to pull live Barchart or MarketChameleon IV Rank and technical consensus.
    - In-browser CSV Upload: Drag-and-drop or upload any Barchart or MarketChameleon CSV directly.
    - CSV Export & 1-Click Clipboard Copy: Instantly copy or download screened candidates with all respective column headings (including CBOE Weeklys and Options Cadence).
    - 1-Click navigation to Interactive Candlestick Charts, 5-Part Options Safety Audit, and Schwab Broker Staging.

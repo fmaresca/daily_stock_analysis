@@ -1241,7 +1241,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
               onChange={(e) => setWeeklyOnly(e.target.checked)}
               className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/50"
             />
-            <span className="font-semibold text-emerald-300">Has Options Only</span>
+            <span className="font-semibold text-emerald-300" title="Filter to equities having at least weekly expiration options">At least Weekly Options</span>
           </label>
 
           {activeSource === 'MARKETCHAMELEON' && (
