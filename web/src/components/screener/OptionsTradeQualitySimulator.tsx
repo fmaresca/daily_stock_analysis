@@ -6,7 +6,7 @@ import { calculateBarchartOpinion } from '../../utils/barchartEngine';
 import { calculateSMA, calculateRSI } from '../../utils/technicalIndicators';
 import { SECURITY_INTELLIGENCE_REGISTRY } from '../../utils/securityIntelligence';
 import { classifySectorAndBaseVol } from '../../utils/screenerHydrator';
-import { RefreshCw, Zap, TrendingUp, ShieldCheck, ExternalLink, CheckCircle2, AlertTriangle, Search } from '../icons';
+import { RefreshCw, Zap, TrendingUp, ShieldCheck, ExternalLink, CheckCircle2, AlertTriangle, Search, Target } from '../icons';
 
 export interface OptionsTradeQualitySimulatorProps {
   initialTicker?: string;
@@ -95,6 +95,75 @@ function normCdf(x: number): number {
   }
 }
 
+/**
+ * Standard Acklam's Inverse Normal Cumulative Distribution Function (Probit)
+ * Computes exact d1 from target delta to solve for option strike.
+ */
+function inverseNormalCdf(p: number): number {
+  if (p <= 0.0001) return -3.75;
+  if (p >= 0.9999) return 3.75;
+
+  const a = [
+    -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2,
+    1.38357751867269e2, -3.066479806614716e1, 2.506628277459239e0,
+  ];
+  const b = [
+    -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2,
+    6.680131188771972e1, -1.328068155288572e1,
+  ];
+  const c = [
+    -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838e0,
+    -2.549732539343734e0, 4.374664141464968e0, 2.938163982698783e0,
+  ];
+  const d = [
+    7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996e0,
+    3.754408661907416e0,
+  ];
+
+  const pLow = 0.02425;
+  const pHigh = 1.0 - pLow;
+
+  if (p < pLow) {
+    const q = Math.sqrt(-2.0 * Math.log(p));
+    return (
+      (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+    );
+  }
+  if (p <= pHigh) {
+    const q = p - 0.5;
+    const r = q * q;
+    return (
+      (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) *
+      q /
+      (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0)
+    );
+  }
+  const q = Math.sqrt(-2.0 * Math.log(1.0 - p));
+  return -(
+    (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+    ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+  );
+}
+
+/**
+ * Calculates standard US equity option exchange strike increments.
+ * Snaps theoretical price to nearest tradeable listed strike price.
+ */
+function getNearestExchangeStrike(theoreticalStrike: number, spot: number): number {
+  let interval = 1.0;
+  if (spot <= 25) {
+    interval = 0.5;
+  } else if (spot <= 100) {
+    interval = 1.0;
+  } else if (spot <= 200) {
+    interval = 2.5;
+  } else {
+    interval = 5.0;
+  }
+  return Math.round(theoreticalStrike / interval) * interval;
+}
+
 export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulatorProps> = ({
   initialTicker = '',
   initialExpiration = '',
@@ -131,6 +200,105 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
 
   const dte = useMemo(() => calculateDte(expirationDate), [expirationDate]);
 
+  // Dynamically calculate nearest strike price and contract economics based on simulation inputs
+  const simulatedContract = useMemo(() => {
+    const spot = pulledData?.spotPrice || 100.0;
+    const sma50 = pulledData?.sma50;
+    const effectiveDte = dte;
+    const T = Math.max(1, effectiveDte) / 365.0;
+    const rate = 0.045;
+
+    // Implied Volatility: use pulled IV if available, or derive calibrated IV from ivRank slider
+    const ivDecimal = pulledData?.ivCurrent
+      ? pulledData.ivCurrent
+      : Math.max(0.16, Math.min(0.95, 0.20 + (ivRank / 100) * 0.40));
+
+    // Target delta from slider (0.10 to 0.45)
+    const targetDelta = Math.max(0.05, Math.min(0.48, delta));
+
+    let theoreticalStrike: number;
+    if (strategy === 'COVERED_CALL') {
+      const d1 = inverseNormalCdf(targetDelta);
+      theoreticalStrike = spot * Math.exp((rate + (ivDecimal * ivDecimal) / 2.0) * T - d1 * ivDecimal * Math.sqrt(T));
+      theoreticalStrike = Math.max(spot * 1.002, theoreticalStrike);
+    } else {
+      const d1 = inverseNormalCdf(1.0 - targetDelta);
+      theoreticalStrike = spot * Math.exp((rate + (ivDecimal * ivDecimal) / 2.0) * T - d1 * ivDecimal * Math.sqrt(T));
+      theoreticalStrike = Math.min(spot * 0.998, Math.max(0.5, theoreticalStrike));
+    }
+
+    const nearestStrike = getNearestExchangeStrike(theoreticalStrike, spot);
+
+    // Black Scholes valuation at nearest tradeable strike
+    const d1Actual = (Math.log(spot / nearestStrike) + (rate + (ivDecimal * ivDecimal) / 2.0) * T) / (ivDecimal * Math.sqrt(T));
+    const d2Actual = d1Actual - ivDecimal * Math.sqrt(T);
+
+    const rawDelta = strategy === 'COVERED_CALL' ? normCdf(d1Actual) : normCdf(d1Actual) - 1.0;
+    const actualDelta = Math.min(0.50, Math.max(0.05, Math.round(Math.abs(rawDelta) * 100) / 100));
+    const popPct = Math.round((1.0 - actualDelta) * 100);
+
+    let mid = 0;
+    if (strategy === 'COVERED_CALL') {
+      mid = spot * normCdf(d1Actual) - nearestStrike * Math.exp(-rate * T) * normCdf(d2Actual);
+    } else {
+      mid = nearestStrike * Math.exp(-rate * T) * normCdf(-d2Actual) - spot * normCdf(-d1Actual);
+    }
+    mid = Math.max(0.10, Math.round(mid * 100) / 100);
+
+    const bid = Math.max(0.05, Math.round(mid * 0.95 * 100) / 100);
+    const ask = Math.round(mid * 1.05 * 100) / 100;
+
+    const collateral = strategy === 'CASH_SECURED_PUT' ? nearestStrike * 100 : spot * 100;
+    const premiumTotal = Math.round(mid * 100);
+    const rocPerTradePct = (premiumTotal / collateral) * 100;
+    const calcAnnualizedRoC = Math.round((rocPerTradePct * (365 / effectiveDte)) * 10) / 10;
+
+    const bufferPct = strategy === 'CASH_SECURED_PUT'
+      ? -Math.round((((spot - nearestStrike) / spot) * 100) * 10) / 10
+      : Math.round((((nearestStrike - spot) / spot) * 100) * 10) / 10;
+
+    const breakeven = strategy === 'CASH_SECURED_PUT'
+      ? Math.round((nearestStrike - mid) * 100) / 100
+      : Math.round((spot - mid) * 100) / 100;
+
+    const cushionPct = Math.round((Math.abs(spot - breakeven) / spot) * 1000) / 10;
+
+    const strikeVsSma50 = sma50 ? Math.round((nearestStrike - sma50) * 100) / 100 : 0;
+    const strikeVsSma50Pct = sma50 ? Math.round(((nearestStrike - sma50) / sma50) * 1000) / 10 : 0;
+
+    return {
+      spotPrice: spot,
+      expirationFormatted: expirationDate,
+      dte: effectiveDte,
+      nearestStrike,
+      theoreticalStrike: Math.round(theoreticalStrike * 100) / 100,
+      targetDelta,
+      bsDelta: actualDelta,
+      actualDelta,
+      popPct,
+      estimatedMid: mid,
+      midPrice: mid,
+      bid,
+      bidPrice: bid,
+      ask,
+      askPrice: ask,
+      collateral,
+      collateralPerContract: collateral,
+      premiumTotal,
+      premiumPerContract: premiumTotal,
+      annualizedRoC: Math.min(75, Math.max(10, calcAnnualizedRoC)),
+      bufferPct,
+      breakeven,
+      breakEven: breakeven,
+      cushionPct,
+      sma50,
+      underlyingSma50: sma50 || spot,
+      strikeVsSma50,
+      strikeVsSma50Pct,
+      strikeVsSmaPct: strikeVsSma50Pct,
+    };
+  }, [pulledData, dte, ivRank, delta, strategy, expirationDate]);
+
   // Compute live score and breakdown in real time
   const result = useMemo(() => {
     return scoreFromSliderInputs({
@@ -138,12 +306,12 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       ivRank,
       delta,
       distTo50SmaPct: distTo50Sma,
-      annualizedReturnPct: annualizedRoC,
+      annualizedReturnPct: simulatedContract.annualizedRoC || annualizedRoC,
       bidAskSpreadPct: bidAskSpread,
       openInterest,
       hasEarningsAlert,
     });
-  }, [strategy, ivRank, delta, distTo50Sma, annualizedRoC, bidAskSpread, openInterest, hasEarningsAlert]);
+  }, [strategy, ivRank, delta, distTo50Sma, simulatedContract.annualizedRoC, annualizedRoC, bidAskSpread, openInterest, hasEarningsAlert]);
 
   // Radial Gauge Math
   const radius = 70;
@@ -360,52 +528,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
     }
   };
 
-  // Preset Handlers
-  const handleLoadPreset = (name: string) => {
-    if (name === 'XYZ_REFERENCE') {
-      setTicker('XYZ');
-      setStrategy('CASH_SECURED_PUT');
-      setIvRank(48);
-      setDelta(0.18);
-      setDistTo50Sma(-5.1);
-      setAnnualizedRoC(28.5);
-      setBidAskSpread(4.2);
-      setOpenInterest(2400);
-      setHasEarningsAlert(false);
-    } else if (name === 'TSLA_BULL_CSP') {
-      setTicker('TSLA');
-      setStrategy('CASH_SECURED_PUT');
-      setIvRank(58);
-      setDelta(0.19);
-      setDistTo50Sma(-6.4);
-      setAnnualizedRoC(32.0);
-      setBidAskSpread(3.0);
-      setOpenInterest(8500);
-      setHasEarningsAlert(false);
-      handleFetchTechnicals('TSLA');
-    } else if (name === 'PLTR_CSP') {
-      setTicker('PLTR');
-      setStrategy('CASH_SECURED_PUT');
-      setIvRank(52);
-      setDelta(0.17);
-      setDistTo50Sma(-4.2);
-      setAnnualizedRoC(29.0);
-      setBidAskSpread(2.8);
-      setOpenInterest(4200);
-      setHasEarningsAlert(false);
-      handleFetchTechnicals('PLTR');
-    } else if (name === 'EARNINGS_RISK') {
-      setTicker('NVDA');
-      setStrategy('CASH_SECURED_PUT');
-      setIvRank(85);
-      setDelta(0.24);
-      setDistTo50Sma(-3.0);
-      setAnnualizedRoC(45.0);
-      setBidAskSpread(8.0);
-      setOpenInterest(1200);
-      setHasEarningsAlert(true);
-    }
-  };
+
 
   return (
     <div className="bg-slate-950 text-slate-100 rounded-2xl border border-slate-800/80 shadow-2xl p-5 sm:p-7 max-w-5xl w-full mx-auto backdrop-blur-xl font-sans select-none">
@@ -675,33 +798,113 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
         )}
       </div>
 
-      {/* Quick Presets Row */}
-      <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1 text-xs">
-        <span className="text-slate-400 text-[11px] font-semibold uppercase tracking-wider">Presets:</span>
-        <button
-          onClick={() => handleLoadPreset('XYZ_REFERENCE')}
-          className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer"
-        >
-          Reference Example (XYZ - 96 Score)
-        </button>
-        <button
-          onClick={() => handleLoadPreset('TSLA_BULL_CSP')}
-          className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer"
-        >
-          TSLA High-IVR CSP (58% IVR)
-        </button>
-        <button
-          onClick={() => handleLoadPreset('PLTR_CSP')}
-          className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer"
-        >
-          PLTR 17Δ Sweet Spot
-        </button>
-        <button
-          onClick={() => handleLoadPreset('EARNINGS_RISK')}
-          className="px-2.5 py-1 rounded-md bg-slate-900 border border-rose-900/40 hover:border-rose-500/40 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
-        >
-          Earnings Risk Gate Test (-40 pts)
-        </button>
+      {/* Dynamic Simulated Contract & Nearest Strike Blueprint Card */}
+      <div className="mb-5 bg-gradient-to-r from-slate-900/95 via-slate-900/80 to-slate-950 border border-emerald-500/30 rounded-xl p-4 shadow-lg shadow-emerald-950/20 backdrop-blur-md">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-800/80">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <Target className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Simulated Nearest Strike & Contract Blueprint
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                  {strategy === 'COVERED_CALL' ? 'Covered Call (CC)' : 'Cash Secured Put (CSP)'}
+                </span>
+              </div>
+              <div className="text-sm font-medium text-slate-200 flex items-center gap-2 mt-0.5">
+                <span className="font-bold text-white font-mono">{ticker || 'UNDERLYING'}</span>
+                <span className="text-slate-500">•</span>
+                <span>Spot: <strong className="text-slate-200 font-mono">${simulatedContract.spotPrice.toFixed(2)}</strong></span>
+                <span className="text-slate-500">•</span>
+                <span>Exp: <strong className="text-slate-200">{simulatedContract.expirationFormatted}</strong> ({simulatedContract.dte} DTE)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Nearest Exch. Strike</span>
+              <div className="flex items-center gap-1.5 justify-end">
+                <span className="text-2xl font-black text-emerald-400 font-mono tracking-tight">
+                  ${simulatedContract.nearestStrike.toFixed(2)}
+                </span>
+                <span className={`px-1.5 py-0.5 rounded text-[11px] font-black uppercase ${
+                  strategy === 'COVERED_CALL' 
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                }`}>
+                  {strategy === 'COVERED_CALL' ? 'CALL' : 'PUT'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-xs">
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
+            <span className="text-slate-400 text-[10px] block">Strike Cushion (OTM)</span>
+            <span className="font-mono font-bold text-emerald-400 text-sm">
+              {simulatedContract.bufferPct >= 0 ? '+' : ''}{simulatedContract.bufferPct.toFixed(1)}%
+            </span>
+            <span className="text-[9px] text-slate-500 block truncate">
+              Theor: ${simulatedContract.theoreticalStrike.toFixed(2)}
+            </span>
+          </div>
+
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
+            <span className="text-slate-400 text-[10px] block">Target / Actual Δ</span>
+            <span className="font-mono font-bold text-cyan-400 text-sm">
+              {simulatedContract.targetDelta.toFixed(2)} / {simulatedContract.bsDelta.toFixed(2)}
+            </span>
+            <span className="text-[9px] text-slate-500 block truncate">
+              PoP ~{simulatedContract.popPct.toFixed(0)}%
+            </span>
+          </div>
+
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
+            <span className="text-slate-400 text-[10px] block">Est. Option Premium</span>
+            <span className="font-mono font-bold text-amber-400 text-sm">
+              ${simulatedContract.midPrice.toFixed(2)}
+            </span>
+            <span className="text-[9px] text-slate-500 block truncate">
+              Bid ${simulatedContract.bidPrice.toFixed(2)} / Ask ${simulatedContract.askPrice.toFixed(2)}
+            </span>
+          </div>
+
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
+            <span className="text-slate-400 text-[10px] block">Premium Income (1x)</span>
+            <span className="font-mono font-bold text-emerald-400 text-sm">
+              +${simulatedContract.premiumPerContract.toFixed(0)}
+            </span>
+            <span className="text-[9px] text-slate-500 block truncate">
+              Per 100-share lot
+            </span>
+          </div>
+
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
+            <span className="text-slate-400 text-[10px] block">Capital / Collateral</span>
+            <span className="font-mono font-bold text-slate-200 text-sm">
+              ${simulatedContract.collateralPerContract.toLocaleString()}
+            </span>
+            <span className="text-[9px] text-slate-500 block truncate">
+              {strategy === 'COVERED_CALL' ? '100 shares held' : 'Cash held in reserve'}
+            </span>
+          </div>
+
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
+            <span className="text-slate-400 text-[10px] block">Break-Even / SMA50</span>
+            <span className="font-mono font-bold text-indigo-300 text-sm">
+              ${simulatedContract.breakEven.toFixed(2)}
+            </span>
+            <span className="text-[9px] text-slate-500 block truncate">
+              SMA50: ${simulatedContract.underlyingSma50.toFixed(2)} ({simulatedContract.strikeVsSmaPct >= 0 ? '+' : ''}{simulatedContract.strikeVsSmaPct.toFixed(1)}%)
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* 3. Main 3-Column Layout matching reference image */}
