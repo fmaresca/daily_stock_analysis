@@ -18,6 +18,7 @@ export interface EarningsCalendarEntry {
   fiscalQuarter?: string;
   isConfirmed?: boolean;
   historicalAvgMovePct?: number; // e.g. 7.5 for 7.5%
+  lastEarningsDate?: string; // YYYY-MM-DD of most recent prior earnings release
 }
 
 /**
@@ -332,18 +333,38 @@ export async function fetchLiveEarningsInfo(
 
   // 5. Fallback if network sources failed or symbol has unannounced dates
   if (!discoveredDate) {
-    onProgress?.(`Analyzing fiscal calendar and seasonal reporting cycle for ${sym}...`);
+    onProgress?.(`Estimating next earnings date for ${sym} using 90-day rolling cycle...`);
     // Deliberate brief pacing delay to allow UI to register status
     await new Promise((resolve) => setTimeout(resolve, 800));
 
     const today = new Date();
-    const currentMonth = today.getMonth(); // 0-11
-    // Project standard quarterly earnings window (approx 28 days post quarter-end: Jan/Apr/Jul/Oct)
-    const targetMonth = currentMonth < 3 ? 3 : currentMonth < 6 ? 6 : currentMonth < 9 ? 9 : 0;
-    const targetYear = currentMonth >= 9 ? today.getFullYear() + 1 : today.getFullYear();
-    const projected = new Date(targetYear, targetMonth, 28);
-    discoveredDate = `${projected.getFullYear()}-${String(projected.getMonth() + 1).padStart(2, '0')}-${String(projected.getDate()).padStart(2, '0')}`;
-    isConfirmed = false;
+
+    // Prefer last known earnings date + 90 days as the approximated future date.
+    // This is more accurate than projecting a generic quarterly window for companies
+    // that haven't yet announced their next earnings release.
+    const existingEntry = MONITORED_EARNINGS_REGISTRY[sym];
+    const lastKnown = existingEntry?.lastEarningsDate || existingEntry?.nextEarningsDate;
+    if (lastKnown && lastKnown !== 'N/A') {
+      const lastDate = new Date(lastKnown);
+      lastDate.setHours(0, 0, 0, 0);
+      // Only use as base if it's a past date (already occurred)
+      if (lastDate < today) {
+        const approx = new Date(lastDate.getTime() + 90 * 24 * 60 * 60 * 1000);
+        discoveredDate = `${approx.getFullYear()}-${String(approx.getMonth() + 1).padStart(2, '0')}-${String(approx.getDate()).padStart(2, '0')}`;
+        isConfirmed = false;
+        onProgress?.(`${sym}: No announced date — approximating next earnings as ${discoveredDate} (+90d from last known)`);
+      }
+    }
+
+    // Secondary fallback: Standard quarterly earnings window (Jan/Apr/Jul/Oct)
+    if (!discoveredDate) {
+      const currentMonth = today.getMonth(); // 0-11
+      const targetMonth = currentMonth < 3 ? 3 : currentMonth < 6 ? 6 : currentMonth < 9 ? 9 : 0;
+      const targetYear = currentMonth >= 9 ? today.getFullYear() + 1 : today.getFullYear();
+      const projected = new Date(targetYear, targetMonth, 28);
+      discoveredDate = `${projected.getFullYear()}-${String(projected.getMonth() + 1).padStart(2, '0')}-${String(projected.getDate()).padStart(2, '0')}`;
+      isConfirmed = false;
+    }
   }
 
   // Format quarter title
@@ -426,14 +447,27 @@ export function checkEarningsInsideExpiration(
   let fiscalQuarter = entry?.fiscalQuarter || 'Quarterly Earnings';
   let historicalAvgMovePct = entry?.historicalAvgMovePct || 7.0;
 
-  // Fallback: If not in static registry, dynamically estimate next earnings date
-  // (Standard US corporate earnings season occurs quarterly: Jan/Apr/Jul/Oct)
+  // Fallback: If not in static registry, estimate next earnings date.
+  // Prefer: last known earnings date + 90 days (more accurate for companies without
+  // announced dates). Secondary: standard quarterly window (Jan/Apr/Jul/Oct).
   if (!targetEarningsDateStr) {
-    const estimatedMonth = today.getMonth() < 3 ? 3 : today.getMonth() < 6 ? 6 : today.getMonth() < 9 ? 9 : 0;
-    const estimatedYear = today.getMonth() >= 9 ? today.getFullYear() + 1 : today.getFullYear();
-    const d = new Date(estimatedYear, estimatedMonth, 28);
-    targetEarningsDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    isConfirmed = false;
+    const lastKnown = entry?.lastEarningsDate;
+    if (lastKnown && lastKnown !== 'N/A') {
+      const lastDate = new Date(lastKnown);
+      lastDate.setHours(0, 0, 0, 0);
+      if (lastDate < today) {
+        const approx = new Date(lastDate.getTime() + 90 * 24 * 60 * 60 * 1000);
+        targetEarningsDateStr = `${approx.getFullYear()}-${String(approx.getMonth() + 1).padStart(2, '0')}-${String(approx.getDate()).padStart(2, '0')}`;
+        isConfirmed = false;
+      }
+    }
+    if (!targetEarningsDateStr) {
+      const estimatedMonth = today.getMonth() < 3 ? 3 : today.getMonth() < 6 ? 6 : today.getMonth() < 9 ? 9 : 0;
+      const estimatedYear = today.getMonth() >= 9 ? today.getFullYear() + 1 : today.getFullYear();
+      const d = new Date(estimatedYear, estimatedMonth, 28);
+      targetEarningsDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      isConfirmed = false;
+    }
   }
 
   const earningsDate = new Date(targetEarningsDateStr);

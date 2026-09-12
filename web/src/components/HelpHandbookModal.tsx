@@ -2100,6 +2100,46 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   <strong>Rule:</strong> Circuit-breaker thresholds are set in <code className="text-rose-200">.env</code> via <code className="text-rose-200">RISK_MAX_DRAWDOWN_PCT</code>, <code className="text-rose-200">RISK_MAX_DELTA_EXPOSURE</code>, and <code className="text-rose-200">RISK_MAX_SINGLE_UNDERLYING_PCT</code>. All default to conservative values — tighten them, never loosen beyond your personal risk tolerance.
                 </div>
               </div>
+
+              {/* Executive Portfolio Digest & Interactive Threat Register */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-amber-500/30 space-y-3">
+                <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Executive Portfolio Digest: Interactive Threat Register &amp; Binary Events Shock Buffer</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  The <strong>Executive Portfolio Digest</strong> acts as your top-level command center for portfolio health, combining automated 24/7 contract monitoring with interactive inspection modals:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-emerald-300 flex items-center gap-1.5">
+                      <span>Position Health &amp; Threat Register Modal</span>
+                    </div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      Click the card to open a full breakdown categorized by Delta stress:
+                    </p>
+                    <ul className="text-[11px] text-slate-400 space-y-1 list-disc list-inside">
+                      <li><strong className="text-rose-300">Critical (&ge;0.50Δ):</strong> Triggers immediate 0.50Δ Net-Credit Roll Protocol (roll out &amp; down before market close).</li>
+                      <li><strong className="text-rose-400">Threatened (&ge;0.40Δ):</strong> Queued on active watch as strike is tested.</li>
+                      <li><strong className="text-amber-300">On Watch (&ge;0.30Δ):</strong> Drifting near 2 SD Bollinger boundaries.</li>
+                      <li><strong className="text-emerald-400">Safe (&lt;0.30Δ):</strong> Well within statistical safety margin.</li>
+                    </ul>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-amber-300 flex items-center gap-1.5">
+                      <span>Upcoming Binary Events &amp; 90-Day Rolling Fallback</span>
+                    </div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      Click the card to inspect contracts with pending earnings releases:
+                    </p>
+                    <ul className="text-[11px] text-slate-400 space-y-1 list-disc list-inside">
+                      <li><strong className="text-rose-300">Inside Expiration Warning:</strong> Flags any open CSP/CC where an earnings announcement occurs between trade date and expiration.</li>
+                      <li><strong className="text-amber-300">Sizing Throttle:</strong> Caps single-ticker allocation to 2% max when binary events are active.</li>
+                      <li><strong className="text-blue-300">90-Day Rolling Fallback:</strong> If unannounced, estimates the next report date using last known release + 90 days (marked as ~ Estimated) rather than generic quarter-end dates.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
