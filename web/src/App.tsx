@@ -10,6 +10,7 @@ import { PrimaryScreenerTable } from './components/PrimaryScreenerTable';
 import { ScreenerTable } from './components/ScreenerTable';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { calculateLiveExecutiveMetrics } from './utils/executiveReportGenerator';
 
 // Code-split heavy modals (loaded on-demand when triggered by user)
 const HelpHandbookModal = lazy(() => import('./components/HelpHandbookModal').then(m => ({ default: m.HelpHandbookModal })));
@@ -376,6 +377,11 @@ export const App: React.FC = () => {
   const trackedEquitySymbols = useMemo(() => {
     return Array.from(new Set([...accountEquitySymbols, ...separatelyCreatedWatchlistSymbols]));
   }, [accountEquitySymbols, separatelyCreatedWatchlistSymbols]);
+
+  // 4. Dynamic Executive Risk & Compliance Metrics (Live Theta & Health Pulse)
+  const executiveMetrics = useMemo(() => {
+    return calculateLiveExecutiveMetrics();
+  }, [portfolioRefreshKey]);
 
   // Auto-Sync & Rate Limit Safety State
   const [autoSyncSettings, setAutoSyncSettings] = useState(() => loadAutoSyncSettings());
@@ -1508,6 +1514,7 @@ export const App: React.FC = () => {
         summary={dataPayload?.summary || null}
         lastUpdated={lastLiveFetchTime || dataPayload?.metadata.last_updated || ''}
         totalTickers={universeTickers.length}
+        executiveMetrics={executiveMetrics}
         onRefresh={fetchData}
         onLiveRecalculate={() => handleLiveRecalculate(currentWatchlistSymbols)}
         isLoading={isLoading}

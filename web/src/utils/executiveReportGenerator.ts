@@ -25,13 +25,64 @@ export interface ExecutiveDigestMetrics {
   upcomingEarningsCount: number;
 }
 
-import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest';
+import {
+  PortfolioPosition,
+  LIVING_TRUST_OPTIONS_POSITIONS,
+  runPortfolioStressTest,
+} from './portfolioStressTest';
 import {
   getStoredCapitalState,
   DEFAULT_ACCOUNT_NET_VALUE,
 } from './capitalAndTaxLedger';
 
-export function getSampleExecutiveMetrics(): ExecutiveDigestMetrics {
+export function calculateComplianceHealthScore(
+  positions: PortfolioPosition[],
+  capitalState: { freeCash: number; totalCash: number; committedCollateral: number },
+  netLiquidity: number
+): number {
+  let score = 100;
+
+  // 1. Threatened positions (|delta| >= 0.40): -10 pts each
+  const threatened = positions.filter(
+    (p) => p.type !== 'CASH' && p.type !== 'MMF' && Math.abs(p.delta) >= 0.40
+  );
+  score -= threatened.length * 10;
+
+  // 2. Low cash reserve buffer (< 10% of net liquidity): -15 pts; (< 5%): -25 pts
+  const cashReservePct = netLiquidity > 0 ? (capitalState.freeCash / netLiquidity) * 100 : 0;
+  if (cashReservePct < 5) {
+    score -= 25;
+  } else if (cashReservePct < 10) {
+    score -= 15;
+  }
+
+  // 3. Single equity security CSP limit: No more than $200,000 per equity
+  const cspBySymbol: Record<string, number> = {};
+  positions
+    .filter((p) => p.type === 'CSP')
+    .forEach((p) => {
+      const sym = p.symbol.toUpperCase();
+      cspBySymbol[sym] = (cspBySymbol[sym] || 0) + p.strike * p.quantity * 100;
+    });
+  const oversizedCsps = Object.values(cspBySymbol).filter((collat) => collat > 200000);
+  score -= oversizedCsps.length * 10;
+
+  // 4. Covered call >= 80% profit triggers unhedged: -5 pts each (max 15 pts)
+  const unrolledCalls = positions.filter((p) => {
+    if (p.type !== 'COVERED_CALL') return false;
+    const curP = p.currentOptionPrice ?? p.entryPrice;
+    const profitPct = p.entryPrice > 0 ? ((p.entryPrice - curP) / p.entryPrice) * 100 : 0;
+    return profitPct >= 80;
+  });
+  score -= Math.min(15, unrolledCalls.length * 5);
+
+  return Math.max(10, Math.min(100, Math.round(score)));
+}
+
+export function calculateLiveExecutiveMetrics(
+  customPositions?: PortfolioPosition[],
+  customCapital?: ReturnType<typeof getStoredCapitalState>
+): ExecutiveDigestMetrics {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -41,13 +92,16 @@ export function getSampleExecutiveMetrics(): ExecutiveDigestMetrics {
   });
 
   try {
-    let positions: PortfolioPosition[] = LIVING_TRUST_OPTIONS_POSITIONS;
-    const rawPos = typeof localStorage !== 'undefined' ? localStorage.getItem('deltaharvest_portfolio_book') : null;
-    if (rawPos) {
-      const parsed = JSON.parse(rawPos);
-      if (Array.isArray(parsed) && parsed.length > 0) positions = parsed;
+    let positions: PortfolioPosition[] = customPositions || LIVING_TRUST_OPTIONS_POSITIONS;
+    if (!customPositions && typeof localStorage !== 'undefined') {
+      const rawPos = localStorage.getItem('deltaharvest_portfolio_book');
+      if (rawPos) {
+        const parsed = JSON.parse(rawPos);
+        if (Array.isArray(parsed) && parsed.length > 0) positions = parsed;
+      }
     }
-    const capital = getStoredCapitalState(positions);
+
+    const capital = customCapital || getStoredCapitalState(positions);
     const stockVal = positions
       .filter((p) => p.type === 'STOCK')
       .reduce((sum, p) => sum + p.quantity * p.spotPrice, 0);
@@ -55,25 +109,38 @@ export function getSampleExecutiveMetrics(): ExecutiveDigestMetrics {
     const freeCash = capital.freeCash;
     const cashReservePct = netLiq > 0 ? parseFloat(((freeCash / netLiq) * 100).toFixed(1)) : 13.0;
 
-    const threatened = positions.filter((p) => Math.abs(p.delta) >= 0.40).length;
-    const safe = positions.length - threatened;
+    // Run dynamic portfolio stress analysis for real Greeks and Margin
+    const stress = runPortfolioStressTest(positions);
+    const dailyTheta = Math.max(0, stress.totalDailyTheta);
+    const monthlyRunRate = Math.round(dailyTheta * 30 * 100) / 100;
+
+    const threatened = positions.filter(
+      (p) => p.type !== 'CASH' && p.type !== 'MMF' && Math.abs(p.delta) >= 0.40
+    ).length;
+    const safe = positions.filter((p) => p.type !== 'CASH' && p.type !== 'MMF').length - threatened;
+
+    const healthScore = calculateComplianceHealthScore(positions, capital, netLiq);
+
+    let directionalBias: 'BULLISH' | 'NEUTRAL' | 'DEFENSIVE' = 'NEUTRAL';
+    if (stress.totalBetaDelta > 50) directionalBias = 'BULLISH';
+    else if (stress.totalBetaDelta < -20) directionalBias = 'DEFENSIVE';
 
     return {
       dateStr,
       netLiquidity: Math.round(netLiq || DEFAULT_ACCOUNT_NET_VALUE),
       freeCash: Math.round(freeCash || 305570),
       cashReservePct,
-      dailyTheta: 185.50,
-      projectedMonthlyCashflow: 5565.0,
-      betaWeightedDelta: 42.5,
-      directionalBias: 'NEUTRAL',
-      complianceHealthScore: 96,
-      totalPositions: positions.length,
-      safePositions: safe,
+      dailyTheta,
+      projectedMonthlyCashflow: monthlyRunRate,
+      betaWeightedDelta: stress.totalBetaDelta,
+      directionalBias,
+      complianceHealthScore: healthScore,
+      totalPositions: positions.filter((p) => p.type !== 'CASH' && p.type !== 'MMF').length,
+      safePositions: Math.max(0, safe),
       threatenedPositions: threatened,
-      regTMarginUsed: Math.round(capital.committedCollateral),
-      portfolioMarginUsed: Math.round(capital.committedCollateral * 0.4),
-      capitalReliefPct: 60.0,
+      regTMarginUsed: Math.round(stress.regTMargin || capital.committedCollateral),
+      portfolioMarginUsed: Math.round(stress.portfolioMargin || capital.committedCollateral * 0.4),
+      capitalReliefPct: stress.capitalReliefPct || 60.0,
       winRatePct: 91.2,
       upcomingEarningsCount: 0,
     };
@@ -90,7 +157,7 @@ export function getSampleExecutiveMetrics(): ExecutiveDigestMetrics {
     projectedMonthlyCashflow: 5565.0,
     betaWeightedDelta: 42.5,
     directionalBias: 'NEUTRAL',
-    complianceHealthScore: 96,
+    complianceHealthScore: 95,
     totalPositions: 17,
     safePositions: 15,
     threatenedPositions: 2,
@@ -100,6 +167,10 @@ export function getSampleExecutiveMetrics(): ExecutiveDigestMetrics {
     winRatePct: 91.2,
     upcomingEarningsCount: 0,
   };
+}
+
+export function getSampleExecutiveMetrics(): ExecutiveDigestMetrics {
+  return calculateLiveExecutiveMetrics();
 }
 
 export function generateMarkdownExecutiveReport(m: ExecutiveDigestMetrics): string {

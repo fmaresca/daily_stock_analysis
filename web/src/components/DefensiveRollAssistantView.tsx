@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { OptionOpportunity, MultiLegSpread } from '../types/options';
 import {
   ThreatenedPositionInfo,
@@ -27,6 +27,20 @@ interface DefensiveRollAssistantViewProps {
 export const DefensiveRollAssistantView: React.FC<DefensiveRollAssistantViewProps> = ({
   onStageRollOrder,
 }) => {
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const handleSync = () => {
+      setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener('deltaharvest_portfolio_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('deltaharvest_portfolio_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
   const availablePositions = useMemo(() => {
     const presets = getSampleThreatenedPositions();
     try {
@@ -57,17 +71,24 @@ export const DefensiveRollAssistantView: React.FC<DefensiveRollAssistantViewProp
                 threatLevel,
               };
             });
-          const existingIds = new Set(ledgerPositions.map((p) => p.id));
-          return [...ledgerPositions, ...presets.filter((p) => !existingIds.has(p.id))];
+          if (ledgerPositions.length > 0) {
+            return ledgerPositions;
+          }
         }
       }
     } catch (e) {
       console.warn('Failed to load portfolio positions for roll assistant:', e);
     }
     return presets;
-  }, []);
+  }, [refreshKey]);
 
-  const [selectedPosId, setSelectedPosId] = useState<string>(availablePositions[0].id);
+  const [selectedPosId, setSelectedPosId] = useState<string>(() => availablePositions[0]?.id || '');
+
+  useEffect(() => {
+    if (!availablePositions.some((p) => p.id === selectedPosId) && availablePositions.length > 0) {
+      setSelectedPosId(availablePositions[0].id);
+    }
+  }, [availablePositions, selectedPosId]);
 
   const activePosition = useMemo(() => {
     return availablePositions.find((p) => p.id === selectedPosId) || availablePositions[0];

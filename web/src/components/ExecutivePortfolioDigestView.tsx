@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  getSampleExecutiveMetrics,
+  calculateLiveExecutiveMetrics,
   ExecutiveDigestMetrics,
   generateMarkdownExecutiveReport,
 } from '../utils/executiveReportGenerator';
@@ -20,7 +20,20 @@ import {
 } from './icons';
 
 export const ExecutivePortfolioDigestView: React.FC = () => {
-  const [metrics, setMetrics] = useState<ExecutiveDigestMetrics>(() => getSampleExecutiveMetrics());
+  const [metrics, setMetrics] = useState<ExecutiveDigestMetrics>(() => calculateLiveExecutiveMetrics());
+
+  useEffect(() => {
+    const handleSync = () => {
+      setMetrics(calculateLiveExecutiveMetrics());
+    };
+    handleSync();
+    window.addEventListener('deltaharvest_portfolio_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('deltaharvest_portfolio_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
 
   const handleDownloadMarkdown = () => {
     const md = generateMarkdownExecutiveReport(metrics);
