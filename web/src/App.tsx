@@ -44,6 +44,7 @@ const OptionsIncomeAnalyzer = lazy(() => import('./components/OptionsIncomeAnaly
 const EconomicCalendarView = lazy(() => import('./components/EconomicCalendarView').then(m => ({ default: m.EconomicCalendarView })));
 const WeeklyPositionAuditView = lazy(() => import('./components/WeeklyPositionAuditView').then(m => ({ default: m.WeeklyPositionAuditView })));
 const CascadingScreenerView = lazy(() => import('./components/CascadingScreenerView').then(m => ({ default: m.CascadingScreenerView })));
+const SchwabPositionsUploadView = lazy(() => import('./components/SchwabPositionsUploadView').then(m => ({ default: m.SchwabPositionsUploadView })));
 const WeeklyCashLedgerView = lazy(() => import('./components/WeeklyCashLedgerView').then(m => ({ default: m.WeeklyCashLedgerView })));
 const HoldingsCoveredCallView = lazy(() => import('./components/HoldingsCoveredCallView').then(m => ({ default: m.HoldingsCoveredCallView })));
 const WeeklyExecutiveReportView = lazy(() => import('./components/WeeklyExecutiveReportView').then(m => ({ default: m.WeeklyExecutiveReportView })));
@@ -131,7 +132,7 @@ export const App: React.FC = () => {
   // Navigation Tree State (Defaults to Guided End-of-Week Workflow)
   const [activeTree, setActiveTree] = useState<MenuTreeType>('WORKFLOW');
   const [activeEquitiesTab, setActiveEquitiesTab] = useState<EquitiesTabType>('TECHNICAL_SCREENER');
-  const [activeOptionsTab, setActiveOptionsTab] = useState<OptionsTabType>('WEEKLY_POSITION_AUDIT');
+  const [activeOptionsTab, setActiveOptionsTab] = useState<OptionsTabType>('SCHWAB_POSITIONS_UPLOAD');
   const [activeChartSymbol, setActiveChartSymbol] = useState<string>('TSLA');
 
   // Client-Side Route Parsing & URL Synchronization
@@ -153,7 +154,7 @@ export const App: React.FC = () => {
     if (path === '/spreads' || path === '/multi-leg') return { tree: 'OPTIONS', optionsTab: 'MULTI_LEG_SPREADS' };
     if (path === '/margin' || path === '/risk') return { tree: 'OPTIONS', optionsTab: 'PORTFOLIO_MARGIN_SIM' };
     if (path === '/calendar' || path === '/economic-calendar') return { tree: 'OPTIONS', optionsTab: 'ECONOMIC_CALENDAR' };
-    if (path === '/workflow' || path === '/') return { tree: 'WORKFLOW', optionsTab: 'WEEKLY_CASH_LEDGER' };
+    if (path === '/workflow' || path === '/') return { tree: 'WORKFLOW', optionsTab: 'SCHWAB_POSITIONS_UPLOAD' };
 
     return { tree: 'WORKFLOW' };
   };
@@ -2133,8 +2134,13 @@ export const App: React.FC = () => {
         ) : (
           /* Workflow & Options Engine Views */
           <div className="space-y-4">
-            {activeOptionsTab === 'WEEKLY_CASH_LEDGER' ? (
-              /* Step 1: Cash, Disbursements & YTD Tax Ledger */
+            {activeOptionsTab === 'SCHWAB_POSITIONS_UPLOAD' ? (
+              /* Step 1: Charles Schwab Positions & Balances Upload */
+              <SchwabPositionsUploadView
+                onNavigateToCashLedger={() => setActiveOptionsTab('WEEKLY_CASH_LEDGER')}
+              />
+            ) : activeOptionsTab === 'WEEKLY_CASH_LEDGER' ? (
+              /* Step 2: Cash, Disbursements & YTD Tax Ledger */
               <WeeklyCashLedgerView
                 onNavigateToHoldings={() => setActiveOptionsTab('HOLDINGS_COVERED_CALLS')}
                 onNavigateToScreener={() => setActiveOptionsTab('CASCADING_SCREENER')}

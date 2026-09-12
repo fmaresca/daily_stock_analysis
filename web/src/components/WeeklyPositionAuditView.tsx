@@ -35,6 +35,8 @@ import {
   Award,
   Layers,
 } from './icons';
+import { getOptionExpirationStatus, isOptionExpired } from '../utils/optionExpirationEngine';
+import { fetchTradierQuotesBatch } from '../utils/liveMarketFetcher';
 import { SortableTh } from './ui/SortableTh';
 import { sortData, SortOrder } from '../utils/tableSort';
 
@@ -77,16 +79,84 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
   });
 
   // Filter state for Active Position Ledger
-  const [positionFilter, setPositionFilter] = useState<'ALL' | 'EQUITY' | 'CSP' | 'COVERED_CALL' | 'CASH_MMF'>('ALL');
+  const [positionFilter, setPositionFilter] = useState<'ALL' | 'EQUITY' | 'CSP' | 'COVERED_CALL' | 'CASH_MMF' | 'EXPIRED'>('ALL');
 
   // Filtered positions based on selected tab
   const filteredPositions = useMemo(() => {
     if (positionFilter === 'EQUITY') return positions.filter((p) => p.type === 'STOCK');
-    if (positionFilter === 'CSP') return positions.filter((p) => p.type === 'CSP');
-    if (positionFilter === 'COVERED_CALL') return positions.filter((p) => p.type === 'COVERED_CALL');
+    if (positionFilter === 'CSP') return positions.filter((p) => p.type === 'CSP' && !isOptionExpired(p.expiration, p.dte));
+    if (positionFilter === 'COVERED_CALL') return positions.filter((p) => p.type === 'COVERED_CALL' && !isOptionExpired(p.expiration, p.dte));
     if (positionFilter === 'CASH_MMF') return positions.filter((p) => p.type === 'CASH' || p.type === 'MMF');
+    if (positionFilter === 'EXPIRED') return positions.filter((p) => (p.type === 'CSP' || p.type === 'COVERED_CALL') && isOptionExpired(p.expiration, p.dte));
     return positions;
   }, [positions, positionFilter]);
+
+  // Live market quote hydration state
+  const [isRefreshingQuotes, setIsRefreshingQuotes] = useState(false);
+  const [marketStatusMsg, setMarketStatusMsg] = useState<string>('');
+
+  const refreshMarketQuotes = async () => {
+    setIsRefreshingQuotes(true);
+    try {
+      const symbols = Array.from(
+        new Set(
+          positions
+            .filter((p) => p.type !== 'CASH' && p.type !== 'MMF')
+            .map((p) => p.symbol.toUpperCase().trim())
+            .filter(Boolean)
+        )
+      );
+      if (symbols.length === 0) {
+        setIsRefreshingQuotes(false);
+        return;
+      }
+
+      const tradierQuotes = await fetchTradierQuotesBatch(symbols);
+
+      const now = new Date();
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const estNow = new Date(utc + 3600000 * -4); // EDT UTC-4
+      const dayOfWeek = estNow.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isMarketHours =
+        !isWeekend &&
+        (estNow.getHours() > 9 || (estNow.getHours() === 9 && estNow.getMinutes() >= 30)) &&
+        estNow.getHours() < 16;
+
+      let updatedCount = 0;
+      const updatedPositions = positions.map((pos) => {
+        if (pos.type === 'CASH' || pos.type === 'MMF') return pos;
+        const sym = pos.symbol.toUpperCase().trim();
+        const quote = tradierQuotes.get(sym);
+        if (quote && quote.last > 0) {
+          updatedCount++;
+          const newPrice = Math.round(quote.last * 100) / 100;
+          return {
+            ...pos,
+            spotPrice: newPrice,
+            marketValueTotal: pos.type === 'STOCK' ? newPrice * pos.quantity : pos.marketValueTotal,
+          };
+        }
+        return pos;
+      });
+
+      if (updatedCount > 0) {
+        setPositions(updatedPositions);
+      }
+
+      setMarketStatusMsg(
+        isMarketHours ? 'Live NBBO Market Feed' : 'Market Closed (Friday Close)'
+      );
+    } catch (e) {
+      console.warn('Quote refresh notice:', e);
+    } finally {
+      setIsRefreshingQuotes(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshMarketQuotes();
+  }, []);
 
   // Sorting state for Active Positions Ledger
   const [posSortKey, setPosSortKey] = useState<string>('symbol');
@@ -433,7 +503,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
 
       {/* 3. Action Banners: Urgent Weekend Decisions */}
       <div className="space-y-3">
-        {/* Alert 1: 80% Profit Rule */}
+        {/* Alert 1: 80% Profit Rule (Active unexpired positions only) */}
         {audit.profitTargetHits.length > 0 && (
           <div className="glass-panel p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-950/20 shadow-lg flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
@@ -442,10 +512,10 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
               </div>
               <div>
                 <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider block">
-                  🎯 80% Profit Target Hit ({audit.profitTargetHits.length} Positions)
+                  🎯 80% Profit Target Hit ({audit.profitTargetHits.length} Open Positions)
                 </span>
                 <span className="text-xs text-slate-300">
-                  Options have decayed &ge; 80%. Close these positions to eliminate tail gamma risk and redeploy cash.
+                  Active options have decayed &ge; 80%. Close these positions early to eliminate tail gamma risk and redeploy cash.
                 </span>
               </div>
             </div>
@@ -456,7 +526,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                   key={h.position.id}
                   className="px-2.5 py-1 rounded-lg bg-slate-900 border border-emerald-500/40 text-xs font-mono flex items-center space-x-2"
                 >
-                  <strong className="text-white">{h.position.symbol}</strong>
+                  <strong className="text-white">{h.position.symbol} ${h.position.strike}{h.position.type === 'CSP' ? 'P' : 'C'}</strong>
                   <span className="text-emerald-400 font-bold">+{h.profitPct.toFixed(0)}%</span>
                   {onStageCloseOrder && (
                     <button
@@ -472,7 +542,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
           </div>
         )}
 
-        {/* Alert 2: Threatened Strikes */}
+        {/* Alert 2: Threatened Strikes (Active unexpired positions only) */}
         {audit.threatenedPositions.length > 0 && (
           <div className="glass-panel p-3.5 rounded-xl border border-rose-500/40 bg-rose-950/20 shadow-lg flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
@@ -481,10 +551,10 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
               </div>
               <div>
                 <span className="text-xs font-bold text-rose-300 uppercase tracking-wider block">
-                  ⚠️ Strike Tested / Assignment Risk ({audit.threatenedPositions.length} Positions)
+                  ⚠️ Strike Tested / Assignment Risk ({audit.threatenedPositions.length} Open Positions)
                 </span>
                 <span className="text-xs text-slate-300">
-                  Spot price is within 2.5% of strike or in-the-money. Evaluate defensive down-and-out credit rolls.
+                  Mkt price is within 2.5% of strike or in-the-money. Evaluate defensive down-and-out credit rolls before expiration.
                 </span>
               </div>
             </div>
@@ -495,7 +565,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                   key={t.position.id}
                   className="px-2.5 py-1 rounded-lg bg-slate-900 border border-rose-500/40 text-xs font-mono flex items-center space-x-2"
                 >
-                  <strong className="text-white">{t.position.symbol}</strong>
+                  <strong className="text-white">{t.position.symbol} ${t.position.strike}{t.position.type === 'CSP' ? 'P' : 'C'}</strong>
                   <span className="text-rose-400 font-bold">
                     ${t.position.strike} ({t.distancePct.toFixed(1)}% cushion)
                   </span>
@@ -514,7 +584,41 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
           </div>
         )}
 
-        {/* Alert 3: Uncovered Shares Available for Covered Calls */}
+        {/* Alert 3: Informational Settled/Expired Contracts */}
+        {audit.expiredPositions && audit.expiredPositions.length > 0 && (
+          <div className="glass-panel p-3 rounded-xl border border-slate-700/60 bg-slate-900/50 shadow-md flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-lg bg-slate-800 text-slate-400">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                  📜 Settled / Expired Contracts ({audit.expiredPositions.length} Contracts)
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  Expiration date has passed. Expired contracts do not require action; collateral released and 100% premium kept for OTM expires.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 flex-wrap gap-1.5">
+              {audit.expiredPositions.map((exp) => (
+                <div
+                  key={exp.position.id}
+                  className="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-700/80 text-xs font-mono flex items-center space-x-1.5"
+                >
+                  <strong className="text-white">{exp.position.symbol} ${exp.position.strike}{exp.position.type === 'CSP' ? 'P' : 'C'}</strong>
+                  <span className={exp.isWorthless ? 'text-emerald-400 font-semibold text-[11px]' : 'text-amber-400 font-semibold text-[11px]'}>
+                    {exp.isWorthless ? 'Worthless (100% Win)' : 'Assigned/Settled'}
+                  </span>
+                  <span className="text-slate-500 text-[10px]">({exp.expiredDate})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Alert 4: Uncovered Shares Available for Covered Calls */}
         {audit.uncoveredShareLots.length > 0 && (
           <div className="glass-panel p-3.5 rounded-xl border border-blue-500/40 bg-blue-950/20 shadow-lg flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
@@ -564,19 +668,34 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
               <span className="text-[11px] font-mono text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                 Living Trust-Options ...609
               </span>
+              {marketStatusMsg && (
+                <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/50 border border-cyan-500/30 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  <span>{marketStatusMsg}</span>
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-2">
+              <button
+                onClick={refreshMarketQuotes}
+                disabled={isRefreshingQuotes}
+                title="Refresh real-time / closing market prices (Tradier API Primary)"
+                className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-cyan-300 hover:text-white border border-cyan-500/30 text-xs font-semibold flex items-center space-x-1.5 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingQuotes ? 'animate-spin' : ''}`} />
+                <span>{isRefreshingQuotes ? 'Refreshing...' : 'Refresh Mkt Quotes'}</span>
+              </button>
               <button
                 onClick={handleResetToLiveSchwabAccount}
                 title="Reset/sync baseline Charles Schwab account positions (Equities, Options, Cash & MMFs)"
                 className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center space-x-1.5 transition-colors"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
                 <span>Sync Schwab Baseline</span>
               </button>
               <span className="text-xs text-slate-400 font-mono hidden md:inline">
-                {positions.filter((p) => p.type === 'CSP').length} CSPs •{' '}
-                {positions.filter((p) => p.type === 'COVERED_CALL').length} CCs •{' '}
+                {positions.filter((p) => p.type === 'CSP' && !isOptionExpired(p.expiration, p.dte)).length} CSPs •{' '}
+                {positions.filter((p) => p.type === 'COVERED_CALL' && !isOptionExpired(p.expiration, p.dte)).length} CCs •{' '}
                 {positions.filter((p) => p.type === 'STOCK').length} Equities •{' '}
                 {positions.filter((p) => p.type === 'CASH' || p.type === 'MMF').length} Cash &amp; MMF
               </span>
@@ -613,7 +732,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                   : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/70'
               }`}
             >
-              Cash-Secured Puts ({positions.filter((p) => p.type === 'CSP').length})
+              Cash-Secured Puts ({positions.filter((p) => p.type === 'CSP' && !isOptionExpired(p.expiration, p.dte)).length})
             </button>
             <button
               onClick={() => setPositionFilter('COVERED_CALL')}
@@ -623,7 +742,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                   : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/70'
               }`}
             >
-              Covered Calls ({positions.filter((p) => p.type === 'COVERED_CALL').length})
+              Covered Calls ({positions.filter((p) => p.type === 'COVERED_CALL' && !isOptionExpired(p.expiration, p.dte)).length})
             </button>
             <button
               onClick={() => setPositionFilter('CASH_MMF')}
@@ -635,6 +754,16 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
             >
               Cash &amp; Money Market Funds ({positions.filter((p) => p.type === 'CASH' || p.type === 'MMF').length})
             </button>
+            <button
+              onClick={() => setPositionFilter('EXPIRED')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                positionFilter === 'EXPIRED'
+                  ? 'bg-slate-700 text-white shadow-md ring-1 ring-slate-400'
+                  : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/70'
+              }`}
+            >
+              Expired / Settled ({positions.filter((p) => (p.type === 'CSP' || p.type === 'COVERED_CALL') && isOptionExpired(p.expiration, p.dte)).length})
+            </button>
           </div>
         </div>
 
@@ -644,7 +773,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
               <tr className="border-b border-slate-800 bg-slate-900/90 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 <SortableTh label="Symbol / Asset Class" sortKey="symbol" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
                 <SortableTh label="Quantity" sortKey="quantity" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
-                <SortableTh label="Spot Price" sortKey="spotPrice" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
+                <SortableTh label="Mkt Price" sortKey="spotPrice" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
                 <SortableTh label="Strike / Coverage" sortKey="strike" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
                 <SortableTh label="DTE (Exp)" sortKey="dte" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
                 <SortableTh label="Delta" sortKey="delta" currentSortKey={posSortKey} currentSortOrder={posSortOrder} onSort={requestPosSort} />
@@ -667,10 +796,13 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                 sortedPositions.map((p) => {
                   const isCsp = p.type === 'CSP';
                   const isCc = p.type === 'COVERED_CALL';
+                  const isOption = isCsp || isCc;
                   const isStock = p.type === 'STOCK';
                   const isCash = p.type === 'CASH';
                   const isMmf = p.type === 'MMF';
                   const isLiquid = isCash || isMmf;
+
+                  const expStatus = getOptionExpirationStatus(p.expiration, p.dte);
 
                   const collateral = isCsp
                     ? p.strike * 100 * (p.quantity || 1)
@@ -761,13 +893,30 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                         ) : isStock ? (
                           <span className="text-slate-500">Hold</span>
                         ) : (
-                          <span
-                            className={`${
-                              p.dte <= 5 ? 'text-amber-400 font-bold' : 'text-slate-300'
-                            }`}
-                          >
-                            {p.dte}d
-                          </span>
+                          <div>
+                            <span
+                              className={`font-semibold ${
+                                expStatus.isExpired
+                                  ? 'text-slate-400 text-[11px]'
+                                  : expStatus.isToday
+                                  ? 'text-rose-400 font-bold'
+                                  : expStatus.dte <= 5
+                                  ? 'text-amber-400 font-bold'
+                                  : 'text-slate-200'
+                              }`}
+                            >
+                              {expStatus.shortLabel}
+                            </span>
+                            {p.expiration && (
+                              <span
+                                className={`text-[10px] block ${
+                                  expStatus.isExpired ? 'text-slate-500 line-through' : 'text-slate-400'
+                                }`}
+                              >
+                                {expStatus.formattedExpiration}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
 
@@ -829,6 +978,18 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
                             Cash Reserve
                           </span>
+                        ) : isOption && expStatus.isExpired ? (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              (isCsp && p.spotPrice >= p.strike) || (isCc && p.spotPrice <= p.strike)
+                                ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
+                                : 'bg-slate-900 text-slate-400 border-slate-700'
+                            }`}
+                          >
+                            {(isCsp && p.spotPrice >= p.strike) || (isCc && p.spotPrice <= p.strike)
+                              ? 'Expired (100% Win)'
+                              : 'Expired / Settled'}
+                          </span>
                         ) : profitPct >= 80 ? (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                             80% Hit
@@ -837,7 +998,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
                             Threatened
                           </span>
-                        ) : p.dte <= 5 && !isStock ? (
+                        ) : expStatus.dte <= 5 && !isStock ? (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
                             Expiring
                           </span>
@@ -850,7 +1011,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
 
                       <td className="py-3 px-4 text-center">
                         <div className="flex items-center justify-center space-x-1.5">
-                          {isCsp && onNavigateToRollAssistant && (
+                          {isCsp && !expStatus.isExpired && onNavigateToRollAssistant && (
                             <button
                               onClick={() => onNavigateToRollAssistant(p.symbol)}
                               title="Evaluate Defensive Roll"
@@ -1019,7 +1180,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
               </div>
 
               <div>
-                <label className="text-slate-300 block mb-1 font-semibold">Spot Price ($)</label>
+                <label className="text-slate-300 block mb-1 font-semibold">Mkt Price ($)</label>
                 <input
                   type="number"
                   step="0.01"

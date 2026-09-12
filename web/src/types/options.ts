@@ -394,6 +394,7 @@ export interface FundamentalHealthData {
 export type MenuTreeType = 'WORKFLOW' | 'OPTIONS' | 'EQUITIES' | 'METHODOLOGY' | 'FAQ' | 'DISCLAIMER';
 
 export type WorkflowStepType =
+  | 'SCHWAB_POSITIONS_UPLOAD'
   | 'WEEKLY_CASH_LEDGER'
   | 'HOLDINGS_COVERED_CALLS'
   | 'CASCADING_SCREENER'
@@ -414,6 +415,7 @@ export type EquitiesTabType =
   | 'SECTOR_OVERVIEW';
 
 export type OptionsTabType =
+  | 'SCHWAB_POSITIONS_UPLOAD'
   | 'WEEKLY_CASH_LEDGER'
   | 'HOLDINGS_COVERED_CALLS'
   | 'WEEKLY_EXECUTIVE_REPORT'
