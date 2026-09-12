@@ -35,6 +35,7 @@ import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescr
 import { fetchTickerChartData } from '../utils/liveMarketFetcher';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
+import { getSchwabImportedEquities } from '../utils/schwabPositionsParser';
 import { SortableTh } from './ui/SortableTh';
 import { sortData, SortOrder } from '../utils/tableSort';
 
@@ -72,11 +73,23 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
   const [mcFilters, setMcFilters] = useState<Record<string, string>>(DEFAULT_MARKET_CHAMELEON_PRESETS[0].filters);
   const [cboeOnlyGate, setCboeOnlyGate] = useState<boolean>(false);
 
-  // Barchart Custom Watchlist (View 190898) Ingestion State
-  const [watchlistInputText, setWatchlistInputText] = useState<string>('AAPL, NVDA, TSLA, DELL, NOW, MSFT, AMD, AMZN, META, PLTR');
+  // Barchart Custom Watchlist (View 190898) Ingestion State (Restricted to Schwab CSV Equities)
+  const [watchlistInputText, setWatchlistInputText] = useState<string>(() =>
+    getSchwabImportedEquities().join(', ')
+  );
   const [singleSymbolInput, setSingleSymbolInput] = useState<string>('');
   const [isAnalyzingWatchlist, setIsAnalyzingWatchlist] = useState<boolean>(false);
   const [watchlistError, setWatchlistError] = useState<string>('');
+
+  // Sync with Schwab CSV portfolio uploads
+  useEffect(() => {
+    const handlePortfolioUpdate = () => {
+      const schwabSyms = getSchwabImportedEquities().join(', ');
+      setWatchlistInputText(schwabSyms);
+    };
+    window.addEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+    return () => window.removeEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+  }, []);
 
   // Apply prescreen preset or filter configuration from modal
   const handleApplyPreset = (filters: Record<string, string>, cboeOnly: boolean, presetName?: string) => {
@@ -991,42 +1004,17 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
 
             {/* Presets Chips */}
             <div className="flex items-center space-x-1.5 overflow-x-auto text-[11px]">
-              <span className="text-slate-400 text-xs mr-1">Presets:</span>
+              <span className="text-slate-400 text-xs mr-1">Universe Presets:</span>
               <button
                 type="button"
-                onClick={() => setWatchlistInputText('AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA')}
-                className="px-2 py-0.5 rounded bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 text-[11px] font-bold cursor-pointer hover:text-white"
-                title="Populate with 7 equities from Living Trust-Options ...609 account"
+                onClick={() => setWatchlistInputText(getSchwabImportedEquities().join(', '))}
+                className="px-2.5 py-1 rounded bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 text-[11px] font-bold cursor-pointer hover:text-white flex items-center space-x-1.5"
+                title="Populate with equities from Schwab CSV import / Living Trust account"
               >
-                Living Trust Equities (7)
-              </button>
-              <button
-                type="button"
-                onClick={() => setWatchlistInputText('AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA')}
-                className="px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] cursor-pointer hover:text-white"
-              >
-                Mag 7
-              </button>
-              <button
-                type="button"
-                onClick={() => setWatchlistInputText('NVDA, AMD, AVGO, TSM, QCOM, MU, ASML')}
-                className="px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] cursor-pointer hover:text-white"
-              >
-                Semis
-              </button>
-              <button
-                type="button"
-                onClick={() => setWatchlistInputText('SPY, QQQ, IWM, AAPL, TSLA, NVDA, AMD, AMZN, MSFT, META')}
-                className="px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] cursor-pointer hover:text-white"
-              >
-                CBOE High Vol
-              </button>
-              <button
-                type="button"
-                onClick={() => setWatchlistInputText('DELL, NOW, PLTR, ARM, CRWD, SMCI, COIN')}
-                className="px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] cursor-pointer hover:text-white"
-              >
-                AI &amp; Cloud
+                <span>Schwab Import Equities</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-200 text-[10px] font-mono">
+                  {getSchwabImportedEquities().length}
+                </span>
               </button>
             </div>
           </div>
@@ -1057,7 +1045,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
               rows={2}
               value={watchlistInputText}
               onChange={(e) => setWatchlistInputText(e.target.value)}
-              placeholder="e.g. AAPL, NVDA, TSLA, DELL, NOW, PLTR, MSFT, AMZN, AMD, META"
+              placeholder="e.g. AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA or your custom stock symbols"
               className="w-full bg-slate-950/90 border border-slate-700/80 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 font-mono focus:outline-none focus:ring-1 focus:ring-amber-500"
             />
           </div>
