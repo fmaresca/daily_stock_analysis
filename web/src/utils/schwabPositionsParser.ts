@@ -606,6 +606,37 @@ export function getSchwabImportedEquities(): string[] {
   return DEFAULT_SCHWAB_LIVING_TRUST_EQUITIES;
 }
 
+/**
+ * Returns a map of imported equity symbols to their spot/market price from the Schwab portfolio book.
+ */
+export function getSchwabImportedEquitiesWithPrices(): Record<string, number> {
+  const result: Record<string, number> = {};
+  if (typeof window === 'undefined') return result;
+  try {
+    const bookRaw = localStorage.getItem('deltaharvest_portfolio_book');
+    if (bookRaw) {
+      const positions = JSON.parse(bookRaw);
+      if (Array.isArray(positions)) {
+        positions
+          .filter(
+            (p: any) =>
+              (p.type === 'STOCK' || p.type === 'EQUITY') &&
+              p.symbol &&
+              p.spotPrice > 0 &&
+              !p.symbol.includes(' ')
+          )
+          .forEach((p: any) => {
+            result[p.symbol.toUpperCase()] = p.spotPrice;
+          });
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return result;
+}
+
+
 // Helpers
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];

@@ -22,6 +22,7 @@ import {
   parseSchwabPositionsCsv,
   syncImportedEquitiesToWatchlist,
 } from '../utils/schwabPositionsParser';
+import { autoSyncSchwabPortfolioPrices } from '../utils/liveMarketFetcher';
 import { LiveTransactionModal } from './LiveTransactionModal';
 import { LiquidCapitalWaterfall } from './cash/LiquidCapitalWaterfall';
 import { TaxAlphaLedgerPanel } from './cash/TaxAlphaLedgerPanel';
@@ -152,6 +153,15 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
           `Imported ${parsed.accountName}: Total Cash $${parsed.capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })} (SNYXX + SNAXX + Sweep), -$${parsed.totalCommittedCspCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })} CSP Offset (PANW + PLTR), -$${parsed.encumberedLivingExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })} Living Exp -> $${parsed.netFreeCashForNewCsps.toLocaleString(undefined, { minimumFractionDigits: 2 })} Net Free Cash for new CSPs (${parsed.maxAllowedNewPositions} positions). ${parsed.equitySymbols.length} Equities synced to Watchlist: ${parsed.equitySymbols.join(', ')}!`
         );
         setTimeout(() => setImportSuccessMsg(''), 10000);
+
+        // Auto-sync live trading prices (or latest closing prices if market is closed)
+        autoSyncSchwabPortfolioPrices(parsed.portfolioPositions).then((updatedPositions) => {
+          window.dispatchEvent(
+            new CustomEvent('deltaharvest_portfolio_updated', {
+              detail: { source: 'live_price_sync', positions: updatedPositions, capital: parsed.capitalState },
+            })
+          );
+        });
 
         // Dispatch global update event
         window.dispatchEvent(

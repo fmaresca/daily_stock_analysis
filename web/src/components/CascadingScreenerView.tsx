@@ -47,7 +47,7 @@ import {
 } from './icons';
 import { MarketChameleonPrescreenModal } from './MarketChameleonPrescreenModal';
 import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescreen';
-import { fetchTickerChartData, fetchTradierQuotesBatch } from '../utils/liveMarketFetcher';
+import { fetchTickerChartData, fetchTradierQuotesBatch, syncLiveEquitiesPrices } from '../utils/liveMarketFetcher';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { parseScreenerCSV } from '../utils/screenerCsvParser';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
@@ -58,7 +58,8 @@ import { BarchartTopTab } from './screener/cascading/BarchartTopTab';
 import { MarketChameleonTab } from './screener/cascading/MarketChameleonTab';
 import { TosReturnScreenTab } from './screener/cascading/TosReturnScreenTab';
 import { GeminiDecisionHubTab } from './screener/cascading/GeminiDecisionHubTab';
-import { getSchwabImportedEquities } from '../utils/schwabPositionsParser';
+import { getSchwabImportedEquities, getSchwabImportedEquitiesWithPrices } from '../utils/schwabPositionsParser';
+import { SECURITY_INTELLIGENCE_REGISTRY } from '../utils/securityIntelligence';
 
 export type CascadingSubTab = 'BARCHART' | 'MARKETCHAMELEON' | 'TOS_BARCHART' | 'GEMINI_DECISION_HUB';
 
@@ -294,6 +295,44 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
         .catch((err) => console.warn('Could not load weekly_screeners_barchart_custom.json:', err));
     }
   }, [tosWatchlistDataset]);
+
+  // Auto-sync most current trading price (or closing price if after close) for TOS/Barchart records
+  useEffect(() => {
+    if (!tosWatchlistDataset || tosWatchlistDataset.records.length === 0) return;
+    const symbols = tosWatchlistDataset.records.map((r) => r.symbol);
+    syncLiveEquitiesPrices(symbols).then((liveMap) => {
+      if (!liveMap || liveMap.size === 0) return;
+      let hasChanges = false;
+      const syncedRecords = tosWatchlistDataset.records.map((r) => {
+        const live = liveMap.get(r.symbol);
+        if (live && live.price > 0 && Math.abs(live.price - r.last_price) > 0.001) {
+          hasChanges = true;
+          return {
+            ...r,
+            last_price: live.price,
+            price_change: live.priceChange !== undefined ? live.priceChange : r.price_change,
+            percent_change: live.percentChange !== undefined ? live.percentChange : r.percent_change,
+            updated_at: new Date().toISOString(),
+          };
+        }
+        return r;
+      });
+
+      if (hasChanges) {
+        const fresh: WeeklyScreenerDataset = {
+          ...tosWatchlistDataset,
+          timestamp: new Date().toISOString(),
+          records: syncedRecords,
+        };
+        setTosWatchlistDataset(fresh);
+        try {
+          localStorage.setItem('deltaharvest_tos_barchart_watchlist', JSON.stringify(fresh));
+        } catch {
+          // ignore
+        }
+      }
+    });
+  }, [tosWatchlistDataset?.total_count]);
 
   // Parse custom TOS tickers using strict sanitizer
   const tosSymbols = useMemo(() => {
@@ -682,27 +721,10 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       console.warn('Backend API analyze-watchlist unavailable, executing local 13-indicator analysis fallback:', apiErr);
     }
 
-    // 2. Client-side evaluation with real closing prices
+    // 2. Client-side evaluation with real trading/closing prices
     try {
-      const knownPortfolioPrices: Record<string, { price: number; name?: string }> = {
-        AXTI: { price: 61.64, name: 'AXT Inc' },
-        BLZE: { price: 13.455, name: 'Backblaze Inc Class A' },
-        IONQ: { price: 39.52, name: 'IonQ Inc' },
-        LUNR: { price: 14.81, name: 'Intuitive Machines Inc Class A' },
-        NET: { price: 278.92, name: 'Cloudflare Inc Class A' },
-        RTX: { price: 200.79, name: 'RTX Corp' },
-        TSLA: { price: 354.08, name: 'Tesla Inc' },
-        PANW: { price: 338.00, name: 'Palo Alto Networks Inc' },
-        PLTR: { price: 165.00, name: 'Palantir Technologies Inc' },
-        AAPL: { price: 225.00, name: 'Apple Inc' },
-        NVDA: { price: 125.50, name: 'NVIDIA Corp' },
-        MSFT: { price: 445.00, name: 'Microsoft Corp' },
-        AMZN: { price: 185.00, name: 'Amazon.com Inc' },
-        GOOGL: { price: 165.00, name: 'Alphabet Inc' },
-        META: { price: 510.00, name: 'Meta Platforms Inc' },
-        AMD: { price: 155.00, name: 'Advanced Micro Devices Inc' },
-      };
-
+      const schwabImportedPrices = getSchwabImportedEquitiesWithPrices();
+      const livePriceMap = await syncLiveEquitiesPrices(uniqueSymbols);
       const fallbackRecords: WeeklyScreenerRecord[] = [];
       const batchSize = 5;
 
@@ -712,16 +734,19 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
           batch.map(async (sym) => {
             const chartData = await fetchTickerChartData(sym);
             const closes = chartData?.closes || [];
-            let lastPrice = chartData?.spotPrice || knownPortfolioPrices[sym]?.price || 100.0;
-            let priceChange = 0;
-            let percentChange = 0;
+            const liveInfo = livePriceMap.get(sym);
+            let lastPrice = liveInfo?.price || chartData?.spotPrice || schwabImportedPrices[sym] || 100.0;
+            let priceChange = liveInfo?.priceChange || 0;
+            let percentChange = liveInfo?.percentChange || 0;
 
-            if (closes.length >= 2) {
+            if (closes.length >= 2 && priceChange === 0) {
               const lastClose = closes[closes.length - 1];
               const prevClose = closes[closes.length - 2];
               priceChange = Math.round((lastClose - prevClose) * 100) / 100;
               percentChange = Math.round(((lastClose - prevClose) / prevClose) * 10000) / 100;
-              lastPrice = Math.round(lastClose * 100) / 100;
+              if (lastPrice <= 0) {
+                lastPrice = Math.round(lastClose * 100) / 100;
+              }
             }
 
             const opinionResult = calculateBarchartOpinion(sym, closes, lastPrice);
@@ -749,7 +774,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
 
             const rec: WeeklyScreenerRecord = {
               symbol: sym,
-              name: knownPortfolioPrices[sym]?.name || `${sym} Equity`,
+              name: SECURITY_INTELLIGENCE_REGISTRY[sym]?.name || `${sym} Equity`,
               last_price: lastPrice,
               price_change: priceChange,
               percent_change: percentChange,
