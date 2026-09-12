@@ -86,7 +86,7 @@ class TestEconomicCalendarAPI(unittest.TestCase):
 
         self.assertIn("indicators", result)
         self.assertTrue(result["fallback"])
-        self.assertEqual(result["source"], "fallback_baseline")
+        self.assertEqual(result["source"], "curated_macro_schedule")
         self.assertIn("notice", result)
         self.assertIn("Displaying baseline schedule", result["notice"])
         self.assertGreater(len(result["indicators"]), 0)
@@ -179,6 +179,29 @@ class TestEconomicCalendarAPI(unittest.TestCase):
         self.assertEqual(cpi["forecast"], "0.3%")
         self.assertIn("Technology", cpi["sectors"])
         self.assertIn("QQQ", cpi["tickers"])
+
+    @patch("urllib.request.urlopen")
+    def test_scope_past_returns_historical(self, mock_urlopen):
+        past_sample = [
+            {
+                "title": "Unemployment Claims",
+                "country": "USD",
+                "date": "2026-09-10T08:30:00-04:00",
+                "impact": "Medium",
+                "forecast": "205K",
+                "previous": "206K"
+            }
+        ]
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(past_sample).encode("utf-8")
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        result = get_economic_calendar(scope="past")
+        self.assertEqual(result["scope"], "past")
+        self.assertEqual(result["source"], "faireconomy_media")
+        self.assertEqual(len(result["indicators"]), 1)
+        self.assertEqual(result["indicators"][0]["title"], "Unemployment Claims")
 
 
 if __name__ == "__main__":
