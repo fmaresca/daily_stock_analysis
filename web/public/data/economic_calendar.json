@@ -2,7 +2,7 @@
   "source": "curated_macro_schedule",
   "fallback": false,
   "notice": "Weekly high-impact US macroeconomic catalyst radar & sector transmission schedule.",
-  "last_updated": "2026-09-12T16:00:00.000Z",
+  "last_updated": "2026-09-12T18:25:00.000Z",
   "indicators": [
     {
       "title": "Empire State Manufacturing Index",

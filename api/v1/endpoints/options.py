@@ -944,87 +944,322 @@ _SECTOR_IMPACT_MAP = {
 
 _FALLBACK_INDICATORS = [
     {
-        "title": "ISM Services PMI",
+        "title": "Empire State Manufacturing Index",
         "country": "USD",
-        "dateET": "Mon, Sep 7",
-        "timeET": "10:00 AM",
-        "impact": "Moderate",
-        "forecast": "52.0",
-        "previous": "51.4",
-        "sectors": "Industrials, Basic Materials, Tech Supply",
-        "tickers": "XLI, XLB, SOXX",
-        "isoDate": datetime.now(timezone.utc).isoformat()
-    },
-    {
-        "title": "Initial Jobless Claims",
-        "country": "USD",
-        "dateET": "Thu, Sep 10",
+        "dateET": "Mon, Sep 14",
         "timeET": "08:30 AM",
         "impact": "Moderate",
-        "forecast": "228K",
-        "previous": "227K",
-        "sectors": "Broad Equities, High-Beta Assets",
-        "tickers": "SPY, IWM",
-        "isoDate": datetime.now(timezone.utc).isoformat()
-    },
-    {
-        "title": "CPI m/m & Core CPI y/y",
-        "country": "USD",
-        "dateET": "Wed, Sep 16",
-        "timeET": "08:30 AM",
-        "impact": "High",
-        "forecast": "0.2% / 3.2%",
-        "previous": "0.2% / 3.2%",
-        "sectors": "Technology, Real Estate, Financials, Utilities",
-        "tickers": "QQQ, VNQ, XLF, TLT",
-        "isoDate": datetime.now(timezone.utc).isoformat()
-    },
-    {
-        "title": "FOMC Rate Decision & Press Conference",
-        "country": "USD",
-        "dateET": "Wed, Sep 16",
-        "timeET": "02:00 PM",
-        "impact": "High",
-        "forecast": "4.75% - 5.00%",
-        "previous": "5.25% - 5.50%",
-        "sectors": "Banking, Tech, Real Estate, Precious Metals",
-        "tickers": "KRE, XLF, QQQ, GLD",
-        "isoDate": datetime.now(timezone.utc).isoformat()
+        "forecast": "-4.0",
+        "previous": "-4.7",
+        "sectors": "Industrials, Basic Materials, Cyclicals",
+        "tickers": "XLI, XLB, CAT",
+        "isoDate": "2026-09-14T08:30:00-04:00"
     },
     {
         "title": "Retail Sales m/m",
         "country": "USD",
-        "dateET": "Fri, Sep 18",
+        "dateET": "Tue, Sep 15",
         "timeET": "08:30 AM",
         "impact": "High",
         "forecast": "0.3%",
-        "previous": "0.1%",
+        "previous": "0.4%",
         "sectors": "Consumer Discretionary, Retail, Transports",
-        "tickers": "XLY, XRT, IYT",
-        "isoDate": datetime.now(timezone.utc).isoformat()
+        "tickers": "XLY, XRT, IYT, AMZN, WMT",
+        "isoDate": "2026-09-15T08:30:00-04:00"
+    },
+    {
+        "title": "Core Retail Sales m/m",
+        "country": "USD",
+        "dateET": "Tue, Sep 15",
+        "timeET": "08:30 AM",
+        "impact": "High",
+        "forecast": "0.4%",
+        "previous": "0.3%",
+        "sectors": "Consumer Discretionary, Retail",
+        "tickers": "XLY, XRT, HD, TGT",
+        "isoDate": "2026-09-15T08:30:00-04:00"
+    },
+    {
+        "title": "Industrial Production m/m",
+        "country": "USD",
+        "dateET": "Tue, Sep 15",
+        "timeET": "09:15 AM",
+        "impact": "Moderate",
+        "forecast": "0.2%",
+        "previous": "-0.6%",
+        "sectors": "Industrials, Energy, Materials",
+        "tickers": "XLI, XLE, GE",
+        "isoDate": "2026-09-15T09:15:00-04:00"
+    },
+    {
+        "title": "FOMC Meeting Begins (Day 1)",
+        "country": "USD",
+        "dateET": "Tue, Sep 15",
+        "timeET": "All Day",
+        "impact": "Moderate",
+        "forecast": "—",
+        "previous": "—",
+        "sectors": "Broad Market, Interest Rate Sensitive",
+        "tickers": "SPY, QQQ, TLT",
+        "isoDate": "2026-09-15T09:30:00-04:00"
+    },
+    {
+        "title": "Building Permits",
+        "country": "USD",
+        "dateET": "Wed, Sep 16",
+        "timeET": "08:30 AM",
+        "impact": "Moderate",
+        "forecast": "1.41M",
+        "previous": "1.40M",
+        "sectors": "Homebuilders, Building Products, Real Estate",
+        "tickers": "ITB, XHB, VNQ, HD",
+        "isoDate": "2026-09-16T08:30:00-04:00"
+    },
+    {
+        "title": "Housing Starts",
+        "country": "USD",
+        "dateET": "Wed, Sep 16",
+        "timeET": "08:30 AM",
+        "impact": "Moderate",
+        "forecast": "1.31M",
+        "previous": "1.24M",
+        "sectors": "Homebuilders, Real Estate",
+        "tickers": "ITB, XHB, DHI, LEN",
+        "isoDate": "2026-09-16T08:30:00-04:00"
+    },
+    {
+        "title": "Crude Oil Inventories (EIA)",
+        "country": "USD",
+        "dateET": "Wed, Sep 16",
+        "timeET": "10:30 AM",
+        "impact": "Moderate",
+        "forecast": "-1.2M",
+        "previous": "+0.8M",
+        "sectors": "Energy, Transportation, Airlines",
+        "tickers": "XLE, JETS, IYT, XOM, CVX",
+        "isoDate": "2026-09-16T10:30:00-04:00"
+    },
+    {
+        "title": "FOMC Rate Decision & Statement",
+        "country": "USD",
+        "dateET": "Wed, Sep 16",
+        "timeET": "02:00 PM",
+        "impact": "High",
+        "forecast": "5.00% - 5.25%",
+        "previous": "5.25% - 5.50%",
+        "sectors": "Banking, Tech, Real Estate, Precious Metals",
+        "tickers": "KRE, XLF, QQQ, GLD, TLT",
+        "isoDate": "2026-09-16T14:00:00-04:00"
+    },
+    {
+        "title": "FOMC Economic Projections (Dot Plot)",
+        "country": "USD",
+        "dateET": "Wed, Sep 16",
+        "timeET": "02:00 PM",
+        "impact": "High",
+        "forecast": "—",
+        "previous": "—",
+        "sectors": "Broad Market, Treasury Yields",
+        "tickers": "SPY, TLT, IEF, QQQ",
+        "isoDate": "2026-09-16T14:00:00-04:00"
+    },
+    {
+        "title": "FOMC Press Conference (Chair Powell)",
+        "country": "USD",
+        "dateET": "Wed, Sep 16",
+        "timeET": "02:30 PM",
+        "impact": "High",
+        "forecast": "—",
+        "previous": "—",
+        "sectors": "Broad Market, High-Beta Tech, Small Caps",
+        "tickers": "SPY, QQQ, IWM, VIX",
+        "isoDate": "2026-09-16T14:30:00-04:00"
+    },
+    {
+        "title": "Initial Jobless Claims",
+        "country": "USD",
+        "dateET": "Thu, Sep 17",
+        "timeET": "08:30 AM",
+        "impact": "High",
+        "forecast": "228K",
+        "previous": "227K",
+        "sectors": "Broad Equities, High-Beta Assets",
+        "tickers": "SPY, IWM, QQQ",
+        "isoDate": "2026-09-17T08:30:00-04:00"
+    },
+    {
+        "title": "Philly Fed Manufacturing Index",
+        "country": "USD",
+        "dateET": "Thu, Sep 17",
+        "timeET": "08:30 AM",
+        "impact": "Moderate",
+        "forecast": "2.3",
+        "previous": "-7.0",
+        "sectors": "Industrials, Basic Materials",
+        "tickers": "XLI, XLB",
+        "isoDate": "2026-09-17T08:30:00-04:00"
+    },
+    {
+        "title": "Continuing Jobless Claims",
+        "country": "USD",
+        "dateET": "Thu, Sep 17",
+        "timeET": "08:30 AM",
+        "impact": "Moderate",
+        "forecast": "1.85M",
+        "previous": "1.84M",
+        "sectors": "Broad Equities",
+        "tickers": "SPY, IWM",
+        "isoDate": "2026-09-17T08:30:00-04:00"
+    },
+    {
+        "title": "Natural Gas Storage",
+        "country": "USD",
+        "dateET": "Thu, Sep 17",
+        "timeET": "10:30 AM",
+        "impact": "Low",
+        "forecast": "+52B",
+        "previous": "+40B",
+        "sectors": "Energy, Utilities",
+        "tickers": "XLE, XLU, UNG",
+        "isoDate": "2026-09-17T10:30:00-04:00"
+    },
+    {
+        "title": "Current Account Balance",
+        "country": "USD",
+        "dateET": "Thu, Sep 17",
+        "timeET": "08:30 AM",
+        "impact": "Low",
+        "forecast": "-260B",
+        "previous": "-238B",
+        "sectors": "US Dollar, Multi-nationals",
+        "tickers": "UUP, SPY",
+        "isoDate": "2026-09-17T08:30:00-04:00"
+    },
+    {
+        "title": "Quadruple Witching Options Expiration",
+        "country": "USD",
+        "dateET": "Fri, Sep 18",
+        "timeET": "Market Close",
+        "impact": "High",
+        "forecast": "Volume Surge",
+        "previous": "—",
+        "sectors": "Broad Market, Derivatives, Index ETFs",
+        "tickers": "SPY, QQQ, IWM, VIX",
+        "isoDate": "2026-09-18T16:00:00-04:00"
+    },
+    {
+        "title": "Leading Economic Index (LEI) m/m",
+        "country": "USD",
+        "dateET": "Fri, Sep 18",
+        "timeET": "10:00 AM",
+        "impact": "Moderate",
+        "forecast": "-0.3%",
+        "previous": "-0.6%",
+        "sectors": "Broad Equities, Cyclicals",
+        "tickers": "SPY, DIA",
+        "isoDate": "2026-09-18T10:00:00-04:00"
     }
 ]
 
 
+def _fetch_nasdaq_calendar():
+    """Backup live economic calendar ingestion from Nasdaq API."""
+    url = "https://api.nasdaq.com/api/calendar/economicevents"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*"
+    }
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        raw = resp.read().decode("utf-8")
+        data = json.loads(raw)
+
+    rows = data.get("data", {}).get("rows", [])
+    as_of = data.get("data", {}).get("asOf", "This Week")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("Empty Nasdaq calendar rows")
+
+    usd_events = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        country = r.get("country", "")
+        if country not in ("United States", "USD", "US"):
+            continue
+
+        event_name = (r.get("eventName") or "Economic Release").strip()
+        title_upper = event_name.upper()
+        affected_sectors = "Broad Equities"
+        affected_tickers = "SPY"
+        mapped_impact = "Low"
+
+        for key, mapping in _SECTOR_IMPACT_MAP.items():
+            if key in title_upper:
+                affected_sectors = mapping["sectors"]
+                affected_tickers = mapping["tickers"]
+                mapped_impact = mapping["impact"]
+                break
+
+        # Convert GMT to ET
+        gmt_time = r.get("gmt", "")
+        time_et = gmt_time
+        if gmt_time and ":" in gmt_time:
+            try:
+                parts = gmt_time.split(":")
+                h, m = int(parts[0]), parts[1]
+                h_et = (h - 4 + 24) % 24
+                ampm = "AM" if h_et < 12 else "PM"
+                disp_h = 12 if h_et in (0, 12) else (h_et if h_et < 12 else h_et - 12)
+                time_et = f"{disp_h:02d}:{m} {ampm}"
+            except Exception:
+                pass
+
+        cons = (r.get("consensus") or "").replace("&nbsp;", "").strip() or "—"
+        prev = (r.get("previous") or "").replace("&nbsp;", "").strip() or "—"
+
+        usd_events.append({
+            "title": event_name,
+            "country": "USD",
+            "dateET": as_of,
+            "timeET": time_et,
+            "impact": mapped_impact,
+            "forecast": cons,
+            "previous": prev,
+            "sectors": affected_sectors,
+            "tickers": affected_tickers,
+            "isoDate": datetime.now(timezone.utc).isoformat()
+        })
+
+    if not usd_events:
+        raise ValueError("No US events in Nasdaq response")
+
+    return usd_events
+
+
 @router.get("/economic-calendar")
-def get_economic_calendar():
+def get_economic_calendar(t: Optional[str] = None, refresh: bool = False):
     """
-    Ingests the weekly macroeconomic calendar from Forex Factory / faireconomy.media,
-    filters for USD events, applies deterministic sector-impact mapping, and normalizes timestamps.
+    Multi-tier macroeconomic calendar ingestion:
+    - Tier 1: Forex Factory / faireconomy.media
+    - Tier 2 (Live Backup): Nasdaq Live Economic Calendar
+    - Tier 3: Curated weekly macro schedule
+    Filters for USD events, applies deterministic sector-impact mapping, and normalizes timestamps.
     """
     now = time.time()
-    if _CALENDAR_CACHE["data"] is not None and (now - _CALENDAR_CACHE["timestamp"]) < 1800:
+    force_refresh = refresh or (t is not None)
+    if not force_refresh and _CALENDAR_CACHE["data"] is not None and (now - _CALENDAR_CACHE["timestamp"]) < 1800:
         return _CALENDAR_CACHE["data"]
 
+    # Tier 1: Forex Factory
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     headers = {
-        "User-Agent": "DailyStockAnalysis/1.0",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
         "Accept": "application/json"
     }
 
     try:
         req = urllib.request.Request(url, headers=headers, method="GET")
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=8) as resp:
             raw_data = resp.read().decode("utf-8")
             events = json.loads(raw_data)
 
@@ -1059,7 +1294,6 @@ def get_economic_calendar():
             iso_date = raw_date
 
             try:
-                # Handle ISO 8601 string e.g. 2026-09-07T10:00:00-04:00
                 dt = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
                 try:
                     import zoneinfo
@@ -1083,12 +1317,15 @@ def get_economic_calendar():
                 "dateET": date_et,
                 "timeET": time_et,
                 "impact": mapped_impact,
-                "forecast": forecast if forecast else "--",
-                "previous": previous if previous else "--",
+                "forecast": forecast if forecast else "—",
+                "previous": previous if previous else "—",
                 "sectors": affected_sectors,
                 "tickers": affected_tickers,
                 "isoDate": iso_date
             })
+
+        if not usd_events:
+            raise ValueError("No USD events returned from Forex Factory")
 
         result = {
             "indicators": usd_events,
@@ -1101,12 +1338,29 @@ def get_economic_calendar():
         return result
 
     except Exception as err:
-        logger.warning("Failed to fetch upstream macro calendar: %s. Returning baseline schedule.", err)
+        logger.info("Forex Factory feed unavailable (%s), trying Nasdaq Live Calendar backup...", err)
+        # Tier 2: Try Nasdaq Live Calendar
+        try:
+            nasdaq_events = _fetch_nasdaq_calendar()
+            result = {
+                "indicators": nasdaq_events,
+                "source": "nasdaq_live",
+                "fallback": False,
+                "notice": "Live macroeconomic schedule ingested via Nasdaq Calendar Radar.",
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+            }
+            _CALENDAR_CACHE["timestamp"] = now
+            _CALENDAR_CACHE["data"] = result
+            return result
+        except Exception as n_err:
+            logger.warning("Nasdaq backup also unavailable (%s). Returning baseline schedule.", n_err)
+
+        # Tier 3: Curated Baseline
         fallback_result = {
             "indicators": _FALLBACK_INDICATORS,
             "source": "fallback_baseline",
             "fallback": True,
-            "notice": f"Remote macro feed temporarily offline ({str(err)}). Displaying baseline schedule.",
+            "notice": f"Remote macro feed offline ({str(err)}). Displaying baseline schedule.",
             "last_updated": datetime.now(timezone.utc).isoformat(),
         }
         return fallback_result

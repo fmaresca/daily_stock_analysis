@@ -125,6 +125,62 @@ class TestEconomicCalendarAPI(unittest.TestCase):
         self.assertEqual(mock_urlopen.call_count, 1)
         self.assertEqual(res1["indicators"], res2["indicators"])
 
+        # Third call with refresh=True must bypass cache and trigger network call
+        res3 = get_economic_calendar(refresh=True)
+        self.assertEqual(mock_urlopen.call_count, 2)
+        self.assertEqual(res3["indicators"], res1["indicators"])
+
+    @patch("urllib.request.urlopen")
+    def test_nasdaq_backup_when_ff_fails(self, mock_urlopen):
+        nasdaq_sample = {
+            "data": {
+                "asOf": "Wed, Sep 16, 2026",
+                "rows": [
+                    {
+                        "gmt": "12:30",
+                        "country": "United States",
+                        "eventName": "Core CPI",
+                        "actual": "",
+                        "consensus": "0.3%",
+                        "previous": "0.2%",
+                        "description": ""
+                    },
+                    {
+                        "gmt": "10:00",
+                        "country": "Germany",
+                        "eventName": "German ZEW",
+                        "actual": "",
+                        "consensus": "15.0",
+                        "previous": "12.0",
+                        "description": ""
+                    }
+                ]
+            }
+        }
+
+        # First call (Forex Factory) raises Exception, second call (Nasdaq) succeeds
+        mock_ff_resp = MagicMock()
+        mock_ff_resp.side_effect = Exception("Forex Factory 429 Too Many Requests")
+
+        mock_nasdaq_resp = MagicMock()
+        mock_nasdaq_resp.read.return_value = json.dumps(nasdaq_sample).encode("utf-8")
+        mock_nasdaq_resp.__enter__.return_value = mock_nasdaq_resp
+
+        mock_urlopen.side_effect = [Exception("Forex Factory 429"), mock_nasdaq_resp]
+
+        result = get_economic_calendar()
+
+        self.assertIn("indicators", result)
+        self.assertFalse(result["fallback"])
+        self.assertEqual(result["source"], "nasdaq_live")
+        self.assertEqual(len(result["indicators"]), 1)
+        cpi = result["indicators"][0]
+        self.assertEqual(cpi["title"], "Core CPI")
+        self.assertEqual(cpi["forecast"], "0.3%")
+        self.assertIn("Technology", cpi["sectors"])
+        self.assertIn("QQQ", cpi["tickers"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
