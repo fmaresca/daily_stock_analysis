@@ -1222,7 +1222,8 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 <ul className="list-disc list-inside text-slate-300 space-y-1.5 pl-1 leading-relaxed">
                   <li><strong>Avoid Opening 24h Before High-Impact Releases:</strong> DeltaHarvest algorithms flag naked puts or tight credit spreads opening immediately ahead of CPI or FOMC due to binary event risk.</li>
                   <li><strong>Post-Event IV Crush Harvesting:</strong> Once a major release is published (e.g. 8:31 AM ET post-CPI or 2:30 PM ET post-FOMC), implied volatility collapses. This is the optimal window to sell high-IV cash-secured puts with wide downside cushions (&ge;4.5%).</li>
-                  <li><strong>Offline Baseline Notice:</strong> If the remote live feed encounters an outage, an amber banner informs you that a verified baseline schedule is active, ensuring 100% continuous uptime.</li>
+                  <li><strong>Multi-Tier Resilient Feed Ingestion:</strong> The Radar utilizes a 3-tier architecture: <em>Tier 1: Forex Factory Live Feed</em>, <em>Tier 2: Nasdaq Live Calendar Radar</em> backup, and <em>Tier 3: Curated High-Impact Weekly Schedule</em>.</li>
+                  <li><strong>Live Eastern Time (ET) Synchronization:</strong> Real-time feed status badges indicate the active source (Forex Factory, Nasdaq, or Curated Schedule) along with live synchronization timestamps. Clicking "Refresh Feed" forces an immediate edge and cache bypass.</li>
                 </ul>
               </div>
             </div>

@@ -12,13 +12,15 @@ Macroeconomic data releases (such as CPI, FOMC, and Non-Farm Payrolls) cause vio
 
 | Parameter | Specifications |
 | :--- | :--- |
-| **Primary Feed** | Forex Factory Public JSON Feed (`https://nfs.faireconomy.media/ff_calendar_thisweek.json`) |
+| **Tier 1 (Primary Feed)** | Forex Factory Public JSON Feed (`https://nfs.faireconomy.media/ff_calendar_thisweek.json`) |
+| **Tier 2 (Live Backup Feed)** | Nasdaq Live Economic Calendar Radar (`https://api.nasdaq.com/api/calendar/economicevents`) |
+| **Tier 3 (Baseline Schedule)** | Curated High-Impact Weekly US Macroeconomic Schedule |
 | **Authentication** | Zero API keys or authentication required (100% Free) |
-| **Cadence** | Real-time weekly releases, refreshed every 30 minutes |
+| **Cadence** | Real-time weekly releases, refreshed every 15–30 minutes, or instantly on manual refresh |
 | **Timezone** | All releases normalized to US Eastern Time (ET) |
 | **Filtering** | Filtered strictly for US Dollar (`USD`) releases |
-| **Edge Caching** | Cached at Cloudflare edge nodes for 30 minutes (`max-age=1800`) |
-| **Offline Resilience** | Built-in fallback baseline dataset with an evident amber UI warning banner |
+| **Cache-Bypass Refresh** | Manual "Refresh Feed" injects dynamic timestamp (`?t=...`) to bypass edge & memory caches |
+| **Offline Resilience** | Multi-tier failover ensures 100% uptime with clear UI badges (`🟢 Forex Factory`, `🏛️ Nasdaq Live`, `🛡️ Curated Schedule`, `⚠️ Baseline Offline`) |
 
 ---
 
@@ -37,7 +39,7 @@ Macroeconomic data releases (such as CPI, FOMC, and Non-Farm Payrolls) cause vio
 
 ---
 
-## 4. Dual-Runtime Edge & Local Parity
+## 4. Multi-Tier Dual-Runtime Architecture
 
 ```
                        ┌───────────────────────────────┐
@@ -51,15 +53,18 @@ Macroeconomic data releases (such as CPI, FOMC, and Non-Farm Payrolls) cause vio
  Cloudflare Pages Edge Function                    FastAPI Local Backend
 /functions/api/economic-calendar.js         GET /api/v1/options/economic-calendar
               │                                                │
-              └────────────────────────┬───────────────────────┘
-                                       ▼
-                       Forex Factory Public JSON Feed
-               https://nfs.faireconomy.media/ff_calendar_thisweek.json
+              ├─────────────► Tier 1: Forex Factory Live ──────┤
+              │               (ff_calendar_thisweek.json)      │
+              │                                                │
+              ├─────────────► Tier 2: Nasdaq Live Radar ───────┤
+              │               (api.nasdaq.com)                 │
+              │                                                │
+              └─────────────► Tier 3: Curated Baseline ────────┘
 ```
 
-- **Cloudflare Edge Function (`functions/api/economic-calendar.js`)**: Executes in serverless edge V8 isolates with zero server cold starts, filtering USD events and serving cached responses.
-- **FastAPI Endpoint (`api/v1/endpoints/options.py`)**: Local endpoint with 30-minute memory cache and automatic fallback baseline if running offline without Wrangler.
-- **Offline Fallback Warning Banner**: When the upstream feed is unreachable, both runtimes return `fallback: true` with a clear message. The UI displays an amber alert banner notifying the user that pre-cached baseline data is currently active.
+- **Cloudflare Edge Function (`functions/api/economic-calendar.js`)**: Executes in serverless edge V8 isolates with zero server cold starts, sequential Tier 1 -> Tier 2 -> Tier 3 failover, and dynamic cache-control headers.
+- **FastAPI Endpoint (`api/v1/endpoints/options.py`)**: Local endpoint with sequential multi-tier failover and `refresh`/`t` parameter cache-bypassing support.
+- **Evident Feed & Fallback Badges**: Real-time badges indicate exactly which feed is providing data (`🟢 Forex Factory Live Feed`, `🏛️ Nasdaq Live Radar Feed`, `🛡️ High-Impact Curated Schedule`, or `⚠️ Baseline Offline Schedule`), along with live synchronization timestamps.
 
 ---
 
