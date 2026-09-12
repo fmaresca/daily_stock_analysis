@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
               <h1 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
                 <span>DeltaHarvest</span>
                 <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                  v2.0
+                  v3.3
                 </span>
               </h1>
               <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono hidden md:inline">
