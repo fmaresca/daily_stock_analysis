@@ -37,6 +37,8 @@ When an earnings announcement falls within the options expiration period ($t_{\t
   - **Covered Call (CC)**: Must clear the upper straddle bound with a 15% safety buffer:
     $$\text{Strike}_{\text{CC, Defended}} \ge S + \text{Straddle Dollar Move} \times 1.15$$
 - **100-Point Scoring Model Reward**: Defended trades that clear the straddle move are protected from binary gap breaches and receive only a mild -12 pt event penalty, passing the risk gate instead of triggering a hard -40 pt disqualification.
+- **Automated Live Earnings Calendar Retrieval & Latency Pause**:
+  For tickers not pre-stored in the local earnings registry, the simulator automatically pauses to query multi-source financial and SEC disclosure feeds (via Yahoo Finance quoteSummary calendarEvents, v7 quote timestamps, and corporate reporting calendars). A prominent in-flight progress banner (`⏳ Pausing to fetch corporate earnings calendar for {symbol}...`) alerts the user to the network lookup so the ATM Straddle Implied Move and Earnings-Defended Strike are accurately computed and cached.
 
 ---
 

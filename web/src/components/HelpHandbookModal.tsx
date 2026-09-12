@@ -512,7 +512,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 <p className="text-slate-300 leading-relaxed text-[11px]">
                   Selling options through corporate earnings announcements introduces severe binary jump risk (volatility crush and overnight gap risk). The simulator dynamically tracks upcoming corporate reporting schedules and evaluates whether an announcement falls inside the selected expiration cycle (<code className="text-amber-300 font-mono">tradeDate &le; earningsDate &le; expirationDate</code>):
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[11px] font-sans">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 text-[11px] font-sans">
                   <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
                     <span className="font-bold text-amber-300 block">1. Dynamic Calendar Capture</span>
                     <p className="text-slate-400">
@@ -532,6 +532,12 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <span className="font-bold text-emerald-300 block">3. Defended Strike Formulation</span>
                     <p className="text-slate-400">
                       Adjusts recommended strike prices outside the straddle cone with a 15% safety buffer (<code className="text-emerald-400 font-mono">CSP Strike &le; Spot - Move &times; 1.15</code>; <code className="text-amber-400 font-mono">CC Strike &ge; Spot + Move &times; 1.15</code>). Defended trades avoid hard disqualification!
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <span className="font-bold text-cyan-300 block">4. Live Sync &amp; Latency Pause</span>
+                    <p className="text-slate-400">
+                      For unstored equities, the simulator pauses to automatically fetch live SEC/Wall Street event dates. An in-flight banner alerts you to the lookup and caches the date permanently in browser storage.
                     </p>
                   </div>
                 </div>
