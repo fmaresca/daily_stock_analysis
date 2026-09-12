@@ -2359,28 +2359,61 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">What is the 0.50 Delta Defensive Roll Rule and how does the Repair Engine work?</div>
                   <p className="text-xs text-slate-400">
-                    When short options face adverse price moves, DeltaHarvest enforces the <strong>0.50 Delta Rule</strong>: never permit an option to reach assignment without testing a defensive adjustment. The <strong>Defensive Rolling &amp; Repair Engine</strong> evaluates four institutional repair tactics: (1) <em>Roll Out &amp; Down</em> (extending expiration 21–28 days while dropping strike $5.00 for a net credit); (2) <em>Roll Flat</em> (extending time at the same strike to harvest maximum extrinsic value); (3) <em>Inverted Wing Defense</em> (selling an opposing credit spread to reduce maximum drawdown); and (4) <em>1:2 Ratio Stock Repair</em> (recovering underwater stock at zero net capital cost).
+                    When short options face adverse price moves, DeltaHarvest enforces the <strong>0.50 Delta Rule</strong>: never permit an option to reach assignment without testing a defensive adjustment. The <strong>Defensive Rolling &amp; Repair Engine</strong> evaluates four institutional repair tactics: (1) <em>Roll Out &amp; Down</em> (extending expiration 21–28 days while dropping strike $5.00 for a net credit); (2) <em>Roll Flat</em> (extending time at the same strike to harvest maximum extrinsic value); (3) <em>Inverted Wing Defense</em> (selling an opposing credit spread to reduce maximum drawdown); and (4) <em>1:2 Ratio Stock Repair</em> (recovering underwater stock at zero net capital cost). The assistant is directly wired to your live portfolio ledger in real-time, strictly evaluating your actual open holdings and suppressing generic mock presets whenever live positions exist.
                   </p>
                 </div>
 
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">How do Section 1256 Index Contracts and the Wash-Sale Shield optimize taxes?</div>
                   <p className="text-xs text-slate-400">
-                    Under <strong>IRS Section 1256</strong>, all trading profits in broad index options (SPX, XSP, NDX, RUT) enjoy statutory 60/40 tax treatment: 60% is taxed at the lower long-term capital gains rate (20%) and 40% at short-term rates, generating an effective blended tax rate of ~26.8% vs. 37% for standard equity options. In addition, Section 1256 contracts settle in cash and are exempt from the 30-day wash-sale rule. The <strong>Wash-Sale Shield</strong> identifies underwater equity positions and suggests non-substantially identical replacement proxies (e.g. SPY &rarr; XSP) to bank immediate tax deductions while keeping continuous market exposure.
+                    Under <strong>IRS Section 1256</strong>, all trading profits in broad index options (SPX, XSP, NDX, RUT) enjoy statutory 60/40 tax treatment: 60% is taxed at the lower long-term capital gains rate (20%) and 40% at short-term rates, generating an effective blended tax rate of ~26.8% vs. 37% for standard equity options. In addition, Section 1256 contracts settle in cash and are exempt from the 30-day wash-sale rule. The <strong>Wash-Sale Shield</strong> identifies underwater equity positions and suggests non-substantially identical replacement proxies (e.g. SPY &rarr; XSP) to bank immediate tax deductions while keeping continuous market exposure. The Tax Alpha Optimizer also synchronizes directly with your verified 2026 Calendar YTD Premiums baseline ($603,305.40), featuring a 1-click &quot;Sync YTD&quot; action to model realistic annual Form 6781 tax alpha.
                   </p>
                 </div>
 
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">What is the Executive Portfolio Health Digest &amp; Continuous Guardian?</div>
                   <p className="text-xs text-slate-400">
-                    The <strong>Executive Portfolio Health Digest</strong> aggregates total Net Liquidity, Daily Theta Cashflow run-rate, SPY Beta Delta exposure, and Portfolio Margin (TIMS) capital savings into a unified C-suite dashboard with one-click <strong>Download Markdown</strong> and <strong>Print Executive PDF</strong> capabilities. In the background, the <strong>Continuous Risk Sweeper</strong> autonomously audits active positions against the 80% profit-taking threshold and 0.50 Delta defense trigger, issuing instant alerts to protect capital.
+                    The <strong>Executive Portfolio Health Digest</strong> aggregates total Net Liquidity, Daily Theta Cashflow run-rate, SPY Beta Delta exposure, and Portfolio Margin (TIMS) capital savings into a unified C-suite dashboard with one-click <strong>Download Markdown</strong> and <strong>Print Executive PDF</strong> capabilities. Its <strong>100-Point Compliance Health Score</strong> is calculated dynamically from live holdings: starting at 100, it deducts 10 pts per threatened position (|&Delta;| &ge; 0.40), 15–25 pts if free cash buffer falls below 10% or 5%, 10 pts per single-equity CSP exposure exceeding $200,000, and 5 pts per unrolled covered call that has captured &ge; 80% profit. In the background, the <strong>Continuous Risk Sweeper</strong> autonomously audits active positions against the 80% profit-taking threshold and 0.50 Delta defense trigger, issuing instant alerts to protect capital.
                   </p>
                 </div>
 
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">How does the Closed-Loop Trade Lifecycle &amp; Top Header Risk Pulse work?</div>
                   <p className="text-xs text-slate-400">
-                    DeltaHarvest links order execution, portfolio margin stress-testing, and defensive repair into a unified closed loop: (1) When an order is previewed or executed in the <em>Broker Workbench</em>, it automatically logs into your active <em>Portfolio Ledger</em>; (2) The <em>Defensive Rolling Engine</em> dynamically loads your active ledger positions so you can test and stage repair tactics on real holdings; (3) The <em>Option Chain Matrix</em> models true CBOE calendar Friday cycles (weekly, monthly 3rd Friday, and annual LEAPS); (4) The persistent <em>Top Header Risk Pulse</em> dynamically calculates and displays real-time portfolio compliance health and net daily theta run-rate (e.g. <code>{'{score}'}/100 Health • +${'{theta}'}/d</code>) synchronized live with your active portfolio positions and stress test engine, with global hotkeys (<code>?</code> for Handbook, <code>Alt+S</code> for Staging, <code>Alt+E</code> for Executive Digest).
+                    DeltaHarvest links order execution, portfolio margin stress-testing, and defensive repair into a unified closed loop: (1) When an order is previewed or executed in the <em>Broker Workbench</em>, it automatically logs into your active <em>Portfolio Ledger</em>; (2) The <em>Defensive Rolling Engine</em> dynamically loads your active ledger positions so you can test and stage repair tactics on real holdings; (3) The <em>Option Chain Matrix</em> models true CBOE calendar Friday cycles (weekly, monthly 3rd Friday, and annual LEAPS); (4) The persistent <em>Top Header Risk Pulse</em> dynamically calculates and displays real-time portfolio compliance health and net daily theta run-rate (e.g. <code>{'{score}'}/100 Health • +${'{theta}'}/d</code>) synchronized live with your active portfolio positions and stress test engine via global storage events, with global hotkeys (<code>?</code> for Handbook, <code>Alt+S</code> for Staging, <code>Alt+E</code> for Executive Digest).
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span className="text-emerald-400">💵</span>
+                    <span>How does Calendar YTD Premiums Tracking work ($603,305.40 Baseline &amp; Pre-Logging Verification)?</span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Calendar YTD Premiums Tracking records cumulative gross and net option cashflow generated across the tax year. For 2026, the verified institutional baseline is established at <strong>$603,305.40</strong>. The platform features two direct verification points:
+                  </p>
+                  <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+                    <li><strong>Step 2 Panel A (Weekly Cash Ledger):</strong> Displays the cumulative Calendar YTD total with a dedicated <em>Edit Starting Baseline</em> modal and quick-fill chips to adjust or correct historical premiums at any time.</li>
+                    <li><strong>Pre-Logging Verification Modal:</strong> When you click <em>Log Current Week Premium</em>, the modal prominently displays and allows editing the starting YTD balance ($603,305.40) directly at the top. This allows you to verify and calibrate the baseline before logging your current week&apos;s realized option income, with a live calculation of the resulting cumulative YTD total.</li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span className="text-emerald-400">📊</span>
+                    <span>Where is the YTD Capital Gains and Capital Loss Carryforwards tracking located and how is it edited?</span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    YTD Capital Gains and Capital Loss Carryforwards are tracked in <strong>Step 2 (WeeklyCashLedgerView) Panel B</strong> via an institutional 4-card matrix:
+                  </p>
+                  <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+                    <li><strong>Realized Capital Gains:</strong> Closed gains from equity, ETF, and underlying share sales.</li>
+                    <li><strong>Realized Capital Losses:</strong> Closed losses from stock or long hedges.</li>
+                    <li><strong>Prior Year Loss Carryforward:</strong> Unused historical capital losses brought forward under IRS rules (including the standard $3,000 annual ordinary income offset allowance).</li>
+                    <li><strong>Net Taxable Options &amp; Equity Estimate:</strong> Real-time net taxable liability: <code className="text-emerald-300 font-mono">Net = (YTD Premiums + Realized Gains) - Realized Losses - Loss Carryforward Offset</code>.</li>
+                  </ul>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Click <strong>&quot;Edit Gains &amp; Carryover&quot;</strong> on the card header to open the dedicated maintenance modal, where you can modify the tax year, enter realized gains and losses, adjust loss carryforwards, and instantly preview net taxable income before saving.
                   </p>
                 </div>
 
@@ -2394,9 +2427,9 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   </p>
                   <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
                     <li><strong>Long Equities (7 lots):</strong> AXTI (1,500 shs), BLZE (11,000 shs), IONQ (1,500 shs), LUNR (5,000 shs), NET (1,300 shs), RTX (1,700 shs), TSLA (2,000 shs) totaling $1,785,894.00 equity.</li>
-                    <li><strong>Related Options (10 contracts/legs):</strong> 2 Cash-Secured Puts (PANW 327.50P x3, PLTR 165.00P x10 locking $263,250.00 collateral) and 8 Covered Calls across your equity lots (AXTI 70C, BLZE 17.5C, IONQ 43.5C, LUNR 16.5C, NET 300C, RTX 207.5C, TSLA 370C, TSLA 375C).</li>
-                    <li><strong>Bank Cash &amp; Sweep:</strong> $293,703.52 Core Bank Deposit Sweep (100% instant liquid purchasing power).</li>
-                    <li><strong>Money Market Funds (MMF):</strong> BNY Mellon NY AMT-Free MMF (SNYXX, $202,775.94) and Schwab Premier Advantage MMF (SNAXX, $77,341.30), bringing total cash/MMF coverage to $573,820.76.</li>
+                    <li><strong>Related Options (10 contracts/legs):</strong> 2 Cash-Secured Puts (PANW 327.50P x3, PLTR 165.00P x10 locking $263,250.00 collateral) and 8 Covered Calls across your equity lots (AXTI 70C, BLZE 17.5C, IONQ 43.5C, LUNR 16.5C, NET 300C, RTX 207.5C, TSLA 370C, TSLA 375C). In the 2026-09-12 reconciliation, following PANW expiration, PLTR 160.00P (-10 contracts, $160,000 collateral) forms the sole active CSP liability.</li>
+                    <li><strong>Bank Cash &amp; Sweep:</strong> $293,703.52 Core Bank Deposit Sweep ($299,590.53 in the 2026-09-12 reconciliation) providing 100% instant liquid purchasing power.</li>
+                    <li><strong>Money Market Funds (MMF):</strong> BNY Mellon NY AMT-Free MMF (SNYXX, $202,775.94) and Schwab Premier Advantage MMF (SNAXX, $77,341.30), bringing total cash/MMF reserve coverage to $573,820.76 ($579,707.77 in 2026-09-12 reconciliation), delivering $419,707.77 Precalculated Available Cash and $414,707.77 deployable free cash after $5,000 weekly living expenses.</li>
                   </ul>
                   <p className="text-xs text-slate-400 mt-1">
                     Use the <strong>Asset Class Filter Tabs</strong> (<em>All, Equities, CSPs, Covered Calls, Cash &amp; MMF</em>) to isolate holdings, or click <strong>&quot;Sync Schwab Baseline&quot;</strong> to re-synchronize live account holdings at any time.
