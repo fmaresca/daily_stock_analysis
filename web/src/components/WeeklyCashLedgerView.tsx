@@ -4,7 +4,7 @@ import {
   TaxLedgerState,
   DisbursementItem,
 } from '../types/options';
-import { PortfolioPosition } from '../utils/portfolioStressTest';
+import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from '../utils/portfolioStressTest';
 import {
   getStoredCapitalState,
   getDefaultCapitalState,
@@ -62,6 +62,32 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
   const [taxState, setTaxState] = useState<TaxLedgerState>(() =>
     getStoredTaxLedgerState()
   );
+
+  // Derive active positions from prop or stored book or baseline
+  const activePositions = useMemo(() => {
+    if (positions && positions.length > 0) return positions;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('deltaharvest_portfolio_book');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return LIVING_TRUST_OPTIONS_POSITIONS;
+  }, [positions]);
+
+  const activeCSPs = useMemo(() => activePositions.filter((p) => p.type === 'CSP'), [activePositions]);
+  const activeCoveredCalls = useMemo(() => activePositions.filter((p) => p.type === 'COVERED_CALL'), [activePositions]);
+  const activeEquities = useMemo(() => activePositions.filter((p) => p.type === 'STOCK'), [activePositions]);
+  const activeCspNames = useMemo(() => {
+    if (activeCSPs.length === 0) return 'None';
+    return activeCSPs.map((p) => p.symbol).join(', ');
+  }, [activeCSPs]);
+  const availableCashBeforeLiving = useMemo(() => {
+    return Math.max(0, capitalState.totalCash - capitalState.committedCollateral);
+  }, [capitalState.totalCash, capitalState.committedCollateral]);
 
   // Automatically synchronize when Step 1 (Schwab CSV upload) updates capital or portfolio
   useEffect(() => {
@@ -505,7 +531,7 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
           <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
             <span className="text-[10px] text-slate-400 block font-semibold">Core Cash &amp; Sweep</span>
             <span className="text-sm font-bold font-mono text-cyan-300 block">
-              ${(capitalState.cashBreakdown?.coreCash ?? 293703.52).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ${(capitalState.cashBreakdown?.coreCash ?? 299590.53).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
             <span className="text-[9px] text-slate-500">Cash investments sweep</span>
           </div>
@@ -516,7 +542,7 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
               ${capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
             <span className="text-[9px] text-emerald-400/70 font-mono">
-              PANW + PLTR Offsets: -${capitalState.committedCollateral.toLocaleString()}
+              {activeCspNames} Offsets: -${capitalState.committedCollateral.toLocaleString()}
             </span>
           </div>
         </div>
@@ -526,7 +552,7 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
           <div className="flex items-center space-x-2">
             <span className="text-[11px] font-bold text-slate-300">Equities Ingested into Watchlist:</span>
             <div className="flex items-center gap-1.5 font-mono font-bold">
-              {['AXTI', 'BLZE', 'IONQ', 'LUNR', 'NET', 'RTX', 'TSLA'].map((sym) => (
+              {(activeEquities.length > 0 ? activeEquities.map((e) => e.symbol) : ['AXTI', 'BLZE', 'IONQ', 'LUNR', 'NET', 'RTX', 'TSLA']).map((sym) => (
                 <span
                   key={sym}
                   className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[10px]"
@@ -537,7 +563,7 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
             </div>
           </div>
           <span className="text-[10px] text-slate-400 font-mono">
-            7 Long Holdings &bull; 7 Covered Calls Linked &bull; 2 CSP Offsets Active (PANW, PLTR)
+            {activeEquities.length} Long Holdings &bull; {activeCoveredCalls.length} Covered Calls Linked &bull; {activeCSPs.length} CSP Offset{activeCSPs.length === 1 ? '' : 's'} Active ({activeCspNames})
           </span>
         </div>
       </div>
@@ -568,11 +594,11 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
             <span className="text-slate-300">
               Total Cash Pool (Money Market + Sweep): <strong className="text-white font-mono">${capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
               {' '}&minus; Open Put Liabilities: <strong className="text-rose-400 font-mono">${capitalState.committedCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
-              {' '}&#61; <strong className="text-emerald-400 font-mono text-sm">${Math.max(0, capitalState.totalCash - capitalState.committedCollateral).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> Available Cash
+              {' '}&#61; <strong className="text-emerald-400 font-mono text-sm">${availableCashBeforeLiving.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> Available Cash (Before Living Expenses)
             </span>
           </div>
           <div className="text-[11px] font-mono text-slate-400">
-            Less Disbursements: &minus;${capitalState.totalEncumberedDisbursements.toLocaleString()} &rarr; <span className="text-emerald-400 font-bold">${capitalState.freeCash.toLocaleString()} Deployable Free Cash</span>
+            Less Weekly Living Expenses: &minus;${capitalState.totalEncumberedDisbursements.toLocaleString()} &rarr; <span className="text-emerald-400 font-bold">${capitalState.freeCash.toLocaleString(undefined, { minimumFractionDigits: 2 })} Deployable Free Cash</span>
           </div>
         </div>
 
@@ -683,20 +709,25 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
 
           {/* Box 3: Committed Put Collateral */}
           <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-            <span className="text-[11px] text-slate-400 block">3. Committed CSP Collateral</span>
+            <span className="text-[11px] text-slate-400 block font-semibold">3. Committed CSP Collateral</span>
             <span className="text-xl font-bold font-mono text-cyan-400 block">
-              -${capitalState.committedCollateral.toLocaleString()}
+              -${capitalState.committedCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
-            <span className="text-[10px] text-slate-500 block">
-              Locked in {(positions || []).filter((p) => p.type === 'CSP').length} open put writes
+            <span className="text-[10px] text-slate-400 block truncate" title={activeCSPs.map((p) => `${p.symbol} $${p.strike}P`).join(', ')}>
+              Locked in {activeCSPs.length} open put write{activeCSPs.length === 1 ? '' : 's'} ({activeCSPs.map((p) => `${p.symbol} $${p.strike}P`).join(', ') || 'PLTR $160P'})
             </span>
           </div>
 
           {/* Box 4: True Free Cash Available */}
           <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/40 space-y-1 shadow-lg shadow-emerald-950/50">
-            <span className="text-[11px] text-emerald-400 font-bold block">4. True Free Deployable Cash</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-emerald-400 font-bold block">4. True Free Deployable Cash</span>
+              <span className="text-[10px] text-cyan-300 font-mono font-bold" title="Available cash prior to $5,000 weekly living expenses deduction">
+                ${availableCashBeforeLiving.toLocaleString(undefined, { minimumFractionDigits: 2 })} pre-deduction
+              </span>
+            </div>
             <span className="text-xl font-bold font-mono text-emerald-300 block">
-              ${capitalState.freeCash.toLocaleString()}
+              ${capitalState.freeCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
             <span className="text-[10px] text-emerald-400/90 font-mono block">
               Max Concurrent: <strong className="text-white font-bold">{capitalState.maxAllowedPositions} positions</strong> (capped at 5)

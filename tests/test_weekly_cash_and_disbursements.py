@@ -505,6 +505,55 @@ TABLE 3: EXCLUDED CANDIDATES
         deployable_free_cash = total_cash_pool - total_csp_collateral - weekly_living_disbursement
         self.assertAlmostEqual(deployable_free_cash, 305570.76, places=2)
 
+    def test_latest_schwab_export_2026_09_12_reconciliation(self):
+        """
+        Validates exact dollar-for-dollar cash and collateral reconciliation for the
+        2026-09-12 Charles Schwab export (account Living Trust-Options ...609).
+        Available Cash prior to $5,000 weekly living expenses deduction MUST equal $419,707.77.
+        Net Deployable Free Cash after $5,000 deduction MUST equal $414,707.77.
+        """
+        # 1. Three-tiered Liquid Cash Pool
+        snyxx = 202775.94     # Schwab New York Municipal Money Ultra
+        snaxx = 77341.30      # Schwab Prime Advantage Money Ultra
+        core_cash = 299590.53 # Charles Schwab Bank Deposit Sweep (Liquid Core)
+        total_liquid_cash = snyxx + snaxx + core_cash
+        self.assertAlmostEqual(total_liquid_cash, 579707.77, places=2)
+
+        # 2. Active Cash-Secured Puts (PANW expired 09/11, PLTR 160P active exp 09/18)
+        open_csps = [
+            {"symbol": "PLTR", "strike": 160.00, "contracts": 10, "expiration": "2026-09-18"},
+        ]
+        committed_csp_collateral = sum(c["strike"] * c["contracts"] * 100 for c in open_csps)
+        self.assertEqual(committed_csp_collateral, 160000.00)
+
+        # Verify $200,000 single equity security constraint
+        self.assertLessEqual(committed_csp_collateral, 200000.00)
+
+        # 3. Available Cash BEFORE deduction of $5,000 weekly living expenses
+        available_cash_before_living = total_liquid_cash - committed_csp_collateral
+        self.assertAlmostEqual(available_cash_before_living, 419707.77, places=2)
+
+        # 4. Weekly living expenses deduction
+        weekly_living_disbursement = 5000.00
+
+        # 5. True Deployable Free Cash AFTER deduction
+        net_deployable_free_cash = available_cash_before_living - weekly_living_disbursement
+        self.assertAlmostEqual(net_deployable_free_cash, 414707.77, places=2)
+
+        # 6. Position sizing limits (freeCash / targetAllocation capped at 5)
+        target_allocation = 100000.00
+        max_positions = min(5, int(net_deployable_free_cash // target_allocation))
+        self.assertEqual(max_positions, 4)
+
+        # 7. Total Account Liquidation Value Check ($2,388,228.85)
+        total_account_net_value = 2388228.85
+        total_equity_value = 97155.00 + 136400.00 + 55125.00 + 71750.00 + 398489.00 + 336056.00 + 730880.00 # $1,825,855.00
+        total_short_call_liability = 2431.65 + 357.50 + 421.20 + 11529.57 + 629.00 + 570.00 # $15,938.92
+        short_put_market_liability = 1395.00
+        total_deriv_liability = total_short_call_liability + short_put_market_liability # $17,333.92
+        net_liquidation = (total_equity_value + total_liquid_cash) - total_deriv_liability
+        self.assertAlmostEqual(net_liquidation, total_account_net_value, places=2)
+
 
 if __name__ == "__main__":
     unittest.main()

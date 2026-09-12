@@ -27,11 +27,11 @@ export const MAX_SINGLE_EQUITY_POSITION_LIMIT = 200000; // $200,000 maximum coll
 
 // Real Account Profile: Living Trust-Options ...609
 export const DEFAULT_ACCOUNT_NAME = 'Living Trust-Options ...609';
-export const DEFAULT_ACCOUNT_NET_VALUE = 2343519.76; // Total account liquidation value
+export const DEFAULT_ACCOUNT_NET_VALUE = 2388228.85; // Total account liquidation value
 export const DEFAULT_SNYXX_CASH = 202775.94; // Schwab New York Municipal Money Ultra
 export const DEFAULT_SNAXX_CASH = 77341.30; // Schwab Prime Advantage Money Ultra
-export const DEFAULT_CORE_CASH = 293703.52; // Cash & Cash Investments sweep
-export const DEFAULT_TOTAL_AVAILABLE_CASH = 573820.76; // Total liquid cash to cover CSP before offsets (SNYXX + SNAXX + Core Cash)
+export const DEFAULT_CORE_CASH = 299590.53; // Cash & Cash Investments sweep
+export const DEFAULT_TOTAL_AVAILABLE_CASH = 579707.77; // Total liquid cash to cover CSP before offsets (SNYXX + SNAXX + Core Cash)
 export const DEFAULT_WEEKLY_DISBURSEMENT = 5000; // $5,000 weekly living expenses rule
 export const DEFAULT_PER_POSITION_BUDGET = 100000; // Default target allocation per position (strictly capped at $200,000)
 
