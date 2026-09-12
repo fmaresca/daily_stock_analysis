@@ -24,11 +24,11 @@ logger = logging.getLogger(__name__)
 class TradierFetcher(BaseFetcher):
     """
     Tradier API Provider for US Equities and Options Chains.
-    Used as an automatic fallback when Schwab session is offline or pending authentication.
+    Primary data provider for real-time NBBO quotes, options chains, and Greeks.
     """
 
     name = "TradierFetcher"
-    priority = 2
+    priority = 1
 
     def __init__(
         self,
@@ -43,6 +43,45 @@ class TradierFetcher(BaseFetcher):
     def is_available(self) -> bool:
         """Returns True if Tradier API token is configured."""
         return bool(self.api_token)
+
+    def fetch_expirations(self, symbol: str) -> List[str]:
+        """Fetches available option expiration dates for symbol."""
+        if not self.is_available():
+            return []
+        url = f"{self.base_url}/markets/options/expirations"
+        params = {"symbol": symbol.strip().upper()}
+        try:
+            resp = self.session.get(url, headers=self._get_headers(), params=params, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                dates = data.get("expirations", {}).get("date", [])
+                if isinstance(dates, str):
+                    return [dates]
+                return list(dates) if isinstance(dates, list) else []
+            return []
+        except Exception as e:
+            logger.warning(f"[Tradier] Error fetching expirations: {e}")
+            return []
+
+    def get_sample_quote(self, symbol: str = "SPY") -> Optional[Dict[str, Any]]:
+        """Fetches a normalized quote sample for status verification."""
+        data = self.fetch_quotes([symbol])
+        quotes_container = data.get("quotes", {})
+        quote_item = quotes_container.get("quote", {})
+        if isinstance(quote_item, list) and quote_item:
+            quote_item = quote_item[0]
+        if isinstance(quote_item, dict) and quote_item.get("symbol"):
+            return {
+                "symbol": quote_item.get("symbol"),
+                "description": quote_item.get("description"),
+                "last": quote_item.get("last"),
+                "bid": quote_item.get("bid"),
+                "ask": quote_item.get("ask"),
+                "volume": quote_item.get("volume"),
+                "change": quote_item.get("change"),
+                "change_percentage": quote_item.get("change_percentage"),
+            }
+        return None
 
     def _get_headers(self) -> Dict[str, str]:
         if not self.api_token:

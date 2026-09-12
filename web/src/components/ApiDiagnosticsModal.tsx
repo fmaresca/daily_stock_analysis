@@ -19,13 +19,14 @@ import {
 interface ApiDiagnosticsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenTradierSettings?: () => void;
   onOpenSchwabSettings?: () => void;
 }
 
 interface TestResult {
   id: string;
   name: string;
-  category: 'SCHWAB' | 'MARKET_DATA' | 'PREDICTION_MARKETS' | 'SENTIMENT';
+  category: 'TRADIER' | 'SCHWAB' | 'MARKET_DATA' | 'PREDICTION_MARKETS' | 'SENTIMENT';
   status: 'IDLE' | 'RUNNING' | 'SUCCESS' | 'WARNING' | 'ERROR';
   latencyMs?: number;
   message: string;
@@ -36,14 +37,22 @@ interface TestResult {
 export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
   isOpen,
   onClose,
+  onOpenTradierSettings,
   onOpenSchwabSettings,
 }) => {
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
   const [tests, setTests] = useState<TestResult[]>([
     {
+      id: 'tradier_api',
+      name: 'Tradier API (Primary Market Data & Options)',
+      category: 'TRADIER',
+      status: 'IDLE',
+      message: 'Tests live developer token, real-time NBBO quotes on SPY, and options chain latency.',
+    },
+    {
       id: 'schwab_api',
-      name: 'Charles Schwab Retail Trader API',
+      name: 'Charles Schwab Retail Trader API (Fallback)',
       category: 'SCHWAB',
       status: 'IDLE',
       message: 'Tests OAuth2 token handshake, live Level 1 NBBO quote on SPY, and options chain latency.',
@@ -81,6 +90,94 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
 
   const updateTest = (id: string, updates: Partial<TestResult>) => {
     setTests((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+  };
+
+  const testTradierApi = async () => {
+    updateTest('tradier_api', { status: 'RUNNING', message: 'Testing Tradier API (Primary Provider)...' });
+    const t0 = performance.now();
+
+    try {
+      const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
+      const savedKey = localStorage.getItem('tradier_api_key') || viteKey || '';
+      const useSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
+
+      if (!savedKey) {
+        updateTest('tradier_api', {
+          status: 'WARNING',
+          latencyMs: 0,
+          message: 'Tradier API token not configured. Click "Configure Tradier API" to set your developer token.',
+          details: {
+            hint: 'Get your personal API key from developer.tradier.com for real-time NBBO quotes and option chains.',
+          },
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        return;
+      }
+
+      // 1. Check backend status if running
+      try {
+        const resp = await fetch(`/api/v1/options/tradier/status?token=${encodeURIComponent(savedKey)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.status === 'CONNECTED' && data.sample_quote) {
+            const elapsed = Math.round(performance.now() - t0);
+            updateTest('tradier_api', {
+              status: 'SUCCESS',
+              latencyMs: data.latency_ms || elapsed,
+              message: 'Connected via backend! Tradier is active as Primary market data provider.',
+              details: data.sample_quote,
+              timestamp: new Date().toLocaleTimeString(),
+            });
+            return;
+          }
+        }
+      } catch {
+        // Fall through to direct fetch
+      }
+
+      // 2. Direct client-side fetch test
+      const baseUrl = useSandbox ? 'https://sandbox.tradier.com/v1' : 'https://api.tradier.com/v1';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const resp = await fetch(`${baseUrl}/markets/quotes?symbols=SPY&greeks=true`, {
+        headers: {
+          'Authorization': `Bearer ${savedKey.trim()}`,
+          'Accept': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const elapsed = Math.round(performance.now() - t0);
+      if (resp.status === 200) {
+        const data = await resp.json();
+        const quote = Array.isArray(data?.quotes?.quote) ? data.quotes.quote[0] : data?.quotes?.quote;
+        updateTest('tradier_api', {
+          status: 'SUCCESS',
+          latencyMs: elapsed,
+          message: 'Connected! Live NBBO quotes and real-time options chain feeds are active from Tradier (Primary).',
+          details: {
+            symbol: quote?.symbol || 'SPY',
+            last: quote?.last,
+            bid: quote?.bid,
+            ask: quote?.ask,
+            volume: quote?.volume,
+            token_masked: savedKey.slice(0, 4) + '••••••••' + savedKey.slice(-4),
+          },
+          timestamp: new Date().toLocaleTimeString(),
+        });
+      } else {
+        throw new Error(`Tradier returned status ${resp.status}`);
+      }
+    } catch (err: any) {
+      const elapsed = Math.round(performance.now() - t0);
+      updateTest('tradier_api', {
+        status: 'ERROR',
+        latencyMs: elapsed,
+        message: err.message || 'Tradier API ping failed.',
+        timestamp: new Date().toLocaleTimeString(),
+      });
+    }
   };
 
   const testSchwabApi = async () => {
@@ -263,6 +360,7 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
   const runAllSelfTests = async () => {
     setIsRunningAll(true);
     await Promise.all([
+      testTradierApi(),
       testSchwabApi(),
       testMarketDataStream(),
       testPredictionMarkets(),
@@ -452,6 +550,23 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
                       <pre className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono text-emerald-300 overflow-x-auto whitespace-pre">
                         {JSON.stringify(test.details, null, 2)}
                       </pre>
+
+                      {test.category === 'TRADIER' && onOpenTradierSettings && (
+                        <div className="pt-1 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onClose();
+                              onOpenTradierSettings();
+                            }}
+                            className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 underline"
+                          >
+                            <span>Open Tradier Credential Settings</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
 
                       {test.category === 'SCHWAB' && onOpenSchwabSettings && (
                         <div className="pt-1 flex justify-end">

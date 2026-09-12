@@ -44,6 +44,7 @@ from .longbridge_fetcher import LongbridgeFetcher
 from .finnhub_fetcher import FinnhubFetcher
 from .alphavantage_fetcher import AlphaVantageFetcher
 from .schwab_fetcher import SchwabFetcher, SchwabAuthManager
+from .tradier_fetcher import TradierFetcher
 from .us_index_mapping import is_us_index_code, is_us_stock_code, get_us_index_yf_symbol, US_INDEX_MAPPING
 
 __all__ = [
@@ -59,6 +60,7 @@ __all__ = [
     'LongbridgeFetcher',
     'FinnhubFetcher',
     'AlphaVantageFetcher',
+    'TradierFetcher',
     'SchwabFetcher',
     'SchwabAuthManager',
     'is_us_index_code',

@@ -31,6 +31,7 @@ interface HeaderProps {
   onOpenHelp: () => void;
   onOpenWatchlists: () => void;
   onOpenReports: () => void;
+  onOpenTradier: () => void;
   onOpenSchwab: () => void;
   onOpenAlerts?: () => void;
   onOpenDiagnostics?: () => void;
@@ -60,6 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenHelp,
   onOpenWatchlists,
   onOpenReports,
+  onOpenTradier,
   onOpenSchwab,
   onOpenAlerts,
   onOpenDiagnostics,
@@ -178,14 +180,26 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Schwab API Settings */}
+          {/* Tradier API Settings (Primary) */}
+          <button
+            onClick={onOpenTradier}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400/70 transition-all cursor-pointer whitespace-nowrap shadow-sm shadow-emerald-500/10"
+            title="Configure Tradier API Key (Primary Live Market Data & Options Chains)"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Tradier API</span>
+            <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-600/40 font-mono">Primary</span>
+          </button>
+
+          {/* Schwab API Settings (Fallback) */}
           <button
             onClick={onOpenSchwab}
             className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-blue-300 hover:border-blue-500/50 transition-all cursor-pointer whitespace-nowrap"
-            title="Configure Charles Schwab Retail Trader API keys"
+            title="Configure Charles Schwab Retail Trader API keys (Fallback Provider)"
           >
             <span className="w-2 h-2 rounded-full bg-blue-400" />
             <span>Schwab API</span>
+            <span className="text-[10px] px-1 py-0.2 rounded bg-blue-950/80 text-blue-400 border border-blue-700/40 font-mono">Fallback</span>
           </button>
 
           {/* Watchlists Button */}

@@ -1858,15 +1858,28 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </div>
               </div>
 
-              {/* Tradier Fallback */}
-              <div className="bg-slate-950/70 p-4 rounded-xl border border-teal-500/30 space-y-2">
-                <div className="flex items-center space-x-2 text-teal-400 font-bold text-xs">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Tradier API — Secondary Data Source Fallback</span>
+              {/* Tradier Primary API Architecture */}
+              <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/40 space-y-2">
+                <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
+                  <Zap className="w-4 h-4" />
+                  <span>Tradier API — Primary Real-Time Market Data &amp; Options Provider</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700/50">Primary</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  If your Charles Schwab OAuth session is not yet authenticated or is offline, the system automatically falls back to <strong>Tradier</strong> for live options chains and US equity quotes. Configure your Tradier API token in <code className="text-slate-400">.env</code> as <code className="text-slate-400">TRADIER_TOKEN</code>. This ensures zero data gap during Schwab re-authorization cycles.
+                  DeltaHarvest utilizes <strong>Tradier API</strong> as the primary engine for real-time NBBO equity quotes and live option chains with institutional Greeks. Tradier provides native CORS support (<code className="text-emerald-300 bg-emerald-950/60 px-1 rounded">Access-Control-Allow-Origin: *</code>), enabling zero-latency client-side streaming on Cloudflare Pages without requiring proxy servers.
                 </p>
+                <div className="text-[11px] text-slate-400 space-y-1 pt-1 border-t border-slate-800">
+                  <div className="flex items-center gap-1.5 text-emerald-300 font-semibold">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Privacy &amp; Security Architecture:</span>
+                  </div>
+                  <p>
+                    Your Tradier API Key is kept <strong>strictly private</strong>. It is masked by default with bullet dots in the settings modal and stored exclusively in private client-side <code className="text-slate-300">localStorage</code> or local gitignored <code className="text-slate-300">.env</code>. It is never committed to GitHub or exposed in public deployments.
+                  </p>
+                  <p>
+                    <strong>Automatic Failover:</strong> If Tradier is offline or unconfigured, the system automatically falls back to <strong>Charles Schwab Retail Trader API</strong> (secondary fallback) and Yahoo Finance / CBOE directory snapshots.
+                  </p>
+                </div>
               </div>
 
               {/* Automated Live Sync Frequency & Rate Limits */}

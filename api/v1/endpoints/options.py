@@ -28,6 +28,7 @@ from src.config import Config
 from src.services.cef_analytics_service import CEFAnalyticsService
 from src.services.risk_circuit_breaker import RiskCircuitBreakerService
 from data_provider.schwab_fetcher import SchwabFetcher, SchwabAuthManager
+from data_provider.tradier_fetcher import TradierFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -295,6 +296,81 @@ def get_schwab_status(
         }
 
 
+class TradierConfigRequest(BaseModel):
+    api_token: str
+    use_sandbox: bool = False
+
+
+@router.post("/tradier/configure")
+def configure_tradier(
+    request: TradierConfigRequest,
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Tests and verifies Tradier API Token.
+    """
+    token = request.api_token.strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="Tradier API Token must be provided.")
+
+    fetcher = TradierFetcher(api_token=token, use_sandbox=request.use_sandbox)
+    sample = fetcher.get_sample_quote("SPY")
+    if not sample:
+        raise HTTPException(status_code=400, detail="Failed to connect to Tradier API with provided token. Check token validity.")
+
+    return {
+        "status": "SUCCESS",
+        "message": "Tradier API token verified successfully.",
+        "sample_quote": sample,
+    }
+
+
+@router.get("/tradier/status")
+def get_tradier_status(
+    token: Optional[str] = None,
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Returns Tradier API connection status, token validity, and tests a live quote on SPY.
+    """
+    fetcher = TradierFetcher(api_token=token) if token else TradierFetcher()
+    if not fetcher.is_available():
+        return {
+            "status": "UNCONFIGURED",
+            "configured": False,
+            "connected": False,
+            "message": "Tradier API token not configured.",
+        }
+
+    try:
+        t0 = time.time()
+        sample = fetcher.get_sample_quote("SPY")
+        latency_ms = round((time.time() - t0) * 1000, 1)
+
+        if sample:
+            return {
+                "status": "CONNECTED",
+                "configured": True,
+                "connected": True,
+                "latency_ms": latency_ms,
+                "sample_quote": sample,
+                "message": "Tradier API is active (Primary Market Data Provider).",
+            }
+        return {
+            "status": "ERROR",
+            "configured": True,
+            "connected": False,
+            "message": "Tradier quote response empty or rejected.",
+        }
+    except Exception as e:
+        return {
+            "status": "ERROR",
+            "configured": True,
+            "connected": False,
+            "message": f"Tradier connection failed: {str(e)}",
+        }
+
+
 @router.get("/chain/{symbol}")
 def get_live_option_chain(
     symbol: str,
@@ -303,40 +379,57 @@ def get_live_option_chain(
     config: Config = Depends(get_config_dep),
 ) -> Dict[str, Any]:
     """
-    Fetches real-time option chain with Greeks from Charles Schwab Developer API if configured.
+    Fetches real-time option chain with Greeks.
+    Primary: Tradier API.
+    Fallback: Charles Schwab Retail Trader API.
     """
+    clean_sym = symbol.upper().strip()
+
+    # 1. Attempt Primary: Tradier API
+    tradier = TradierFetcher()
+    if tradier.is_available():
+        try:
+            chain = tradier.fetch_option_chains(symbol=clean_sym)
+            if chain and "options" in chain:
+                return {
+                    "status": "SUCCESS",
+                    "provider": "TRADIER",
+                    "is_primary": True,
+                    "symbol": clean_sym,
+                    "chain": chain,
+                }
+        except Exception as err:
+            logger.warning(f"Tradier option chain failed for {clean_sym}: {err}. Falling back to Schwab.")
+
+    # 2. Attempt Fallback: Charles Schwab API
     auth = SchwabAuthManager()
-    if not auth.is_configured():
-        return {
-            "status": "UNCONFIGURED",
-            "message": "Schwab API keys are not configured. Configure via Web UI Settings or .env.",
-            "symbol": symbol.upper(),
-            "chain": {},
-        }
+    if auth.is_configured():
+        fetcher = SchwabFetcher(auth_manager=auth)
+        if fetcher.is_available():
+            try:
+                chain = fetcher.fetch_option_chains(
+                    symbol=clean_sym,
+                    contract_type=contract_type,
+                    strike_count=strike_count,
+                )
+                return {
+                    "status": "SUCCESS",
+                    "provider": "SCHWAB",
+                    "is_primary": False,
+                    "fallback": True,
+                    "symbol": clean_sym,
+                    "chain": chain,
+                }
+            except Exception as e:
+                logger.warning(f"Schwab fallback option chain fetch failed for {clean_sym}: {e}")
 
-    fetcher = SchwabFetcher(auth_manager=auth)
-    if not fetcher.is_available():
-        return {
-            "status": "TOKEN_PENDING",
-            "message": "Schwab OAuth token requires authorization in Web UI.",
-            "symbol": symbol.upper(),
-            "chain": {},
-        }
-
-    try:
-        chain = fetcher.fetch_option_chains(
-            symbol=symbol,
-            contract_type=contract_type,
-            strike_count=strike_count,
-        )
-        return {
-            "status": "SUCCESS",
-            "symbol": symbol.upper(),
-            "chain": chain,
-        }
-    except Exception as e:
-        logger.warning(f"Schwab option chain fetch failed for {symbol}: {e}")
-        raise HTTPException(status_code=502, detail=f"Schwab fetch failed: {str(e)}")
+    # 3. Neither provider succeeded
+    return {
+        "status": "UNCONFIGURED",
+        "message": "Option chain provider unconfigured. Please configure Tradier API (Primary) or Charles Schwab API (Fallback) in Web UI Settings or .env.",
+        "symbol": clean_sym,
+        "chain": {},
+    }
 
 
 class SchwabOrderRequest(BaseModel):

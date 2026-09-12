@@ -201,6 +201,55 @@ export async function fetchTickerChartData(symbol: string): Promise<{
 }
 
 /**
+ * Fetches real-time market quotes directly from Tradier API if configured.
+ * Acts as the Primary data feed for live spot pricing and NBBO spreads.
+ */
+export async function fetchTradierQuotesBatch(
+  symbols: string[]
+): Promise<Map<string, { last: number; bid: number; ask: number; volume: number }>> {
+  const result = new Map<string, { last: number; bid: number; ask: number; volume: number }>();
+  try {
+    const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
+    const key = localStorage.getItem('tradier_api_key') || viteKey;
+    const isEnabled = localStorage.getItem('tradier_enabled') !== 'false';
+    const useSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
+    if (!key || !isEnabled) return result;
+
+    const baseUrl = useSandbox ? 'https://sandbox.tradier.com/v1' : 'https://api.tradier.com/v1';
+    const cleanSyms = symbols.map((s) => s.trim().toUpperCase()).filter(Boolean).join(',');
+    if (!cleanSyms) return result;
+
+    const resp = await fetch(`${baseUrl}/markets/quotes?symbols=${cleanSyms}&greeks=true`, {
+      headers: {
+        'Authorization': `Bearer ${key.trim()}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      let quotes = data?.quotes?.quote;
+      if (quotes && !Array.isArray(quotes)) quotes = [quotes];
+      if (Array.isArray(quotes)) {
+        for (const q of quotes) {
+          if (q && q.symbol) {
+            result.set(q.symbol.toUpperCase(), {
+              last: Number(q.last) || Number(q.close) || 0,
+              bid: Number(q.bid) || 0,
+              ask: Number(q.ask) || 0,
+              volume: Number(q.volume) || 0,
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Tradier] Live quote fetch failed, falling back to secondary providers:', e);
+  }
+  return result;
+}
+
+/**
  * Client-Side Real-Time Market Data Engine
  * Computes live technicals and options opportunities for all watchlist symbols directly in browser.
  */
@@ -209,6 +258,9 @@ export async function fetchClientSideLiveMarketData(
   activeSymbols: string[]
 ): Promise<OptionsDataPayload> {
   const symbols = Array.from(new Set(activeSymbols.map((s) => s.toUpperCase().trim())));
+
+  // 1. Primary Market Data Probe: Tradier API (if configured)
+  const tradierQuotes = await fetchTradierQuotesBatch(symbols);
 
   // Seed with all existing tickers so no asset ever disappears
   const tickerMap = new Map<string, TickerMeta>();
@@ -222,15 +274,21 @@ export async function fetchClientSideLiveMarketData(
       batch.map(async (sym) => {
         const existing = tickerMap.get(sym);
         let chartData = await fetchTickerChartData(sym);
+        const tradierData = tradierQuotes.get(sym);
 
         if (!chartData && existing && existing.spot_price !== 100.0) {
+          if (tradierData && tradierData.last > 0) {
+            existing.spot_price = Math.round(tradierData.last * 100) / 100;
+          }
           // If live fetch fails/rate-limits, retain existing without error
           return;
         }
 
         if (!chartData) {
           const intel = SECURITY_INTELLIGENCE_REGISTRY[sym];
-          const spotPrice = intel?.keySupportPrice && intel?.keyResistancePrice
+          const spotPrice = tradierData && tradierData.last > 0
+            ? Math.round(tradierData.last * 100) / 100
+            : intel?.keySupportPrice && intel?.keyResistancePrice
             ? Math.round(((intel.keySupportPrice + intel.keyResistancePrice) / 2) * 100) / 100
             : intel?.targetPrice ? Math.round(intel.targetPrice * 0.9 * 100) / 100 : 100.0;
           const avgVol = intel?.liquidityScore && intel.liquidityScore >= 95 ? 25000000 : 1000000;
@@ -263,7 +321,13 @@ export async function fetchClientSideLiveMarketData(
           return;
         }
 
-        const { spotPrice, closes, avgVolume } = chartData;
+        let { spotPrice, closes, avgVolume } = chartData;
+        if (tradierData && tradierData.last > 0) {
+          spotPrice = Math.round(tradierData.last * 100) / 100;
+          if (tradierData.volume > 0) {
+            avgVolume = tradierData.volume;
+          }
+        }
 
         // 20 SMA & Standard Deviation
         const recent20 = closes.slice(-20);
