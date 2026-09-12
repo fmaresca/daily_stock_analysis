@@ -16,6 +16,14 @@ import {
   parseDateYMD,
   formatDateYMD,
 } from '../../utils/nyseHolidayCalendar';
+import {
+  checkEarningsInsideExpiration,
+  calculateStraddleImpliedMove,
+  calculateEarningsDefendedStrike,
+  EarningsExpirationAnalysis,
+  StraddleImpliedMoveResult,
+  DefendedStrikeResult,
+} from '../../utils/earningsCalendar';
 
 export interface OptionsTradeQualitySimulatorProps {
   initialTicker?: string;
@@ -188,6 +196,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   const [bidAskSpread, setBidAskSpread] = useState<number>(3.5);
   const [openInterest, setOpenInterest] = useState<number>(2400);
   const [hasEarningsAlert, setHasEarningsAlert] = useState<boolean>(false);
+  const [factorEarningsInStrike, setFactorEarningsInStrike] = useState<boolean>(true);
 
   // Live Fetch & Technical Hydration States
   const [isFetching, setIsFetching] = useState<boolean>(false);
@@ -196,6 +205,19 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   const [pulledData, setPulledData] = useState<PulledTechnicalData | null>(null);
 
   const dte = useMemo(() => calculateOptionsDte(expirationDate), [expirationDate]);
+
+  // Dynamic analysis of whether an earnings announcement occurs within the options expiration period
+  const earningsAnalysis = useMemo(() => {
+    if (!ticker || !expirationDate) return null;
+    return checkEarningsInsideExpiration(ticker, expirationDate);
+  }, [ticker, expirationDate]);
+
+  // Auto-engage or disengage earnings alert when ticker or expiration date changes
+  useEffect(() => {
+    if (earningsAnalysis) {
+      setHasEarningsAlert(earningsAnalysis.hasEarningsInsideExpiration);
+    }
+  }, [earningsAnalysis?.hasEarningsInsideExpiration]);
 
   // Live quick expiration targets based on NYSE holiday calendar
   const quickExpirations = useMemo(() => {
@@ -261,9 +283,28 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       theoreticalStrike = Math.min(spot * 0.998, Math.max(0.5, theoreticalStrike));
     }
 
-    const nearestStrike = getNearestExchangeStrike(theoreticalStrike, spot);
+    const unadjustedNearestStrike = getNearestExchangeStrike(theoreticalStrike, spot);
 
-    // Black Scholes valuation at nearest tradeable strike
+    // Calculate In-The-Money / At-The-Money Straddle Implied Move
+    const straddleMove = calculateStraddleImpliedMove(spot, ivDecimal, effectiveDte, ticker);
+    const defendedResult = calculateEarningsDefendedStrike({
+      strategy,
+      spotPrice: spot,
+      unadjustedStrike: unadjustedNearestStrike,
+      straddleMoveDollar: straddleMove.impliedMoveDollar,
+      straddleMovePct: straddleMove.impliedMovePct,
+    });
+
+    const isEarningsActive = hasEarningsAlert || (earningsAnalysis?.hasEarningsInsideExpiration ?? false);
+    const nearestStrike = isEarningsActive && factorEarningsInStrike
+      ? defendedResult.defendedStrike
+      : unadjustedNearestStrike;
+
+    const clearsStraddle = strategy === 'CASH_SECURED_PUT'
+      ? nearestStrike <= straddleMove.lowerExpectedBound
+      : nearestStrike >= straddleMove.upperExpectedBound;
+
+    // Black Scholes valuation at actual selected strike
     const d1Actual = (Math.log(spot / nearestStrike) + (rate + (ivDecimal * ivDecimal) / 2.0) * T) / (ivDecimal * Math.sqrt(T));
     const d2Actual = d1Actual - ivDecimal * Math.sqrt(T);
 
@@ -305,7 +346,12 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       expirationFormatted: expirationDate,
       dte: effectiveDte,
       nearestStrike,
+      unadjustedStrike: unadjustedNearestStrike,
       theoreticalStrike: Math.round(theoreticalStrike * 100) / 100,
+      straddleMove,
+      defendedResult,
+      isEarningsActive,
+      clearsStraddle,
       targetDelta,
       bsDelta: actualDelta,
       actualDelta,
@@ -331,7 +377,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       strikeVsSma50Pct,
       strikeVsSmaPct: strikeVsSma50Pct,
     };
-  }, [pulledData, dte, ivRank, delta, strategy, expirationDate]);
+  }, [pulledData, dte, ivRank, delta, strategy, expirationDate, ticker, earningsAnalysis, hasEarningsAlert, factorEarningsInStrike]);
 
   // Compute live score and breakdown in real time
   const result = useMemo(() => {
@@ -344,8 +390,20 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       bidAskSpreadPct: bidAskSpread,
       openInterest,
       hasEarningsAlert,
+      clearsEarningsStraddle: simulatedContract.clearsStraddle,
     });
-  }, [strategy, ivRank, delta, distTo50Sma, simulatedContract.annualizedRoC, annualizedRoC, bidAskSpread, openInterest, hasEarningsAlert]);
+  }, [
+    strategy,
+    ivRank,
+    delta,
+    distTo50Sma,
+    simulatedContract.annualizedRoC,
+    simulatedContract.clearsStraddle,
+    annualizedRoC,
+    bidAskSpread,
+    openInterest,
+    hasEarningsAlert,
+  ]);
 
   // Radial Gauge Math
   const radius = 70;
@@ -497,8 +555,9 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       const calcSpread = isUltraLiquid ? 1.5 : profile.sector.includes('Technology') ? 3.2 : 4.5;
       const calcOpenInt = isUltraLiquid ? 8500 : 2200;
 
-      // Earnings Alert: Check if within DTE
-      const hasEarnings = intel?.decisionAction === 'AVOID_EARNINGS';
+      // Earnings Alert: Check if within DTE using dynamic earnings calendar
+      const earningsCheck = checkEarningsInsideExpiration(sym, expirationDate);
+      const hasEarnings = earningsCheck.hasEarningsInsideExpiration || intel?.decisionAction === 'AVOID_EARNINGS';
 
       // 5. Apply hydrated values to simulator sliders
       setIvRank(resolvedIvRank);
@@ -534,6 +593,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
           bidAskSpread: calcSpread,
         },
         hasEarningsAlert: hasEarnings,
+        nextEarningsDate: earningsCheck.earningsDate || undefined,
         updatedAt: new Date().toLocaleTimeString(),
       });
 
@@ -683,29 +743,46 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
                 }`}
               />
             </div>
-            {/* Status indicator under date input */}
-            {expirationAnalysis && (
-              <div className="mt-1 flex items-center justify-between text-[10px]">
-                {expirationAnalysis.needsAdjustment ? (
-                  <div className="flex items-center gap-1 text-amber-400">
-                    <span>⚠️ {expirationAnalysis.dayName} ({expirationAnalysis.adjustmentReason})</span>
-                    <button
-                      type="button"
-                      onClick={() => setExpirationDate(expirationAnalysis.suggestedDateStr)}
-                      className="underline font-bold text-amber-300 hover:text-white cursor-pointer ml-1"
-                      title="Snap to preceding open NYSE trading day"
-                    >
-                      Snap to {expirationAnalysis.suggestedDayName} ({expirationAnalysis.suggestedDateStr})
-                    </button>
-                  </div>
-                ) : (
-                  <span className="text-emerald-400 font-medium">
-                    ✓ {expirationAnalysis.dayName} Expiration
-                    {expirationAnalysis.holiday.isHoliday && ` (${expirationAnalysis.holiday.holidayName})`}
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Status indicator under date input: NYSE Calendar & Earnings Announcement */}
+            <div className="mt-1 space-y-0.5 text-[10px]">
+              {expirationAnalysis && (
+                <div className="flex items-center justify-between">
+                  {expirationAnalysis.needsAdjustment ? (
+                    <div className="flex items-center gap-1 text-amber-400">
+                      <span>⚠️ {expirationAnalysis.dayName} ({expirationAnalysis.adjustmentReason})</span>
+                      <button
+                        type="button"
+                        onClick={() => setExpirationDate(expirationAnalysis.suggestedDateStr)}
+                        className="underline font-bold text-amber-300 hover:text-white cursor-pointer ml-1"
+                        title="Snap to preceding open NYSE trading day"
+                      >
+                        Snap to {expirationAnalysis.suggestedDayName} ({expirationAnalysis.suggestedDateStr})
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-emerald-400 font-medium">
+                      ✓ {expirationAnalysis.dayName} Expiration
+                      {expirationAnalysis.holiday.isHoliday && ` (${expirationAnalysis.holiday.holidayName})`}
+                    </span>
+                  )}
+                </div>
+              )}
+              {earningsAnalysis && (
+                <div className="flex items-center justify-between font-mono">
+                  {earningsAnalysis.hasEarningsInsideExpiration ? (
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      ⚠️ Earnings on {earningsAnalysis.earningsDate} ({earningsAnalysis.daysBeforeExpiration}d to exp)
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">
+                      {earningsAnalysis.earningsDate
+                        ? `📅 Next Earnings: ${earningsAnalysis.earningsDate} (Cleared)`
+                        : '📅 Broad Index ETF (No Single-Stock Earnings Event)'}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Data Source Switcher: Barchart.com vs MarketChameleon.com */}
@@ -739,32 +816,23 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
             </div>
           </div>
 
-          {/* Action Trigger Button */}
+          {/* Action Button: Pull Live Technicals */}
           <div className="md:col-span-2">
             <button
               type="button"
               onClick={() => handleFetchTechnicals()}
               disabled={isFetching || !ticker.trim()}
-              className="w-full py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-700/30 disabled:opacity-50 disabled:cursor-not-allowed border border-emerald-400/30"
             >
-              {isFetching ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Pulling...</span>
-                </>
-              ) : (
-                <>
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>Fetch Info</span>
-                </>
-              )}
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+              <span>{isFetching ? 'Hydrating...' : 'Pull Quant'}</span>
             </button>
           </div>
         </div>
 
-        {/* Quick Expiration Shortcuts */}
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-800/80 text-[11px] overflow-x-auto">
-          <span className="text-slate-400 font-semibold flex items-center gap-1 whitespace-nowrap">
+        {/* Quick Expiration Presets */}
+        <div className="mt-3.5 pt-3 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
             Quick Expirations:
           </span>
@@ -786,6 +854,11 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
                 Adj
               </span>
             )}
+            {earningsAnalysis?.earningsDate && new Date(earningsAnalysis.earningsDate) <= new Date(quickExpirations.nextWeekly.dateString) && (
+              <span className="text-[9px] bg-rose-500/20 text-rose-300 font-bold px-1 rounded border border-rose-500/30" title={`Earnings on ${earningsAnalysis.earningsDate}`}>
+                ⚠️ Earnings
+              </span>
+            )}
           </button>
           <button
             type="button"
@@ -803,6 +876,11 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
             {quickExpirations.dte14.wasHolidayAdjusted && (
               <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded border border-amber-500/30" title={`Holiday: ${quickExpirations.dte14.holidayName}`}>
                 Adj
+              </span>
+            )}
+            {earningsAnalysis?.earningsDate && new Date(earningsAnalysis.earningsDate) <= new Date(quickExpirations.dte14.dateString) && (
+              <span className="text-[9px] bg-rose-500/20 text-rose-300 font-bold px-1 rounded border border-rose-500/30" title={`Earnings on ${earningsAnalysis.earningsDate}`}>
+                ⚠️ Earnings
               </span>
             )}
           </button>
@@ -824,6 +902,11 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
                 Adj
               </span>
             )}
+            {earningsAnalysis?.earningsDate && new Date(earningsAnalysis.earningsDate) <= new Date(quickExpirations.dte30.dateString) && (
+              <span className="text-[9px] bg-rose-500/20 text-rose-300 font-bold px-1 rounded border border-rose-500/30" title={`Earnings on ${earningsAnalysis.earningsDate}`}>
+                ⚠️ Earnings
+              </span>
+            )}
           </button>
           <button
             type="button"
@@ -841,6 +924,11 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
             {quickExpirations.dte45.wasHolidayAdjusted && (
               <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded border border-amber-500/30" title={`Holiday: ${quickExpirations.dte45.holidayName}`}>
                 Adj
+              </span>
+            )}
+            {earningsAnalysis?.earningsDate && new Date(earningsAnalysis.earningsDate) <= new Date(quickExpirations.dte45.dateString) && (
+              <span className="text-[9px] bg-rose-500/20 text-rose-300 font-bold px-1 rounded border border-rose-500/30" title={`Earnings on ${earningsAnalysis.earningsDate}`}>
+                ⚠️ Earnings
               </span>
             )}
           </button>
@@ -927,7 +1015,16 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
 
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Nearest Exch. Strike</span>
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+                  {simulatedContract.isEarningsActive && factorEarningsInStrike ? 'Defended Strike' : 'Nearest Exch. Strike'}
+                </span>
+                {simulatedContract.isEarningsActive && factorEarningsInStrike && (
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded border border-emerald-500/30">
+                    🛡️ Earnings-Defended
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-1.5 justify-end">
                 <span className="text-2xl font-black text-emerald-400 font-mono tracking-tight">
                   ${simulatedContract.nearestStrike.toFixed(2)}
@@ -940,9 +1037,85 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
                   {strategy === 'COVERED_CALL' ? 'CALL' : 'PUT'}
                 </span>
               </div>
+              {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike && (
+                <span className="text-[10px] font-mono text-slate-400 block">
+                  Unadjusted Delta Strike: ${simulatedContract.unadjustedStrike.toFixed(2)}
+                </span>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Earnings Straddle Implied Move Alert & Defense Banner */}
+        {simulatedContract.isEarningsActive && (
+          <div className={`mb-3.5 p-3.5 rounded-xl border ${
+            simulatedContract.clearsStraddle
+              ? 'bg-emerald-950/25 border-emerald-500/40 text-emerald-200'
+              : 'bg-rose-950/25 border-rose-500/40 text-rose-200'
+          }`}>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-2.5">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className={`w-4 h-4 shrink-0 ${simulatedContract.clearsStraddle ? 'text-emerald-400' : 'text-rose-400 animate-pulse'}`} />
+                <span className="font-bold text-xs text-white">
+                  Earnings Announcement Inside Expiration Window: {earningsAnalysis?.earningsDate || 'Imminent'}
+                  {earningsAnalysis?.fiscalQuarter ? ` (${earningsAnalysis.fiscalQuarter})` : ''}
+                  {earningsAnalysis?.daysBeforeExpiration !== null && earningsAnalysis?.daysBeforeExpiration !== undefined && (
+                    <span className="ml-1 text-slate-300 font-normal">
+                      &bull; Reports {earningsAnalysis.daysBeforeExpiration} days before expiration
+                    </span>
+                  )}
+                </span>
+              </div>
+              <label className="flex items-center space-x-2 text-xs cursor-pointer font-medium select-none bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800">
+                <input
+                  type="checkbox"
+                  checked={factorEarningsInStrike}
+                  onChange={(e) => setFactorEarningsInStrike(e.target.checked)}
+                  className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-emerald-500/30 cursor-pointer"
+                />
+                <span className="text-slate-200">Factor Straddle Implied Move into Recommended Strike</span>
+              </label>
+            </div>
+
+            <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
+              <div className="bg-slate-950/70 p-2 rounded-lg border border-slate-800">
+                <span className="text-slate-400 text-[10px] block">ATM STRADDLE IMPLIED MOVE</span>
+                <span className="text-amber-400 font-bold text-sm">
+                  &plusmn;${simulatedContract.straddleMove.impliedMoveDollar.toFixed(2)} (&plusmn;{simulatedContract.straddleMove.impliedMovePct.toFixed(1)}%)
+                </span>
+                <span className="text-[9px] text-slate-500 block truncate">
+                  Expected 1-SD event jump
+                </span>
+              </div>
+              <div className="bg-slate-950/70 p-2 rounded-lg border border-slate-800">
+                <span className="text-slate-400 text-[10px] block">EXPECTED POST-EARNINGS RANGE</span>
+                <span className="text-slate-200 font-bold text-sm">
+                  ${simulatedContract.straddleMove.lowerExpectedBound.toFixed(2)} &ndash; ${simulatedContract.straddleMove.upperExpectedBound.toFixed(2)}
+                </span>
+                <span className="text-[9px] text-slate-500 block truncate">
+                  Downside / Upside jump envelope
+                </span>
+              </div>
+              <div className="bg-slate-950/70 p-2 rounded-lg border border-slate-800">
+                <span className="text-slate-400 text-[10px] block">EARNINGS STRIKE DEFENSE</span>
+                <span className={`font-bold text-sm flex items-center gap-1 ${
+                  simulatedContract.clearsStraddle ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  {simulatedContract.clearsStraddle ? '🛡️ Clears Straddle Bounds' : '⚠️ Inside Straddle Breach Zone'}
+                </span>
+                <span className="text-[9px] text-slate-400 block truncate">
+                  {simulatedContract.clearsStraddle
+                    ? `Cushion: $${simulatedContract.defendedResult.cushionPastStraddleDollar.toFixed(2)} (${simulatedContract.defendedResult.cushionPastStraddlePct.toFixed(1)}%) past bounds`
+                    : `Risk: Strike is $${Math.abs(simulatedContract.defendedResult.cushionPastStraddleDollar).toFixed(2)} within move`}
+                </span>
+              </div>
+            </div>
+
+            <p className="mt-2 text-[11px] text-slate-300 leading-relaxed font-sans">
+              {simulatedContract.defendedResult.recommendationNote}
+            </p>
+          </div>
+        )}
 
         {/* Metric Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-xs">
@@ -1132,8 +1305,12 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
               <span className="text-slate-300">Earnings Within Expiration Window</span>
             </label>
             {hasEarningsAlert && (
-              <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
-                -40 PTS PENALTY
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                simulatedContract.clearsStraddle
+                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                  : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+              }`}>
+                {simulatedContract.clearsStraddle ? '-12 PTS (DEFENDED)' : '-40 PTS PENALTY'}
               </span>
             )}
           </div>

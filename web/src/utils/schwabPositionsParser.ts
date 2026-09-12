@@ -412,13 +412,34 @@ export function parseSchwabPositionsCsv(
 
   // Construct authentic option tax records from Schwab
   const taxRecords: TaxLedgerRecord[] = [];
-  const recDate = asOfTimestamp.split(' ')[0] || new Date().toISOString().split('T')[0];
+
+  // Parse asOfTimestamp to extract clean date (YYYY-MM-DD) and execution/export time (e.g. 11:35 AM ET)
+  let recDate = new Date().toISOString().split('T')[0];
+  let recTime = '';
+  if (asOfTimestamp && asOfTimestamp.trim()) {
+    const rawTs = asOfTimestamp.trim();
+    const ymdMatch = rawTs.match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+    const mdyMatch = rawTs.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+    if (ymdMatch) {
+      recDate = `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
+    } else if (mdyMatch) {
+      recDate = `${mdyMatch[3]}-${mdyMatch[1].padStart(2, '0')}-${mdyMatch[2].padStart(2, '0')}`;
+    }
+    const timeMatch = rawTs.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?(?:\s*[A-Z]{2,4})?)/i);
+    if (timeMatch) {
+      recTime = timeMatch[1].trim();
+      if (!recTime.toUpperCase().includes('ET')) {
+        recTime += ' ET';
+      }
+    }
+  }
+  const fullDateTime = recTime ? `${recDate} (${recTime})` : recDate;
 
   openCSPs.forEach((csp, idx) => {
     const premAmount = Math.abs(csp.costBasis) || Math.abs(csp.quantity) * csp.price * 100;
     taxRecords.push({
       id: `REC_SCHWAB_${csp.underlyingSymbol}_${csp.strike}P_${idx}`,
-      date: recDate,
+      date: fullDateTime,
       symbol: csp.underlyingSymbol,
       type: 'PREMIUM_EARNED',
       amount: premAmount,
@@ -431,7 +452,7 @@ export function parseSchwabPositionsCsv(
     const premAmount = Math.abs(cc.costBasis) || Math.abs(cc.quantity) * cc.price * 100;
     taxRecords.push({
       id: `REC_SCHWAB_${cc.underlyingSymbol}_${cc.strike}C_${idx}`,
-      date: recDate,
+      date: fullDateTime,
       symbol: cc.underlyingSymbol,
       type: 'PREMIUM_EARNED',
       amount: premAmount,

@@ -239,6 +239,7 @@ export function scoreFromSliderInputs(params: {
   openInterest?: number;
   rsi14?: number;
   hasEarningsAlert?: boolean;
+  clearsEarningsStraddle?: boolean;
 }): {
   compositeScore: number;
   breakdown: ScoreComponentBreakdown;
@@ -257,6 +258,7 @@ export function scoreFromSliderInputs(params: {
     openInterest = 1500,
     rsi14 = 52,
     hasEarningsAlert = false,
+    clearsEarningsStraddle = false,
   } = params;
 
   // 1. IV Rank (Max 25)
@@ -308,9 +310,14 @@ export function scoreFromSliderInputs(params: {
   let passedRiskGate = true;
 
   if (hasEarningsAlert) {
-    passedRiskGate = false;
-    rawScore = Math.max(0, rawScore - 40);
-    notes.push('CRITICAL RISK: Earnings announcement falls prior to weekly expiration.');
+    if (clearsEarningsStraddle) {
+      rawScore = Math.max(0, rawScore - 12);
+      notes.push('DEFENDED RISK: Earnings falls inside expiration, but strike is safely positioned beyond the 1.15x ATM Straddle Implied Move.');
+    } else {
+      passedRiskGate = false;
+      rawScore = Math.max(0, rawScore - 40);
+      notes.push('CRITICAL RISK: Earnings announcement falls prior to weekly expiration and strike is within the straddle implied move.');
+    }
   }
 
   if (bidAskSpreadPct > 15) {

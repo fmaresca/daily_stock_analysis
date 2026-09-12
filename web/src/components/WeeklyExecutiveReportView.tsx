@@ -394,7 +394,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
               <table className="w-full text-left text-xs font-mono">
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/80 print:border-black print:text-black print:bg-gray-100">
-                    <th className="py-2 px-2.5">Date</th>
+                    <th className="py-2 px-2.5">Date / Execution Time (ET)</th>
                     <th className="py-2 px-2.5">Symbol</th>
                     <th className="py-2 px-2.5">Strategy</th>
                     <th className="py-2 px-2.5">Type</th>
@@ -403,10 +403,16 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 print:divide-gray-300">
-                  {taxState.records.map((rec) => (
-                    <tr key={rec.id} className="hover:bg-slate-900/40">
-                      <td className="py-2 px-2.5 text-slate-400 print:text-gray-600">{rec.date}</td>
-                      <td className="py-2 px-2.5 font-bold text-white print:text-black">{rec.symbol}</td>
+                  {taxState.records.map((rec) => {
+                    // Format display date: if only a time string e.g. "11:35" was recorded, pair with reportDate and denote ET
+                    let displayDate = rec.date;
+                    if (rec.date && rec.date.includes(':') && !rec.date.includes('-') && !rec.date.includes('/')) {
+                      displayDate = `${reportDate} (${rec.date} ET)`;
+                    }
+                    return (
+                      <tr key={rec.id} className="hover:bg-slate-900/40">
+                        <td className="py-2 px-2.5 text-slate-400 print:text-gray-600 whitespace-nowrap font-mono text-[11px]">{displayDate}</td>
+                        <td className="py-2 px-2.5 font-bold text-white print:text-black">{rec.symbol}</td>
                       <td className="py-2 px-2.5">
                         <span
                           className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
@@ -438,7 +444,8 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
                         {rec.note}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
