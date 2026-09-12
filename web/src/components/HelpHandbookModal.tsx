@@ -2373,7 +2373,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-white">What is the Executive Portfolio Health Digest &amp; Continuous Guardian?</div>
                   <p className="text-xs text-slate-400">
-                    The <strong>Executive Portfolio Health Digest</strong> aggregates total Net Liquidity, Daily Theta Cashflow run-rate, SPY Beta Delta exposure, and Portfolio Margin (TIMS) capital savings into a unified C-suite dashboard with one-click <strong>Download Markdown</strong> and <strong>Print Executive PDF</strong> capabilities. Its <strong>100-Point Compliance Health Score</strong> is calculated dynamically from live holdings: starting at 100, it deducts 10 pts per threatened position (|&Delta;| &ge; 0.40), 15–25 pts if free cash buffer falls below 10% or 5%, 10 pts per single-equity CSP exposure exceeding $200,000, and 5 pts per unrolled covered call that has captured &ge; 80% profit. In the background, the <strong>Continuous Risk Sweeper</strong> autonomously audits active positions against the 80% profit-taking threshold and 0.50 Delta defense trigger, issuing instant alerts to protect capital.
+                    The <strong>Executive Portfolio Health Digest</strong> aggregates total Net Liquidity, Daily Theta Cashflow run-rate, SPY Beta Delta exposure, and Portfolio Margin (TIMS) capital savings into a unified C-suite dashboard with one-click <strong>Download Markdown</strong> and <strong>Print Executive PDF</strong> capabilities. The PDF engine supports a dedicated <strong>Text Form / No Backgrounds</strong> mode with light formatting, stripping all dark backgrounds and box graphics for clean financial printing or filing. Its <strong>100-Point Compliance Health Score</strong> is calculated dynamically from live holdings: starting at 100, it deducts 10 pts per threatened position (|&Delta;| &ge; 0.40), 15–25 pts if free cash buffer falls below 10% or 5%, 10 pts per single-equity CSP exposure exceeding $200,000, and 5 pts per unrolled covered call that has captured &ge; 80% profit. In the background, the <strong>Continuous Risk Sweeper</strong> autonomously audits active positions against the 80% profit-taking threshold and 0.50 Delta defense trigger, issuing instant alerts to protect capital.
                   </p>
                 </div>
 
@@ -2433,6 +2433,16 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   </ul>
                   <p className="text-xs text-slate-400 mt-1">
                     Use the <strong>Asset Class Filter Tabs</strong> (<em>All, Equities, CSPs, Covered Calls, Cash &amp; MMF</em>) to isolate holdings, or click <strong>&quot;Sync Schwab Baseline&quot;</strong> to re-synchronize live account holdings at any time.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>🖨️</span>
+                    <span>How does the PDF engine handle printing without background graphics (Text Form with Light Formatting)?</span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Both the <strong>Weekly Executive Master Report</strong> (Step 6) and the <strong>Executive Portfolio Health Digest</strong> feature native PDF rendering engineered for clean, ink-efficient text printing without background graphics. The platform sets <code>print-color-adjust: economy</code> so browser print engines naturally suppress heavy color fills and allow unchecking &quot;Background graphics&quot; without breaking readability. Additionally, a dedicated <strong>&quot;Text Form / No Backgrounds&quot;</strong> toggle is provided in the action toolbar; when active, it completely eliminates all dark card backgrounds, glassmorphism, and color blocks, rendering clean financial text, subtle 1px divider lines, and high-contrast typography optimized for archiving, executive memos, and physical printing.
                   </p>
                 </div>
               </div>
