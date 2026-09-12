@@ -18,6 +18,7 @@ import {
   Filter,
   Clock,
   CheckCircle2,
+  HelpCircle,
 } from './icons';
 import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 
@@ -116,8 +117,47 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                 activeTree === 'EQUITIES' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
               }`}
             >
-              {totalTickersCount}
+              <span>{totalTickersCount}</span>
             </span>
+          </button>
+
+          {/* Mode 4: Quantitative Methodology */}
+          <button
+            onClick={() => onSelectTree('METHODOLOGY')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+              activeTree === 'METHODOLOGY'
+                ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-600/30 ring-1 ring-teal-400/40'
+                : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <BrainCircuit className="w-4 h-4 text-teal-300" />
+            <span>📐 Methodology</span>
+          </button>
+
+          {/* Mode 5: Investor FAQ */}
+          <button
+            onClick={() => onSelectTree('FAQ')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+              activeTree === 'FAQ'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30 ring-1 ring-cyan-400/40'
+                : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <HelpCircle className="w-4 h-4 text-cyan-300" />
+            <span>❓ FAQ</span>
+          </button>
+
+          {/* Mode 6: Regulatory Disclaimers */}
+          <button
+            onClick={() => onSelectTree('DISCLAIMER')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+              activeTree === 'DISCLAIMER'
+                ? 'bg-gradient-to-r from-rose-600 to-amber-600 text-white shadow-lg shadow-rose-600/30 ring-1 ring-rose-400/40'
+                : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-rose-300" />
+            <span>⚖️ Disclaimers</span>
           </button>
         </div>
 
@@ -362,7 +402,7 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
               <span>Systematic Backtester</span>
             </button>
           </div>
-        ) : (
+        ) : activeTree === 'EQUITIES' ? (
           /* EQUITIES MODE: Stock Screener, Charts & Fundamental Analysis */
           <div className="flex items-center space-x-2 min-w-max">
             <button
@@ -471,6 +511,53 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             >
               <PieChart className="w-3.5 h-3.5" />
               <span>Sector Overview</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-2 min-w-max w-full">
+            <button
+              onClick={() => onSelectTree('METHODOLOGY')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
+                activeTree === 'METHODOLOGY'
+                  ? 'bg-teal-600 text-white border-teal-400 shadow-md shadow-teal-600/30'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <BrainCircuit className="w-3.5 h-3.5 text-teal-300" />
+              <span>Quantitative Methodology</span>
+            </button>
+
+            <button
+              onClick={() => onSelectTree('FAQ')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
+                activeTree === 'FAQ'
+                  ? 'bg-cyan-600 text-white border-cyan-400 shadow-md shadow-cyan-600/30'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-cyan-300" />
+              <span>Investor FAQ</span>
+            </button>
+
+            <button
+              onClick={() => onSelectTree('DISCLAIMER')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
+                activeTree === 'DISCLAIMER'
+                  ? 'bg-rose-600 text-white border-rose-400 shadow-md shadow-rose-600/30'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-rose-300" />
+              <span>Regulatory Disclaimers</span>
+            </button>
+
+            <span className="text-slate-600 px-2">|</span>
+
+            <button
+              onClick={() => onSelectTree('WORKFLOW')}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800 cursor-pointer"
+            >
+              <span>Return to Workflow ➔</span>
             </button>
           </div>
         )}

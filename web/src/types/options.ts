@@ -391,7 +391,7 @@ export interface FundamentalHealthData {
   roc_type?: 'CONSTRUCTIVE' | 'DESTRUCTIVE' | 'NONE';
 }
 
-export type MenuTreeType = 'WORKFLOW' | 'OPTIONS' | 'EQUITIES';
+export type MenuTreeType = 'WORKFLOW' | 'OPTIONS' | 'EQUITIES' | 'METHODOLOGY' | 'FAQ' | 'DISCLAIMER';
 
 export type WorkflowStepType =
   | 'WEEKLY_CASH_LEDGER'

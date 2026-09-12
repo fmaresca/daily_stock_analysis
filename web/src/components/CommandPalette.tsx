@@ -271,6 +271,36 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
+      id: 'nav-methodology',
+      title: 'Quantitative Methodology & Mathematical Architecture',
+      subtitle: 'Bollinger 2.0 SD rule, Delta boundaries, 80% Buy-to-Close rule & 0.50 Delta defensive roll',
+      icon: <BrainCircuit className="w-4 h-4 text-teal-400" />,
+      action: () => {
+        onNavigateTree('METHODOLOGY');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-faq',
+      title: 'Investor FAQ & Operational Knowledge Base',
+      subtitle: 'Questions on execution, 80% profit rules, margin models, Tradier API, and defensive rolls',
+      icon: <HelpCircle className="w-4 h-4 text-cyan-400" />,
+      action: () => {
+        onNavigateTree('FAQ');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-disclaimers',
+      title: 'Regulatory Disclaimers & Options Risk Disclosures',
+      subtitle: 'OCC characteristics and risks of standardized options, educational notices, and terms',
+      icon: <ShieldCheck className="w-4 h-4 text-rose-400" />,
+      action: () => {
+        onNavigateTree('DISCLAIMER');
+        onClose();
+      },
+    },
+    {
       id: 'nav-calculator',
       title: 'Compound Yield & Income Calculator',
       subtitle: 'Simulate weekly option harvesting returns and cash collateral growth',
