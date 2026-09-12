@@ -20,6 +20,7 @@ import {
 import { saveCapitalState, saveTaxLedgerState, getStoredTaxLedgerState } from '../utils/capitalAndTaxLedger';
 import { getSamplePortfolioBook } from '../utils/portfolioStressTest';
 import { TaxLedgerState } from '../types/options';
+import { autoSyncSchwabPortfolioPrices } from '../utils/liveMarketFetcher';
 
 interface SchwabPositionsUploadViewProps {
   onNavigateToCashLedger: () => void;
@@ -59,7 +60,17 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
         saveTaxLedgerState(freshTax);
       }
 
-      // Notify other tabs
+      // Auto-sync live trading prices (or latest closing prices if market is closed)
+      autoSyncSchwabPortfolioPrices(parsed.portfolioPositions).then((updatedPositions) => {
+        setParsedData((prev) => (prev ? { ...prev, portfolioPositions: updatedPositions } : prev));
+        window.dispatchEvent(
+          new CustomEvent('deltaharvest_portfolio_updated', {
+            detail: { source: 'live_price_sync', positions: updatedPositions, capital: parsed.capitalState },
+          })
+        );
+      });
+
+      // Notify other tabs immediately of initial parse
       window.dispatchEvent(
         new CustomEvent('deltaharvest_portfolio_updated', {
           detail: { source: 'csv_upload', positions: parsed.portfolioPositions, capital: parsed.capitalState },

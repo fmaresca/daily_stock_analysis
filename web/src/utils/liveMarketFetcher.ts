@@ -4,8 +4,16 @@ import {
   OptionsDataPayload,
   ScreenerSummary,
 } from '../types/options';
+import { PortfolioPosition } from './portfolioStressTest';
 import { calculateBarchartOpinion } from './barchartEngine';
 import { SECURITY_INTELLIGENCE_REGISTRY } from './securityIntelligence';
+
+export interface TickerChartData {
+  spotPrice: number;
+  closes: number[];
+  volumes: number[];
+  avgVolume: number;
+}
 
 /**
  * Standard Normal Cumulative Distribution Function (CDF)
@@ -609,3 +617,159 @@ export async function fetchClientSideLiveMarketData(
     opportunities: updatedOpportunities,
   };
 }
+
+export interface LivePriceResult {
+  price: number;
+  priceChange: number;
+  percentChange: number;
+  isAfterHoursOrClosed?: boolean;
+}
+
+/**
+ * Fetches the most current trading price (or closing price if after market close)
+ * for a list of equity symbols using Tradier API as primary broker feed and
+ * multi-source chart data as secondary fallback.
+ */
+export async function syncLiveEquitiesPrices(
+  symbols: string[]
+): Promise<Map<string, LivePriceResult>> {
+  const result = new Map<string, LivePriceResult>();
+  const cleanSymbols = Array.from(
+    new Set(symbols.map((s) => s.trim().toUpperCase()).filter(Boolean))
+  );
+  if (cleanSymbols.length === 0) return result;
+
+  // 1. Query Tradier quotes batch (primary live broker feed)
+  let tradierMap = new Map<string, { last: number; bid: number; ask: number; volume: number }>();
+  try {
+    tradierMap = await fetchTradierQuotesBatch(cleanSymbols);
+  } catch (err) {
+    console.warn('[liveMarketFetcher] Tradier batch query failed:', err);
+  }
+
+  // 2. Query chart data in parallel batches of 5 for missing symbols or to get exact close/prevClose delta
+  const batchSize = 5;
+  for (let i = 0; i < cleanSymbols.length; i += batchSize) {
+    const batch = cleanSymbols.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map(async (sym) => {
+        const tQuote = tradierMap.get(sym);
+        let chartData: TickerChartData | null = null;
+        try {
+          chartData = await fetchTickerChartData(sym);
+        } catch {
+          // ignore
+        }
+
+        const closes = chartData?.closes || [];
+        let price = tQuote?.last && tQuote.last > 0 ? tQuote.last : chartData?.spotPrice || 0;
+        let priceChange = 0;
+        let percentChange = 0;
+
+        if (closes.length >= 2) {
+          const lastClose = closes[closes.length - 1];
+          const prevClose = closes[closes.length - 2];
+          priceChange = Math.round((lastClose - prevClose) * 100) / 100;
+          percentChange = Math.round(((lastClose - prevClose) / prevClose) * 10000) / 100;
+          if (price <= 0) {
+            price = Math.round(lastClose * 100) / 100;
+          }
+        }
+
+        // Fallback: check localStorage portfolio book if price is still missing
+        if (price <= 0 && typeof localStorage !== 'undefined') {
+          try {
+            const rawBook = localStorage.getItem('deltaharvest_portfolio_book');
+            if (rawBook) {
+              const book = JSON.parse(rawBook);
+              if (Array.isArray(book)) {
+                const match = book.find((p: any) => p.symbol === sym && p.spotPrice > 0);
+                if (match) {
+                  price = match.spotPrice;
+                }
+              }
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        if (price > 0) {
+          result.set(sym, {
+            price: Math.round(price * 100) / 100,
+            priceChange,
+            percentChange,
+            isAfterHoursOrClosed: closes.length > 0,
+          });
+        }
+      })
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Automatically syncs the latest trading price (closing price if after close)
+ * for all imported equity positions and writes the updated portfolio book to localStorage.
+ */
+export async function autoSyncSchwabPortfolioPrices(
+  positions: PortfolioPosition[]
+): Promise<PortfolioPosition[]> {
+  if (!Array.isArray(positions) || positions.length === 0) return positions;
+
+  const stockPositions = positions.filter(
+    (p) => p.type === 'STOCK' && p.symbol && !p.symbol.includes(' ')
+  );
+  if (stockPositions.length === 0) return positions;
+
+  const symbols = stockPositions.map((p) => p.symbol.toUpperCase());
+  const livePrices = await syncLiveEquitiesPrices(symbols);
+
+  let hasUpdates = false;
+  const updatedPositions = positions.map((p) => {
+    if (p.type === 'STOCK') {
+      const live = livePrices.get(p.symbol.toUpperCase());
+      if (live && live.price > 0) {
+        hasUpdates = true;
+        const spotPrice = live.price;
+        const marketValueTotal = Math.round(p.quantity * spotPrice * 100) / 100;
+        const costBasisTotal =
+          p.costBasisTotal || (p.entryPrice ? p.entryPrice * p.quantity : marketValueTotal);
+        const gainDollar = Math.round((marketValueTotal - costBasisTotal) * 100) / 100;
+        const gainPct =
+          costBasisTotal > 0 ? Math.round((gainDollar / costBasisTotal) * 10000) / 100 : 0;
+        return {
+          ...p,
+          spotPrice,
+          marketValueTotal,
+          costBasisTotal,
+          gainDollar,
+          gainPct,
+        };
+      }
+    }
+    if (p.type === 'COVERED_CALL') {
+      const live = livePrices.get(p.symbol.toUpperCase());
+      if (live && live.price > 0) {
+        hasUpdates = true;
+        return {
+          ...p,
+          spotPrice: live.price,
+        };
+      }
+    }
+    return p;
+  });
+
+  if (hasUpdates && typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(updatedPositions));
+    } catch {
+      // ignore
+    }
+  }
+
+  return updatedPositions;
+}
+
