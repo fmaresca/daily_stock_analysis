@@ -104,29 +104,28 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
     const sampleBook = getSamplePortfolioBook();
     localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(sampleBook));
     
-    // Create mock Schwab text format for Living Trust-Options ...609
-    const mockCsv = `"Positions for account Living Trust-Options ...609 as of 04:00 PM ET, 2026/09/11"
-"Symbol","Description","Quantity","Price","Price Change %","Price Change $","Market Value","Cost Basis","Gain/Loss %","Gain/Loss $","Total Gain/Loss %","Total Gain/Loss $","Rating","Security Type"
-"Cash & Cash Investments","Bank Deposit Sweep",293703.52,1.00,0%,0.00,293703.52,293703.52,0%,0.00,0%,0.00,"","Cash"
-"SNYXX","Schwab NY Municipal Money Fund Ultra",202775.94,1.00,0%,0.00,202775.94,202775.94,0%,0.00,0%,0.00,"","Money Market"
-"SNAXX","Schwab Prime Advantage Money Fund Ultra",77341.30,1.00,0%,0.00,77341.30,77341.30,0%,0.00,0%,0.00,"","Money Market"
-"AXTI","AXT Inc",1500,61.64,0%,0.00,92460.00,180160.13,-48.68%,-87700.13,-48.68%,-87700.13,"","Equity"
-"BLZE","Backblaze Inc",11000,13.455,0%,0.00,148005.00,188173.41,-21.35%,-40168.41,-21.35%,-40168.41,"","Equity"
-"IONQ","IonQ Inc",1500,39.52,0%,0.00,59280.00,88315.08,-32.88%,-29035.08,-32.88%,-29035.08,"","Equity"
-"LUNR","Intuitive Machines Inc",5000,14.81,0%,0.00,74050.00,143934.00,-48.55%,-69884.00,-48.55%,-69884.00,"","Equity"
-"NET","Cloudflare Inc",1300,278.92,0%,0.00,362596.00,380583.72,-4.73%,-17987.72,-4.73%,-17987.72,"","Equity"
-"RTX","RTX Corp",1700,200.79,0%,0.00,341343.00,372209.38,-8.29%,-30866.38,-8.29%,-30866.38,"","Equity"
-"TSLA","Tesla Inc",2000,354.08,0%,0.00,708160.00,786234.08,-9.93%,-78074.08,-9.93%,-78074.08,"","Equity"
-"PANW 09/11/2026 327.50 P","PANW PUT",-3,5.375,0%,0.00,-1612.50,-1998.96,19.33%,386.46,19.33%,386.46,"","Option"
-"PLTR 09/11/2026 165.00 P","PLTR PUT",-10,1.01,0%,0.00,-1010.00,-883.33,-14.34%,-126.67,-14.34%,-126.67,"","Option"
-"AXTI 09/18/2026 70.00 C","AXTI CALL",-15,2.25,0%,0.00,-3375.00,-11464.50,70.56%,8089.50,70.56%,8089.50,"","Option"
-"BLZE 09/18/2026 17.50 C","BLZE CALL",-110,0.15,0%,0.00,-1650.00,-10923.00,84.90%,9273.00,84.90%,9273.00,"","Option"
-"IONQ 09/11/2026 43.50 C","IONQ CALL",-15,0.365,0%,0.00,-547.50,-634.50,13.71%,87.00,13.71%,87.00,"","Option"
-"LUNR 09/11/2026 16.50 C","LUNR CALL",-50,0.13,0%,0.00,-650.00,-415.00,-56.63%,-235.00,-56.63%,-235.00,"","Option"
-"NET 09/11/2026 300.00 C","NET CALL",-13,1.37,0%,0.00,-1781.00,-2070.90,14.00%,289.90,14.00%,289.90,"","Option"
-"RTX 09/11/2026 207.50 C","RTX CALL",-17,0.27,0%,0.00,-459.00,-464.10,1.10%,5.10,1.10%,5.10,"","Option"
-"TSLA 09/09/2026 370.00 C","TSLA CALL",-20,1.09,0%,0.00,-2180.00,-2766.00,21.19%,586.00,21.19%,586.00,"","Option"
-"TSLA 09/11/2026 375.00 C","TSLA CALL",-20,0.19,0%,0.00,-380.00,-2580.00,85.27%,2200.00,85.27%,2200.00,"","Option"`;
+    // Create mock Schwab text format for Living Trust-Options ...609 from latest real export
+    const mockCsv = `"Positions for account Living Trust-Options ...609 as of 11:35 AM ET, 2026/09/12",,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Symbol,Description,Qty (Quantity),Price,Price Chng % (Price Change %),Price Chng $ (Price Change $),Mkt Val (Market Value),Cost Basis,Day Chng $ (Day Change $),Day Chng % (Day Change %),Gain $ (Gain/Loss $),Gain % (Gain/Loss %),Ratings,Reinvest?,Reinvest Capital Gains?,% of Acct (% of Account),Asset Type
+AXTI,AXT INC,"1,500",64.77,0.11%,0.07,"$97,155.00 ","$180,160.13 ",$105.00 ,0.11%,"($83,005.13)",-46.07%,D,No,N/A,4.04%,Equity
+BLZE,BACKBLAZE INC CLASS A,"11,000",12.4,0.73%,0.09,"$136,400.00 ","$188,173.41 ",$990.00 ,0.73%,"($51,773.41)",-27.51%,C,No,N/A,5.67%,Equity
+IONQ,IONQ INC,"1,500",36.75,-0.24%,-0.09,"$55,125.00 ","$88,315.08 ",($135.00),-0.24%,"($33,190.08)",-37.58%,F,No,N/A,2.29%,Equity
+LUNR,INTUITIVE MACHS INC CLASS A,"5,000",14.35,-1.85%,-0.27,"$71,750.00 ","$143,934.00 ","($1,350.00)",-1.85%,"($72,184.00)",-50.15%,F,No,N/A,2.98%,Equity
+NET,CLOUDFLARE INC CLASS A,"1,300",306.53,-1.49%,-4.64,"$398,489.00 ","$380,583.72 ","($6,032.00)",-1.49%,"$17,905.28 ",4.70%,C,No,N/A,16.57%,Equity
+RTX,RTX CORP,"1,700",197.68,-0.22%,-0.44,"$336,056.00 ","$372,209.38 ",($748.00),-0.22%,"($36,153.38)",-9.71%,A,No,N/A,13.97%,Equity
+TSLA,TESLA INC,"2,000",365.44,0.52%,1.88,"$730,880.00 ","$786,234.08 ","$3,760.00 ",0.52%,"($55,354.08)",-7.04%,F,Yes,N/A,30.38%,Equity
+AXTI 09/18/2026 70.00 C,CALL AXT INC $70 EXP 09/18/26,-15,1.6211,-23.71%,-0.5037,"($2,431.65)","($11,464.76)",$755.55 ,23.71%,"$9,033.11 ",78.79%,-,N/A,N/A,-,Option
+BLZE 09/18/2026 17.50 C,CALL BACKBLAZE INC $17.5 EXP 09/18/26,-110,0.0325,-29.96%,-0.0139,($357.50),"($10,926.45)",$152.90 ,29.96%,"$10,568.95 ",96.73%,-,N/A,N/A,-,Option
+IONQ 09/18/2026 41.00 C,CALL IONQ INC $41 EXP 09/18/26,-15,0.2808,-32.19%,-0.1333,($421.20),($620.01),$199.95 ,32.19%,$198.81 ,32.07%,-,N/A,N/A,-,Option
+NET 09/18/2026 305.00 C,CALL CLOUDFLARE INC $305 EXP 09/18/26,-13,8.8689,-36.98%,-5.2037,"($11,529.57)","($13,719.07)","$6,764.81 ",36.98%,"$2,189.50 ",15.96%,-,N/A,N/A,-,Option
+PLTR 09/18/2026 160.00 P,PUT PALANTIR TECHNOLOGIE$160 EXP 09/18/26,-10,1.395,-38.55%,-0.875,"($1,395.00)","($1,593.32)",$875.00 ,38.55%,$198.32 ,12.45%,-,N/A,N/A,-,Option
+RTX 09/18/2026 205.00 C,CALL RTX CORP $205 EXP 09/18/26,-17,0.37,-35.09%,-0.2,($629.00),($838.67),$340.00 ,35.09%,$209.67 ,25%,-,N/A,N/A,-,Option
+TSLA 09/14/2026 380.00 C,CALL TESLA INC $380 EXP 09/14/26,-20,0.285,-68.68%,-0.625,($570.00),"($1,286.66)","$1,250.00 ",68.68%,$716.66 ,55.70%,-,N/A,N/A,-,Option
+SNYXX,SCHWAB NEW YORK MUNICIPAL MONEY ULTRA,"202,775.94",1,0%,0,"$202,775.94 ","$202,775.94 ",$0.00 ,0%,$0.00 ,0%,-,Yes,Yes,8.43%,Cash and Money Market
+SNAXX,SCHWAB PRIME ADVANTAGE MONEY ULTRA,"77,341.30",1,0%,0,"$77,341.30 ","$77,341.30 ",$0.00 ,0%,$0.00 ,0%,-,Yes,Yes,3.22%,Cash and Money Market
+Cash & Cash Investments,--,--,--,--,--,"$299,590.53 ",--,$0.00 ,0%,--,--,--,--,--,12.45%,Cash and Money Market
+Positions Total,,--,--,--,--,"$2,388,228.85 ","$2,379,278.10 ","$6,928.21 ",0.29%,"($290,639.78)",-12.22%,--,--,--,--,--`;
     processCsvText(mockCsv, 'Positions-LivingTrust-Options-609.csv');
   };
 
@@ -315,6 +314,23 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
             </div>
           </div>
 
+          {/* Calculation Bridge: Available Cash & Deployable Free Cash Callout */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-cyan-950/50 via-slate-900 to-emerald-950/40 border border-cyan-500/40 flex flex-wrap items-center justify-between gap-3 text-xs shadow-lg">
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono font-bold text-[10px] border border-cyan-500/30">
+                STEP 1 &rarr; STEP 2 CASH RECONCILIATION
+              </span>
+              <span className="text-slate-300">
+                Liquid Cash Pool: <strong className="text-white font-mono">${parsedData.cashBreakdown.totalCashToCoverCsp.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                {' '}&minus; Open Put Liabilities: <strong className="text-rose-400 font-mono">${parsedData.totalCommittedCspCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                {' '}&#61; <strong className="text-emerald-400 font-mono text-sm">${parsedData.availableCashBeforeLivingExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> Available Cash (Before Living Expenses)
+              </span>
+            </div>
+            <div className="text-[11px] font-mono text-slate-400">
+              Less $5k Living Expenses: &minus;${parsedData.encumberedLivingExpenses.toLocaleString()} &rarr; <span className="text-emerald-400 font-bold">${parsedData.netFreeCashForNewCsps.toLocaleString(undefined, { minimumFractionDigits: 2 })} Deployable Free Cash</span>
+            </div>
+          </div>
+
           {/* Action to proceed */}
           <div className="glass-panel p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/20 flex flex-wrap items-center justify-between gap-3 shadow-lg">
             <div className="space-y-0.5">
@@ -323,7 +339,7 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
                 <span>Schwab Positions Ingested &amp; Synchronized!</span>
               </h4>
               <p className="text-xs text-slate-300">
-                Proceed to Step 2 to verify your Precalculated Cash Balance (Liquid Cash less Open Put Liabilities) and encumber planned disbursements.
+                Available Cash before living expenses is <strong className="text-emerald-300 font-mono">${parsedData.availableCashBeforeLivingExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>. Proceed to Step 2 to verify your cash ledger and encumber disbursements.
               </p>
             </div>
 

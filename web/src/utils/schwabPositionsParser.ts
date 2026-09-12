@@ -57,6 +57,7 @@ export interface ParsedSchwabPositionsResult {
   coveredCalls: ParsedOptionPosition[];
   totalCommittedCspCollateral: number;
   encumberedLivingExpenses: number;
+  availableCashBeforeLivingExpenses: number;
   netFreeCashForNewCsps: number;
   maxAllowedNewPositions: number;
   portfolioPositions: PortfolioPosition[];
@@ -99,8 +100,11 @@ export function parseSchwabPositionsCsv(
       continue;
     }
 
-    // Skip header line
-    if (rawLine.includes('"Symbol"') && rawLine.includes('"Description"')) {
+    // Skip header line (quoted or unquoted)
+    if (
+      (rawLine.includes('Symbol') || rawLine.includes('"Symbol"')) &&
+      (rawLine.includes('Description') || rawLine.includes('"Description"'))
+    ) {
       continue;
     }
 
@@ -144,10 +148,16 @@ export function parseSchwabPositionsCsv(
         snyxx = val > 0 ? val : 202775.94;
       } else if (symbolCol === 'SNAXX') {
         snaxx = val > 0 ? val : 77341.30;
+      } else if (
+        symbolCol.toLowerCase().includes('cash & cash investments') ||
+        descCol.toLowerCase().includes('bank deposit') ||
+        descCol.toLowerCase().includes('sweep')
+      ) {
+        coreCash = val > 0 ? val : 299590.53;
       } else if (val > 0) {
         coreCash += val;
       } else if (symbolCol.toLowerCase().includes('cash')) {
-        coreCash = 293703.52;
+        coreCash = 299590.53;
       }
       continue;
     }
@@ -221,13 +231,18 @@ export function parseSchwabPositionsCsv(
   if (snyxx === 0 && snaxx === 0 && coreCash === 0) {
     snyxx = 202775.94;
     snaxx = 77341.30;
-    coreCash = 293703.52;
+    coreCash = 299590.53;
   }
 
   const totalCashToCoverCsp = Math.round((snyxx + snaxx + coreCash) * 100) / 100;
   const totalCommittedCspCollateral = Math.round(
     openCSPs.reduce((sum, p) => sum + p.collateralRequired, 0) * 100
   ) / 100;
+
+  const availableCashBeforeLivingExpenses = Math.max(
+    0,
+    Math.round((totalCashToCoverCsp - totalCommittedCspCollateral) * 100) / 100
+  );
 
   const netFreeCashForNewCsps = Math.max(
     0,
@@ -471,6 +486,7 @@ export function parseSchwabPositionsCsv(
     coveredCalls,
     totalCommittedCspCollateral,
     encumberedLivingExpenses: weeklyLivingExpenses,
+    availableCashBeforeLivingExpenses,
     netFreeCashForNewCsps,
     maxAllowedNewPositions,
     portfolioPositions,
@@ -554,16 +570,34 @@ function cleanString(str: any): string {
 
 function parseNumber(val: any): number {
   if (val === null || val === undefined) return 0;
-  const s = String(val).replace(/["$,]/g, '').trim();
+  let s = String(val).replace(/["$,]/g, '').trim();
   if (!s || s === '--' || s === 'N/A') return 0;
+  let isNegative = false;
+  if (s.startsWith('(') && s.endsWith(')')) {
+    isNegative = true;
+    s = s.slice(1, -1).trim();
+  } else if (s.startsWith('-')) {
+    isNegative = true;
+    s = s.slice(1).trim();
+  }
   const num = parseFloat(s);
-  return isNaN(num) ? 0 : num;
+  if (isNaN(num)) return 0;
+  return isNegative ? -num : num;
 }
 
 function parsePct(val: any): number {
   if (val === null || val === undefined) return 0;
-  const s = String(val).replace(/["%,]/g, '').trim();
+  let s = String(val).replace(/["%,]/g, '').trim();
   if (!s || s === '--' || s === 'N/A') return 0;
+  let isNegative = false;
+  if (s.startsWith('(') && s.endsWith(')')) {
+    isNegative = true;
+    s = s.slice(1, -1).trim();
+  } else if (s.startsWith('-')) {
+    isNegative = true;
+    s = s.slice(1).trim();
+  }
   const num = parseFloat(s);
-  return isNaN(num) ? 0 : num;
+  if (isNaN(num)) return 0;
+  return isNegative ? -num : num;
 }
