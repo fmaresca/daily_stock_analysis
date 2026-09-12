@@ -26,6 +26,18 @@ Every underlying equity is evaluated against institutional rules:
 ### Annualized Return on Capital (AROC) Formula:
 $$\text{AROC (\%)} = \left( \frac{\text{Expected Premium}}{\text{Strike Price}} \times \frac{365}{\text{DTE}} \right) \times 100$$
 
+### 2.1 Options Trade Quality Simulator & ATM Straddle Implied Move
+When an earnings announcement falls within the options expiration period ($t_{\text{today}} \le t_{\text{earnings}} \le t_{\text{exp}}$), the **Options Trade Quality Simulator** automatically detects the event and factors in the expected binary move:
+- **ATM Straddle Implied Move**:
+  $$\text{Straddle Move (\%)} = 0.65 \times \text{IV}_{\text{event}} + 0.35 \times \text{HistoricalEarningsMove}_{\text{avg}}$$
+  $$\text{Straddle Dollar Move} = S \times \text{Straddle Move (\%)} = C_{\text{ATM}} + P_{\text{ATM}}$$
+- **Earnings-Defended Strike Formulation**:
+  - **Cash-Secured Put (CSP)**: Must clear the lower straddle bound with a 15% safety buffer:
+    $$\text{Strike}_{\text{CSP, Defended}} \le S - \text{Straddle Dollar Move} \times 1.15$$
+  - **Covered Call (CC)**: Must clear the upper straddle bound with a 15% safety buffer:
+    $$\text{Strike}_{\text{CC, Defended}} \ge S + \text{Straddle Dollar Move} \times 1.15$$
+- **100-Point Scoring Model Reward**: Defended trades that clear the straddle move are protected from binary gap breaches and receive only a mild -12 pt event penalty, passing the risk gate instead of triggering a hard -40 pt disqualification.
+
 ---
 
 ## 3. Gemini Extended Thinking Mode (`thinking_level: HIGH`)

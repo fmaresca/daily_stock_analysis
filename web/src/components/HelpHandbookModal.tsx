@@ -502,6 +502,40 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   </div>
                 </div>
               </div>
+
+              {/* Dynamic Earnings Capture & Straddle Implied Move Defense Engine */}
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-amber-500/30 space-y-3 text-xs">
+                <div className="font-bold text-amber-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <span>Dynamic Earnings Detection &amp; ATM Straddle Implied Move Defense Engine</span>
+                </div>
+                <p className="text-slate-300 leading-relaxed text-[11px]">
+                  Selling options through corporate earnings announcements introduces severe binary jump risk (volatility crush and overnight gap risk). The simulator dynamically tracks upcoming corporate reporting schedules and evaluates whether an announcement falls inside the selected expiration cycle (<code className="text-amber-300 font-mono">tradeDate &le; earningsDate &le; expirationDate</code>):
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[11px] font-sans">
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <span className="font-bold text-amber-300 block">1. Dynamic Calendar Capture</span>
+                    <p className="text-slate-400">
+                      Cross-references authoritative earnings schedules for Schwab living trust equities and top universe tickers against your selected expiration date, tagging warnings automatically and highlighting DTE to the report.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <span className="font-bold text-amber-300 block">2. ATM Straddle Implied Move</span>
+                    <p className="text-slate-400 font-mono text-[10px]">
+                      Move &plusmn;$ = S &times; (0.65 &times; IV_event + 0.35 &times; HistMove%)
+                    </p>
+                    <p className="text-slate-400">
+                      Prices the expected 1-standard-deviation earnings jump cone using market-maker at-the-money straddle pricing to define upper and lower post-earnings gap limits.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                    <span className="font-bold text-emerald-300 block">3. Defended Strike Formulation</span>
+                    <p className="text-slate-400">
+                      Adjusts recommended strike prices outside the straddle cone with a 15% safety buffer (<code className="text-emerald-400 font-mono">CSP Strike &le; Spot - Move &times; 1.15</code>; <code className="text-amber-400 font-mono">CC Strike &ge; Spot + Move &times; 1.15</code>). Defended trades avoid hard disqualification!
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
