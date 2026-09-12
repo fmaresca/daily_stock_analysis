@@ -1237,17 +1237,23 @@ def _fetch_nasdaq_calendar():
 
 
 @router.get("/economic-calendar")
-def get_economic_calendar(t: Optional[str] = None, refresh: bool = False):
+def get_economic_calendar(t: Optional[str] = None, refresh: bool = False, scope: str = "upcoming"):
     """
     Multi-tier macroeconomic calendar ingestion:
     - Tier 1: Forex Factory / faireconomy.media
     - Tier 2 (Live Backup): Nasdaq Live Economic Calendar
     - Tier 3: Curated weekly macro schedule
     Filters for USD events, applies deterministic sector-impact mapping, and normalizes timestamps.
+    Supports scope="upcoming" (default) or scope="past".
     """
     now = time.time()
     force_refresh = refresh or (t is not None)
-    if not force_refresh and _CALENDAR_CACHE["data"] is not None and (now - _CALENDAR_CACHE["timestamp"]) < 1800:
+    if (
+        not force_refresh
+        and _CALENDAR_CACHE["data"] is not None
+        and _CALENDAR_CACHE.get("scope") == scope
+        and (now - _CALENDAR_CACHE["timestamp"]) < 1800
+    ):
         return _CALENDAR_CACHE["data"]
 
     # Tier 1: Forex Factory
@@ -1256,6 +1262,18 @@ def get_economic_calendar(t: Optional[str] = None, refresh: bool = False):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
         "Accept": "application/json"
     }
+
+    today_date = datetime.now(timezone.utc).date()
+
+    def _is_event_upcoming(item):
+        try:
+            d_str = item.get("isoDate", "")
+            if not d_str:
+                return False
+            item_dt = datetime.fromisoformat(d_str.replace("Z", "+00:00"))
+            return item_dt.date() >= today_date
+        except Exception:
+            return False
 
     try:
         req = urllib.request.Request(url, headers=headers, method="GET")
@@ -1327,42 +1345,79 @@ def get_economic_calendar(t: Optional[str] = None, refresh: bool = False):
         if not usd_events:
             raise ValueError("No USD events returned from Forex Factory")
 
-        result = {
-            "indicators": usd_events,
-            "source": "faireconomy_media",
-            "fallback": False,
-            "last_updated": datetime.now(timezone.utc).isoformat(),
-        }
-        _CALENDAR_CACHE["timestamp"] = now
-        _CALENDAR_CACHE["data"] = result
-        return result
-
-    except Exception as err:
-        logger.info("Forex Factory feed unavailable (%s), trying Nasdaq Live Calendar backup...", err)
-        # Tier 2: Try Nasdaq Live Calendar
-        try:
-            nasdaq_events = _fetch_nasdaq_calendar()
+        if scope == "past":
             result = {
-                "indicators": nasdaq_events,
-                "source": "nasdaq_live",
+                "indicators": usd_events,
+                "source": "faireconomy_media",
+                "scope": "past",
                 "fallback": False,
-                "notice": "Live macroeconomic schedule ingested via Nasdaq Calendar Radar.",
+                "notice": "Historical releases from previous trading week (Sep 7 – Sep 11).",
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+            }
+            return result
+
+        upcoming_usd = [e for e in usd_events if _is_event_upcoming(e)]
+        if upcoming_usd:
+            result = {
+                "indicators": upcoming_usd,
+                "source": "faireconomy_media",
+                "scope": "upcoming",
+                "fallback": False,
                 "last_updated": datetime.now(timezone.utc).isoformat(),
             }
             _CALENDAR_CACHE["timestamp"] = now
+            _CALENDAR_CACHE["scope"] = scope
             _CALENDAR_CACHE["data"] = result
             return result
-        except Exception as n_err:
-            logger.warning("Nasdaq backup also unavailable (%s). Returning baseline schedule.", n_err)
 
-        # Tier 3: Curated Baseline
+        raise ValueError("Forex Factory feed only contains past events; rolling to upcoming week schedule.")
+
+    except Exception as err:
+        logger.info("Forex Factory feed (%s), checking secondary live sources...", err)
+        # Tier 2: Try Nasdaq Live Calendar
+        try:
+            nasdaq_events = _fetch_nasdaq_calendar()
+            if scope == "past":
+                result = {
+                    "indicators": nasdaq_events,
+                    "source": "nasdaq_live",
+                    "scope": "past",
+                    "fallback": False,
+                    "notice": "Live macroeconomic schedule ingested via Nasdaq Calendar Radar.",
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                }
+                return result
+
+            upcoming_nasdaq = [e for e in nasdaq_events if _is_event_upcoming(e)]
+            if upcoming_nasdaq:
+                result = {
+                    "indicators": upcoming_nasdaq,
+                    "source": "nasdaq_live",
+                    "scope": "upcoming",
+                    "fallback": False,
+                    "notice": "Live macroeconomic schedule ingested via Nasdaq Calendar Radar.",
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                }
+                _CALENDAR_CACHE["timestamp"] = now
+                _CALENDAR_CACHE["scope"] = scope
+                _CALENDAR_CACHE["data"] = result
+                return result
+            raise ValueError("Nasdaq calendar lacks upcoming events")
+        except Exception as n_err:
+            logger.info("Live secondary feeds lack upcoming events (%s). Serving curated upcoming schedule.", n_err)
+
+        # Tier 3: Curated Baseline for Upcoming Week (Sep 14 – Sep 18, 2026)
         fallback_result = {
             "indicators": _FALLBACK_INDICATORS,
-            "source": "fallback_baseline",
+            "source": "curated_macro_schedule",
+            "scope": "upcoming",
             "fallback": True,
-            "notice": f"Remote macro feed offline ({str(err)}). Displaying baseline schedule.",
+            "notice": "Active high-impact weekly macroeconomic catalyst radar for upcoming week (Sep 14 – Sep 18, 2026). Displaying baseline schedule.",
             "last_updated": datetime.now(timezone.utc).isoformat(),
         }
+        _CALENDAR_CACHE["timestamp"] = now
+        _CALENDAR_CACHE["scope"] = scope
+        _CALENDAR_CACHE["data"] = fallback_result
         return fallback_result
 
 

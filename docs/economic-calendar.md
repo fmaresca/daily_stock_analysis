@@ -19,7 +19,8 @@ Macroeconomic data releases (such as CPI, FOMC, and Non-Farm Payrolls) cause vio
 | **Cadence** | Real-time weekly releases, refreshed every 15–30 minutes, or instantly on manual refresh |
 | **Timezone** | All releases normalized to US Eastern Time (ET) |
 | **Filtering** | Filtered strictly for US Dollar (`USD`) releases |
-| **Cache-Bypass Refresh** | Manual "Refresh Feed" injects dynamic timestamp (`?t=...`) to bypass edge & memory caches |
+| **Week Scope Selector** | Toggle between **Upcoming Week (Sep 14 – 18, 2026)** and **Past Week (Sep 7 – 11, 2026 Archive)** (`?scope=upcoming` vs `?scope=past`) |
+| **Cache-Bypass Refresh** | Manual "Refresh Feed" injects dynamic timestamp (`?t=...&scope=...`) to bypass edge & memory caches |
 | **Offline Resilience** | Multi-tier failover ensures 100% uptime with clear UI badges (`🟢 Forex Factory`, `🏛️ Nasdaq Live`, `🛡️ Curated Schedule`, `⚠️ Baseline Offline`) |
 
 ---

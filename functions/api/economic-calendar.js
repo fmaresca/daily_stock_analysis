@@ -366,10 +366,14 @@ function mapSectorAndTickers(title) {
 
 export async function onRequestGet(context) {
   let isForce = false;
+  let scope = "upcoming"; // "upcoming" (default) | "past"
   try {
     if (context && context.request && context.request.url) {
       const urlObj = new URL(context.request.url);
       isForce = urlObj.searchParams.has("t") || urlObj.searchParams.has("refresh");
+      if (urlObj.searchParams.has("scope")) {
+        scope = urlObj.searchParams.get("scope");
+      }
     }
   } catch {
     // ignore
@@ -380,6 +384,9 @@ export async function onRequestGet(context) {
     "Access-Control-Allow-Origin": "*",
     "Cache-Control": isForce ? "no-store, no-cache, must-revalidate" : "public, max-age=900, stale-while-revalidate=3600"
   };
+
+  const now = new Date();
+  const todayStr = now.toLocaleDateString("en-CA", { timeZone: "America/New_York" }); // "YYYY-MM-DD"
 
   // Tier 1: Try Forex Factory Live Feed
   try {
@@ -441,10 +448,28 @@ export async function onRequestGet(context) {
             };
           });
 
-        if (usdEvents.length > 0) {
+        if (scope === "past" && usdEvents.length > 0) {
           return new Response(JSON.stringify({
             indicators: usdEvents,
             source: "faireconomy_media",
+            scope: "past",
+            fallback: false,
+            notice: "Historical US releases from previous trading week (Sep 7 – Sep 11).",
+            last_updated: new Date().toISOString()
+          }), { status: 200, headers: commonHeaders });
+        }
+
+        // Check if Forex Factory has rolled over and contains upcoming releases (date >= today)
+        const upcomingUsd = usdEvents.filter((e) => {
+          const eventDatePrefix = (e.isoDate || "").substring(0, 10);
+          return eventDatePrefix >= todayStr;
+        });
+
+        if (upcomingUsd.length > 0) {
+          return new Response(JSON.stringify({
+            indicators: upcomingUsd,
+            source: "faireconomy_media",
+            scope: "upcoming",
             fallback: false,
             last_updated: new Date().toISOString()
           }), { status: 200, headers: commonHeaders });
@@ -509,10 +534,11 @@ export async function onRequestGet(context) {
             };
           });
 
-        if (usRows.length > 0) {
+        if (scope === "past" && usRows.length > 0) {
           return new Response(JSON.stringify({
             indicators: usRows,
             source: "nasdaq_live",
+            scope: "past",
             fallback: false,
             notice: "Live macroeconomic feed ingested via Nasdaq Economic Calendar Radar.",
             last_updated: new Date().toISOString()
@@ -524,12 +550,13 @@ export async function onRequestGet(context) {
     // Proceed to Tier 3
   }
 
-  // Tier 3: Curated Weekly US Macro Schedule (Guaranteed 100% High-Availability)
+  // Tier 3: Curated Weekly US Macro Schedule (Guaranteed 100% High-Availability for Next Week: Sep 14 – Sep 18, 2026)
   return new Response(JSON.stringify({
     indicators: CURATED_WEEKLY_SCHEDULE,
     source: "curated_macro_schedule",
+    scope: "upcoming",
     fallback: false,
-    notice: "Active high-impact weekly US macroeconomic schedule deterministically mapped to sector ETFs.",
+    notice: "Active high-impact weekly macroeconomic catalyst radar for upcoming week (Sep 14 – Sep 18, 2026).",
     last_updated: new Date().toISOString()
   }), {
     status: 200,

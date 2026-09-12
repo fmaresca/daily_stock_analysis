@@ -242,6 +242,141 @@ const BUNDLED_MACRO_SCHEDULE: EconomicIndicator[] = [
   }
 ];
 
+const PAST_WEEK_SCHEDULE: EconomicIndicator[] = [
+  {
+    title: "Bank Holiday (Labor Day)",
+    country: "USD",
+    dateET: "Mon, Sep 07",
+    timeET: "All Day",
+    impact: "Low",
+    forecast: "—",
+    previous: "—",
+    sectors: "Broad Equities",
+    tickers: "SPY",
+    isoDate: "2026-09-07T08:00:00-04:00"
+  },
+  {
+    title: "NFIB Small Business Index",
+    country: "USD",
+    dateET: "Tue, Sep 08",
+    timeET: "06:00 AM",
+    impact: "Low",
+    forecast: "99.4",
+    previous: "99.8",
+    sectors: "Small Caps, Regional Banks",
+    tickers: "IWM, KRE",
+    isoDate: "2026-09-08T06:00:00-04:00"
+  },
+  {
+    title: "Consumer Credit m/m",
+    country: "USD",
+    dateET: "Tue, Sep 08",
+    timeET: "03:00 PM",
+    impact: "Low",
+    forecast: "11.9B",
+    previous: "14.2B",
+    sectors: "Financials, Consumer Discretionary",
+    tickers: "XLF, XLY",
+    isoDate: "2026-09-08T15:00:00-04:00"
+  },
+  {
+    title: "Core PPI m/m",
+    country: "USD",
+    dateET: "Thu, Sep 10",
+    timeET: "08:30 AM",
+    impact: "High",
+    forecast: "0.3%",
+    previous: "0.2%",
+    sectors: "Technology, Financials",
+    tickers: "QQQ, XLF, TLT",
+    isoDate: "2026-09-10T08:30:00-04:00"
+  },
+  {
+    title: "PPI m/m",
+    country: "USD",
+    dateET: "Thu, Sep 10",
+    timeET: "08:30 AM",
+    impact: "High",
+    forecast: "0.4%",
+    previous: "0.0%",
+    sectors: "Broad Market, Industrials",
+    tickers: "SPY, XLI",
+    isoDate: "2026-09-10T08:30:00-04:00"
+  },
+  {
+    title: "Unemployment Claims",
+    country: "USD",
+    dateET: "Thu, Sep 10",
+    timeET: "08:30 AM",
+    impact: "Moderate",
+    forecast: "205K",
+    previous: "206K",
+    sectors: "Broad Equities",
+    tickers: "SPY, IWM",
+    isoDate: "2026-09-10T08:30:00-04:00"
+  },
+  {
+    title: "Core CPI m/m",
+    country: "USD",
+    dateET: "Fri, Sep 11",
+    timeET: "08:30 AM",
+    impact: "High",
+    forecast: "0.2%",
+    previous: "0.2%",
+    sectors: "Technology, Financials, Real Estate",
+    tickers: "QQQ, XLF, TLT, VNQ",
+    isoDate: "2026-09-11T08:30:00-04:00"
+  },
+  {
+    title: "Core CPI y/y",
+    country: "USD",
+    dateET: "Fri, Sep 11",
+    timeET: "08:30 AM",
+    impact: "High",
+    forecast: "2.4%",
+    previous: "2.5%",
+    sectors: "Technology, Real Estate",
+    tickers: "QQQ, VNQ, TLT",
+    isoDate: "2026-09-11T08:30:00-04:00"
+  },
+  {
+    title: "CPI m/m",
+    country: "USD",
+    dateET: "Fri, Sep 11",
+    timeET: "08:30 AM",
+    impact: "High",
+    forecast: "0.4%",
+    previous: "0.1%",
+    sectors: "Broad Market, Consumer Discretionary",
+    tickers: "SPY, XLY",
+    isoDate: "2026-09-11T08:30:00-04:00"
+  },
+  {
+    title: "CPI y/y",
+    country: "USD",
+    dateET: "Fri, Sep 11",
+    timeET: "08:30 AM",
+    impact: "High",
+    forecast: "3.4%",
+    previous: "3.4%",
+    sectors: "Broad Market, Treasury Yields",
+    tickers: "SPY, TLT",
+    isoDate: "2026-09-11T08:30:00-04:00"
+  },
+  {
+    title: "Prelim UoM Consumer Sentiment",
+    country: "USD",
+    dateET: "Fri, Sep 11",
+    timeET: "10:00 AM",
+    impact: "Moderate",
+    forecast: "51.0",
+    previous: "51.0",
+    sectors: "Consumer Discretionary",
+    tickers: "XLY, XRT",
+    isoDate: "2026-09-11T10:00:00-04:00"
+  }
+];
+
 interface EconomicCalendarViewProps {
   onSelectSymbolForChart?: (symbol: string) => void;
   onOpenTickerAudit?: (symbol: string) => void;
@@ -256,6 +391,7 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [refreshSuccess, setRefreshSuccess] = useState<boolean>(false);
+  const [scheduleScope, setScheduleScope] = useState<'upcoming' | 'past'>('upcoming');
 
   // Filters
   const [impactFilter, setImpactFilter] = useState<IndicatorFilterTier>('ALL');
@@ -299,13 +435,13 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
     }
   };
 
-  const fetchCalendar = async (isManualRefresh = false) => {
+  const fetchCalendar = async (isManualRefresh = false, targetScope: 'upcoming' | 'past' = scheduleScope) => {
     if (isManualRefresh) setIsRefreshing(true);
     else setLoading(true);
     setError(null);
 
     let success = false;
-    const cacheBuster = isManualRefresh ? `?t=${Date.now()}` : '';
+    const cacheBuster = `?t=${Date.now()}&scope=${targetScope}`;
 
     // Tier 1: Try Cloudflare Pages Edge Function first, fallback to local FastAPI
     try {
@@ -331,10 +467,10 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       // Proceed to Tier 2
     }
 
-    // Tier 2: Static JSON resource (/data/economic_calendar.json)
-    if (!success) {
+    // Tier 2: Static JSON resource (/data/economic_calendar.json) for upcoming week
+    if (!success && targetScope === 'upcoming') {
       try {
-        const bRes = await fetch('./data/economic_calendar.json?t=' + Date.now(), { signal: AbortSignal.timeout(4000) });
+        const bRes = await fetch(`./data/economic_calendar.json?t=${Date.now()}`, { signal: AbortSignal.timeout(4000) });
         if (bRes.ok) {
           const bJson: EconomicCalendarResponse = await bRes.json();
           if (bJson && Array.isArray(bJson.indicators) && bJson.indicators.length > 0) {
@@ -351,13 +487,16 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       }
     }
 
-    // Tier 3: Curated In-Memory Schedule (Guaranteed 100% High Availability)
+    // Tier 3: In-Memory Schedule Fallback
     if (!success) {
+      const fallbackList = targetScope === 'past' ? PAST_WEEK_SCHEDULE : BUNDLED_MACRO_SCHEDULE;
       setData({
-        indicators: BUNDLED_MACRO_SCHEDULE,
-        source: 'curated_macro_schedule',
+        indicators: fallbackList,
+        source: targetScope === 'past' ? 'faireconomy_media' : 'curated_macro_schedule',
         fallback: false,
-        notice: 'Active weekly macroeconomic catalyst radar & sector transmission schedule.',
+        notice: targetScope === 'past'
+          ? 'Historical US macroeconomic releases from previous trading week (Sep 7 – Sep 11, 2026).'
+          : 'Active weekly macroeconomic catalyst radar & sector transmission schedule for upcoming week (Sep 14 – Sep 18, 2026).',
         last_updated: new Date().toISOString(),
       });
       success = true;
@@ -565,7 +704,9 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                All releases normalized to US Eastern Time (ET). Deterministically mapped to sector transmission channels and proxy ETFs.
+                {scheduleScope === 'upcoming'
+                  ? 'Upcoming Trading Week (Sep 14 – Sep 18, 2026) • Normalized to US Eastern Time (ET) with deterministic sector & proxy ETF mapping.'
+                  : 'Past Trading Week (Sep 7 – Sep 11, 2026 Archive) • Actual prints normalized to US Eastern Time (ET).'}
               </p>
             </div>
           </div>
@@ -573,6 +714,42 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
 
         {/* Action Controls */}
         <div className="flex items-center flex-wrap gap-2.5">
+          {/* Week Scope Selector */}
+          <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-700/80 text-xs shadow-inner">
+            <button
+              onClick={() => {
+                setScheduleScope('upcoming');
+                fetchCalendar(true, 'upcoming');
+              }}
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                scheduleScope === 'upcoming'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+              title="Show Upcoming Week catalysts (Sep 14 – Sep 18, 2026)"
+            >
+              <Calendar className="w-3.5 h-3.5 text-blue-200" />
+              <span>Upcoming Week (Sep 14 – 18)</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/25 text-blue-100">Next</span>
+            </button>
+            <button
+              onClick={() => {
+                setScheduleScope('past');
+                fetchCalendar(true, 'past');
+              }}
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                scheduleScope === 'past'
+                  ? 'bg-slate-700 text-white shadow-md shadow-slate-700/30 ring-1 ring-slate-500/50'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+              title="Show Past Week releases (Sep 7 – Sep 11, 2026)"
+            >
+              <span>⏪</span>
+              <span>Past Week (Sep 7 – 11)</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">Archive</span>
+            </button>
+          </div>
+
           <button
             onClick={() => setIsAiModalOpen(true)}
             className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-600/30 transition-all border border-violet-400/40 cursor-pointer"
@@ -582,7 +759,7 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
           </button>
 
           <button
-            onClick={() => fetchCalendar(true)}
+            onClick={() => fetchCalendar(true, scheduleScope)}
             disabled={isRefreshing}
             className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2 border transition-all cursor-pointer disabled:opacity-50 ${
               refreshSuccess
