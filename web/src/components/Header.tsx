@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp,
   RefreshCw,
@@ -17,11 +17,16 @@ import {
 } from './icons';
 import { ScreenerSummary } from '../types/options';
 import { analyzeSyncRateLimits } from '../utils/marketHoursAndAutoSync';
+import {
+  calculateLiveExecutiveMetrics,
+  ExecutiveDigestMetrics,
+} from '../utils/executiveReportGenerator';
 
 interface HeaderProps {
   summary: ScreenerSummary | null;
   lastUpdated: string;
   totalTickers: number;
+  executiveMetrics?: ExecutiveDigestMetrics;
   onRefresh: () => void;
   onLiveRecalculate?: () => void;
   isLoading: boolean;
@@ -76,8 +81,29 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleMarketHoursOnly,
   isMarketOpen = true,
   isThrottled = false,
+  executiveMetrics,
 }) => {
   const [isAutoSyncMenuOpen, setIsAutoSyncMenuOpen] = useState(false);
+  const [liveExecutiveMetrics, setLiveExecutiveMetrics] = useState<ExecutiveDigestMetrics>(
+    () => executiveMetrics || calculateLiveExecutiveMetrics()
+  );
+
+  useEffect(() => {
+    if (executiveMetrics) {
+      setLiveExecutiveMetrics(executiveMetrics);
+      return;
+    }
+    const handleSync = () => {
+      setLiveExecutiveMetrics(calculateLiveExecutiveMetrics());
+    };
+    handleSync();
+    window.addEventListener('deltaharvest_portfolio_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('deltaharvest_portfolio_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, [executiveMetrics]);
 
   const rateAnalysis = useMemo(() => {
     return analyzeSyncRateLimits(autoSyncInterval, totalTickers || 7);
@@ -170,13 +196,15 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenExecutiveDigest && (
             <button
               onClick={onOpenExecutiveDigest}
-              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold font-mono rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer whitespace-nowrap shadow-sm shadow-emerald-500/10"
-              title="Click to view Executive Portfolio Health Digest & Briefing"
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold font-mono rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer whitespace-nowrap shadow-sm shadow-emerald-500/10 group"
+              title={`Executive Portfolio Health Digest • ${liveExecutiveMetrics.complianceHealthScore}/100 Health • $${liveExecutiveMetrics.netLiquidity.toLocaleString()} Net Liq • +$${liveExecutiveMetrics.dailyTheta.toFixed(2)}/day Theta`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>94/100 Health</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span>{liveExecutiveMetrics.complianceHealthScore}/100 Health</span>
               <span className="text-slate-500">•</span>
-              <span className="text-cyan-300">+$142/d</span>
+              <span className={liveExecutiveMetrics.dailyTheta >= 0 ? "text-cyan-300" : "text-rose-400"}>
+                {liveExecutiveMetrics.dailyTheta >= 0 ? '+' : ''}${Math.round(liveExecutiveMetrics.dailyTheta)}/d
+              </span>
             </button>
           )}
 

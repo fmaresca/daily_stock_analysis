@@ -6,6 +6,7 @@ import {
   getSampleWashSaleCandidates,
   WashSaleHarvestCandidate,
 } from '../utils/taxAlphaOptimizer';
+import { getStoredCapitalState } from '../utils/capitalAndTaxLedger';
 import {
   DollarSign,
   ShieldCheck,
@@ -20,7 +21,15 @@ import {
 } from './icons';
 
 export const TaxAlphaOptimizerView: React.FC = () => {
-  const [annualProfit, setAnnualProfit] = useState<number>(50000);
+  const storedYtd = useMemo(() => {
+    try {
+      return getStoredCapitalState().ytdPremiumsEarned || 603305.40;
+    } catch {
+      return 603305.40;
+    }
+  }, []);
+
+  const [annualProfit, setAnnualProfit] = useState<number>(storedYtd);
   const [taxProfile, setTaxProfile] = useState<TaxBracketProfile>(DEFAULT_TAX_PROFILE);
   const [harvestCandidates, setHarvestCandidates] = useState<WashSaleHarvestCandidate[]>(() =>
     getSampleWashSaleCandidates(taxProfile)
@@ -87,7 +96,17 @@ export const TaxAlphaOptimizerView: React.FC = () => {
         {/* Tax Profile Inputs & Simulator */}
         <div className="p-4 rounded-xl bg-slate-950/90 border border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
           <div>
-            <label className="text-slate-400 block mb-1">Annual Options Net Profit ($):</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-400 block">Annual Options Net Profit ($):</label>
+              <button
+                type="button"
+                onClick={() => setAnnualProfit(storedYtd)}
+                className="text-[10px] text-emerald-400 hover:text-emerald-300 underline font-mono"
+                title="Reset to verified YTD Premiums from portfolio storage"
+              >
+                Sync YTD (${Math.round(storedYtd).toLocaleString()})
+              </button>
+            </div>
             <input
               type="number"
               step="5000"
