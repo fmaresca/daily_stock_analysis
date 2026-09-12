@@ -710,7 +710,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                       <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
                       <ol className="text-slate-300 space-y-1 list-decimal list-inside">
                         <li><strong>Update Screens (Tab 1 &amp; 2):</strong> Click <strong>&quot;Fetch Live Quotes&quot;</strong> to re-hydrate real-time market prices, or click <strong>&quot;Upload CSV&quot;</strong> to ingest newly downloaded Friday screens directly.</li>
-                        <li><strong>Run TOS Screen (Tab 3):</strong> Paste your ThinkorSwim scan tickers or click a preset (e.g. Living Trust Equities 7, Mag 7, Semis) and click <strong>&quot;▶ Run Barchart View 190898 Analysis&quot;</strong>.</li>
+                        <li><strong>Run TOS Screen (Tab 3):</strong> Click <strong>Schwab Import Equities</strong> (or paste custom symbols) and click <strong>&quot;▶ Run Barchart View 190898 Analysis&quot;</strong>.</li>
                         <li><strong>Send to Gemini Hub:</strong> Click <strong>&quot;📥 Send Screened Stocks to Gemini Decision Hub&quot;</strong> on any of the screens.</li>
                         <li><strong>Generate &amp; Run Prompt:</strong> On Tab 4, click <strong>&quot;1-Click Copy Prompt&quot;</strong>. Open <strong>gemini.google.com</strong> (select Gemini Pro with Extended Thinking HIGH), paste the prompt, and execute.</li>
                         <li><strong>Import &amp; Stage:</strong> Copy Gemini&apos;s markdown response, paste it into the DeltaHarvest parser box, and click <strong>&quot;1-Click Stage&quot;</strong> on Table 1 recommended trades.</li>
@@ -985,7 +985,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
                     <span className="font-bold text-amber-300">Ingestion Modes:</span> Quick Single Symbol or Bulk Textarea (commas, spaces, newlines, or .txt/.csv file upload).<br />
-                    <span className="font-bold text-amber-300">Curated Presets:</span> Mag 7, Semis, CBOE High Vol, AI &amp; Cloud.
+                    <span className="font-bold text-amber-300">Curated Presets:</span> Schwab Import Equities (Living Trust) or custom pasted tickers.
                   </div>
                   <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
                     <span className="font-bold text-amber-300">View 190898 Columns:</span> Symbol, Name, Last Price, Net Change, % Change, Barchart Opinion, Opinion Score %, Stability (Previous / Last Week / Last Month), Weekly Options, Options Cadence, Signal Strength, Signal Direction, Recommended Strategy.<br />
@@ -994,7 +994,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
                   <div className="text-amber-400 font-bold"># CLI Commands:</div>
-                  <div>python scripts/run_screener_agent.py --source barchart_custom --symbols &quot;AAPL,NVDA,TSLA,DELL,NOW&quot;</div>
+                  <div>python scripts/run_screener_agent.py --source barchart_custom --symbols &quot;AXTI,BLZE,IONQ,LUNR,NET,RTX,TSLA&quot;</div>
                   <div>python scripts/run_screener_agent.py --source barchart_custom --symbols-file symbols.txt</div>
                 </div>
               </div>

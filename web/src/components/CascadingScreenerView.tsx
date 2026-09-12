@@ -58,6 +58,7 @@ import { BarchartTopTab } from './screener/cascading/BarchartTopTab';
 import { MarketChameleonTab } from './screener/cascading/MarketChameleonTab';
 import { TosReturnScreenTab } from './screener/cascading/TosReturnScreenTab';
 import { GeminiDecisionHubTab } from './screener/cascading/GeminiDecisionHubTab';
+import { getSchwabImportedEquities } from '../utils/schwabPositionsParser';
 
 export type CascadingSubTab = 'BARCHART' | 'MARKETCHAMELEON' | 'TOS_BARCHART' | 'GEMINI_DECISION_HUB';
 
@@ -148,13 +149,25 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
   const [activePresetName, setActivePresetName] = useState<string>(DEFAULT_MARKET_CHAMELEON_PRESETS[0].name);
   const [mcFilters, setMcFilters] = useState<Record<string, string>>(DEFAULT_MARKET_CHAMELEON_PRESETS[0].filters);
 
-  // ThinkorSwim Custom Input & Analysis State
-  const [tosTickersInput, setTosTickersInput] = useState<string>('AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA, PANW, PLTR');
+  // ThinkorSwim Custom Input & Analysis State (Defaulted strictly to Schwab CSV Equities)
+  const [tosTickersInput, setTosTickersInput] = useState<string>(() =>
+    getSchwabImportedEquities().join(', ')
+  );
   const [singleSymbolInput, setSingleSymbolInput] = useState<string>('');
   const [isAnalyzingTos, setIsAnalyzingTos] = useState<boolean>(false);
   const [tosError, setTosError] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string>('');
   const [copiedBarchartTickers, setCopiedBarchartTickers] = useState<boolean>(false);
+
+  // Sync with Schwab CSV portfolio uploads
+  useEffect(() => {
+    const handlePortfolioUpdate = () => {
+      const schwabSyms = getSchwabImportedEquities().join(', ');
+      setTosTickersInput(schwabSyms);
+    };
+    window.addEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+    return () => window.removeEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+  }, []);
 
   // Funnel Stage Controls (Tab 4: Gemini Decision Hub)
   const [minBarchartScore, setMinBarchartScore] = useState<number>(70);
@@ -231,6 +244,48 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
   // Load Initial Custom Barchart Watchlist if no saved state
   useEffect(() => {
     if (!tosWatchlistDataset) {
+      const saved = localStorage.getItem('deltaharvest_tos_barchart_watchlist');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.records)) {
+            const bannedSyms = new Set([
+              'AAPL',
+              'MSFT',
+              'AMZN',
+              'GOOGL',
+              'META',
+              'AMD',
+              'AVGO',
+              'TSM',
+              'QCOM',
+              'MU',
+              'ASML',
+              'MARA',
+              'SOFI',
+              'RIVN',
+              'AI',
+              'PATH',
+              'SNOW',
+              'CRWD',
+              'MDB',
+              'DELL',
+              'NOW',
+              'ARM',
+              'SMCI',
+            ]);
+            const hasBanned = parsed.records.some((r: any) => bannedSyms.has(r.symbol));
+            if (!hasBanned) {
+              setTosWatchlistDataset(parsed);
+              return;
+            } else {
+              localStorage.removeItem('deltaharvest_tos_barchart_watchlist');
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
       fetch('./data/weekly_screeners_barchart_custom.json?t=' + Date.now())
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {

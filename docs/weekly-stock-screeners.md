@@ -58,7 +58,7 @@ Primary Target URL:
      - Signal Strength & Signal Direction
      - Recommended Strategy
    - Built-in tab-delimited text (`generate_copy_paste_text`) and standardized CSV export.
-   - Web UI tab "Barchart Watchlist (View 190898)" with dedicated Ingestion & Analysis Console, quick preset chips (`Mag 7`, `Semis`, `CBOE High Vol`, `AI & Cloud`), single symbol quick analyze, and bulk symbol ingestion.
+   - Web UI tab "Barchart Watchlist (View 190898)" with dedicated Ingestion & Analysis Console, curated "Schwab Import Equities" preset (restricted to Schwab CSV import holdings, with Mag 7 / Semis / CBOE High Vol / AI & Cloud removed), single symbol quick analyze, and bulk custom symbol ingestion.
 
 6. **Web UI Section ("Weekly Stock Screeners")**:
    - Accessible from both the Equities and Options navigation menus, as well as the Ctrl+K Command Palette.

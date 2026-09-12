@@ -17,6 +17,7 @@ import {
   WeeklyScreenerRecord,
   WeeklyScreenerDataset,
 } from '../../../types/weeklyScreeners';
+import { getSchwabImportedEquities } from '../../../utils/schwabPositionsParser';
 
 export interface TosReturnScreenTabProps {
   tosTickersInput: string;
@@ -135,7 +136,7 @@ export const TosReturnScreenTab: React.FC<TosReturnScreenTabProps> = React.memo(
             <div>
               <div className="font-semibold text-slate-200">Select or Input Tickers</div>
               <div className="text-slate-400 text-[10px] leading-tight mt-0.5">
-                Click a <strong>Quick Preset</strong> below, paste <strong>TOS tickers</strong>, or click <strong>Upload File</strong> (.csv/.txt). <span className="text-cyan-400">CSV headers are auto-audited &amp; filtered.</span>
+                Click <strong>Schwab Import Equities</strong> below, paste custom <strong>symbols</strong>, or click <strong>Upload File</strong> (.csv/.txt). <span className="text-cyan-400">CSV headers are auto-audited &amp; filtered.</span>
               </div>
             </div>
           </div>
@@ -167,61 +168,21 @@ export const TosReturnScreenTab: React.FC<TosReturnScreenTabProps> = React.memo(
 
         {/* Presets Chips */}
         <div className="flex items-center space-x-2 overflow-x-auto text-[11px] pt-1">
-          <span className="text-slate-400 font-semibold shrink-0">Quick Presets:</span>
+          <span className="text-slate-400 font-semibold shrink-0">Universe Presets:</span>
           <button
             type="button"
             onClick={() => {
-              const syms = 'AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA';
+              const syms = getSchwabImportedEquities().join(', ');
               onTosTickersInputChange(syms);
               onRunBarchartAnalysis(syms.split(', '));
             }}
-            className="px-2.5 py-1 rounded-lg bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 font-bold transition-all cursor-pointer whitespace-nowrap"
+            className="px-2.5 py-1 rounded-lg bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 font-bold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5"
+            title="Populate with equities from Schwab CSV import / Living Trust account"
           >
-            Living Trust Equities (7)
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const syms = 'AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA';
-              onTosTickersInputChange(syms);
-              onRunBarchartAnalysis(syms.split(', '));
-            }}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer whitespace-nowrap"
-          >
-            Mag 7
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const syms = 'NVDA, AMD, AVGO, TSM, QCOM, MU, ASML';
-              onTosTickersInputChange(syms);
-              onRunBarchartAnalysis(syms.split(', '));
-            }}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer whitespace-nowrap"
-          >
-            Semis
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const syms = 'TSLA, PLTR, AMD, MARA, COIN, SOFI, RIVN';
-              onTosTickersInputChange(syms);
-              onRunBarchartAnalysis(syms.split(', '));
-            }}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer whitespace-nowrap"
-          >
-            CBOE High Vol
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const syms = 'PLTR, AI, PATH, SNOW, CRWD, MDB, NET';
-              onTosTickersInputChange(syms);
-              onRunBarchartAnalysis(syms.split(', '));
-            }}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer whitespace-nowrap"
-          >
-            AI &amp; Cloud
+            <span>Schwab Import Equities</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-200 text-[10px] font-mono">
+              {getSchwabImportedEquities().length}
+            </span>
           </button>
         </div>
 
@@ -230,7 +191,7 @@ export const TosReturnScreenTab: React.FC<TosReturnScreenTabProps> = React.memo(
           rows={2}
           value={tosTickersInput}
           onChange={(e) => onTosTickersInputChange(e.target.value)}
-          placeholder="Paste comma or space-separated symbols from ThinkorSwim scan (e.g. AAPL, NVDA, MSFT, AMD, GOOGL, PLTR, PANW)..."
+          placeholder="Paste comma or space-separated symbols (e.g. AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA or your custom tickers)..."
           className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
         />
 

@@ -543,6 +543,69 @@ export function syncImportedEquitiesToWatchlist(symbols: string[], accountName: 
   }
 }
 
+export const DEFAULT_SCHWAB_LIVING_TRUST_EQUITIES: string[] = [
+  'AXTI',
+  'BLZE',
+  'IONQ',
+  'LUNR',
+  'NET',
+  'RTX',
+  'TSLA',
+];
+
+/**
+ * Retrieves the current equity symbols from the Schwab CSV import.
+ * Checks localStorage watchlist groups ('living-trust-equities') and portfolio book,
+ * falling back to the 7 authentic Schwab Living Trust equities.
+ */
+export function getSchwabImportedEquities(): string[] {
+  if (typeof window === 'undefined') {
+    return DEFAULT_SCHWAB_LIVING_TRUST_EQUITIES;
+  }
+  try {
+    // 1. Check watchlist groups for imported equities
+    const groupsRaw = localStorage.getItem('deltaharvest_watchlist_groups');
+    if (groupsRaw) {
+      const groups = JSON.parse(groupsRaw);
+      if (Array.isArray(groups)) {
+        const livingTrustGroup = groups.find(
+          (g: any) => g.id === 'living-trust-equities' || g.name === 'Living Trust Equities'
+        );
+        if (
+          livingTrustGroup &&
+          Array.isArray(livingTrustGroup.tickers) &&
+          livingTrustGroup.tickers.length > 0
+        ) {
+          return livingTrustGroup.tickers.map((s: string) => s.toUpperCase());
+        }
+      }
+    }
+
+    // 2. Check portfolio book for imported stock holdings
+    const bookRaw = localStorage.getItem('deltaharvest_portfolio_book');
+    if (bookRaw) {
+      const positions = JSON.parse(bookRaw);
+      if (Array.isArray(positions)) {
+        const stocks = positions
+          .filter(
+            (p: any) =>
+              (p.type === 'STOCK' || p.type === 'EQUITY') &&
+              p.symbol &&
+              !p.symbol.includes(' ') &&
+              !p.symbol.includes('$')
+          )
+          .map((p: any) => p.symbol.toUpperCase());
+        if (stocks.length > 0) {
+          return Array.from(new Set(stocks));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Error reading Schwab imported equities:', err);
+  }
+  return DEFAULT_SCHWAB_LIVING_TRUST_EQUITIES;
+}
+
 // Helpers
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];
