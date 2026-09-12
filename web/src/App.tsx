@@ -47,6 +47,9 @@ const CascadingScreenerView = lazy(() => import('./components/CascadingScreenerV
 const WeeklyCashLedgerView = lazy(() => import('./components/WeeklyCashLedgerView').then(m => ({ default: m.WeeklyCashLedgerView })));
 const HoldingsCoveredCallView = lazy(() => import('./components/HoldingsCoveredCallView').then(m => ({ default: m.HoldingsCoveredCallView })));
 const WeeklyExecutiveReportView = lazy(() => import('./components/WeeklyExecutiveReportView').then(m => ({ default: m.WeeklyExecutiveReportView })));
+const MethodologyView = lazy(() => import('./components/MethodologyView').then(m => ({ default: m.MethodologyView })));
+const FaqView = lazy(() => import('./components/FaqView').then(m => ({ default: m.FaqView })));
+const DisclaimerView = lazy(() => import('./components/DisclaimerView').then(m => ({ default: m.DisclaimerView })));
 import { PortfolioPosition } from './utils/portfolioStressTest';
 import { getStoredCapitalState } from './utils/capitalAndTaxLedger';
 import { WeeklyScreenerDataset } from './types/weeklyScreeners';
@@ -130,6 +133,87 @@ export const App: React.FC = () => {
   const [activeEquitiesTab, setActiveEquitiesTab] = useState<EquitiesTabType>('TECHNICAL_SCREENER');
   const [activeOptionsTab, setActiveOptionsTab] = useState<OptionsTabType>('WEEKLY_POSITION_AUDIT');
   const [activeChartSymbol, setActiveChartSymbol] = useState<string>('TSLA');
+
+  // Client-Side Route Parsing & URL Synchronization
+  const parseRouteFromLocation = (): {
+    tree: MenuTreeType;
+    optionsTab?: OptionsTabType;
+    equitiesTab?: EquitiesTabType;
+  } => {
+    if (typeof window === 'undefined') return { tree: 'WORKFLOW' };
+    const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+    const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '');
+    const path = hash ? `/${hash}` : rawPath;
+
+    if (path === '/methodology' || path === '/rules') return { tree: 'METHODOLOGY' };
+    if (path === '/faq' || path === '/help' || path === '/handbook') return { tree: 'FAQ' };
+    if (path === '/disclaimer' || path === '/disclosures' || path === '/terms') return { tree: 'DISCLAIMER' };
+    if (path === '/equities' || path === '/screener' || path === '/stocks') return { tree: 'EQUITIES', equitiesTab: 'TECHNICAL_SCREENER' };
+    if (path === '/options' || path === '/options-screener') return { tree: 'OPTIONS', optionsTab: 'WEEKLY_POSITION_AUDIT' };
+    if (path === '/spreads' || path === '/multi-leg') return { tree: 'OPTIONS', optionsTab: 'MULTI_LEG_SPREADS' };
+    if (path === '/margin' || path === '/risk') return { tree: 'OPTIONS', optionsTab: 'PORTFOLIO_MARGIN_SIM' };
+    if (path === '/calendar' || path === '/economic-calendar') return { tree: 'OPTIONS', optionsTab: 'ECONOMIC_CALENDAR' };
+    if (path === '/workflow' || path === '/') return { tree: 'WORKFLOW', optionsTab: 'WEEKLY_CASH_LEDGER' };
+
+    return { tree: 'WORKFLOW' };
+  };
+
+  const navigateTo = (
+    tree: MenuTreeType,
+    optionsTab?: OptionsTabType,
+    equitiesTab?: EquitiesTabType,
+    push = true
+  ) => {
+    setActiveTree(tree);
+    if (optionsTab) setActiveOptionsTab(optionsTab);
+    if (equitiesTab) setActiveEquitiesTab(equitiesTab);
+
+    let path = '/';
+    if (tree === 'METHODOLOGY') path = '/methodology';
+    else if (tree === 'FAQ') path = '/faq';
+    else if (tree === 'DISCLAIMER') path = '/disclaimer';
+    else if (tree === 'EQUITIES') path = '/equities';
+    else if (tree === 'OPTIONS') {
+      if (optionsTab === 'MULTI_LEG_SPREADS') path = '/spreads';
+      else if (optionsTab === 'PORTFOLIO_MARGIN_SIM') path = '/margin';
+      else if (optionsTab === 'ECONOMIC_CALENDAR') path = '/calendar';
+      else path = '/options';
+    } else if (tree === 'WORKFLOW') {
+      path = '/workflow';
+    }
+
+    if (push && typeof window !== 'undefined' && window.location.pathname !== path) {
+      try {
+        window.history.pushState({ tree, optionsTab, equitiesTab }, '', path);
+      } catch {
+        // Restricted environment fallback
+      }
+    }
+  };
+
+  // Synchronize route on mount and browser popstate / back / forward
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parseRouteFromLocation();
+      setActiveTree(route.tree);
+      if (route.optionsTab) setActiveOptionsTab(route.optionsTab);
+      if (route.equitiesTab) setActiveEquitiesTab(route.equitiesTab);
+    };
+
+    const initial = parseRouteFromLocation();
+    if (initial.tree !== 'WORKFLOW') {
+      setActiveTree(initial.tree);
+      if (initial.optionsTab) setActiveOptionsTab(initial.optionsTab);
+      if (initial.equitiesTab) setActiveEquitiesTab(initial.equitiesTab);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
+  }, []);
 
   // Interactive Modal States
   const [selectedTicker, setSelectedTicker] = useState<TickerMeta | null>(null);
@@ -1456,7 +1540,7 @@ export const App: React.FC = () => {
         {/* Dual Navigation Tree: US Equities Analysis vs Options Engine */}
         <DualMenuTree
           activeTree={activeTree}
-          onSelectTree={(tree) => setActiveTree(tree)}
+          onSelectTree={(tree) => navigateTo(tree, activeOptionsTab, activeEquitiesTab)}
           activeEquitiesTab={activeEquitiesTab}
           onSelectEquitiesTab={handleSelectEquitiesTab}
           activeOptionsTab={activeOptionsTab}
@@ -1475,7 +1559,7 @@ export const App: React.FC = () => {
           <div className="flex items-center space-x-2 text-slate-400">
             <span className="text-slate-500 font-semibold">📍 Location:</span>
             <button
-              onClick={() => setActiveTree('WORKFLOW')}
+              onClick={() => navigateTo('WORKFLOW', 'WEEKLY_CASH_LEDGER')}
               className={`hover:underline font-semibold ${
                 activeTree === 'WORKFLOW' ? 'text-emerald-400 font-bold' : 'text-slate-400'
               }`}
@@ -1484,7 +1568,7 @@ export const App: React.FC = () => {
             </button>
             <span>/</span>
             <button
-              onClick={() => setActiveTree('OPTIONS')}
+              onClick={() => navigateTo('OPTIONS', 'WEEKLY_POSITION_AUDIT')}
               className={`hover:underline font-semibold ${
                 activeTree === 'OPTIONS' ? 'text-indigo-400 font-bold' : 'text-slate-400'
               }`}
@@ -1493,7 +1577,7 @@ export const App: React.FC = () => {
             </button>
             <span>/</span>
             <button
-              onClick={() => setActiveTree('EQUITIES')}
+              onClick={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
               className={`hover:underline font-semibold ${
                 activeTree === 'EQUITIES' ? 'text-blue-400 font-bold' : 'text-slate-400'
               }`}
@@ -1502,7 +1586,13 @@ export const App: React.FC = () => {
             </button>
             <span>/</span>
             <span className="text-white font-bold font-mono">
-              {activeTree === 'EQUITIES'
+              {activeTree === 'METHODOLOGY'
+                ? 'QUANTITATIVE METHODOLOGY'
+                : activeTree === 'FAQ'
+                ? 'INVESTOR FAQ'
+                : activeTree === 'DISCLAIMER'
+                ? 'REGULATORY DISCLAIMERS'
+                : activeTree === 'EQUITIES'
                 ? activeEquitiesTab.replace(/_/g, ' ')
                 : activeOptionsTab.replace(/_/g, ' ')}
             </span>
@@ -1840,7 +1930,24 @@ export const App: React.FC = () => {
 
         {/* Primary Content View Switcher */}
         <Suspense fallback={<LoadingSkeleton rows={8} className="p-4" />}>
-        {activeTree === 'EQUITIES' ? (
+        {activeTree === 'METHODOLOGY' ? (
+          <MethodologyView
+            onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
+            onNavigateToOptions={() => navigateTo('OPTIONS', 'WEEKLY_POSITION_AUDIT')}
+          />
+        ) : activeTree === 'FAQ' ? (
+          <FaqView
+            onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
+            onNavigateToMethodology={() => navigateTo('METHODOLOGY')}
+            onOpenTradier={() => setIsTradierModalOpen(true)}
+            onOpenSchwab={() => setIsSchwabModalOpen(true)}
+          />
+        ) : activeTree === 'DISCLAIMER' ? (
+          <DisclaimerView
+            onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
+            onNavigateToMethodology={() => navigateTo('METHODOLOGY')}
+          />
+        ) : activeTree === 'EQUITIES' ? (
           activeEquitiesTab === 'WEEKLY_STOCK_SCREENERS' ? (
             /* Weekly Stock Screeners (Barchart Direction Strength & Multi-Source Engine) */
             <WeeklyStockScreenersView
@@ -2518,15 +2625,161 @@ export const App: React.FC = () => {
       )}
       </Suspense>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 space-y-2">
-          <p className="font-semibold text-slate-300">
-            DeltaHarvest Institutional • Systematic US Equities Analysis &amp; Options Income
-          </p>
-          <p className="text-[11px] text-slate-500 max-w-2xl mx-auto">
-            Rules: Cash-Secured Put strikes $\le$ Lower Bollinger Band (2 SD); Covered Call strikes $\ge$ Upper Bollinger Band (2 SD). Always observe the 80% Profit Buy-to-Close trigger and 0.50 Delta roll trigger.
-          </p>
+      {/* Comprehensive Footer with SEO & Crawler-Friendly Internal Hyperlinks */}
+      <footer className="border-t border-slate-800/80 bg-slate-950/95 py-10 mt-14 text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-left">
+            {/* Column 1: Brand & Overview */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+                  Δ
+                </div>
+                <span className="font-bold text-white tracking-tight text-sm">DeltaHarvest Institutional</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Systematic US equities quantitative analysis, conservative options cash flow harvesting, and institutional risk management.
+              </p>
+              <div className="text-[10px] font-mono text-emerald-400">
+                Tradier API Primary • Schwab Retail Fallback
+              </div>
+            </div>
+
+            {/* Column 2: Core Workflows */}
+            <div className="space-y-2">
+              <div className="text-xs font-mono uppercase tracking-wider text-white font-bold">Core Engines</div>
+              <ul className="space-y-1.5 text-[11px]">
+                <li>
+                  <a
+                    href="/workflow"
+                    onClick={(e) => { e.preventDefault(); navigateTo('WORKFLOW', 'WEEKLY_CASH_LEDGER'); }}
+                    className="hover:text-emerald-400 transition-colors"
+                  >
+                    End-of-Week Workflow
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/equities"
+                    onClick={(e) => { e.preventDefault(); navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER'); }}
+                    className="hover:text-emerald-400 transition-colors"
+                  >
+                    Equities Technical Screener
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/options"
+                    onClick={(e) => { e.preventDefault(); navigateTo('OPTIONS', 'WEEKLY_POSITION_AUDIT'); }}
+                    className="hover:text-emerald-400 transition-colors"
+                  >
+                    Weekly Options &amp; Position Audit
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/spreads"
+                    onClick={(e) => { e.preventDefault(); navigateTo('OPTIONS', 'MULTI_LEG_SPREADS'); }}
+                    className="hover:text-emerald-400 transition-colors"
+                  >
+                    Multi-Leg Spreads Analyzer
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 3: Quantitative Tools */}
+            <div className="space-y-2">
+              <div className="text-xs font-mono uppercase tracking-wider text-white font-bold">Risk &amp; Margin</div>
+              <ul className="space-y-1.5 text-[11px]">
+                <li>
+                  <a
+                    href="/margin"
+                    onClick={(e) => { e.preventDefault(); navigateTo('OPTIONS', 'PORTFOLIO_MARGIN_SIM'); }}
+                    className="hover:text-emerald-400 transition-colors"
+                  >
+                    Portfolio Margin (TIMS) Simulator
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/calendar"
+                    onClick={(e) => { e.preventDefault(); navigateTo('OPTIONS', 'ECONOMIC_CALENDAR'); }}
+                    className="hover:text-emerald-400 transition-colors"
+                  >
+                    Economic &amp; Earnings Calendar
+                  </a>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setIsSimulatorModalOpen(true)}
+                    className="hover:text-emerald-400 transition-colors text-left cursor-pointer"
+                  >
+                    Trade Quality Scoring Simulator
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setIsDiagnosticsOpen(true)}
+                    className="hover:text-emerald-400 transition-colors text-left cursor-pointer"
+                  >
+                    API Diagnostics &amp; System Health
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 4: Institutional Documentation & Disclosures */}
+            <div className="space-y-2">
+              <div className="text-xs font-mono uppercase tracking-wider text-white font-bold">Governance &amp; Research</div>
+              <ul className="space-y-1.5 text-[11px]">
+                <li>
+                  <a
+                    href="/methodology"
+                    onClick={(e) => { e.preventDefault(); navigateTo('METHODOLOGY'); }}
+                    className="hover:text-teal-400 font-medium transition-colors"
+                  >
+                    Quantitative Methodology (2.0 SD Rule)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/faq"
+                    onClick={(e) => { e.preventDefault(); navigateTo('FAQ'); }}
+                    className="hover:text-cyan-400 font-medium transition-colors"
+                  >
+                    Investor FAQ &amp; Handbook
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/disclaimer"
+                    onClick={(e) => { e.preventDefault(); navigateTo('DISCLAIMER'); }}
+                    className="hover:text-rose-400 font-medium transition-colors"
+                  >
+                    Regulatory Disclaimers &amp; OCC Risks
+                  </a>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setIsTradierModalOpen(true)}
+                    className="text-emerald-400 hover:text-emerald-300 transition-colors text-left cursor-pointer"
+                  >
+                    Tradier API Settings (Primary)
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
+            <p>
+              &copy; {new Date().getFullYear()} DeltaHarvest Institutional. Quantitative Equity Analysis &amp; Options Income.
+            </p>
+            <p>
+              Rules: Cash-Secured Put strikes &le; Lower Bollinger Band (2 SD); Covered Call strikes &ge; Upper Bollinger Band (2 SD); 80% Buy-to-Close rule; 0.50 Delta Roll trigger.
+            </p>
+          </div>
         </div>
       </footer>
 
