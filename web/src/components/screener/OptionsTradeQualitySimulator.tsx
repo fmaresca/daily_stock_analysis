@@ -20,6 +20,8 @@ import {
   checkEarningsInsideExpiration,
   calculateStraddleImpliedMove,
   calculateEarningsDefendedStrike,
+  isStoredInEarningsRegistry,
+  fetchLiveEarningsInfo,
   EarningsExpirationAnalysis,
   StraddleImpliedMoveResult,
   DefendedStrikeResult,
@@ -198,6 +200,12 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   const [hasEarningsAlert, setHasEarningsAlert] = useState<boolean>(false);
   const [factorEarningsInStrike, setFactorEarningsInStrike] = useState<boolean>(true);
 
+  // Dynamic Earnings Calendar Retrieval & Indication States
+  const [isFetchingEarnings, setIsFetchingEarnings] = useState<boolean>(false);
+  const [earningsFetchStatus, setEarningsFetchStatus] = useState<string | null>(null);
+  const [earningsSyncNotice, setEarningsSyncNotice] = useState<string | null>(null);
+  const [earningsCacheKey, setEarningsCacheKey] = useState<number>(0);
+
   // Live Fetch & Technical Hydration States
   const [isFetching, setIsFetching] = useState<boolean>(false);
   const [fetchStatus, setFetchStatus] = useState<string | null>(null);
@@ -209,8 +217,9 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   // Dynamic analysis of whether an earnings announcement occurs within the options expiration period
   const earningsAnalysis = useMemo(() => {
     if (!ticker || !expirationDate) return null;
+    // earningsCacheKey triggers re-analysis when live earnings are discovered and cached
     return checkEarningsInsideExpiration(ticker, expirationDate);
-  }, [ticker, expirationDate]);
+  }, [ticker, expirationDate, earningsCacheKey]);
 
   // Auto-engage or disengage earnings alert when ticker or expiration date changes
   useEffect(() => {
@@ -218,6 +227,51 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       setHasEarningsAlert(earningsAnalysis.hasEarningsInsideExpiration);
     }
   }, [earningsAnalysis?.hasEarningsInsideExpiration]);
+
+  // Automatically detect if ticker lacks stored earnings intelligence and pause to fetch live schedule
+  useEffect(() => {
+    const cleanSym = ticker.trim().toUpperCase();
+    if (!cleanSym || cleanSym.length < 1) return;
+
+    // Skip if already in registry, cache, or broad market ETF
+    if (isStoredInEarningsRegistry(cleanSym)) {
+      return;
+    }
+
+    let isCancelled = false;
+    setIsFetchingEarnings(true);
+    setEarningsFetchStatus(`Pausing to fetch corporate earnings calendar for ${cleanSym}...`);
+
+    fetchLiveEarningsInfo(cleanSym, (status) => {
+      if (!isCancelled) {
+        setEarningsFetchStatus(status);
+      }
+    })
+      .then((entry) => {
+        if (!isCancelled) {
+          setIsFetchingEarnings(false);
+          setEarningsCacheKey((prev) => prev + 1);
+          setEarningsSyncNotice(
+            `Live Earnings Calendar Synced: ${entry.symbol} reports ${entry.nextEarningsDate} (${entry.timeOfDay || 'AMC'})`
+          );
+          setTimeout(() => {
+            setEarningsFetchStatus(null);
+            setEarningsSyncNotice(null);
+          }, 4500);
+        }
+      })
+      .catch((err) => {
+        if (!isCancelled) {
+          console.warn(`Could not sync live earnings for ${cleanSym}:`, err);
+          setIsFetchingEarnings(false);
+          setEarningsFetchStatus(null);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [ticker]);
 
   // Live quick expiration targets based on NYSE holiday calendar
   const quickExpirations = useMemo(() => {
@@ -427,7 +481,20 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
     setFetchStatus(`Pulling ${sourceToUse === 'BARCHART' ? 'Barchart.com' : 'MarketChameleon.com'} technicals for ${sym}...`);
 
     try {
+      // 0. Synchronize corporate earnings calendar if not stored
+      if (!isStoredInEarningsRegistry(sym)) {
+        setIsFetchingEarnings(true);
+        setFetchStatus(`[1/3] Pausing to synchronize live corporate earnings calendar for ${sym}...`);
+        await fetchLiveEarningsInfo(sym, (status) => {
+          setEarningsFetchStatus(status);
+          setFetchStatus(`[1/3] ${status}`);
+        });
+        setIsFetchingEarnings(false);
+        setEarningsCacheKey((prev) => prev + 1);
+      }
+
       // 1. Fetch live market price & daily closes
+      setFetchStatus(`[2/3] Pulling ${sourceToUse === 'BARCHART' ? 'Barchart.com' : 'MarketChameleon.com'} technicals for ${sym}...`);
       const chartData = await fetchTickerChartData(sym);
       const profile = classifySectorAndBaseVol(sym, `${sym} Equity`);
       const intel = SECURITY_INTELLIGENCE_REGISTRY[sym];
@@ -948,6 +1015,44 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
           </div>
         )}
 
+        {/* Live Earnings Sync Progress & Latency Notification Banner */}
+        {isFetchingEarnings && (
+          <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/40 rounded-xl text-amber-300 text-xs flex items-center justify-between shadow-sm shadow-amber-500/10 animate-pulse">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+              </div>
+              <div>
+                <div className="font-bold flex items-center gap-2">
+                  <span>{earningsFetchStatus || `Pausing to fetch corporate earnings calendar for ${ticker}...`}</span>
+                  <span className="text-[9px] bg-amber-500/20 text-amber-200 px-1.5 py-0.5 rounded border border-amber-500/30 font-mono uppercase">
+                    Live SEC/Event Sync
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-400/80 mt-0.5 font-sans">
+                  Querying corporate reporting calendars &amp; disclosure feeds to determine earnings dates and ATM straddle defense. Expect a brief pause.
+                </p>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-amber-400 shrink-0">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              <span>Fetching...</span>
+            </div>
+          </div>
+        )}
+
+        {earningsSyncNotice && (
+          <div className="mt-3 p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs flex items-center justify-between font-mono">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{earningsSyncNotice}</span>
+            </div>
+            <span className="text-[9px] uppercase px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded border border-emerald-500/30">
+              Live Synced
+            </span>
+          </div>
+        )}
+
         {/* Pulled Technical Intelligence Card */}
         {pulledData && (
           <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-xs font-mono">
@@ -1046,6 +1151,26 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
           </div>
         </div>
 
+        {/* Live Earnings Fetch In-Flight Banner */}
+        {isFetchingEarnings && !simulatedContract.isEarningsActive && (
+          <div className="mb-3.5 p-3.5 rounded-xl border border-amber-500/40 bg-amber-950/20 text-amber-200 text-xs shadow-sm shadow-amber-500/10">
+            <div className="flex items-center gap-2.5">
+              <RefreshCw className="w-4 h-4 animate-spin text-amber-400 shrink-0" />
+              <div>
+                <span className="font-bold text-amber-300 text-xs flex items-center gap-2">
+                  <span>Synchronizing Corporate Earnings Calendar for {ticker || 'Underlying'}...</span>
+                  <span className="text-[9px] bg-amber-500/20 text-amber-200 px-1.5 py-0.5 rounded border border-amber-500/30 font-mono uppercase">
+                    In Progress
+                  </span>
+                </span>
+                <p className="text-[11px] text-amber-400/80 mt-0.5 font-sans">
+                  The simulator is pausing to query live event feeds for announcement dates. The ATM Straddle Implied Move and Defended Strike will update as soon as the date is retrieved.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Earnings Straddle Implied Move Alert & Defense Banner */}
         {simulatedContract.isEarningsActive && (
           <div className={`mb-3.5 p-3.5 rounded-xl border ${
@@ -1056,11 +1181,27 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-2.5">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className={`w-4 h-4 shrink-0 ${simulatedContract.clearsStraddle ? 'text-emerald-400' : 'text-rose-400 animate-pulse'}`} />
-                <span className="font-bold text-xs text-white">
-                  Earnings Announcement Inside Expiration Window: {earningsAnalysis?.earningsDate || 'Imminent'}
-                  {earningsAnalysis?.fiscalQuarter ? ` (${earningsAnalysis.fiscalQuarter})` : ''}
+                <span className="font-bold text-xs text-white flex items-center flex-wrap gap-1.5">
+                  <span>Earnings Announcement Inside Expiration Window: {earningsAnalysis?.earningsDate || 'Imminent'}</span>
+                  {earningsAnalysis?.fiscalQuarter && (
+                    <span className="text-slate-300">({earningsAnalysis.fiscalQuarter})</span>
+                  )}
+                  {earningsAnalysis?.timeOfDay && (
+                    <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700 font-mono">
+                      {earningsAnalysis.timeOfDay === 'AMC' ? 'After Close (AMC)' : earningsAnalysis.timeOfDay === 'BMO' ? 'Before Open (BMO)' : earningsAnalysis.timeOfDay}
+                    </span>
+                  )}
+                  {earningsAnalysis?.isConfirmed ? (
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">
+                      Confirmed Live
+                    </span>
+                  ) : (
+                    <span className="text-[9px] bg-amber-500/20 text-amber-300 font-medium px-1.5 py-0.5 rounded border border-amber-500/30">
+                      Projected Cycle
+                    </span>
+                  )}
                   {earningsAnalysis?.daysBeforeExpiration !== null && earningsAnalysis?.daysBeforeExpiration !== undefined && (
-                    <span className="ml-1 text-slate-300 font-normal">
+                    <span className="text-slate-300 font-normal">
                       &bull; Reports {earningsAnalysis.daysBeforeExpiration} days before expiration
                     </span>
                   )}
