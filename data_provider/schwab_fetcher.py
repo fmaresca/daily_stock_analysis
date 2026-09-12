@@ -156,11 +156,11 @@ class SchwabAuthManager:
 class SchwabFetcher(BaseFetcher):
     """
     Charles Schwab Retail Trader API Fetcher.
-    Highest priority for real-time US quotes and options chains with live Greeks.
+    Secondary / Fallback provider for real-time US quotes and options chains with live Greeks.
     """
 
     name = "SchwabFetcher"
-    priority = 1
+    priority = 2
 
     def __init__(self, auth_manager: Optional[SchwabAuthManager] = None):
         self.auth = auth_manager or SchwabAuthManager()

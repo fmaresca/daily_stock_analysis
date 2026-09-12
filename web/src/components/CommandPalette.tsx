@@ -32,6 +32,7 @@ interface CommandPaletteProps {
   onOpenHelp: () => void;
   onOpenWatchlist: () => void;
   onOpenReports: () => void;
+  onOpenTradier?: () => void;
   onOpenSchwab?: () => void;
   onOpenDiagnostics?: () => void;
   onOpenSimulator?: () => void;
@@ -49,6 +50,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenHelp,
   onOpenWatchlist,
   onOpenReports,
+  onOpenTradier,
   onOpenSchwab,
   onOpenDiagnostics,
   onOpenSimulator,
@@ -319,8 +321,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
+      id: 'action-tradier',
+      title: 'Tradier API Provisioning & Settings (Primary)',
+      subtitle: 'Configure Tradier developer API Key for primary live market data & options chains',
+      icon: <Key className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        if (onOpenTradier) onOpenTradier();
+        onClose();
+      },
+    },
+    {
       id: 'action-schwab',
-      title: 'Charles Schwab API Provisioning & Settings',
+      title: 'Charles Schwab API Provisioning & Settings (Fallback)',
       subtitle: 'Configure retail developer App Key, Secret, and OAuth tokens',
       icon: <Key className="w-4 h-4 text-blue-400" />,
       action: () => {

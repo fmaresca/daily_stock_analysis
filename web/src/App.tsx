@@ -19,6 +19,7 @@ const TickerAuditModal = lazy(() => import('./components/TickerAuditModal').then
 const OptionDetailModal = lazy(() => import('./components/OptionDetailModal').then(m => ({ default: m.OptionDetailModal })));
 const IncomeCalculatorModal = lazy(() => import('./components/IncomeCalculatorModal').then(m => ({ default: m.IncomeCalculatorModal })));
 const SchwabSettingsModal = lazy(() => import('./components/SchwabSettingsModal').then(m => ({ default: m.SchwabSettingsModal })));
+const TradierSettingsModal = lazy(() => import('./components/TradierSettingsModal').then(m => ({ default: m.TradierSettingsModal })));
 const ApiDiagnosticsModal = lazy(() => import('./components/ApiDiagnosticsModal').then(m => ({ default: m.ApiDiagnosticsModal })));
 const BrokerOrderStagingModal = lazy(() => import('./components/BrokerOrderStagingModal').then(m => ({ default: m.BrokerOrderStagingModal })));
 const AlertSettingsModal = lazy(() => import('./components/AlertSettingsModal').then(m => ({ default: m.AlertSettingsModal })));
@@ -138,6 +139,7 @@ export const App: React.FC = () => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState<boolean>(false);
   const [isReportQueryModalOpen, setIsReportQueryModalOpen] = useState<boolean>(false);
+  const [isTradierModalOpen, setIsTradierModalOpen] = useState<boolean>(false);
   const [isSchwabModalOpen, setIsSchwabModalOpen] = useState<boolean>(false);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState<boolean>(false);
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState<boolean>(false);
@@ -1437,6 +1439,7 @@ export const App: React.FC = () => {
         onOpenHelp={() => setIsHelpModalOpen(true)}
         onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
+        onOpenTradier={() => setIsTradierModalOpen(true)}
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
         onOpenAlerts={() => setIsAlertsModalOpen(true)}
         onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
@@ -2357,6 +2360,7 @@ export const App: React.FC = () => {
         onOpenHelp={() => setIsHelpModalOpen(true)}
         onOpenWatchlist={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
+        onOpenTradier={() => setIsTradierModalOpen(true)}
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
         onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
         onOpenSimulator={() => setIsSimulatorModalOpen(true)}
@@ -2371,19 +2375,36 @@ export const App: React.FC = () => {
         onClose={() => setIsHelpModalOpen(false)}
       />
 
-      {/* 3. Charles Schwab Retail Trader API Provisioning Modal */}
+      {/* 3. Tradier API Settings Modal (Primary) */}
+      <TradierSettingsModal
+        isOpen={isTradierModalOpen}
+        onClose={() => setIsTradierModalOpen(false)}
+        onOpenSchwabSettings={() => {
+          setIsTradierModalOpen(false);
+          setIsSchwabModalOpen(true);
+        }}
+      />
+
+      {/* 3.1. Charles Schwab Retail Trader API Provisioning Modal (Fallback) */}
       <SchwabSettingsModal
         isOpen={isSchwabModalOpen}
         onClose={() => setIsSchwabModalOpen(false)}
       />
 
-      {/* 3.1. API Health & Automated Diagnostics Suite Modal */}
+      {/* 3.2. API Health & Automated Diagnostics Suite Modal */}
       {isDiagnosticsOpen && (
         <ErrorBoundary fallbackTitle="API Diagnostics Suite Recovered" onReset={() => setIsDiagnosticsOpen(false)}>
           <ApiDiagnosticsModal
             isOpen={isDiagnosticsOpen}
             onClose={() => setIsDiagnosticsOpen(false)}
-            onOpenSchwabSettings={() => setIsSchwabModalOpen(true)}
+            onOpenTradierSettings={() => {
+              setIsDiagnosticsOpen(false);
+              setIsTradierModalOpen(true);
+            }}
+            onOpenSchwabSettings={() => {
+              setIsDiagnosticsOpen(false);
+              setIsSchwabModalOpen(true);
+            }}
           />
         </ErrorBoundary>
       )}

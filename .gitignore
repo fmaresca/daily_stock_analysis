@@ -54,11 +54,14 @@ env/
 .cursorrules
 
 # 数据和日志
-/data/
+/data/*
+!/data/options_data.json
+!/data/watchlist.json
 /.llm_usage_hmac_secret
 **/.llm_usage_hmac_secret
 logs/
-reports/
+reports/*
+!reports/latest_options_audit.md
 *.db
 *.sqlite
 *.sqlite3
