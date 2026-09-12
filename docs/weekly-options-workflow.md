@@ -100,6 +100,8 @@ where:
 - `web/src/components/EconomicCalendarView.tsx`: Step 4 Command Center (High-impact USD macro events with 3-tier fallback).
 - `web/src/components/CascadingScreenerView.tsx`: Step 5 Interactive Screener (Tri-screen funnel, TOS import, and Gemini Extended Thinking prompt bridge).
 - `web/src/components/WeeklyExecutiveReportView.tsx`: Step 6 Comprehensive Master Report (Multi-tier metrics, transactions audit trail, and print PDF).
+- `web/src/components/ExecutivePortfolioDigestView.tsx`: Interactive Executive Portfolio Digest (Interactive Threat Register Modal with 0.50Δ Roll Protocol & Binary Events Shock Buffer Modal with 90-day rolling fallback).
+- `web/src/utils/earningsCalendar.ts`: Corporate earnings calendar detection, straddle move estimation, and 90-day rolling fallback.
 - `web/src/components/BrokerStagingWorkbench.tsx`: Step 7 Order Workbench (Validated broker payloads, 80% profit brackets, and execution history).
 - `web/src/components/DualMenuTree.tsx`: Revamped navigation with 7-Step Weekly Workflow, Strategy Labs, and Equities Universe.
 - `web/src/components/HelpHandbookModal.tsx`: Educational handbook chapter on weekly routine, capital rules, FAQs, and institutional principles.
