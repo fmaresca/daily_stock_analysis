@@ -43,6 +43,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
   const [refreshKey, setRefreshKey] = useState(0);
   const [isLiveTxModalOpen, setIsLiveTxModalOpen] = useState(false);
   const [successToast, setSuccessToast] = useState('');
+  const [printCleanText, setPrintCleanText] = useState(true);
 
   // Listen for live transaction updates across the app during the trading week
   useEffect(() => {
@@ -218,7 +219,20 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <label
+            className="flex items-center space-x-1.5 text-xs text-slate-300 hover:text-white cursor-pointer select-none px-2.5 py-2 rounded-xl border border-slate-700 bg-slate-800/80 shadow-sm"
+            title="When checked, suppresses background graphics/fills and renders PDF in clean text form with light formatting"
+          >
+            <input
+              type="checkbox"
+              checked={printCleanText}
+              onChange={(e) => setPrintCleanText(e.target.checked)}
+              className="rounded border-slate-600 text-emerald-500 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-500"
+            />
+            <span className="font-mono text-[11px] whitespace-nowrap">Text Form / No Backgrounds</span>
+          </label>
+
           <button
             onClick={() => setIsLiveTxModalOpen(true)}
             className="px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-white shadow-lg shadow-amber-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
@@ -254,7 +268,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
       )}
 
       {/* Printable Master Report Body */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 print:border-none print:bg-white print:text-black print:p-0">
+      <div className={`bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 print:border-none print:bg-white print:text-black print:p-0 ${printCleanText ? 'print-clean-text' : ''}`}>
         {/* Printable Header */}
         <div className="border-b border-slate-800 pb-4 print:border-black">
           <div className="flex items-center justify-between">

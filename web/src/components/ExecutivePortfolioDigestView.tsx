@@ -21,6 +21,7 @@ import {
 
 export const ExecutivePortfolioDigestView: React.FC = () => {
   const [metrics, setMetrics] = useState<ExecutiveDigestMetrics>(() => calculateLiveExecutiveMetrics());
+  const [printCleanText, setPrintCleanText] = useState(true);
 
   useEffect(() => {
     const handleSync = () => {
@@ -53,7 +54,7 @@ export const ExecutivePortfolioDigestView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className={`space-y-6 animate-fadeIn ${printCleanText ? 'print-clean-text' : ''}`}>
       {/* Header Banner */}
       <div className="glass-panel p-6 rounded-2xl border border-slate-800/80 bg-gradient-to-r from-slate-900/95 via-slate-900/60 to-slate-950 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -76,7 +77,20 @@ export const ExecutivePortfolioDigestView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <label
+              className="flex items-center space-x-1.5 text-xs text-slate-300 hover:text-white cursor-pointer select-none px-2.5 py-2 rounded-xl border border-slate-700 bg-slate-800/80 shadow-sm"
+              title="When checked, suppresses background graphics/fills and renders PDF in clean text form with light formatting"
+            >
+              <input
+                type="checkbox"
+                checked={printCleanText}
+                onChange={(e) => setPrintCleanText(e.target.checked)}
+                className="rounded border-slate-600 text-blue-500 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer accent-blue-500"
+              />
+              <span className="font-mono text-[11px] whitespace-nowrap">Text Form / No Backgrounds</span>
+            </label>
+
             <button
               onClick={handleDownloadMarkdown}
               className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-300 border border-blue-500/30 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
