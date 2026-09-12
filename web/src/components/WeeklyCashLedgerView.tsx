@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   AccountCapitalState,
   TaxLedgerState,
+  TaxLedgerRecord,
   DisbursementItem,
 } from '../types/options';
 import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from '../utils/portfolioStressTest';
@@ -36,6 +37,7 @@ import {
   AlertTriangle,
   Upload,
   Zap,
+  Edit2,
 } from './icons';
 
 interface WeeklyCashLedgerViewProps {
@@ -100,8 +102,14 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
       setInlineCashValue(freshCapital.totalCash);
       setInputTargetAllocation(freshCapital.maxPerPositionAllocation || DEFAULT_PER_POSITION_BUDGET);
       setInputPriorYtdPremiums(freshCapital.priorYtdPremiumBalance);
+      setInputPriorYtdBalanceOnly(freshCapital.priorYtdPremiumBalance);
+      setModalStartingYtdInput(freshCapital.priorYtdPremiumBalance);
       setInputCurrentWeekPremiums(freshCapital.currentWeekPremiumsCollected);
       setInputLossCarryover(freshTax.priorYearLossCarryforward);
+      setInputRealizedGains(freshTax.ytdRealizedCapitalGains);
+      setInputRealizedLosses(freshTax.ytdRealizedCapitalLosses);
+      setInputTaxCarryover(freshTax.priorYearLossCarryforward);
+      setInputTaxYear(freshTax.currentTaxYear);
     };
 
     window.addEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
@@ -129,6 +137,20 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
   const [inputLossCarryover, setInputLossCarryover] = useState<number>(
     taxState.priorYearLossCarryforward
   );
+
+  // Dedicated modal for editing Starting / Prior YTD Premium Balance ($603,305.40)
+  const [isEditPriorYtdOpen, setIsEditPriorYtdOpen] = useState(false);
+  const [inputPriorYtdBalanceOnly, setInputPriorYtdBalanceOnly] = useState<number>(capitalState.priorYtdPremiumBalance);
+
+  // Dedicated modal for editing YTD Capital Gains, Losses & Loss Carryforwards
+  const [isEditTaxGainsOpen, setIsEditTaxGainsOpen] = useState(false);
+  const [inputRealizedGains, setInputRealizedGains] = useState<number>(taxState.ytdRealizedCapitalGains);
+  const [inputRealizedLosses, setInputRealizedLosses] = useState<number>(taxState.ytdRealizedCapitalLosses);
+  const [inputTaxCarryover, setInputTaxCarryover] = useState<number>(taxState.priorYearLossCarryforward);
+  const [inputTaxYear, setInputTaxYear] = useState<number>(taxState.currentTaxYear);
+
+  // Field in "Log Current Week Premium" modal for editing starting YTD before logging
+  const [modalStartingYtdInput, setModalStartingYtdInput] = useState<number>(capitalState.priorYtdPremiumBalance);
 
   // Quick inline cash editing
   const [isEditingInlineCash, setIsEditingInlineCash] = useState(false);
@@ -292,12 +314,80 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     const updatedTax: TaxLedgerState = {
       ...taxState,
       priorYearLossCarryforward: Number(inputLossCarryover),
+      ytdRealizedCapitalGains: Number(inputRealizedGains),
+      ytdRealizedCapitalLosses: Number(inputRealizedLosses),
       ytdPremiumsEarned: Number(inputPriorYtdPremiums) + Number(inputCurrentWeekPremiums),
     };
     setTaxState(updatedTax);
     saveTaxLedgerState(updatedTax);
 
     setIsEditCashOpen(false);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('deltaharvest_portfolio_updated', {
+          detail: { source: 'balances_updated', capital: updatedCap, taxLedger: updatedTax },
+        })
+      );
+    }
+  };
+
+  // Handle Save Prior YTD Balance Only ($603,305.40)
+  const handleSavePriorYtdBalance = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newPrior = Number(inputPriorYtdBalanceOnly);
+    const newYtdTotal = newPrior + capitalState.currentWeekPremiumsCollected;
+
+    const updatedCap: AccountCapitalState = {
+      ...capitalState,
+      priorYtdPremiumBalance: newPrior,
+      ytdPremiumsEarned: newYtdTotal,
+      lastUpdated: new Date().toISOString(),
+    };
+    setCapitalState(updatedCap);
+    saveCapitalState(updatedCap);
+    setInputPriorYtdPremiums(newPrior);
+    setModalStartingYtdInput(newPrior);
+
+    const updatedTax: TaxLedgerState = {
+      ...taxState,
+      ytdPremiumsEarned: newYtdTotal,
+    };
+    setTaxState(updatedTax);
+    saveTaxLedgerState(updatedTax);
+    setIsEditPriorYtdOpen(false);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('deltaharvest_portfolio_updated', {
+          detail: { source: 'prior_ytd_updated', capital: updatedCap, taxLedger: updatedTax },
+        })
+      );
+    }
+  };
+
+  // Handle Save YTD Capital Gains, Losses & Carryforward
+  const handleSaveTaxGains = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updatedTax: TaxLedgerState = {
+      ...taxState,
+      currentTaxYear: Number(inputTaxYear) || 2026,
+      ytdRealizedCapitalGains: Number(inputRealizedGains),
+      ytdRealizedCapitalLosses: Number(inputRealizedLosses),
+      priorYearLossCarryforward: Number(inputTaxCarryover),
+    };
+    setTaxState(updatedTax);
+    saveTaxLedgerState(updatedTax);
+    setInputLossCarryover(Number(inputTaxCarryover));
+    setIsEditTaxGainsOpen(false);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('deltaharvest_portfolio_updated', {
+          detail: { source: 'tax_gains_updated', taxLedger: updatedTax },
+        })
+      );
+    }
   };
 
   // Handle Add Disbursement
@@ -352,26 +442,31 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     saveCapitalState(updated);
   };
 
-  // Handle Add Weekly Premium Record
+  // Handle Add Weekly Premium Record (with prior starting balance check/update)
   const handleAddWeeklyPremium = (e: React.FormEvent) => {
     e.preventDefault();
+    const startingYtd = Number(modalStartingYtdInput) || capitalState.priorYtdPremiumBalance;
     const addedAmount = Number(premAmount);
     const newWeeklyTotal = capitalState.currentWeekPremiumsCollected + addedAmount;
-    const newYtdTotal = capitalState.priorYtdPremiumBalance + newWeeklyTotal;
+    const newYtdTotal = startingYtd + newWeeklyTotal;
 
     const updatedCap: AccountCapitalState = {
       ...capitalState,
+      priorYtdPremiumBalance: startingYtd,
       currentWeekPremiumsCollected: newWeeklyTotal,
       ytdPremiumsEarned: newYtdTotal,
+      lastUpdated: new Date().toISOString(),
     };
     setCapitalState(updatedCap);
     saveCapitalState(updatedCap);
+    setInputPriorYtdPremiums(startingYtd);
+    setInputPriorYtdBalanceOnly(startingYtd);
 
-    const newRec = {
+    const newRec: TaxLedgerRecord = {
       id: `PREM_${Date.now()}`,
       date: new Date().toISOString().split('T')[0],
       symbol: premSymbol.toUpperCase().trim() || 'WEEKLY_EXP',
-      type: 'PREMIUM_EARNED' as const,
+      type: 'PREMIUM_EARNED',
       amount: addedAmount,
       strategy: 'CSP',
       note: `${premType}: ${premNote || 'Current week settlement'}`,
@@ -388,6 +483,14 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     setIsAddWeekPremiumOpen(false);
     setPremSymbol('');
     setPremNote('');
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('deltaharvest_portfolio_updated', {
+          detail: { source: 'weekly_premium_logged', capital: updatedCap, taxLedger: updatedTax },
+        })
+      );
+    }
   };
 
   return (
@@ -843,7 +946,7 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
         </div>
       </div>
 
-      {/* 3. Dual Panels: Calendar YTD Premiums & Prior-Year Carryover */}
+      {/* 3. Dual Panels: Calendar YTD Premiums & YTD Capital Gains / Carryover */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Panel A: Calendar YTD Premiums Tracking */}
         <div className="glass-panel p-4 rounded-2xl border border-slate-800 shadow-xl space-y-3 bg-gradient-to-br from-slate-900/90 to-slate-950">
@@ -852,28 +955,54 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
               <TrendingUp className="w-4 h-4 text-emerald-400" />
               <span>Calendar YTD Premiums Tracking ({taxState.currentTaxYear})</span>
             </span>
-            <button
-              onClick={() => setIsAddWeekPremiumOpen(true)}
-              className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center space-x-1 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Log Current Week Premium</span>
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  setInputPriorYtdBalanceOnly(capitalState.priorYtdPremiumBalance);
+                  setIsEditPriorYtdOpen(true);
+                }}
+                className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center space-x-1 cursor-pointer bg-slate-900/80 px-2.5 py-1 rounded-lg border border-cyan-500/30 hover:border-cyan-400/60 transition-colors"
+                title="Directly edit starting YTD baseline balance"
+              >
+                <Edit2 className="w-3 h-3" />
+                <span>Edit Starting YTD</span>
+              </button>
+              <button
+                onClick={() => {
+                  setModalStartingYtdInput(capitalState.priorYtdPremiumBalance);
+                  setIsAddWeekPremiumOpen(true);
+                }}
+                className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center space-x-1 cursor-pointer bg-slate-900/80 px-2.5 py-1 rounded-lg border border-emerald-500/30 hover:border-emerald-400/60 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log Current Week Premium</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2 pt-1">
-            <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">Prior YTD Balance</span>
-              <span className="text-base font-bold font-mono text-slate-200">
-                ${capitalState.priorYtdPremiumBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            <div
+              onClick={() => {
+                setInputPriorYtdBalanceOnly(capitalState.priorYtdPremiumBalance);
+                setIsEditPriorYtdOpen(true);
+              }}
+              className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition-colors group relative"
+              title="Click to edit starting YTD balance ($603,305.40)"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-400 block font-medium">Starting / Prior YTD</span>
+                <Edit2 className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+              </div>
+              <span className="text-base font-bold font-mono text-cyan-300">
+                ${capitalState.priorYtdPremiumBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <span className="text-[9px] text-slate-500 block">Previous weeks</span>
+              <span className="text-[9px] text-slate-500 block">Baseline ($603,305.40 default)</span>
             </div>
 
             <div className="p-2.5 rounded-xl bg-slate-900/80 border border-emerald-500/30">
               <span className="text-[10px] text-emerald-400 block font-semibold">+ Current Week</span>
               <span className="text-base font-bold font-mono text-emerald-300">
-                +${capitalState.currentWeekPremiumsCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                +${capitalState.currentWeekPremiumsCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-[9px] text-emerald-400/70 block">Settled this week</span>
             </div>
@@ -881,61 +1010,124 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
             <div className="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/40">
               <span className="text-[10px] text-white block font-bold">= Cumulative YTD</span>
               <span className="text-base font-bold font-mono text-emerald-400">
-                ${capitalState.ytdPremiumsEarned.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                ${capitalState.ytdPremiumsEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <span className="text-[9px] text-slate-400 block">Resets Jan 1</span>
+              <span className="text-[9px] text-slate-400 block">2026 Calendar Year</span>
             </div>
           </div>
 
           <p className="text-[11px] text-slate-400">
-            Captures all options expired, exercised, or rolled for the current week and adds to your calendar year-to-date starting balance.
+            Captures all options expired, exercised, or rolled for the current week and adds to your calendar year-to-date starting balance ($603,305.40 baseline).
           </p>
         </div>
 
-        {/* Panel B: Prior-Year Loss Carryover & Net Tax Offset */}
+        {/* Panel B: YTD Capital Gains & Loss Carryforward Offset */}
         <div className="glass-panel p-4 rounded-2xl border border-slate-800 shadow-xl space-y-3 bg-gradient-to-br from-slate-900/90 to-slate-950">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
               <Percent className="w-4 h-4 text-cyan-400" />
-              <span>Prior-Year Capital Loss Carryover Offset</span>
+              <span>YTD Capital Gains &amp; Loss Carryforward ({taxState.currentTaxYear})</span>
             </span>
-            <span className="text-[11px] text-cyan-300 font-mono font-semibold">
-              IRS Carryforward Active
-            </span>
+            <button
+              onClick={() => {
+                setInputRealizedGains(taxState.ytdRealizedCapitalGains);
+                setInputRealizedLosses(taxState.ytdRealizedCapitalLosses);
+                setInputTaxCarryover(taxState.priorYearLossCarryforward);
+                setInputTaxYear(taxState.currentTaxYear);
+                setIsEditTaxGainsOpen(true);
+              }}
+              className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center space-x-1 cursor-pointer bg-slate-900/80 px-2.5 py-1 rounded-lg border border-cyan-500/30 hover:border-cyan-400/60 transition-colors"
+              title="Edit YTD Realized Capital Gains, Losses, and Carryforwards"
+            >
+              <Edit2 className="w-3 h-3" />
+              <span>Edit Gains &amp; Carryover</span>
+            </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-1">
-            <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">Prior-Year Carryover</span>
-              <span className="text-base font-bold font-mono text-amber-400">
-                -${taxState.priorYearLossCarryforward.toLocaleString()}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+            <div
+              onClick={() => {
+                setInputRealizedGains(taxState.ytdRealizedCapitalGains);
+                setInputRealizedLosses(taxState.ytdRealizedCapitalLosses);
+                setInputTaxCarryover(taxState.priorYearLossCarryforward);
+                setInputTaxYear(taxState.currentTaxYear);
+                setIsEditTaxGainsOpen(true);
+              }}
+              className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-colors group"
+              title="Click to edit YTD Realized Capital Gains"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-emerald-400 block font-semibold">Realized Gains</span>
+                <Edit2 className="w-2.5 h-2.5 text-slate-500 group-hover:text-emerald-400" />
+              </div>
+              <span className="text-base font-bold font-mono text-emerald-400">
+                +${taxState.ytdRealizedCapitalGains.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <span className="text-[9px] text-slate-500 block">Carried from {taxState.currentTaxYear - 1}</span>
+              <span className="text-[9px] text-slate-500 block">YTD Capital Gains</span>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">Carryover Applied</span>
-              <span className="text-base font-bold font-mono text-cyan-300">
-                -${taxMetrics.carryforwardApplied.toLocaleString()}
+            <div
+              onClick={() => {
+                setInputRealizedGains(taxState.ytdRealizedCapitalGains);
+                setInputRealizedLosses(taxState.ytdRealizedCapitalLosses);
+                setInputTaxCarryover(taxState.priorYearLossCarryforward);
+                setInputTaxYear(taxState.currentTaxYear);
+                setIsEditTaxGainsOpen(true);
+              }}
+              className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-rose-500/50 cursor-pointer transition-colors group"
+              title="Click to edit YTD Realized Capital Losses"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-rose-400 block font-semibold">Realized Losses</span>
+                <Edit2 className="w-2.5 h-2.5 text-slate-500 group-hover:text-rose-400" />
+              </div>
+              <span className="text-base font-bold font-mono text-rose-400">
+                -${taxState.ytdRealizedCapitalLosses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <span className="text-[9px] text-cyan-400/70 block">Offsets gains/premiums</span>
+              <span className="text-[9px] text-slate-500 block">YTD Capital Losses</span>
+            </div>
+
+            <div
+              onClick={() => {
+                setInputRealizedGains(taxState.ytdRealizedCapitalGains);
+                setInputRealizedLosses(taxState.ytdRealizedCapitalLosses);
+                setInputTaxCarryover(taxState.priorYearLossCarryforward);
+                setInputTaxYear(taxState.currentTaxYear);
+                setIsEditTaxGainsOpen(true);
+              }}
+              className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/50 cursor-pointer transition-colors group"
+              title="Click to edit Prior-Year Loss Carryforward"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-amber-400 block font-semibold">Loss Carryforward</span>
+                <Edit2 className="w-2.5 h-2.5 text-slate-500 group-hover:text-amber-400" />
+              </div>
+              <span className="text-base font-bold font-mono text-amber-400">
+                -${taxState.priorYearLossCarryforward.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[9px] text-slate-500 block">IRS Carryover</span>
             </div>
 
             <div className="p-2.5 rounded-xl bg-blue-950/30 border border-blue-500/30">
-              <span className="text-[10px] text-blue-300 block font-semibold">Net Estimated Taxable</span>
+              <span className="text-[10px] text-blue-300 block font-semibold">Net Taxable Est.</span>
               <span className="text-base font-bold font-mono text-white">
-                ${taxMetrics.netTaxableIncome.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+                ${taxMetrics.netTaxableIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <span className="text-[9px] text-slate-400 block">Taxable income</span>
+              <span className="text-[9px] text-slate-400 block">Gains - Losses - Carry</span>
             </div>
           </div>
 
-          <div className="flex justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/80 font-mono">
+          <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-slate-800/80 font-mono">
             <span>
-              Realized Capital Gains: <strong className="text-emerald-400">+${taxState.ytdRealizedCapitalGains.toLocaleString()}</strong>
+              Net Cap Gains: <strong className={taxState.ytdRealizedCapitalGains - taxState.ytdRealizedCapitalLosses >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                {taxState.ytdRealizedCapitalGains - taxState.ytdRealizedCapitalLosses >= 0 ? '+' : ''}${(taxState.ytdRealizedCapitalGains - taxState.ytdRealizedCapitalLosses).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </strong>
             </span>
             <span>
-              Realized Losses: <strong className="text-rose-400">-${taxState.ytdRealizedCapitalLosses.toLocaleString()}</strong>
+              Carryforward Offsetting: <strong className="text-cyan-300">-${taxMetrics.carryforwardApplied.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+            </span>
+            <span>
+              Premiums Included: <strong className="text-emerald-300">+${capitalState.ytdPremiumsEarned.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
             </span>
           </div>
         </div>
@@ -1042,6 +1234,41 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
                 <span className="text-[10px] text-slate-500 mt-0.5 block">
                   Capital loss carried over from prior year to offset current year realized gains and option premiums.
                 </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 block mb-1 font-semibold">
+                    YTD Realized Gains ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={inputRealizedGains}
+                    onChange={(e) => setInputRealizedGains(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono"
+                    required
+                  />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    Closed equity/ETF gains
+                  </span>
+                </div>
+                <div>
+                  <label className="text-slate-300 block mb-1 font-semibold">
+                    YTD Realized Losses ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={inputRealizedLosses}
+                    onChange={(e) => setInputRealizedLosses(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-rose-400 font-mono"
+                    required
+                  />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    Closed equity/ETF losses
+                  </span>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-2 pt-3 border-t border-slate-800">
@@ -1156,6 +1383,36 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
             </div>
 
             <form onSubmit={handleAddWeeklyPremium} className="space-y-4 text-xs">
+              <div className="p-3 bg-slate-900/90 rounded-xl border border-emerald-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-200 font-semibold text-xs flex items-center space-x-1.5">
+                    <span>Starting / Prior YTD Premiums ($)</span>
+                    <span className="text-[10px] text-slate-400 font-normal">(Verified 2026 Baseline)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setModalStartingYtdInput(603305.40)}
+                    className="text-[10px] text-emerald-400 hover:text-emerald-300 underline font-mono cursor-pointer"
+                  >
+                    Reset to $603,305.40
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={modalStartingYtdInput}
+                  onChange={(e) => setModalStartingYtdInput(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-bold font-mono text-sm focus:border-emerald-500 focus:outline-none"
+                  required
+                />
+                <div className="flex justify-between items-center text-[10px] text-slate-400 pt-0.5">
+                  <span>Current Week premium will be added to this baseline amount.</span>
+                  <span className="font-mono text-slate-300">
+                    Preview YTD: ${(Number(modalStartingYtdInput || 0) + capitalState.currentWeekPremiumsCollected + Number(premAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
               <div>
                 <label className="text-slate-300 block mb-1 font-semibold">Symbol</label>
                 <input
@@ -1217,6 +1474,214 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
                 >
                   Add to Current Week
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: Edit Starting / Prior YTD Premium Balance Only */}
+      {isEditPriorYtdOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="glass-panel p-6 rounded-2xl border border-slate-800 max-w-md w-full shadow-2xl space-y-4 bg-slate-950">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5 text-cyan-400" />
+                <span>Edit Calendar YTD Starting Balance</span>
+              </h3>
+              <button
+                onClick={() => setIsEditPriorYtdOpen(false)}
+                className="text-slate-400 hover:text-white text-lg font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePriorYtdBalance} className="space-y-4 text-xs">
+              <div className="p-3 bg-cyan-950/20 border border-cyan-500/30 rounded-xl space-y-1">
+                <span className="text-[11px] font-bold text-cyan-300 block">Baseline Tracking for 2026</span>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Enter your verified calendar year-to-date starting option premiums prior to the current week.
+                  Current verified baseline is <strong className="text-white font-mono">$603,305.40</strong>.
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-300 font-semibold">
+                    Starting / Prior YTD Premiums ($)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setInputPriorYtdBalanceOnly(603305.40)}
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 underline font-mono cursor-pointer"
+                  >
+                    Quick Fill: $603,305.40
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={inputPriorYtdBalanceOnly}
+                  onChange={(e) => setInputPriorYtdBalanceOnly(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono font-bold text-sm focus:border-cyan-500 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1 font-mono text-[11px]">
+                <div className="flex justify-between text-slate-400">
+                  <span>Current Week Premiums:</span>
+                  <span className="text-emerald-400">+${capitalState.currentWeekPremiumsCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-white font-bold border-t border-slate-800 pt-1">
+                  <span>New Cumulative YTD:</span>
+                  <span className="text-emerald-300">${(Number(inputPriorYtdBalanceOnly || 0) + capitalState.currentWeekPremiumsCollected).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditPriorYtdOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold"
+                >
+                  Save YTD Baseline
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: Edit YTD Capital Gains, Losses & Carryforward */}
+      {isEditTaxGainsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="glass-panel p-6 rounded-2xl border border-slate-800 max-w-md w-full shadow-2xl space-y-4 bg-slate-950">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                <Percent className="w-5 h-5 text-cyan-400" />
+                <span>Edit YTD Capital Gains &amp; Loss Carryforward</span>
+              </h3>
+              <button
+                onClick={() => setIsEditTaxGainsOpen(false)}
+                className="text-slate-400 hover:text-white text-lg font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTaxGains} className="space-y-4 text-xs">
+              <div>
+                <label className="text-slate-300 block mb-1 font-semibold">Tax Year</label>
+                <input
+                  type="number"
+                  value={inputTaxYear}
+                  onChange={(e) => setInputTaxYear(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-300 block mb-1 font-semibold">
+                  YTD Realized Capital Gains ($)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={inputRealizedGains}
+                  onChange={(e) => setInputRealizedGains(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono font-bold"
+                  required
+                />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Total realized gains on equities/ETFs closed this tax year.
+                </span>
+              </div>
+
+              <div>
+                <label className="text-slate-300 block mb-1 font-semibold">
+                  YTD Realized Capital Losses ($)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={inputRealizedLosses}
+                  onChange={(e) => setInputRealizedLosses(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-rose-400 font-mono font-bold"
+                  required
+                />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Total realized losses on closed trades to offset gains.
+                </span>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-300 font-semibold">
+                    Prior-Year Capital Loss Carryforward ($)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setInputTaxCarryover(3000)}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 underline font-mono cursor-pointer"
+                  >
+                    IRS Default: $3,000
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={inputTaxCarryover}
+                  onChange={(e) => setInputTaxCarryover(Number(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-amber-400 font-mono font-bold"
+                  required
+                />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Carried forward from previous years (Schedule D / Form 1040).
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5 font-mono text-[11px]">
+                <div className="flex justify-between text-slate-400">
+                  <span>Net Capital Gains / Losses:</span>
+                  <span className={Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                    {Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) >= 0 ? '+' : ''}${(Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Carryforward Deducted:</span>
+                  <span className="text-amber-400">-${Math.min(Math.max(0, Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0)), Number(inputTaxCarryover || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-white font-bold border-t border-slate-800 pt-1">
+                  <span>Estimated Net Taxable Income:</span>
+                  <span className="text-cyan-300">
+                    ${Math.max(0, (capitalState.ytdPremiumsEarned + Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) - Number(inputTaxCarryover || 0))).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditTaxGainsOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold"
+                >
+                  Save Tax Settings
                 </button>
               </div>
             </form>

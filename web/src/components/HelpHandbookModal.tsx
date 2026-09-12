@@ -590,8 +590,10 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <div className="space-y-1.5">
                       <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
                       <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                        <li><strong>Precalculated Cash Formula:</strong> Evaluates <code className="text-emerald-300 font-mono">Precalculated Liquid Cash = Cash Sweep + Money Market Funds - &Sigma;(Strike &times; 100 &times; Contracts for open CSPs)</code> ($573,820.76 - $263,250.00 = $310,570.76).</li>
-                        <li><strong>Living Expense Encumbrance:</strong> Automatically subtracts $5,000 upfront weekly living disbursements before options sizing, yielding $305,570.76 Net Deployable Free Cash.</li>
+                        <li><strong>Precalculated Cash Formula:</strong> Evaluates <code className="text-emerald-300 font-mono">Precalculated Liquid Cash = Cash Sweep + Money Market Funds - &Sigma;(Strike &times; 100 &times; Contracts for open CSPs)</code>.</li>
+                        <li><strong>Living Expense Encumbrance:</strong> Automatically subtracts $5,000 upfront weekly living disbursements before options sizing.</li>
+                        <li><strong>Calendar YTD Premiums Tracking:</strong> Automatically tracks cumulative option premiums earned across the calendar year (2026 baseline defaults to $603,305.40) and adds settled current week premiums.</li>
+                        <li><strong>YTD Capital Gains &amp; Loss Netting:</strong> Computes net taxable income by adding YTD premiums and realized capital gains, subtracting realized losses and applying prior-year capital loss carryforwards (e.g. IRS $3,000 annual allowance).</li>
                         <li><strong>Position Limits:</strong> Strictly enforces $200,000 single equity security position limit and dynamically sizes concurrent trades: <code className="text-emerald-400 font-mono">min(5, floor(Free Cash / Target Allocation))</code>.</li>
                       </ul>
                     </div>
@@ -601,6 +603,8 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                       <ol className="text-slate-300 space-y-1 list-decimal list-inside">
                         <li><strong>Verify Precalculated Cash:</strong> Review the formula breakdown box. If cash or MMF balances changed, edit inline or use quick chips.</li>
                         <li><strong>Set Living Expenses:</strong> Verify the weekly disbursement ($5,000 default). Adjust if extraordinary tax or capital distributions are planned.</li>
+                        <li><strong>Update Starting YTD Premiums ($603,305.40):</strong> Directly edit or quick-fill the starting YTD baseline in Panel A or verify/adjust the starting balance directly within the <em>Log Current Week Premium</em> modal before logging weekly options.</li>
+                        <li><strong>Maintain YTD Capital Gains &amp; Loss Carryforwards:</strong> Click <em>Edit Gains &amp; Carryover</em> in Panel B to update closed equity/ETF realized gains, realized losses, and IRS prior-year loss carryforwards with real-time taxable income preview.</li>
                         <li><strong>Position Allocation Target:</strong> Select your target allocation (Auto, $50k, $100k, or $200k max cap) to calibrate position sizing.</li>
                       </ol>
                     </div>

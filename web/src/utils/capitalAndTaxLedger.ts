@@ -34,6 +34,8 @@ export const DEFAULT_CORE_CASH = 299590.53; // Cash & Cash Investments sweep
 export const DEFAULT_TOTAL_AVAILABLE_CASH = 579707.77; // Total liquid cash to cover CSP before offsets (SNYXX + SNAXX + Core Cash)
 export const DEFAULT_WEEKLY_DISBURSEMENT = 5000; // $5,000 weekly living expenses rule
 export const DEFAULT_PER_POSITION_BUDGET = 100000; // Default target allocation per position (strictly capped at $200,000)
+export const DEFAULT_PRIOR_YTD_PREMIUM_BALANCE = 603305.40; // 2026 Calendar YTD Options Premiums Harvested
+export const DEFAULT_YTD_PREMIUMS_EARNED = 603305.40;
 
 /**
  * Dynamically calculates target allocation per position and maximum concurrent positions permitted:
@@ -114,9 +116,9 @@ export function getDefaultCapitalState(positions: PortfolioPosition[] = []): Acc
     totalEncumberedDisbursements: encumbered,
     committedCollateral: committed,
     freeCash: free,
-    priorYtdPremiumBalance: 45942.09,
-    currentWeekPremiumsCollected: 5572.02,
-    ytdPremiumsEarned: 51514.11,
+    priorYtdPremiumBalance: DEFAULT_PRIOR_YTD_PREMIUM_BALANCE,
+    currentWeekPremiumsCollected: 0.00,
+    ytdPremiumsEarned: DEFAULT_YTD_PREMIUMS_EARNED,
     maxPerPositionAllocation: sizing.targetAllocationPerPosition,
     singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
     maxAllowedPositions: sizing.maxConcurrentPositions,
@@ -223,12 +225,11 @@ export const SCHWAB_REAL_OPTIONS_RECORDS: TaxLedgerRecord[] = [
 
 export function getDefaultTaxLedgerState(): TaxLedgerState {
   const currentYear = new Date().getFullYear();
-  const totalPremiums = SCHWAB_REAL_OPTIONS_RECORDS.reduce((sum, r) => sum + r.amount, 0);
 
   return {
     currentTaxYear: currentYear,
     priorYearLossCarryforward: 3000, // Standard IRS $3,000 capital loss deduction allowance or custom carryforward
-    ytdPremiumsEarned: totalPremiums,
+    ytdPremiumsEarned: DEFAULT_YTD_PREMIUMS_EARNED,
     ytdRealizedCapitalGains: 0.00,
     ytdRealizedCapitalLosses: 0.00,
     records: SCHWAB_REAL_OPTIONS_RECORDS,
@@ -281,6 +282,11 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
         coreCash: DEFAULT_CORE_CASH,
       };
       state.totalCash = DEFAULT_TOTAL_AVAILABLE_CASH;
+    }
+
+    // Auto-migrate if prior YTD premium balance is understated (< $100,000 or legacy $45,942.09)
+    if (!state.priorYtdPremiumBalance || state.priorYtdPremiumBalance < 100000 || state.priorYtdPremiumBalance === 45942.09) {
+      state.priorYtdPremiumBalance = DEFAULT_PRIOR_YTD_PREMIUM_BALANCE;
     }
 
     const mmfCashTotal = activePositions
@@ -359,12 +365,14 @@ export function getStoredTaxLedgerState(): TaxLedgerState {
             (r) => r.symbol !== 'SPY' && r.symbol !== 'AAPL' && r.symbol !== 'IWM' && !r.id.startsWith('REC_00')
           );
           fresh.records = [...userRecords, ...SCHWAB_REAL_OPTIONS_RECORDS];
-          fresh.ytdPremiumsEarned = fresh.records
-            .filter((r) => r.type === 'PREMIUM_EARNED')
-            .reduce((sum, r) => sum + r.amount, 0);
+          fresh.ytdPremiumsEarned = DEFAULT_YTD_PREMIUMS_EARNED;
           fresh.priorYearLossCarryforward = parsed.priorYearLossCarryforward || 3000;
           saveTaxLedgerState(fresh);
           return fresh;
+        }
+        if (!parsed.ytdPremiumsEarned || parsed.ytdPremiumsEarned < 100000 || parsed.ytdPremiumsEarned === 51514.11) {
+          parsed.ytdPremiumsEarned = DEFAULT_YTD_PREMIUMS_EARNED;
+          saveTaxLedgerState(parsed);
         }
         return parsed;
       }

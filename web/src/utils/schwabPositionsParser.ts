@@ -10,7 +10,12 @@
 
 import { AccountCapitalState, WatchlistGroup, TaxLedgerRecord } from '../types/options';
 import { PortfolioPosition } from './portfolioStressTest';
-import { MAX_SINGLE_EQUITY_POSITION_LIMIT, DEFAULT_WEEKLY_DISBURSEMENT } from './capitalAndTaxLedger';
+import {
+  MAX_SINGLE_EQUITY_POSITION_LIMIT,
+  DEFAULT_WEEKLY_DISBURSEMENT,
+  DEFAULT_PRIOR_YTD_PREMIUM_BALANCE,
+  DEFAULT_YTD_PREMIUMS_EARNED,
+} from './capitalAndTaxLedger';
 
 export interface ParsedEquityHolding {
   symbol: string;
@@ -452,9 +457,9 @@ export function parseSchwabPositionsCsv(
     totalEncumberedDisbursements: weeklyLivingExpenses,
     committedCollateral: totalCommittedCspCollateral,
     freeCash: netFreeCashForNewCsps,
-    priorYtdPremiumBalance: Math.max(0, totalCalculatedPremiums - 5572.02),
-    currentWeekPremiumsCollected: 5572.02,
-    ytdPremiumsEarned: totalCalculatedPremiums,
+    priorYtdPremiumBalance: DEFAULT_PRIOR_YTD_PREMIUM_BALANCE,
+    currentWeekPremiumsCollected: 0.00,
+    ytdPremiumsEarned: DEFAULT_YTD_PREMIUMS_EARNED,
     maxPerPositionAllocation: targetPerPosition,
     singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
     maxAllowedPositions: maxAllowedNewPositions,

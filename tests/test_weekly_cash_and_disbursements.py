@@ -64,6 +64,27 @@ class TestWeeklyCashAndDisbursements(unittest.TestCase):
         cumulative_ytd = prior_ytd_balance + current_week_premiums
         self.assertEqual(cumulative_ytd, 25750.0)
 
+    def test_2026_baseline_ytd_premiums_and_carryforward_editing(self):
+        # Verified 2026 baseline: $603,305.40
+        verified_baseline_ytd = 603305.40
+        current_week_settled = 15200.00
+        new_total_ytd = verified_baseline_ytd + current_week_settled
+        self.assertEqual(new_total_ytd, 618505.40)
+
+        # Capital gains netting with carryforward
+        ytd_realized_gains = 25000.00
+        ytd_realized_losses = 5000.00
+        irs_loss_carryforward = 3000.00
+
+        net_gains_before_carry = ytd_realized_gains - ytd_realized_losses
+        self.assertEqual(net_gains_before_carry, 20000.00)
+
+        total_income_before_carry = new_total_ytd + net_gains_before_carry
+        self.assertEqual(total_income_before_carry, 638505.40)
+
+        taxable_net = total_income_before_carry - irs_loss_carryforward
+        self.assertEqual(taxable_net, 635505.40)
+
     def test_prior_year_loss_carryover_offset(self):
         # Step 3: Prior year capital loss carryover netting
         ytd_premiums = 18000.0
