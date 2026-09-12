@@ -63,6 +63,29 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     getStoredTaxLedgerState()
   );
 
+  // Automatically synchronize when Step 1 (Schwab CSV upload) updates capital or portfolio
+  useEffect(() => {
+    const handlePortfolioUpdate = () => {
+      const freshCapital = getStoredCapitalState(positions || []);
+      const freshTax = getStoredTaxLedgerState();
+      setCapitalState(freshCapital);
+      setTaxState(freshTax);
+      setInputTotalCash(freshCapital.totalCash);
+      setInlineCashValue(freshCapital.totalCash);
+      setInputTargetAllocation(freshCapital.maxPerPositionAllocation || DEFAULT_PER_POSITION_BUDGET);
+      setInputPriorYtdPremiums(freshCapital.priorYtdPremiumBalance);
+      setInputCurrentWeekPremiums(freshCapital.currentWeekPremiumsCollected);
+      setInputLossCarryover(freshTax.priorYearLossCarryforward);
+    };
+
+    window.addEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+    window.addEventListener('storage', handlePortfolioUpdate);
+    return () => {
+      window.removeEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+      window.removeEventListener('storage', handlePortfolioUpdate);
+    };
+  }, [positions]);
+
   // Modals / Edit states
   const [isEditCashOpen, setIsEditCashOpen] = useState(false);
   const [isLiveTxModalOpen, setIsLiveTxModalOpen] = useState(false);

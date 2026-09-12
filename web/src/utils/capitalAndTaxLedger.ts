@@ -242,8 +242,27 @@ export function calculateEncumberedDisbursements(disbursements: DisbursementItem
 export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []): AccountCapitalState {
   try {
     const raw = localStorage.getItem(CAPITAL_STORAGE_KEY);
+    
+    // Check if portfolio book has been ingested via Schwab CSV
+    let storedBookPositions: PortfolioPosition[] = [];
+    if (typeof window !== 'undefined') {
+      try {
+        const bookRaw = localStorage.getItem('deltaharvest_portfolio_book');
+        if (bookRaw) {
+          const parsedBook = JSON.parse(bookRaw);
+          if (Array.isArray(parsedBook) && parsedBook.length > 0) {
+            storedBookPositions = parsedBook;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     const activePositions = currentPositions && currentPositions.length > 0
       ? currentPositions
+      : storedBookPositions.length > 0
+      ? storedBookPositions
       : LIVING_TRUST_OPTIONS_POSITIONS;
 
     let state = raw ? (JSON.parse(raw) as AccountCapitalState) : getDefaultCapitalState(activePositions);
@@ -268,14 +287,24 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
       .filter((p) => p.type === 'CASH' || p.type === 'MMF')
       .reduce((sum, p) => sum + (p.marketValueTotal || (p.quantity * (p.spotPrice || 1))), 0);
 
-    const snyxxVal = activePositions.find((p) => p.type === 'MMF' && p.symbol === 'SNYXX')?.marketValueTotal ?? DEFAULT_SNYXX_CASH;
-    const snaxxVal = activePositions.find((p) => p.type === 'MMF' && p.symbol === 'SNAXX')?.marketValueTotal ?? DEFAULT_SNAXX_CASH;
-    const coreVal = activePositions.find((p) => p.type === 'CASH')?.marketValueTotal ?? DEFAULT_CORE_CASH;
+    const snyxxVal = activePositions.find((p) => p.type === 'MMF' && p.symbol === 'SNYXX')?.marketValueTotal 
+      ?? state.cashBreakdown?.snyxx 
+      ?? DEFAULT_SNYXX_CASH;
+    const snaxxVal = activePositions.find((p) => p.type === 'MMF' && p.symbol === 'SNAXX')?.marketValueTotal 
+      ?? state.cashBreakdown?.snaxx 
+      ?? DEFAULT_SNAXX_CASH;
+    const coreVal = activePositions.find((p) => p.type === 'CASH')?.marketValueTotal 
+      ?? state.cashBreakdown?.coreCash 
+      ?? DEFAULT_CORE_CASH;
+
+    const calculatedLiquidPool = Math.round((snyxxVal + snaxxVal + coreVal) * 100) / 100;
 
     const encumbered = calculateEncumberedDisbursements(state.plannedDisbursements);
     const committed = calculateCommittedCspCollateral(activePositions);
     const totalCash = mmfCashTotal > 0
       ? mmfCashTotal
+      : calculatedLiquidPool > 0
+      ? calculatedLiquidPool
       : (Number(state.totalCash) > 0 ? Number(state.totalCash) : DEFAULT_TOTAL_AVAILABLE_CASH);
     const free = Math.max(0, totalCash - encumbered - committed);
     const sizing = calculateDynamicPositionSizing(free, state.maxPerPositionAllocation || DEFAULT_PER_POSITION_BUDGET);

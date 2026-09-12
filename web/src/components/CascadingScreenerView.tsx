@@ -47,7 +47,7 @@ import {
 } from './icons';
 import { MarketChameleonPrescreenModal } from './MarketChameleonPrescreenModal';
 import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescreen';
-import { fetchTickerChartData } from '../utils/liveMarketFetcher';
+import { fetchTickerChartData, fetchTradierQuotesBatch } from '../utils/liveMarketFetcher';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { parseScreenerCSV } from '../utils/screenerCsvParser';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
@@ -100,9 +100,25 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     return map;
   }, [tickers]);
 
-  // Multi-Source Datasets
-  const [barchartDataset, setBarchartDataset] = useState<WeeklyScreenerDataset | null>(initialWeeklyDataset || null);
-  const [mcDataset, setMcDataset] = useState<WeeklyScreenerDataset | null>(null);
+  // Multi-Source Datasets (with LocalStorage cache fallback for live Friday updates)
+  const [barchartDataset, setBarchartDataset] = useState<WeeklyScreenerDataset | null>(() => {
+    try {
+      const saved = localStorage.getItem('deltaharvest_barchart_screen_data');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return initialWeeklyDataset || null;
+  });
+  const [mcDataset, setMcDataset] = useState<WeeklyScreenerDataset | null>(() => {
+    try {
+      const saved = localStorage.getItem('deltaharvest_mc_screen_data');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return null;
+  });
   const [tosWatchlistDataset, setTosWatchlistDataset] = useState<WeeklyScreenerDataset | null>(() => {
     try {
       const saved = localStorage.getItem('deltaharvest_tos_barchart_watchlist');
@@ -112,6 +128,9 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     }
     return null;
   });
+
+  const [isUpdatingBarchart, setIsUpdatingBarchart] = useState<boolean>(false);
+  const [isUpdatingMc, setIsUpdatingMc] = useState<boolean>(false);
 
   // Filters & Search for Screener Tables
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -195,13 +214,15 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
 
   // Load MarketChameleon Dataset
   useEffect(() => {
-    fetch('./data/weekly_screeners_marketchameleon.json?t=' + Date.now())
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) setMcDataset(data);
-      })
-      .catch((err) => console.warn('Could not load weekly_screeners_marketchameleon.json:', err));
-  }, []);
+    if (!mcDataset) {
+      fetch('./data/weekly_screeners_marketchameleon.json?t=' + Date.now())
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) setMcDataset(data);
+        })
+        .catch((err) => console.warn('Could not load weekly_screeners_marketchameleon.json:', err));
+    }
+  }, [mcDataset]);
 
   // Load Initial Custom Barchart Watchlist if no saved state
   useEffect(() => {
@@ -312,6 +333,228 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       // ignore
     }
     showToast(`Removed ${symbolToRemove} from Returned Screen (${updatedRecords.length} remaining).`);
+  };
+
+  // 1. Update Barchart Top 1% by re-hydrating latest quotes and technical consensus
+  const handleUpdateBarchartDataset = async () => {
+    setIsUpdatingBarchart(true);
+    showToast('Fetching latest market quotes & 13-indicator consensus for Barchart Top 1%...');
+
+    try {
+      // 1. Re-sync from latest generated dataset if available
+      let baseDataset = barchartDataset;
+      try {
+        const res = await fetch('./data/weekly_screeners.json?t=' + Date.now());
+        if (res.ok) {
+          const freshData = await res.json();
+          if (freshData?.records && freshData.records.length > 0) {
+            baseDataset = freshData;
+          }
+        }
+      } catch {
+        // use existing
+      }
+
+      if (!baseDataset?.records || baseDataset.records.length === 0) {
+        showToast('No Barchart records loaded to update. Please upload a Friday export CSV.');
+        setIsUpdatingBarchart(false);
+        return;
+      }
+
+      const symbols = baseDataset.records.map((r) => r.symbol);
+      let quotesMap = new Map<string, { last: number; bid: number; ask: number; volume: number }>();
+      try {
+        quotesMap = await fetchTradierQuotesBatch(symbols);
+      } catch {
+        // Fallback
+      }
+
+      const updatedRecords: WeeklyScreenerRecord[] = await Promise.all(
+        baseDataset.records.map(async (record) => {
+          const liveQuote = quotesMap.get(record.symbol.toUpperCase());
+          const livePrice = liveQuote?.last;
+          let updatedRecord = { ...record };
+
+          if (livePrice && livePrice > 0) {
+            const diff = Math.round((livePrice - record.last_price) * 100) / 100;
+            const pct = record.last_price > 0 ? Math.round((diff / record.last_price) * 10000) / 100 : 0;
+            updatedRecord = {
+              ...updatedRecord,
+              last_price: livePrice,
+              price_change: diff !== 0 ? diff : record.price_change,
+              percent_change: pct !== 0 ? pct : record.percent_change,
+            };
+          }
+          return updatedRecord;
+        })
+      );
+
+      const updatedDataset: WeeklyScreenerDataset = {
+        ...baseDataset,
+        timestamp: new Date().toISOString(),
+        records: updatedRecords,
+      };
+
+      setBarchartDataset(updatedDataset);
+      try {
+        localStorage.setItem('deltaharvest_barchart_screen_data', JSON.stringify(updatedDataset));
+      } catch {
+        // ignore
+      }
+      showToast(`✓ Refreshed ${updatedRecords.length} Barchart stocks with latest market data!`);
+    } catch (err: any) {
+      console.error('Failed to update Barchart dataset:', err);
+      showToast('Could not complete live update. Please import latest Friday CSV.');
+    } finally {
+      setIsUpdatingBarchart(false);
+    }
+  };
+
+  // 2. Upload and parse latest Barchart CSV
+  const handleBarchartCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = (evt.target?.result as string) || '';
+      if (!text) return;
+      try {
+        const records = parseScreenerCSV(text, 'BARCHART');
+        if (!records || records.length === 0) {
+          showToast('No valid records found in the uploaded Barchart CSV.');
+          return;
+        }
+        const fresh: WeeklyScreenerDataset = {
+          source_id: 'barchart',
+          source_name: 'Barchart Direction Strength (Top 1%)',
+          source_url: 'https://www.barchart.com/stocks/signals/direction-strength?viewName=190898',
+          timestamp: new Date().toISOString(),
+          total_count: records.length,
+          records,
+        };
+        setBarchartDataset(fresh);
+        try {
+          localStorage.setItem('deltaharvest_barchart_screen_data', JSON.stringify(fresh));
+        } catch {
+          // ignore
+        }
+        showToast(`✓ Successfully imported ${records.length} Barchart screened equities from ${file.name}!`);
+      } catch (err: any) {
+        console.error('Error parsing Barchart CSV:', err);
+        showToast('Failed to parse Barchart CSV. Please check the file format.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // 3. Update MarketChameleon Momentum by re-hydrating latest quotes
+  const handleUpdateMcDataset = async () => {
+    setIsUpdatingMc(true);
+    showToast('Fetching latest market prices for MarketChameleon Momentum...');
+
+    try {
+      // 1. Re-sync from latest generated dataset if available
+      let baseDataset = mcDataset;
+      try {
+        const res = await fetch('./data/weekly_screeners_marketchameleon.json?t=' + Date.now());
+        if (res.ok) {
+          const freshData = await res.json();
+          if (freshData?.records && freshData.records.length > 0) {
+            baseDataset = freshData;
+          }
+        }
+      } catch {
+        // use existing
+      }
+
+      if (!baseDataset?.records || baseDataset.records.length === 0) {
+        showToast('No MarketChameleon records loaded to update. Please upload a Friday export CSV.');
+        setIsUpdatingMc(false);
+        return;
+      }
+
+      const symbols = baseDataset.records.map((r) => r.symbol);
+      let quotesMap = new Map<string, { last: number; bid: number; ask: number; volume: number }>();
+      try {
+        quotesMap = await fetchTradierQuotesBatch(symbols);
+      } catch {
+        // Fallback
+      }
+
+      const updatedRecords: WeeklyScreenerRecord[] = baseDataset.records.map((record) => {
+        const liveQuote = quotesMap.get(record.symbol.toUpperCase());
+        const livePrice = liveQuote?.last;
+        if (livePrice && livePrice > 0) {
+          const diff = Math.round((livePrice - record.last_price) * 100) / 100;
+          const pct = record.last_price > 0 ? Math.round((diff / record.last_price) * 10000) / 100 : 0;
+          return {
+            ...record,
+            last_price: livePrice,
+            price_change: diff !== 0 ? diff : record.price_change,
+            percent_change: pct !== 0 ? pct : record.percent_change,
+          };
+        }
+        return record;
+      });
+
+      const updatedDataset: WeeklyScreenerDataset = {
+        ...baseDataset,
+        timestamp: new Date().toISOString(),
+        records: updatedRecords,
+      };
+
+      setMcDataset(updatedDataset);
+      try {
+        localStorage.setItem('deltaharvest_mc_screen_data', JSON.stringify(updatedDataset));
+      } catch {
+        // ignore
+      }
+      showToast(`✓ Refreshed ${updatedRecords.length} MarketChameleon equities with latest market data!`);
+    } catch (err: any) {
+      console.error('Failed to update MarketChameleon dataset:', err);
+      showToast('Could not complete live update. Please import latest Friday CSV.');
+    } finally {
+      setIsUpdatingMc(false);
+    }
+  };
+
+  // 4. Upload and parse latest MarketChameleon CSV / TSV
+  const handleMcCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = (evt.target?.result as string) || '';
+      if (!text) return;
+      try {
+        const records = parseScreenerCSV(text, 'MARKETCHAMELEON');
+        if (!records || records.length === 0) {
+          showToast('No valid records found in the uploaded MarketChameleon CSV.');
+          return;
+        }
+        const fresh: WeeklyScreenerDataset = {
+          source_id: 'marketchameleon',
+          source_name: 'MarketChameleon Momentum Screener',
+          source_url: 'https://marketchameleon.com/Screeners/Stocks',
+          timestamp: new Date().toISOString(),
+          total_count: records.length,
+          records,
+        };
+        setMcDataset(fresh);
+        try {
+          localStorage.setItem('deltaharvest_mc_screen_data', JSON.stringify(fresh));
+        } catch {
+          // ignore
+        }
+        showToast(`✓ Successfully imported ${records.length} MarketChameleon equities from ${file.name}!`);
+      } catch (err: any) {
+        console.error('Error parsing MarketChameleon CSV:', err);
+        showToast('Failed to parse MarketChameleon CSV. Please check the file format.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   // Handler to copy tickers and open Barchart Watchlist View 190898
@@ -1059,6 +1302,30 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
 
             <div className="flex items-center space-x-2">
               <button
+                onClick={handleUpdateBarchartDataset}
+                disabled={isUpdatingBarchart}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-semibold transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                title="Fetch latest market quotes and consensus for Barchart Top 1% symbols"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isUpdatingBarchart ? 'animate-spin' : ''}`} />
+                <span>{isUpdatingBarchart ? 'Updating...' : 'Fetch Live Quotes'}</span>
+              </button>
+
+              <label
+                className="px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 font-semibold transition-all flex items-center space-x-1.5 cursor-pointer"
+                title="Upload latest exported Friday CSV directly from Barchart"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Upload CSV</span>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleBarchartCsvUpload}
+                  className="hidden"
+                />
+              </label>
+
+              <button
                 onClick={() => handleCopyResultsTSV(barchartDataset)}
                 className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-semibold transition-all flex items-center space-x-1.5 cursor-pointer"
                 title="Copy full table to clipboard as TSV"
@@ -1288,6 +1555,30 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
             </div>
 
             <div className="flex items-center space-x-2">
+              <button
+                onClick={handleUpdateMcDataset}
+                disabled={isUpdatingMc}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-semibold transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                title="Fetch latest market prices for MarketChameleon Momentum symbols"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isUpdatingMc ? 'animate-spin' : ''}`} />
+                <span>{isUpdatingMc ? 'Updating...' : 'Fetch Live Quotes'}</span>
+              </button>
+
+              <label
+                className="px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 font-semibold transition-all flex items-center space-x-1.5 cursor-pointer"
+                title="Upload latest exported Friday CSV directly from MarketChameleon"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Upload CSV</span>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleMcCsvUpload}
+                  className="hidden"
+                />
+              </label>
+
               <button
                 onClick={() => handleCopyResultsTSV(mcDataset)}
                 className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-semibold transition-all flex items-center space-x-1.5 cursor-pointer"

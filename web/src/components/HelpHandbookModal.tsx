@@ -658,9 +658,10 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     <div className="space-y-1.5">
-                      <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
+                      <strong className="text-white block font-semibold">⚙️ Automated System Calculations &amp; Resilient Feed Engine:</strong>
                       <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                        <li><strong>Live Schedule Sync:</strong> Ingests live US macroeconomic calendar events (Forex Factory / FairEconomy API) and filters strictly for USD high-impact releases.</li>
+                        <li><strong>3-Tier Fallback Hierarchy:</strong> Auto-refreshes high-impact macro catalysts via Tier 1 (Cloudflare Edge API / FastAPI) &rarr; Tier 2 (Secondary Public CORS Proxy Mirror) &rarr; Tier 3 (Curated Bundled Schedule dataset), ensuring 100% uninterrupted availability even during upstream rate limits.</li>
+                        <li><strong>Feed Status Indicator:</strong> Real-time header badges dynamically reflect source health (🟢 Live Feed, 🔄 Secondary Mirror, 🛡️ Curated Schedule).</li>
                         <li><strong>Transmission Matrix:</strong> Maps events to affected sectors (e.g. CPI/PCE &rarr; QQQ/XLF/TLT, FOMC &rarr; Broad Market, NFP &rarr; IWM, Crude Oil &rarr; XLE).</li>
                       </ul>
                     </div>
@@ -669,6 +670,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                       <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
                       <ol className="text-slate-300 space-y-1 list-decimal list-inside">
                         <li><strong>Review Weekly Catalysts:</strong> Check the calendar for high-impact releases scheduled during the upcoming expiration week.</li>
+                        <li><strong>Refresh Feed:</strong> Click <strong>&quot;Refresh Feed&quot;</strong> anytime to re-query the latest calendar updates across the 3-tier hierarchy.</li>
                         <li><strong>Evaluate Sector Exposure:</strong> If CPI or FOMC falls mid-week, verify you widen safety cushions (&ge;5.0% cushion, &le;0.18&Delta;) on sensitive growth equities.</li>
                       </ol>
                     </div>
@@ -693,8 +695,8 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <div className="space-y-1.5">
                       <strong className="text-white block font-semibold">⚙️ Automated System Calculations &amp; Tri-Screen Engine:</strong>
                       <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                        <li><strong>Tab 1 (Barchart Top 1%):</strong> Loads screened equities with 100% buy consensus across 13 technical moving averages and MACDs.</li>
-                        <li><strong>Tab 2 (MarketChameleon Momentum):</strong> Loads momentum equities with RSI 50–70, IV30 &gt; 30%, and CBOE weekly registry verification.</li>
+                        <li><strong>Tab 1 (Barchart Top 1%):</strong> Automated screener with 100% buy consensus across 13 technical moving averages and MACDs. Supports <strong>&quot;Fetch Live Quotes&quot;</strong> (re-hydrating live market prices via Tradier) and <strong>&quot;Upload CSV&quot;</strong> for latest Friday exports.</li>
+                        <li><strong>Tab 2 (MarketChameleon Momentum):</strong> Momentum equities with RSI 50–70, IV30 &gt; 30%, and CBOE weekly registry verification. Features <strong>&quot;Fetch Live Quotes&quot;</strong> and <strong>&quot;Upload CSV&quot;</strong> alongside Prescreen Builder.</li>
                         <li><strong>Tab 3 (ThinkorSwim View 190898):</strong> Automatically computes 13-indicator Barchart opinion consensus, stability arrows, and options cadence for any custom or TOS tickers.</li>
                         <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Ingests liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), strictly eliminates non-weekly options via CBOE Weeklys Gate, filters candidate contracts within 0.15–0.25&Delta;, formats institutional prompt, and parses 3 markdown tables.</li>
                       </ul>
@@ -703,6 +705,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
                       <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
                       <ol className="text-slate-300 space-y-1 list-decimal list-inside">
+                        <li><strong>Update Screens (Tab 1 &amp; 2):</strong> Click <strong>&quot;Fetch Live Quotes&quot;</strong> to re-hydrate real-time market prices, or click <strong>&quot;Upload CSV&quot;</strong> to ingest newly downloaded Friday screens directly.</li>
                         <li><strong>Run TOS Screen (Tab 3):</strong> Paste your ThinkorSwim scan tickers or click a preset (e.g. Living Trust Equities 7, Mag 7, Semis) and click <strong>&quot;▶ Run Barchart View 190898 Analysis&quot;</strong>.</li>
                         <li><strong>Send to Gemini Hub:</strong> Click <strong>&quot;📥 Send Screened Stocks to Gemini Decision Hub&quot;</strong> on any of the screens.</li>
                         <li><strong>Generate &amp; Run Prompt:</strong> On Tab 4, click <strong>&quot;1-Click Copy Prompt&quot;</strong>. Open <strong>gemini.google.com</strong> (select Gemini Pro with Extended Thinking HIGH), paste the prompt, and execute.</li>

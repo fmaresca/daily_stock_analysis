@@ -132,14 +132,22 @@ export function parseSchwabPositionsCsv(
       assetTypeCol.toLowerCase().includes('money market') ||
       symbolCol === 'SNYXX' ||
       symbolCol === 'SNAXX' ||
-      symbolCol.toLowerCase().includes('cash')
+      symbolCol === 'SWVXX' ||
+      symbolCol === 'SNSXX' ||
+      symbolCol.toLowerCase().includes('cash') ||
+      descCol.toLowerCase().includes('bank deposit') ||
+      descCol.toLowerCase().includes('cash') ||
+      descCol.toLowerCase().includes('sweep')
     ) {
+      const val = mktValCol > 0 ? mktValCol : qtyCol > 0 ? qtyCol : 0;
       if (symbolCol === 'SNYXX') {
-        snyxx = mktValCol > 0 ? mktValCol : qtyCol > 0 ? qtyCol : 202775.94;
+        snyxx = val > 0 ? val : 202775.94;
       } else if (symbolCol === 'SNAXX') {
-        snaxx = mktValCol > 0 ? mktValCol : qtyCol > 0 ? qtyCol : 77341.30;
+        snaxx = val > 0 ? val : 77341.30;
+      } else if (val > 0) {
+        coreCash += val;
       } else if (symbolCol.toLowerCase().includes('cash')) {
-        coreCash = mktValCol > 0 ? mktValCol : 293703.52;
+        coreCash = 293703.52;
       }
       continue;
     }
