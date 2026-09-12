@@ -456,11 +456,22 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       if (res && res.ok) {
         const json: EconomicCalendarResponse = await res.json();
         if (json && Array.isArray(json.indicators) && json.indicators.length > 0) {
-          setData({
-            ...json,
-            last_updated: isManualRefresh ? new Date().toISOString() : (json.last_updated || new Date().toISOString()),
+          // If scope is 'upcoming', verify the events are actually upcoming (not last week's un-rolled feed)
+          const todayIso = new Date().toISOString().substring(0, 10);
+          const hasUpcomingEvents = json.indicators.some((item) => {
+            const datePrefix = (item.isoDate || '').substring(0, 10);
+            return datePrefix >= todayIso;
           });
-          success = true;
+
+          if (targetScope === 'upcoming' && !hasUpcomingEvents) {
+            console.warn('Upstream feed contains only past week events. Falling back to upcoming macro schedule.');
+          } else {
+            setData({
+              ...json,
+              last_updated: isManualRefresh ? new Date().toISOString() : (json.last_updated || new Date().toISOString()),
+            });
+            success = true;
+          }
         }
       }
     } catch {
