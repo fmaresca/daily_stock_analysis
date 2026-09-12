@@ -65,9 +65,11 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
     else setLoading(true);
     setError(null);
 
+    let success = false;
+
+    // Tier 1: Try Cloudflare Pages Edge Function first, fallback to local FastAPI
     try {
-      // Dual-runtime: try Cloudflare Pages Edge Function first, fallback to local FastAPI
-      let res: Response;
+      let res: Response | null = null;
       try {
         res = await fetch('/api/economic-calendar');
         if (!res.ok) throw new Error(`Edge returned ${res.status}`);
@@ -75,18 +77,77 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
         res = await fetch('/api/v1/options/economic-calendar');
       }
 
-      if (!res.ok) {
-        throw new Error(`Unable to retrieve economic calendar (HTTP ${res.status})`);
+      if (res && res.ok) {
+        const json: EconomicCalendarResponse = await res.json();
+        if (json && Array.isArray(json.indicators) && json.indicators.length > 0 && !json.fallback) {
+          setData(json);
+          success = true;
+        }
       }
-
-      const json: EconomicCalendarResponse = await res.json();
-      setData(json);
-    } catch (err: any) {
-      setError(err.message || 'Network error fetching macroeconomic calendar.');
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+    } catch {
+      // Proceed to Tier 2
     }
+
+    // Tier 2: Public CORS mirror proxy if upstream rate-limits or Edge is offline
+    if (!success) {
+      try {
+        const mirrorUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://nfs.faireconomy.media/ff_calendar_thisweek.json')}`;
+        const mRes = await fetch(mirrorUrl);
+        if (mRes.ok) {
+          const events = await mRes.json();
+          if (Array.isArray(events) && events.length > 0) {
+            const usdEvents: EconomicIndicator[] = events
+              .filter((e: any) => e.country === 'USD')
+              .map((e: any) => ({
+                title: e.title || 'US Economic Release',
+                country: 'USD',
+                dateET: e.date ? new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'This Week',
+                timeET: e.date ? new Date(e.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'TBD',
+                impact: (e.impact === 'High' ? 'High' : e.impact === 'Medium' ? 'Moderate' : 'Low') as any,
+                forecast: e.forecast || '—',
+                previous: e.previous || '—',
+                sectors: e.title?.toLowerCase().includes('cpi') || e.title?.toLowerCase().includes('pce') ? 'Technology, Financials, Real Estate' : 'Broad Equities',
+                tickers: e.title?.toLowerCase().includes('cpi') ? 'QQQ, XLF, TLT' : 'SPY, IWM',
+                isoDate: e.date || new Date().toISOString(),
+              }));
+
+            if (usdEvents.length > 0) {
+              setData({
+                indicators: usdEvents,
+                source: 'secondary_mirror_proxy',
+                fallback: false,
+                notice: 'Ingested via secondary economic mirror proxy.',
+                last_updated: new Date().toISOString(),
+              });
+              success = true;
+            }
+          }
+        }
+      } catch {
+        // Proceed to Tier 3
+      }
+    }
+
+    // Tier 3: Curated Bundled Weekly Macro Schedule (Guaranteed 100% High Availability)
+    if (!success) {
+      try {
+        const bRes = await fetch('./data/economic_calendar.json?t=' + Date.now());
+        if (bRes.ok) {
+          const bJson: EconomicCalendarResponse = await bRes.json();
+          setData(bJson);
+          success = true;
+        }
+      } catch (err: any) {
+        console.warn('Could not load static economic_calendar.json:', err);
+      }
+    }
+
+    if (!success) {
+      setError('Unable to load economic calendar from primary or fallback sources.');
+    }
+
+    setLoading(false);
+    setIsRefreshing(false);
   };
 
   useEffect(() => {
@@ -238,8 +299,18 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
             <div>
               <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
                 <span>Weekly US Economic Indicators &amp; Macro Catalyst Radar</span>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                  Forex Factory USD Feed
+                <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${
+                  data?.source === 'secondary_mirror_proxy'
+                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                    : data?.source === 'curated_macro_schedule'
+                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                    : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                }`}>
+                  {data?.source === 'secondary_mirror_proxy'
+                    ? '🔄 Secondary Mirror Feed'
+                    : data?.source === 'curated_macro_schedule'
+                    ? '🛡️ High-Impact Curated Schedule'
+                    : '🟢 Forex Factory Live Feed'}
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
