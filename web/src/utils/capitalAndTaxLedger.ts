@@ -18,6 +18,7 @@ import {
   GeminiExcludedCandidate,
 } from '../types/options';
 import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest';
+import { getOptionExpirationStatus } from './optionExpirationEngine';
 
 const CAPITAL_STORAGE_KEY = 'deltaharvest_capital_ledger';
 const TAX_STORAGE_KEY = 'deltaharvest_tax_ledger';
@@ -921,6 +922,12 @@ export interface PositionAuditCategorization {
     threatSeverity: 'CRITICAL' | 'WARNING' | 'ELEVATED';
   }[];
   expiringThisWeek: PortfolioPosition[];
+  expiredPositions: {
+    position: PortfolioPosition;
+    expiredDate: string;
+    isWorthless: boolean;
+    isAssigned: boolean;
+  }[];
   uncoveredShareLots: {
     symbol: string;
     totalShares: number;
@@ -940,6 +947,7 @@ export function auditPositionsWeeklyStatus(
   const profitTargetHits: PositionAuditCategorization['profitTargetHits'] = [];
   const threatenedPositions: PositionAuditCategorization['threatenedPositions'] = [];
   const expiringThisWeek: PortfolioPosition[] = [];
+  const expiredPositions: PositionAuditCategorization['expiredPositions'] = [];
   const healthyPositions: PortfolioPosition[] = [];
 
   const shareMap = new Map<string, { totalShares: number; avgCost: number }>();
@@ -961,72 +969,90 @@ export function auditPositionsWeeklyStatus(
       continue;
     }
 
+    // Dynamic Expiration and DTE Check
+    const expStatus = getOptionExpirationStatus(p.expiration, p.dte);
+
     if (p.type === 'COVERED_CALL') {
-      const count = callContractsMap.get(p.symbol) || 0;
-      callContractsMap.set(p.symbol, count + (p.quantity || 1));
+      // Only unexpired calls encumber stock shares
+      if (!expStatus.isExpired) {
+        const count = callContractsMap.get(p.symbol) || 0;
+        callContractsMap.set(p.symbol, count + (p.quantity || 1));
+      }
+    }
+
+    // If the option has expired, do NOT trigger active warning banners (80% profit close or strike tested roll)
+    if (expStatus.isExpired) {
+      const isWorthless = (p.type === 'CSP' && p.spotPrice >= p.strike) || (p.type === 'COVERED_CALL' && p.spotPrice <= p.strike);
+      expiredPositions.push({
+        position: { ...p, dte: 0 },
+        expiredDate: expStatus.formattedExpiration,
+        isWorthless,
+        isAssigned: !isWorthless,
+      });
+      continue;
     }
 
     // Check DTE (Friday Expirations)
-    if (p.dte <= 5 && p.dte >= 0) {
-      expiringThisWeek.push(p);
+    if (expStatus.dte <= 5 && expStatus.dte >= 0) {
+      expiringThisWeek.push({ ...p, dte: expStatus.dte });
     }
 
-    // 80% Profit Rule
+    // 80% Profit Rule (Only active, unexpired contracts)
     if (p.entryPrice > 0 && p.currentOptionPrice !== undefined) {
       const capturedDollar = (p.entryPrice - p.currentOptionPrice) * 100 * (p.quantity || 1);
       const profitPct = ((p.entryPrice - p.currentOptionPrice) / p.entryPrice) * 100;
       if (profitPct >= 80) {
         profitTargetHits.push({
-          position: p,
+          position: { ...p, dte: expStatus.dte },
           profitPct,
           profitDollar: capturedDollar,
         });
       }
     }
 
-    // Threatened Strikes
+    // Threatened Strikes (Only active, unexpired contracts)
     if (p.type === 'CSP' && p.strike > 0 && p.spotPrice > 0) {
       const distancePct = ((p.spotPrice - p.strike) / p.spotPrice) * 100;
       if (p.spotPrice <= p.strike) {
         threatenedPositions.push({
-          position: p,
+          position: { ...p, dte: expStatus.dte },
           distancePct,
           threatSeverity: 'CRITICAL',
         });
       } else if (distancePct <= 2.5) {
         threatenedPositions.push({
-          position: p,
+          position: { ...p, dte: expStatus.dte },
           distancePct,
           threatSeverity: 'WARNING',
         });
       } else if (Math.abs(p.delta) >= 0.35) {
         threatenedPositions.push({
-          position: p,
+          position: { ...p, dte: expStatus.dte },
           distancePct,
           threatSeverity: 'ELEVATED',
         });
       } else {
-        healthyPositions.push(p);
+        healthyPositions.push({ ...p, dte: expStatus.dte });
       }
     } else if (p.type === 'COVERED_CALL' && p.strike > 0 && p.spotPrice > 0) {
       const distancePct = ((p.strike - p.spotPrice) / p.spotPrice) * 100;
       if (p.spotPrice >= p.strike) {
         threatenedPositions.push({
-          position: p,
+          position: { ...p, dte: expStatus.dte },
           distancePct,
           threatSeverity: 'CRITICAL',
         });
       } else if (distancePct <= 2.5) {
         threatenedPositions.push({
-          position: p,
+          position: { ...p, dte: expStatus.dte },
           distancePct,
           threatSeverity: 'WARNING',
         });
       } else {
-        healthyPositions.push(p);
+        healthyPositions.push({ ...p, dte: expStatus.dte });
       }
     } else {
-      healthyPositions.push(p);
+      healthyPositions.push({ ...p, dte: expStatus.dte });
     }
   }
 
@@ -1051,6 +1077,7 @@ export function auditPositionsWeeklyStatus(
     profitTargetHits,
     threatenedPositions,
     expiringThisWeek,
+    expiredPositions,
     uncoveredShareLots,
     healthyPositions,
   };

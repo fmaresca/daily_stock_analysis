@@ -10,6 +10,7 @@ import {
   saveCapitalState,
 } from '../utils/capitalAndTaxLedger';
 import { StockHoldingPair } from '../types/options';
+import { getOptionExpirationStatus } from '../utils/optionExpirationEngine';
 import {
   ShieldCheck,
   AlertTriangle,
@@ -369,7 +370,7 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                   <SortableTh label="Symbol" sortKey="symbol" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
                   <SortableTh label="Shares" sortKey="shares" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
                   <SortableTh label="Cost Basis" sortKey="costBasis" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
-                  <SortableTh label="Spot Price" sortKey="currentSpot" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
+                  <SortableTh label="Mkt Price" sortKey="currentSpot" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
                   <SortableTh label="Market Value" sortKey="marketValue" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
                   <SortableTh label="Unrealized P&L" sortKey="unrealizedPnl" currentSortKey={stockSortKey} currentSortOrder={stockSortOrder} onSort={requestStockSort} />
                   <th className="sticky top-0 z-10 bg-slate-900/98 backdrop-blur py-2.5 px-3 border-b border-slate-800">Active Covered Call</th>
@@ -544,7 +545,7 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                   <SortableTh label="Symbol" sortKey="symbol" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
                   <SortableTh label="Contracts" sortKey="quantity" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
                   <SortableTh label="Strike" sortKey="strike" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
-                  <SortableTh label="Spot Price" sortKey="spotPrice" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
+                  <SortableTh label="Mkt Price" sortKey="spotPrice" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
                   <SortableTh label="DTE" sortKey="dte" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
                   <SortableTh label="Delta" sortKey="delta" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
                   <SortableTh label="Entry Prem" sortKey="entryPrice" currentSortKey={cspSortKey} currentSortOrder={cspSortOrder} onSort={requestCspSort} />
@@ -558,6 +559,7 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {sortedOpenCSPs.map((pos) => {
                   const collateral = pos.strike * pos.quantity * 100;
+                  const expStatus = getOptionExpirationStatus(pos.expiration, pos.dte);
                   const pnlDollar =
                     pos.gainDollar !== undefined
                       ? pos.gainDollar
@@ -587,9 +589,13 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                       </td>
                       <td className="py-3 px-3">
                         <span className={`px-2 py-0.5 rounded text-[11px] ${
-                          pos.dte <= 7 ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300'
+                          expStatus.isExpired
+                            ? 'bg-slate-800 text-slate-400'
+                            : expStatus.dte <= 7
+                            ? 'bg-amber-500/20 text-amber-300 font-bold'
+                            : 'text-slate-300'
                         }`}>
-                          {pos.dte}d
+                          {expStatus.shortLabel}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-slate-300">
@@ -610,7 +616,15 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                         ${collateral.toLocaleString()}
                       </td>
                       <td className="py-3 px-3">
-                        {is80PctProfit ? (
+                        {expStatus.isExpired ? (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            pos.spotPrice >= pos.strike
+                              ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30'
+                              : 'bg-slate-900 text-slate-400 border-slate-700'
+                          }`}>
+                            {pos.spotPrice >= pos.strike ? 'Expired Worthless (100%)' : 'Expired / Assigned'}
+                          </span>
+                        ) : is80PctProfit ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                             🎯 80% Capture! Close
                           </span>
@@ -619,8 +633,8 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                             ⚠️ In The Money
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">
-                            ✓ On Track (OTM)
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">
+                            Safe OTM
                           </span>
                         )}
                       </td>
@@ -692,7 +706,7 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
             {/* Input Attributes */}
             <div className="grid grid-cols-3 gap-3 text-xs bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
               <div>
-                <span className="text-slate-400 block">Spot Price</span>
+                <span className="text-slate-400 block">Mkt Price</span>
                 <span className="text-white font-bold font-mono text-sm">${selectedHoldingForCC.spotPrice.toFixed(2)}</span>
               </div>
               <div>

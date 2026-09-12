@@ -538,13 +538,48 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
               {/* Step-by-Step Production Guide with Explicit Manual Interventions */}
               <div className="space-y-4">
                 {/* Step 1 */}
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-blue-500/30 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 font-mono font-bold flex items-center justify-center text-xs">
+                        1
+                      </span>
+                      <span className="font-bold text-blue-300 text-sm">Step 1: Upload Schwab Positions &amp; Cash (SchwabPositionsUploadView)</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
+                      Route: WORKFLOW &rarr; SCHWAB_POSITIONS_UPLOAD
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1.5">
+                      <strong className="text-white block font-semibold">⚙️ Automated System Ingestion:</strong>
+                      <ul className="text-slate-300 space-y-1 list-disc list-inside">
+                        <li><strong>CSV Position Ingestion:</strong> Automatically ingests export files directly from Charles Schwab accounts as of the close of trading for the week.</li>
+                        <li><strong>Asset Breakdown:</strong> Classifies rows into Bank Sweep Cash, Money Market Funds (SNYXX, SNAXX), Open Option Contracts (CSPs and Covered Calls), and Equities.</li>
+                        <li><strong>Baseline Auto-Seed:</strong> Pre-loads verified week-ending baseline positions ($573,820.76 liquid cash pool and $263,250.00 CSP encumbrance) with one click.</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+                      <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
+                      <ol className="text-slate-300 space-y-1 list-decimal list-inside">
+                        <li><strong>Export from Schwab:</strong> Log into Charles Schwab, navigate to Positions, and click &quot;Export&quot; as of Friday&apos;s close.</li>
+                        <li><strong>Upload CSV:</strong> Drag-and-drop or select your CSV file in the dropzone.</li>
+                        <li><strong>Verify Balances:</strong> Review categorized cards, then click <strong>&quot;Proceed to Step 2: Cash Balance &rarr;&quot;</strong>.</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
                 <div className="bg-slate-950/80 p-4 rounded-xl border border-emerald-500/30 space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                     <div className="flex items-center space-x-2">
                       <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold flex items-center justify-center text-xs">
-                        1
+                        2
                       </span>
-                      <span className="font-bold text-emerald-300 text-sm">Step 1: Cash &amp; Disbursements Ledger (WeeklyCashLedgerView)</span>
+                      <span className="font-bold text-emerald-300 text-sm">Step 2: Precalculated Cash Balance, Disbursements &amp; Tax Ledger (WeeklyCashLedgerView)</span>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
                       Route: WORKFLOW &rarr; WEEKLY_CASH_LEDGER
@@ -555,9 +590,8 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <div className="space-y-1.5">
                       <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
                       <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                        <li><strong>Cash &amp; MMF Aggregation:</strong> Combines bank cash ($293,703.52) with Charles Schwab money market funds (SNYXX $202,775.94 + SNAXX $77,341.30) to yield $573,820.76 total collateral-backing liquidity.</li>
-                        <li><strong>Living Expense Encumbrance:</strong> Automatically subtracts $5,000 upfront weekly living disbursements before any options sizing occurs.</li>
-                        <li><strong>Committed Collateral Deduction:</strong> Automatically nets -$263,250.00 in active CSP collateral (PANW 327.50P + PLTR 165.00P) to output $305,570.76 True Deployable Free Cash.</li>
+                        <li><strong>Precalculated Cash Formula:</strong> Evaluates <code className="text-emerald-300 font-mono">Precalculated Liquid Cash = Cash Sweep + Money Market Funds - &Sigma;(Strike &times; 100 &times; Contracts for open CSPs)</code> ($573,820.76 - $263,250.00 = $310,570.76).</li>
+                        <li><strong>Living Expense Encumbrance:</strong> Automatically subtracts $5,000 upfront weekly living disbursements before options sizing, yielding $305,570.76 Net Deployable Free Cash.</li>
                         <li><strong>Position Limits:</strong> Strictly enforces $200,000 single equity security position limit and dynamically sizes concurrent trades: <code className="text-emerald-400 font-mono">min(5, floor(Free Cash / Target Allocation))</code>.</li>
                       </ul>
                     </div>
@@ -565,7 +599,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
                       <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
                       <ol className="text-slate-300 space-y-1 list-decimal list-inside">
-                        <li><strong>Verify Liquid Cash:</strong> Review the &quot;1. Total Available Cash&quot; box. If bank or MMF balances changed, click to edit inline or select a quick chip (<strong>$250k</strong>, <strong>$500k</strong>, <strong>$750k</strong>, <strong>$1M</strong>).</li>
+                        <li><strong>Verify Precalculated Cash:</strong> Review the formula breakdown box. If cash or MMF balances changed, edit inline or use quick chips.</li>
                         <li><strong>Set Living Expenses:</strong> Verify the weekly disbursement ($5,000 default). Adjust if extraordinary tax or capital distributions are planned.</li>
                         <li><strong>Position Allocation Target:</strong> Select your target allocation (Auto, $50k, $100k, or $200k max cap) to calibrate position sizing.</li>
                       </ol>
@@ -573,14 +607,14 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                {/* Step 2 */}
+                {/* Step 3 */}
                 <div className="bg-slate-950/80 p-4 rounded-xl border border-indigo-500/30 space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                     <div className="flex items-center space-x-2">
                       <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 font-mono font-bold flex items-center justify-center text-xs">
-                        2
+                        3
                       </span>
-                      <span className="font-bold text-indigo-300 text-sm">Step 2: Holdings &amp; Covered Calls (HoldingsCoveredCallView)</span>
+                      <span className="font-bold text-indigo-300 text-sm">Step 3: Holdings &amp; Covered Calls (HoldingsCoveredCallView)</span>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
                       Route: WORKFLOW &rarr; HOLDINGS_COVERED_CALLS
@@ -591,8 +625,9 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <div className="space-y-1.5">
                       <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
                       <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                        <li><strong>Multi-Leg Pairing:</strong> Pairs 7 equity holdings (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA) with active covered calls.</li>
-                        <li><strong>80% Profit Triggers:</strong> Flags profitable covered calls that have captured &ge;80% of max premium (e.g. BLZE 17.5C at +84.9% and TSLA 375C at +85.3%) to eliminate gamma tail risk.</li>
+                        <li><strong>Multi-Leg Pairing:</strong> Pairs 7 equity holdings (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA) with active covered calls and real-time Mkt Prices.</li>
+                        <li><strong>Dynamic Expiration Engine:</strong> Evaluates option expiration dates deterministically; expired options display a clean &quot;Expired (Date)&quot; status badge.</li>
+                        <li><strong>80% Profit Triggers:</strong> Flags profitable active covered calls that have captured &ge;80% of max premium (excluding expired contracts) to eliminate gamma tail risk.</li>
                         <li><strong>Uncovered Block Detection:</strong> Identifies unhedged 100-share blocks and calculates 20&Delta; strike suggestions anchored above resistance.</li>
                       </ul>
                     </div>
@@ -600,21 +635,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
                       <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
                       <ol className="text-slate-300 space-y-1 list-decimal list-inside">
-                        <li><strong>Check Profit Triggers:</strong> Review positions highlighted in emerald (&ge;80% profit). Click <strong>&quot;Stage BTC Order&quot;</strong> to buy-to-close or roll out and up.</li>
+                        <li><strong>Check Profit Triggers:</strong> Review active positions highlighted in emerald (&ge;80% profit). Click <strong>&quot;Stage BTC Order&quot;</strong> to buy-to-close or roll out and up.</li>
                         <li><strong>Write Covered Calls:</strong> On any unhedged shares, review the recommended 20&Delta; strikes and click <strong>&quot;1-Click Stage CC&quot;</strong> to send to the broker workbench.</li>
                       </ol>
                     </div>
                   </div>
                 </div>
 
-                {/* Step 3 */}
-                <div className="bg-slate-950/80 p-4 rounded-xl border border-blue-500/30 space-y-2.5">
+                {/* Step 4 */}
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-purple-500/30 space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                     <div className="flex items-center space-x-2">
-                      <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 font-mono font-bold flex items-center justify-center text-xs">
-                        3
+                      <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 font-mono font-bold flex items-center justify-center text-xs">
+                        4
                       </span>
-                      <span className="font-bold text-blue-300 text-sm">Step 3: Macro &amp; Catalysts Radar (EconomicCalendarView)</span>
+                      <span className="font-bold text-purple-300 text-sm">Step 4: Macro &amp; Catalysts Radar (EconomicCalendarView)</span>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
                       Route: WORKFLOW &rarr; ECONOMIC_CALENDAR
@@ -640,14 +675,14 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                {/* Step 4 */}
+                {/* Step 5 */}
                 <div className="bg-slate-950/80 p-4 rounded-xl border border-cyan-500/30 space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                     <div className="flex items-center space-x-2">
                       <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 font-mono font-bold flex items-center justify-center text-xs">
-                        4
+                        5
                       </span>
-                      <span className="font-bold text-cyan-300 text-sm">Step 4: Tri-Screen &amp; Gemini AI Decision Hub (CascadingScreenerView)</span>
+                      <span className="font-bold text-cyan-300 text-sm">Step 5: Tri-Screen &amp; Gemini AI Decision Hub (CascadingScreenerView)</span>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
                       Route: WORKFLOW &rarr; CASCADING_SCREENER
@@ -658,10 +693,10 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     <div className="space-y-1.5">
                       <strong className="text-white block font-semibold">⚙️ Automated System Calculations &amp; Tri-Screen Engine:</strong>
                       <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                        <li><strong>Tab 1 (Barchart Top 1%):</strong> Loads 53 screened equities with 100% buy consensus across 13 technical moving averages and MACDs.</li>
-                        <li><strong>Tab 2 (MarketChameleon Momentum):</strong> Loads 60 momentum equities with RSI 50–70, IV30 &gt; 30%, and CBOE weekly registry verification.</li>
+                        <li><strong>Tab 1 (Barchart Top 1%):</strong> Loads screened equities with 100% buy consensus across 13 technical moving averages and MACDs.</li>
+                        <li><strong>Tab 2 (MarketChameleon Momentum):</strong> Loads momentum equities with RSI 50–70, IV30 &gt; 30%, and CBOE weekly registry verification.</li>
                         <li><strong>Tab 3 (ThinkorSwim View 190898):</strong> Automatically computes 13-indicator Barchart opinion consensus, stability arrows, and options cadence for any custom or TOS tickers.</li>
-                        <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Ingests liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), strictly eliminates non-weekly options (e.g. AMCX monthly-only) via CBOE Weeklys Gate, filters candidate contracts within 0.15–0.25&Delta;, formats institutional prompt, and parses 3 markdown tables.</li>
+                        <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Ingests liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), strictly eliminates non-weekly options via CBOE Weeklys Gate, filters candidate contracts within 0.15–0.25&Delta;, formats institutional prompt, and parses 3 markdown tables.</li>
                       </ul>
                     </div>
 
@@ -677,14 +712,14 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                {/* Step 5 */}
+                {/* Step 6 */}
                 <div className="bg-slate-950/80 p-4 rounded-xl border border-amber-500/30 space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                     <div className="flex items-center space-x-2">
                       <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold flex items-center justify-center text-xs">
-                        5
+                        6
                       </span>
-                      <span className="font-bold text-amber-300 text-sm">Step 5: Master Report (WeeklyExecutiveReportView)</span>
+                      <span className="font-bold text-amber-300 text-sm">Step 6: Master Report (WeeklyExecutiveReportView)</span>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
                       Route: WORKFLOW &rarr; WEEKLY_EXECUTIVE_REPORT
@@ -711,14 +746,14 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                {/* Step 6 */}
+                {/* Step 7 */}
                 <div className="bg-slate-950/80 p-4 rounded-xl border border-teal-500/30 space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                     <div className="flex items-center space-x-2">
                       <span className="w-6 h-6 rounded-full bg-teal-500/20 text-teal-300 font-mono font-bold flex items-center justify-center text-xs">
-                        6
+                        7
                       </span>
-                      <span className="font-bold text-teal-300 text-sm">Step 6: Broker Order Execution (BrokerStagingWorkbench)</span>
+                      <span className="font-bold text-teal-300 text-sm">Step 7: Broker Order Execution (BrokerStagingWorkbench)</span>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
                       Route: WORKFLOW &rarr; BROKER_STAGING

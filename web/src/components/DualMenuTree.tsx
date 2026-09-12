@@ -19,6 +19,7 @@ import {
   Clock,
   CheckCircle2,
   HelpCircle,
+  Upload,
 } from './icons';
 import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 
@@ -61,6 +62,7 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             onClick={() => {
               onSelectTree('WORKFLOW');
               if (
+                activeOptionsTab !== 'SCHWAB_POSITIONS_UPLOAD' &&
                 activeOptionsTab !== 'WEEKLY_CASH_LEDGER' &&
                 activeOptionsTab !== 'HOLDINGS_COVERED_CALLS' &&
                 activeOptionsTab !== 'ECONOMIC_CALENDAR' &&
@@ -68,7 +70,7 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                 activeOptionsTab !== 'WEEKLY_EXECUTIVE_REPORT' &&
                 activeOptionsTab !== 'BROKER_STAGING'
               ) {
-                onSelectOptionsTab('WEEKLY_CASH_LEDGER');
+                onSelectOptionsTab('SCHWAB_POSITIONS_UPLOAD');
               }
             }}
             className={`flex items-center space-x-2.5 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
@@ -185,7 +187,23 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
         {activeTree === 'WORKFLOW' ? (
           /* WORKFLOW MODE: Guided End-of-Week Ritual */
           <div className="flex items-center space-x-2 min-w-max w-full">
-            {/* Step 1: Cash & Disbursements */}
+            {/* Step 1: Upload Schwab Positions */}
+            <button
+              onClick={() => onSelectOptionsTab('SCHWAB_POSITIONS_UPLOAD')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
+                activeOptionsTab === 'SCHWAB_POSITIONS_UPLOAD'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+            >
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">1</span>
+              <Upload className="w-3.5 h-3.5 text-emerald-300" />
+              <span>1. Upload Schwab Positions</span>
+            </button>
+
+            <span className="text-slate-600 text-xs">➔</span>
+
+            {/* Step 2: Cash Balance */}
             <button
               onClick={() => onSelectOptionsTab('WEEKLY_CASH_LEDGER')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
@@ -194,14 +212,14 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">1</span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">2</span>
               <DollarSign className="w-3.5 h-3.5 text-emerald-300" />
-              <span>1. Cash &amp; Disbursements</span>
+              <span>2. Cash Balance</span>
             </button>
 
             <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 2: Holdings & Covered Calls */}
+            {/* Step 3: Holdings & Covered Calls */}
             <button
               onClick={() => onSelectOptionsTab('HOLDINGS_COVERED_CALLS')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
@@ -210,14 +228,14 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">2</span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">3</span>
               <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
-              <span>2. Holdings &amp; Covered Calls</span>
+              <span>3. Holdings &amp; Covered Calls</span>
             </button>
 
             <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 3: Macro & Catalysts */}
+            {/* Step 4: Macro & Catalysts */}
             <button
               onClick={() => onSelectOptionsTab('ECONOMIC_CALENDAR')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
@@ -226,14 +244,14 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">3</span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">4</span>
               <Calendar className="w-3.5 h-3.5 text-blue-300" />
-              <span>3. Macro &amp; Catalysts</span>
+              <span>4. Macro &amp; Catalysts</span>
             </button>
 
             <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 4: Cascading Screener & Gemini */}
+            {/* Step 5: Cascading Screener & Gemini */}
             <button
               onClick={() => onSelectOptionsTab('CASCADING_SCREENER')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
@@ -242,14 +260,14 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">4</span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">5</span>
               <Filter className="w-3.5 h-3.5 text-emerald-300" />
-              <span>4. Tri-Screen &amp; Gemini AI</span>
+              <span>5. Tri-Screen &amp; Gemini AI</span>
             </button>
 
             <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 5: Weekly Executive Report */}
+            {/* Step 6: Weekly Executive Report */}
             <button
               onClick={() => onSelectOptionsTab('WEEKLY_EXECUTIVE_REPORT')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
@@ -258,14 +276,14 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">5</span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">6</span>
               <Award className="w-3.5 h-3.5 text-amber-300" />
-              <span>5. Master Report</span>
+              <span>6. Master Report</span>
             </button>
 
             <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 6: Broker Staging */}
+            {/* Step 7: Broker Staging */}
             <button
               onClick={() => onSelectOptionsTab('BROKER_STAGING')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
@@ -274,9 +292,9 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
             >
-              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">6</span>
+              <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">7</span>
               <Zap className="w-3.5 h-3.5 text-cyan-300" />
-              <span>6. Broker Staging</span>
+              <span>7. Broker Staging</span>
             </button>
           </div>
         ) : activeTree === 'OPTIONS' ? (

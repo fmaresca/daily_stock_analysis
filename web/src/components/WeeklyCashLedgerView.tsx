@@ -347,11 +347,11 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
           <h2 className="text-xl font-bold text-white flex items-center space-x-2.5">
-            <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 text-xs flex items-center justify-center font-bold">1</span>
-            <span>Weekly Cash, Disbursements &amp; Tax-Alpha Reconciliation</span>
+            <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 text-xs flex items-center justify-center font-bold">2</span>
+            <span>Precalculated Cash Balance, Disbursements &amp; Tax-Alpha Reconciliation</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Step 1 of the Weekend Routine: Set available cash, encumber planned living disbursements ($5k default), dynamically size CSP positions (max $200k/equity), track weekly premiums, and offset prior-year losses.
+            Step 2 of the Weekend Routine: Review your Precalculated Cash Balance (Money Market Funds + Cash Sweep less liabilities for open put options written), encumber planned living disbursements ($5k default), dynamically size new CSPs (max $200k/equity), and track tax alpha.
           </p>
         </div>
 
@@ -376,7 +376,7 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
               onClick={onNavigateToNextStep}
               className="px-4 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 flex items-center space-x-1.5 transition-colors"
             >
-              <span>Next: Step 2 Holdings &rarr;</span>
+              <span>Next: Step 3 Holdings &rarr;</span>
             </button>
           )}
         </div>
@@ -535,6 +535,21 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
               100% Cash-Secured (Zero Margin)
             </span>
+          </div>
+        </div>
+
+        {/* Precalculated Cash Formula Banner */}
+        <div className="p-3.5 rounded-xl bg-gradient-to-r from-cyan-950/40 via-slate-900 to-emerald-950/30 border border-cyan-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-2">
+            <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono font-bold text-[10px] border border-cyan-500/30">PRECALCULATED CASH</span>
+            <span className="text-slate-300">
+              Total Cash Pool (Money Market + Sweep): <strong className="text-white font-mono">${capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+              {' '}&minus; Open Put Liabilities: <strong className="text-rose-400 font-mono">${capitalState.committedCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+              {' '}&#61; <strong className="text-emerald-400 font-mono text-sm">${Math.max(0, capitalState.totalCash - capitalState.committedCollateral).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> Available Cash
+            </span>
+          </div>
+          <div className="text-[11px] font-mono text-slate-400">
+            Less Disbursements: &minus;${capitalState.totalEncumberedDisbursements.toLocaleString()} &rarr; <span className="text-emerald-400 font-bold">${capitalState.freeCash.toLocaleString()} Deployable Free Cash</span>
           </div>
         </div>
 
