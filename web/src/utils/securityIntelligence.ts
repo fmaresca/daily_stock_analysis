@@ -19,6 +19,7 @@ import {
   SocialSentiment,
   TickerMeta,
 } from '../types/options';
+import { getSecEdgarUrl } from './secEdgarRegistry';
 
 export interface NewsStory {
   id: string;
@@ -95,7 +96,7 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
       { name: 'State Street Global Advisors', stakePct: '5.1%' },
       { name: 'Geode Capital Management', stakePct: '2.1%' },
     ],
-    secEdgarUrl: 'https://www.sec.gov/edgar/browse/?CIK=0000888702',
+    secEdgarUrl: getSecEdgarUrl('SPY'),
     latestFilingDate: '2026-08-15',
     latestFilingType: '10-Q',
     recentNews: [
@@ -733,8 +734,8 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
       { name: 'Morgan Stanley', stakePct: '4.2%' },
       { name: 'Bank of America Corp', stakePct: '3.1%' },
     ],
-    secEdgarUrl: 'https://www.sec.gov/edgar/browse/?CIK=0001072970',
-    latestFilingDate: '2026-08-01',
+    secEdgarUrl: getSecEdgarUrl('JEPI'),
+    latestFilingDate: '2026-08-15',
     latestFilingType: '10-Q',
     recentNews: [
       {
@@ -984,7 +985,7 @@ export const SECURITY_INTELLIGENCE_REGISTRY: Record<string, SecurityIntelligence
       { name: 'CrossingBridge Advisors', stakePct: '16.5%' },
       { name: 'Susquehanna International', stakePct: '5.1%' },
     ],
-    secEdgarUrl: 'https://www.sec.gov/edgar/browse/?CIK=0001824105',
+    secEdgarUrl: getSecEdgarUrl('SPCX'),
     latestFilingDate: '2026-08-10',
     latestFilingType: '10-Q',
     recentNews: [
@@ -1533,7 +1534,7 @@ export function getSecurityIntelligence(symbol: string, meta?: any): SecurityInt
       { name: 'BlackRock Inc.', stakePct: '6.4%' },
       { name: 'State Street Corp', stakePct: '3.8%' },
     ],
-    secEdgarUrl: `https://www.sec.gov/edgar/searchedgar/companysearch?company=${upper}`,
+    secEdgarUrl: getSecEdgarUrl(upper),
     latestFilingDate: '2026-08-15',
     latestFilingType: '10-Q',
     recentNews: [

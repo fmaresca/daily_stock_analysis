@@ -8,6 +8,7 @@
  */
 
 import { TickerMeta } from '../types/options';
+import { getSecEdgarUrl } from './secEdgarRegistry';
 
 export interface QuantAgentAnalysis {
   name: string;
@@ -153,7 +154,7 @@ export async function runMultiAgentTradeAudit(
   const safetyBuffer = Math.abs(spot - recommendedStrike);
   const safetyBufferPct = Math.round((safetyBuffer / spot) * 1000) / 10;
 
-  const edgarUrl = `https://www.sec.gov/edgar/searchedgar/companysearch?company=${ticker.symbol}`;
+  const edgarUrl = getSecEdgarUrl(ticker.symbol);
 
   return {
     symbol: ticker.symbol,

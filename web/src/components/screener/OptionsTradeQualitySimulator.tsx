@@ -320,7 +320,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
 
     // Implied Volatility: use pulled IV if available, or derive calibrated IV from ivRank slider
     const ivDecimal = pulledData?.ivCurrent
-      ? pulledData.ivCurrent
+      ? (pulledData.ivCurrent > 1.0 ? pulledData.ivCurrent / 100.0 : pulledData.ivCurrent)
       : Math.max(0.16, Math.min(0.95, 0.20 + (ivRank / 100) * 0.40));
 
     // Target delta from slider (0.10 to 0.45)
@@ -538,7 +538,8 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
         }
       }
 
-      const ivCurrent = Math.max(0.18, Math.round((hv30 * 1.15) / 100 * 1000) / 1000);
+      const ivCurrent = Math.max(18.0, Math.round(hv30 * 1.15 * 10) / 10);
+      const ivDecimal = ivCurrent / 100.0;
 
       // Check pre-scraped files or datasets for exact figures
       let resolvedIvRank = profile.baseIvRank;
@@ -595,10 +596,9 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
         };
       }
 
-      // 4. Options Expiration & Strike Delta Formulation
       const effectiveDte = Math.max(1, calculateOptionsDte(expirationDate));
       const t = effectiveDte / 365.0;
-      const v = ivCurrent;
+      const v = ivDecimal;
 
       // Conservative strike calculation:
       // CSP: ~0.18 Delta strike below spot (around 4-6% OTM)
@@ -674,18 +674,23 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
     }
   }, [ticker, dataSource, strategy, expirationDate]);
 
-  // Auto-fetch if initialTicker was provided
+  // Automatically synchronize live market price, technicals & earnings calendar whenever ticker or dataSource changes
   useEffect(() => {
-    if (initialTicker && initialTicker.trim().length > 0) {
-      handleFetchTechnicals(initialTicker, initialDataSource);
-    }
-  }, [initialTicker, initialDataSource, handleFetchTechnicals]);
+    const cleanSym = ticker.trim().toUpperCase();
+    if (!cleanSym || cleanSym.length < 1) return;
+
+    const timer = setTimeout(() => {
+      handleFetchTechnicals(cleanSym, dataSource);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [ticker, dataSource, handleFetchTechnicals]);
 
   // Handle switching data source
   const handleSourceChange = (newSource: 'BARCHART' | 'MARKETCHAMELEON') => {
     setDataSource(newSource);
     if (ticker.trim()) {
-      handleFetchTechnicals(ticker, newSource);
+      handleFetchTechnicals(ticker.trim().toUpperCase(), newSource);
     }
   };
 
@@ -1075,8 +1080,10 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
               </span>
             </div>
             <div className="bg-slate-950/60 p-2 rounded border border-slate-800">
-              <span className="text-slate-500 text-[10px] block">PULLED IV RANK</span>
-              <span className="text-emerald-400 font-bold">{pulledData.ivRank}%</span>
+              <span className="text-slate-500 text-[10px] block">PULLED IV / IVR</span>
+              <span className="text-emerald-400 font-bold">
+                {(pulledData.ivCurrent > 1.0 ? pulledData.ivCurrent : pulledData.ivCurrent * 100).toFixed(1)}% / {pulledData.ivRank}
+              </span>
             </div>
             <div className="bg-slate-950/60 p-2 rounded border border-slate-800 sm:col-span-2">
               <span className="text-slate-500 text-[10px] block">
