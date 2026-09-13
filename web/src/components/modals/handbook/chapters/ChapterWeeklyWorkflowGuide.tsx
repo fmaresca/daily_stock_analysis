@@ -4,27 +4,29 @@ import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../../../../types
 
 export interface ChapterWeeklyWorkflowGuideProps {
   onNavigate?: (tree: MenuTreeType, optionsTab?: OptionsTabType, equitiesTab?: EquitiesTabType) => void;
+  onOpenSimulator?: () => void;
 }
 
 export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProps> = ({
   onNavigate,
+  onOpenSimulator,
 }) => {
   return (
     <div className="space-y-6">
       <div className="border-l-2 border-emerald-400 pl-4 py-1">
         <h3 className="text-base font-bold text-white flex items-center gap-2">
-          <span>📅 The Systematic End-of-Week Options Ritual (6-Step Guided Workflow)</span>
+          <span>📅 The Systematic End-of-Week Options Ritual (7-Step Guided Workflow)</span>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
             Production Standard
           </span>
         </h3>
         <p className="text-slate-300 mt-1 text-xs leading-relaxed">
-          Every weekend, systematic options income investors execute this strict 6-step ritual to audit cash, encumber weekly living disbursements ($5,000), manage holdings and 80% profit triggers, evaluate macro catalysts, run the Tri-Screen quant engine, obtain Gemini AI Extended Thinking trade selections in 3 markdown tables, and stage bracket orders in the broker workbench.
+          Every weekend, systematic options income investors execute this strict 7-step ritual to audit cash, encumber weekly living disbursements ($5,000), manage holdings and 80% profit triggers, evaluate macro catalysts, run the Tri-Screen quant engine, obtain Gemini AI Extended Thinking trade selections in 3 markdown tables, and stage bracket orders in the broker workbench.
         </p>
       </div>
 
       <DirectActionBanner
-        title="7-Step Guided Workflow Direct Access"
+        title="7-Step Guided Workflow & Tactical Tools Direct Access"
         actions={[
           {
             label: 'Step 1: Schwab Positions',
@@ -60,6 +62,26 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
             label: 'Step 7: Broker Staging',
             location: 'Workflow > Order Staging',
             onClick: () => onNavigate?.('WORKFLOW', 'BROKER_STAGING'),
+          },
+          {
+            label: 'Trade Quality Simulator',
+            location: 'Interactive Modal: 4-Tab Engine',
+            onClick: onOpenSimulator,
+          },
+          {
+            label: 'Tax Alpha Optimizer (1256)',
+            location: 'Options > Tax Alpha Optimizer',
+            onClick: () => onNavigate?.('OPTIONS', 'TAX_ALPHA_OPTIMIZER'),
+          },
+          {
+            label: 'Defensive Roll Assistant',
+            location: 'Options > Defensive Roll Assistant',
+            onClick: () => onNavigate?.('OPTIONS', 'DEFENSIVE_ROLL_ASSISTANT'),
+          },
+          {
+            label: 'Portfolio Margin Simulator',
+            location: 'Options > Portfolio Margin Sim',
+            onClick: () => onNavigate?.('OPTIONS', 'PORTFOLIO_MARGIN_SIM'),
           },
         ]}
       />

@@ -325,6 +325,42 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
               </button>
             )}
 
+            {/* Section 1256 Tax Alpha & Loss Harvest */}
+            <button
+              onClick={() => {
+                onSelectTree('OPTIONS');
+                onSelectOptionsTab('TAX_ALPHA_OPTIMIZER');
+                onCloseMobile?.();
+              }}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-semibold ${
+                activeTree === 'OPTIONS' && activeOptionsTab === 'TAX_ALPHA_OPTIMIZER'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-emerald-300 hover:text-white bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/30'
+              } transition-all cursor-pointer group`}
+              title="Section 1256 Tax Alpha & Wash Sale Loss Harvest Optimizer"
+            >
+              <DollarSign className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
+              {!isCollapsed && <span>Tax Alpha (1256)</span>}
+            </button>
+
+            {/* Defensive Rolling Assistant */}
+            <button
+              onClick={() => {
+                onSelectTree('OPTIONS');
+                onSelectOptionsTab('DEFENSIVE_ROLL_ASSISTANT');
+                onCloseMobile?.();
+              }}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-semibold ${
+                activeTree === 'OPTIONS' && activeOptionsTab === 'DEFENSIVE_ROLL_ASSISTANT'
+                  ? 'bg-amber-600 text-white shadow-md'
+                  : 'text-amber-300 hover:text-white bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/30'
+              } transition-all cursor-pointer group`}
+              title="Algorithmic Defensive Roll & Contract Repair Assistant"
+            >
+              <ShieldCheck className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
+              {!isCollapsed && <span>Roll Assistant</span>}
+            </button>
+
             {/* Custom Watchlists */}
             {onOpenWatchlists && (
               <button

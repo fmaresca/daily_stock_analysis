@@ -38,6 +38,7 @@ import { ChapterGreeksFormulas } from './modals/handbook/chapters/ChapterGreeksF
 import { ChapterLiquidityTiers } from './modals/handbook/chapters/ChapterLiquidityTiers';
 import { ChapterShortcutsFaq } from './modals/handbook/chapters/ChapterShortcutsFaq';
 import { ChapterQuantValuation } from './modals/handbook/chapters/ChapterQuantValuation';
+import { ChapterTaxAlphaAudit } from './modals/handbook/chapters/ChapterTaxAlphaAudit';
 
 interface HelpHandbookModalProps {
   isOpen: boolean;
@@ -74,7 +75,8 @@ type HandbookTab =
   | 'GREEKS_FORMULAS'
   | 'LIQUIDITY_TIERS'
   | 'SHORTCUTS_FAQ'
-  | 'QUANT_VALUATION_ENGINE';
+  | 'QUANT_VALUATION_ENGINE'
+  | 'TAX_ALPHA_AUDIT';
 
 export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
   isOpen,
@@ -368,6 +370,18 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
             <DollarSign className="w-4 h-4 text-teal-400" />
             <span>14. Quantitative Equity Valuation &amp; DCF Terminal (v3.4)</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('TAX_ALPHA_AUDIT')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'TAX_ALPHA_AUDIT'
+                ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                : 'text-emerald-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <span>15. Institutional Derivatives Tax Alpha &amp; IRC Subchapter P Audit (v3.4)</span>
+          </button>
         </div>
 
         {/* Tab Content Body */}
@@ -390,6 +404,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
           {activeTab === 'WEEKLY_WORKFLOW_GUIDE' && (
             <ChapterWeeklyWorkflowGuide
               onNavigate={onNavigate}
+              onOpenSimulator={onOpenSimulator}
             />
           )}
 
@@ -472,12 +487,20 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
               onOpenCommandPalette={onOpenCommandPalette}
               onOpenWatchlists={onOpenWatchlists}
               onOpenReports={onOpenReports}
+              onOpenSimulator={onOpenSimulator}
             />
           )}
 
           {activeTab === 'QUANT_VALUATION_ENGINE' && (
             <ChapterQuantValuation
               onOpenValuation={onOpenValuation}
+              onNavigate={onNavigate}
+              onOpenSimulator={onOpenSimulator}
+            />
+          )}
+
+          {activeTab === 'TAX_ALPHA_AUDIT' && (
+            <ChapterTaxAlphaAudit
               onNavigate={onNavigate}
               onOpenSimulator={onOpenSimulator}
             />

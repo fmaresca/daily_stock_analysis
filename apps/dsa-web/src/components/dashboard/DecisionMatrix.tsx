@@ -254,6 +254,7 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
         onSelectTrade({
           ticker: item.ticker,
           company_name: item.companyName,
+          market: (item as any).market || 'US',
           bias: item.bias,
           conviction_score: item.convictionScore,
           current_price: item.currentPrice,
@@ -447,7 +448,16 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60 bg-[#0B0F17]">
-            {filteredAndSortedSignals.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={10} className="py-12 text-center text-sm text-slate-400">
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                    <span>Loading decision matrix...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : filteredAndSortedSignals.length === 0 ? (
               <tr>
                 <td colSpan={10} className="py-12 text-center text-sm text-slate-500">
                   No trade setups match the current filters.
@@ -457,7 +467,7 @@ export const DecisionMatrix: React.FC<DecisionMatrixProps> = ({
               filteredAndSortedSignals.map((item) => {
                 const isSelected = selectedTicker?.toUpperCase() === item.ticker.toUpperCase();
                 const hyd = hydrationCache?.[item.ticker.toUpperCase()];
-                const isHydrating = hyd && (hyd.status === 'pending' || hyd.status === 'hydrating');
+                const isHydrating = hyd && (hyd.status === 'pending' || (hyd.status as string) === 'hydrating');
                 const hydFailed = hyd && hyd.status === 'failed';
                 const livePrice = (hyd?.quote?.currentPrice ?? 0) > 0 ? hyd!.quote!.currentPrice : item.currentPrice;
 

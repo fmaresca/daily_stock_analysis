@@ -31,13 +31,18 @@ export const ChapterTradeQualityScoring: React.FC<ChapterTradeQualityScoringProp
         actions={[
           {
             label: 'Launch Interactive Simulator',
-            location: 'Interactive Modal',
+            location: 'Interactive 4-Tab Modal',
             onClick: onOpenSimulator,
           },
           {
-            label: 'Options Income Screener Table',
-            location: 'Options > Income Screener',
-            onClick: () => onNavigate?.('OPTIONS', 'INCOME_SCREENER'),
+            label: 'Section 1256 Tax Alpha Optimizer',
+            location: 'Options > Section 1256 Tax Alpha',
+            onClick: () => onNavigate?.('OPTIONS', 'TAX_ALPHA_OPTIMIZER'),
+          },
+          {
+            label: 'Defensive Roll Assistant',
+            location: 'Options > Defensive Rolling',
+            onClick: () => onNavigate?.('OPTIONS', 'DEFENSIVE_ROLL_ASSISTANT'),
           },
           {
             label: 'Earnings Calendar Guard',
@@ -178,6 +183,83 @@ export const ChapterTradeQualityScoring: React.FC<ChapterTradeQualityScoringProp
             <p className="text-slate-400">
               For unstored equities, the simulator pauses to automatically fetch live SEC/Wall Street event dates. An in-flight banner alerts you to the lookup and caches the date permanently in browser storage.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 4 Simulator Sub-Tabs Architecture & Dual-Yield Engine */}
+      <div className="bg-slate-950/80 p-4 rounded-xl border border-cyan-500/30 space-y-3 text-xs">
+        <div className="font-bold text-cyan-300 flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-cyan-400" />
+            <span>Options Trade Quality Simulator &ndash; 4-Tab Analytical Architecture</span>
+          </span>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+            Institutional v3.4
+          </span>
+        </div>
+        <p className="text-slate-300 leading-relaxed text-[11px]">
+          The Trade Quality Simulator is organized into 4 specialized tabs, bringing together quantitative derivatives pricing, Greek analytics, payoff visualization, lifecycle roll management, and early exercise safeguards:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-emerald-400">📊 Tab 1: Scoring &amp; Sliders</span>
+              <span className="text-[9px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded">Default</span>
+            </div>
+            <p className="text-slate-300 text-[10px] leading-relaxed">
+              Real-time 100-point scoring model with 5 interactive sliders (IV Rank, Delta, 50 SMA distance, RoC, Liquidity). Features the <strong>Contract Blueprint Card</strong> delivering:
+            </p>
+            <ul className="text-slate-400 text-[10px] space-y-1 list-disc pl-3 font-mono">
+              <li><strong>Static Yield (Ann.):</strong> Uncalled return from pure extrinsic time premium.</li>
+              <li><strong>If-Called Return (Ann.):</strong> Total return including stock appreciation to strike.</li>
+              <li><strong>Downside Cushion:</strong> Premium buffer protecting cost basis.</li>
+            </ul>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-cyan-400">📈 Tab 2: Expiration Payoff Diagram</span>
+              <span className="text-[9px] font-mono bg-cyan-500/20 text-cyan-300 px-1.5 py-0.2 rounded">SVG Visualizer</span>
+            </div>
+            <p className="text-slate-300 text-[10px] leading-relaxed">
+              Interactive expiration profit &amp; loss (P&amp;L) curve across a &plusmn;25% underlying price band. Graphically maps:
+            </p>
+            <ul className="text-slate-400 text-[10px] space-y-1 list-disc pl-3 font-mono">
+              <li><strong>Spot Price Marker ($S_0$):</strong> Current entry baseline.</li>
+              <li><strong>Break-Even ($B/E$):</strong> $S_0 - C$ (Calls) or $K - P$ (Puts).</li>
+              <li><strong>Strike Cap ($K$):</strong> Upside profit ceiling with numerical Max Risk pills.</li>
+            </ul>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-amber-400">🔄 Tab 3: Defensive Roll Optimizer</span>
+              <span className="text-[9px] font-mono bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded">Matrix</span>
+            </div>
+            <p className="text-slate-300 text-[10px] leading-relaxed">
+              Algorithmic contract lifecycle manager providing actionable roll tactics for threatened or profit-taking positions:
+            </p>
+            <ul className="text-slate-400 text-[10px] space-y-1 list-disc pl-3 font-mono">
+              <li><strong>Roll Out (+14 DTE):</strong> Extrinsic decay reset for immediate net credit.</li>
+              <li><strong>Roll Up/Down &amp; Out (+28 DTE):</strong> Expands upside/downside safety cushion.</li>
+              <li><strong>0.50Δ Roll Trigger Rule:</strong> Initiate roll when delta reaches 0.50 ATM.</li>
+            </ul>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-purple-400">🛡️ Tab 4: Volatility &amp; Dividend Guard</span>
+              <span className="text-[9px] font-mono bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded">VRP &amp; Ex-Div</span>
+            </div>
+            <p className="text-slate-300 text-[10px] leading-relaxed">
+              Institutional derivatives risk checks monitoring volatility pricing and early assignment arbitrage:
+            </p>
+            <ul className="text-slate-400 text-[10px] space-y-1 list-disc pl-3 font-mono">
+              <li><strong>Variance Risk Premium (VRP):</strong> IV(atm) &minus; RV(30d) (positive VRP rewards sellers).</li>
+              <li><strong>Early Exercise Guard:</strong> Warns when C(extrinsic) &lt; Dividend prior to ex-dividend date.</li>
+              <li><strong>AI Conviction (1&ndash;100):</strong> Multi-agent synthesis with 80% profit-taking rule.</li>
+            </ul>
           </div>
         </div>
       </div>

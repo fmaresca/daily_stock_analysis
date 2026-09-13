@@ -1,20 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Activity,
-  AlertTriangle,
   ArrowDown,
   ArrowUp,
   BarChart2,
   CheckCircle2,
   Clock,
-  ExternalLink,
   FileText,
-  HelpCircle,
-  Layers,
-  Loader2,
   Percent,
   ShieldAlert,
-  Sparkles,
   TrendingUp,
   X,
 } from 'lucide-react';

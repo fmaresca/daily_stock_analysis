@@ -446,6 +446,20 @@ def parse_arguments() -> argparse.Namespace:
         help='强制回测（即使已有回测结果也重新计算）'
     )
 
+    # === Options Screening ===
+    parser.add_argument(
+        '--screen-options',
+        action='store_true',
+        help='运行备兑期权与期权收益筛选 (Covered Call & Option Income Screener)'
+    )
+
+    parser.add_argument(
+        '--symbols',
+        type=str,
+        default=None,
+        help='指定期权筛选的标的股票列表（逗号分隔，如 AAPL,MSFT）'
+    )
+
     return parser.parse_args()
 
 
@@ -1613,6 +1627,16 @@ def main() -> int:
         return 0
 
     try:
+        # 模式 -1: 期权收益筛选
+        if getattr(args, 'screen_options', False):
+            logger.info("模式: 备兑期权与期权收益筛选 (Covered Call & Option Income Screener)")
+            from backend.main import run_screen_options
+            symbols_input = getattr(args, 'symbols', None) or getattr(args, 'stocks', None) or "AAPL,MSFT"
+            sym_list = [s.strip() for s in symbols_input.split(",") if s.strip()]
+            res = run_screen_options(sym_list)
+            print(json.dumps(res, indent=2))
+            return 0
+
         # 模式0: 回测
         if getattr(args, 'backtest', False):
             logger.info("模式: 回测")

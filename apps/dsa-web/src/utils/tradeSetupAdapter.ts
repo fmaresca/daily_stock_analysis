@@ -305,7 +305,7 @@ export function deriveAnalyticalThesis(
       `Catalyst: ${catalyst}`,
     ],
     bear_invalidation: [
-      `Breakdown below structural support invalidate current directional bias.`,
+      `Breakdown below structural support invalidates current ${bias.toLowerCase()} directional bias.`,
       `Unexpected macroeconomic contraction or sector-wide risk-off rotation.`,
     ],
     catalyst_timing: 'Active 2–6 week horizon with upcoming liquidity & volume confirmation.',

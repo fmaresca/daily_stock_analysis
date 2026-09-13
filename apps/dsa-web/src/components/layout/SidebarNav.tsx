@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   BarChart3,
@@ -53,6 +54,7 @@ type DefaultNavItem = {
 const COMMAND_NAV_ITEMS: NavItem[] = [
   { key: 'matrix', label: 'Signals Matrix', to: '/', icon: LayoutDashboard, exact: true },
   { key: 'watchlists', label: 'Watchlists', to: '/?tab=watchlist', icon: Layers },
+  { key: 'covered_calls', label: 'Covered Calls & Income', to: '/dashboard/covered-calls', icon: Percent },
   { key: 'options', label: 'Options Income Scanner', to: '/screening', icon: Percent },
   { key: 'archive', label: 'Archive & Backtests', to: '/backtest', icon: History },
   { key: 'settings', label: 'Settings & API Keys', to: '/settings', icon: Sliders },
@@ -61,6 +63,7 @@ const COMMAND_NAV_ITEMS: NavItem[] = [
 const DEFAULT_NAV_ITEMS: DefaultNavItem[] = [
   { key: 'home', labelKey: 'layout.nav.home', to: '/', icon: LayoutDashboard, exact: true },
   { key: 'chat', labelKey: 'layout.nav.chat', to: '/chat', icon: MessageSquareCode, badge: 'completion' },
+  { key: 'covered_calls', labelKey: 'layout.nav.coveredCalls', to: '/dashboard/covered-calls', icon: Percent },
   { key: 'screening', labelKey: 'layout.nav.screening', to: '/screening', icon: ListOrdered },
   { key: 'portfolio', labelKey: 'layout.nav.portfolio', to: '/portfolio', icon: LineChart },
   { key: 'decision-signals', labelKey: 'layout.nav.decisionSignals', to: '/decision-signals', icon: Activity },
@@ -135,6 +138,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ collapsed = false, onNav
   );
   const itemActiveClass = 'border-border-subtle bg-surface-dark font-semibold text-accent-long shadow-sm';
   const itemIconClass = 'h-4 w-4 shrink-0';
+  const itemLabelClass = cn('truncate font-medium transition-opacity duration-200', isRail ? 'opacity-0 group-hover/sidebar:opacity-100 whitespace-nowrap overflow-hidden' : '');
 
   return (
     <div className="flex h-full flex-col">

@@ -23,6 +23,7 @@ const DecisionSignalsPage = lazy(() => import('./pages/DecisionSignalsPage'));
 const AlertsPage = lazy(() => import('./pages/AlertsPage'));
 const TokenUsagePage = lazy(() => import('./pages/TokenUsagePage'));
 const StockScreeningPage = lazy(() => import('./pages/StockScreeningPage'));
+const CoveredCallPage = lazy(() => import('./pages/CoveredCall/CoveredCallPage').then((m) => ({ default: m.CoveredCallPage })));
 
 const AppContent: React.FC = () => {
   const location = useLocation();
@@ -84,6 +85,8 @@ const AppContent: React.FC = () => {
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/decision-signals" element={<DecisionSignalsPage />} />
         <Route path="/screening" element={<StockScreeningPage />} />
+        <Route path="/covered-calls" element={<CoveredCallPage />} />
+        <Route path="/dashboard/covered-calls" element={<CoveredCallPage />} />
         <Route path="/backtest" element={<BacktestPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/usage" element={<TokenUsagePage />} />

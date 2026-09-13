@@ -40,6 +40,33 @@ When an earnings announcement falls within the options expiration period ($t_{\t
 - **Automated Live Earnings Calendar Retrieval & Latency Pause**:
   For tickers not pre-stored in the local earnings registry, the simulator automatically pauses to query multi-source financial and SEC disclosure feeds (via Yahoo Finance quoteSummary calendarEvents, v7 quote timestamps, and corporate reporting calendars). A prominent in-flight progress banner (`⏳ Pausing to fetch corporate earnings calendar for {symbol}...`) alerts the user to the network lookup so the ATM Straddle Implied Move and Earnings-Defended Strike are accurately computed and cached.
 
+### 2.2 4-Tab Options Trade Quality Simulator Architecture
+
+The **Options Trade Quality Simulator** (`OptionsTradeQualitySimulator.tsx`) is structured into four specialized institutional tabs:
+
+| Tab | Component Engine | Core Metrics & Mathematical Models |
+| :--- | :--- | :--- |
+| **📊 Tab 1: Scoring & Sliders** | `renderScoringTab()` | 100-Point Composite Score, DTE/Delta/IVR sliders, Dual-Yield Blueprint: <br/>• **Static Yield**: $Y_{\text{static}} = \frac{C}{S}$<br/>• **Assigned Yield**: $Y_{\text{assigned}} = \frac{C + (K - S)}{S}$<br/>• **AROC**: $\frac{\text{Premium}}{\text{Strike}} \times \frac{365}{\text{DTE}}$ |
+| **📈 Tab 2: Expiration Payoff** | `renderPayoffTab()` | Interactive P&L curve across price vectors ($S \in [0.7K, 1.3K]$), calculating exact Break-Even ($S_{\text{BE}} = K - P$ for CSP, $S - C$ for CC), Max Profit Cap, and Downside Assignment zone. |
+| **🔄 Tab 3: Defensive Roll Matrix** | `renderRollTab()` | Down-and-out credit roll calculator triggered when spot tests within 2.5% of strike or $|\Delta| \ge 0.40$. Evaluates rolls across 7, 14, 21, and 30 DTE expansions, computing net credit to lower cost basis. |
+| **🛡️ Tab 4: Volatility & Dividend Guard** | `renderVolDividendTab()` | • **Variance Risk Premium**: $\text{VRP} = \text{IV} - \text{RV}_{30\text{d}}$<br/>• **Dividend Early Exercise Risk**: Flags hazard if $t_{\text{ex-div}} \le t_{\text{exp}}$ and $C_{\text{extrinsic}} < \text{Dividend}$. |
+
+### 2.3 Tax Alpha & IRC Subchapter P Gateway Integration
+
+Options trades are audited through the 5-Gateway Statutory Framework:
+1. **IRC §1256 Non-Equity Index Contracts**: SPX, NDX, RUT, XSP options receive 60% Long-Term / 40% Short-Term capital gains rates (max blended ~26.8% vs. 40.8% ordinary). Single-stock equity options and ETFs (SPY, QQQ) do *not* qualify.
+2. **IRC §1092 Qualified Covered Calls (QCC)**: Enforces $> 30$ DTE and non-deep-ITM strike benchmarks to prevent straddle loss-deferral rules and preserve stock holding period clocks.
+3. **IRC §1091 Wash Sales**: 61-day window tracking to disallow losses when substantially identical option contracts are re-entered.
+
+### 2.4 Live Access Points & Interactive Hyperlinks
+
+Users can launch these capabilities directly from anywhere in the application:
+- **Options Trade Quality Simulator**: Open via the `Trade Quality Simulator` button in the top toolbar, the `Options > Simulator` tab, or from chapter hyperlinks in the Help Handbook.
+- **Tax Alpha Optimizer**: Available at `InstitutionalSidebar` &rarr; `Tactical Tools` &rarr; `Tax Alpha (1256)`, or via route `OPTIONS` &rarr; `TAX_ALPHA_OPTIMIZER`.
+- **Defensive Roll Assistant**: Available at `InstitutionalSidebar` &rarr; `Tactical Tools` &rarr; `Roll Assistant`, or via route `OPTIONS` &rarr; `DEFENSIVE_ROLL_ASSISTANT`.
+- **Portfolio Margin Simulator**: Available at `InstitutionalSidebar` &rarr; `Tactical Tools` &rarr; `Portfolio Margin`, or via route `OPTIONS` &rarr; `PORTFOLIO_MARGIN_SIM`.
+- **In-App Help Handbook**: Click `? Help` in the top right to access Chapter 14 (*Options Trade Quality Scoring & 4-Tab Simulator*) and Chapter 15 (*Institutional Derivatives Tax Alpha & IRC Subchapter P Audit*).
+
 ---
 
 ## 3. Gemini Extended Thinking Mode (`thinking_level: HIGH`)
