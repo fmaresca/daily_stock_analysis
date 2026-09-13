@@ -338,6 +338,18 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
+          {/* Direct Admin Console Quick-Action */}
+          {isAuthenticated && isAdmin && (
+            <button
+              onClick={() => (onNavigateTo ? onNavigateTo('ADMIN_USERS') : (window.location.href = '/admin/users'))}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-purple-950/80 hover:bg-purple-900 border border-purple-500/50 text-purple-300 hover:text-white transition-all cursor-pointer shadow-sm shadow-purple-900/30"
+              title="Open Admin User Console to provision and manage logins"
+            >
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden sm:inline">Admin Console</span>
+            </button>
+          )}
+
           {/* User Account / Tenant Profile Menu */}
           {isAuthenticated && user ? (
             <div className="relative">
@@ -415,11 +427,11 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <button
               onClick={() => (onNavigateTo ? onNavigateTo('LOGIN') : (window.location.href = '/login'))}
-              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-950/40 transition-all cursor-pointer"
-              title="Sign In to DeltaHarvest Account"
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-500 hover:to-emerald-500 text-white shadow-sm shadow-emerald-950/40 transition-all cursor-pointer"
+              title="Sign In to DeltaHarvest Account or Admin Console"
             >
               <User className="w-3.5 h-3.5" />
-              <span>Sign In</span>
+              <span>Admin / Sign In</span>
             </button>
           )}
 

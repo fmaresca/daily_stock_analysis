@@ -26,7 +26,12 @@ import {
   Clock,
   DollarSign,
   Activity,
+  User,
+  Users,
+  LogOut,
+  Key,
 } from './icons';
+import { useAuth } from '../context/AuthContext';
 
 interface InstitutionalSidebarProps {
   activeTree: MenuTreeType;
@@ -77,6 +82,7 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
   // Helper for active styling
   const getItemClasses = (isActive: boolean) =>
@@ -349,6 +355,59 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
             </button>
           </nav>
         </div>
+
+        {/* Administration & Multi-Tenant Access */}
+        <div>
+          {!isCollapsed && (
+            <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-purple-400 light:text-purple-700 px-3 mb-2">
+              <span>Security &amp; Tenants</span>
+              <span className="px-1.5 py-0.2 bg-purple-950/60 text-purple-300 border border-purple-800/40 rounded text-[9px]">
+                RBAC
+              </span>
+            </div>
+          )}
+          <nav className="space-y-1">
+            {/* Admin User Console (Enabled for Admin or prompt) */}
+            <button
+              onClick={() => {
+                onSelectTree('ADMIN_USERS');
+                onCloseMobile?.();
+              }}
+              className={`${getItemClasses(activeTree === 'ADMIN_USERS')} w-full`}
+              title="Admin User Console: Provision user logins, manage tenant accounts & reset passwords"
+            >
+              <Users className="w-4 h-4 text-purple-400 shrink-0" />
+              {!isCollapsed && (
+                <div className="flex items-center justify-between w-full text-left">
+                  <span>Admin Console</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-200 border border-purple-700/50 font-mono font-bold">
+                    ADMIN
+                  </span>
+                </div>
+              )}
+            </button>
+
+            {/* Client Private Workspace */}
+            <button
+              onClick={() => {
+                onSelectTree('DASHBOARD');
+                onCloseMobile?.();
+              }}
+              className={`${getItemClasses(activeTree === 'DASHBOARD')} w-full`}
+              title="Private Tenant Workspace: Personal portfolio, private trades & custom watchlists"
+            >
+              <LayoutDashboard className="w-4 h-4 text-emerald-400 shrink-0" />
+              {!isCollapsed && (
+                <div className="flex items-center justify-between w-full text-left">
+                  <span>Client Workspace</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-700/40 font-mono">
+                    PRIVATE
+                  </span>
+                </div>
+              )}
+            </button>
+          </nav>
+        </div>
       </div>
 
       {/* Bottom Footer / Settings & Diagnostics Section */}
@@ -443,6 +502,44 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
             </div>
           )}
         </div>
+
+        {/* User Account / Auth Status Widget */}
+        {isAuthenticated && user ? (
+          <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between text-xs shadow-sm">
+            <div className="flex items-center space-x-2 truncate">
+              <div className="w-6 h-6 rounded-full bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-[10px] font-bold text-purple-300 shrink-0">
+                {user.email[0].toUpperCase()}
+              </div>
+              {!isCollapsed && (
+                <div className="truncate text-left">
+                  <div className="font-semibold text-white truncate text-[11px] leading-tight">{user.displayName || user.email.split('@')[0]}</div>
+                  <div className="text-[9px] text-purple-400 font-mono font-bold">{user.role}</div>
+                </div>
+              )}
+            </div>
+            {!isCollapsed && (
+              <button
+                onClick={() => logout()}
+                className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 rounded transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              onSelectTree('LOGIN');
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border border-purple-400/40 shadow-sm shadow-purple-900/40 transition-all cursor-pointer"
+            title="Sign In with Admin or Client Credentials"
+          >
+            <User className="w-4 h-4 text-white shrink-0" />
+            {!isCollapsed && <span>Sign In as Admin</span>}
+          </button>
+        )}
 
         {/* Theme Toggle Button */}
         {onToggleTheme && (
