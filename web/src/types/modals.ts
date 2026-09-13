@@ -29,4 +29,6 @@ export interface ModalState {
   stagedOrder: StagedBracketOrder | null;
   activeStagedOpportunity: OptionOpportunity | null;
   activeStagedSpread: MultiLegSpread | null;
+  isValuationModalOpen: boolean;
+  valuationInitialTicker?: string;
 }

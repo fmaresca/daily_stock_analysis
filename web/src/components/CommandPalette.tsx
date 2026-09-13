@@ -36,6 +36,7 @@ interface CommandPaletteProps {
   onOpenSchwab?: () => void;
   onOpenDiagnostics?: () => void;
   onOpenSimulator?: () => void;
+  onOpenValuation?: (ticker?: string) => void;
   onExportCSV: () => void;
   onExportExcel: () => void;
   onTriggerPrint: () => void;
@@ -54,6 +55,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenSchwab,
   onOpenDiagnostics,
   onOpenSimulator,
+  onOpenValuation,
   onExportCSV,
   onExportExcel,
   onTriggerPrint,
@@ -207,6 +209,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: <Zap className="w-4 h-4 text-emerald-400" />,
       action: () => {
         if (onOpenSimulator) onOpenSimulator();
+        onClose();
+      },
+    },
+    {
+      id: 'nav-dcf-valuation',
+      title: 'DCF Intrinsic Valuation & DuPont Terminal (v3.4)',
+      subtitle: '5-Yr Midpoint Discounting, WACC & Gordon Bound, DuPont 3/5-Step ROE & Dynamic ATR Risk-Reward',
+      icon: <DollarSign className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        if (onOpenValuation) onOpenValuation();
         onClose();
       },
     },
