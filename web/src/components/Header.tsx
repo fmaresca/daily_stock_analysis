@@ -14,7 +14,9 @@ import {
   Bell,
   ShieldCheck,
   Clock,
+  Menu,
 } from './icons';
+import { DeltaHarvestLogo } from './ui/DeltaHarvestLogo';
 import { ScreenerSummary } from '../types/options';
 import { analyzeSyncRateLimits } from '../utils/marketHoursAndAutoSync';
 import {
@@ -42,6 +44,7 @@ interface HeaderProps {
   onOpenDiagnostics?: () => void;
   onOpenExecutiveDigest?: () => void;
   onOpenSimulator?: () => void;
+  onToggleMobileSidebar?: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
   autoSyncInterval?: number;
@@ -72,6 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDiagnostics,
   onOpenExecutiveDigest,
   onOpenSimulator,
+  onToggleMobileSidebar,
   theme = 'dark',
   onToggleTheme,
   autoSyncInterval = 300,
@@ -134,30 +138,32 @@ export const Header: React.FC<HeaderProps> = ({
   }, [lastUpdated]);
 
   return (
-    <header className="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-30 shadow-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
-        {/* Brand & Title */}
+    <header className="border-b border-slate-800/80 light:border-slate-200/90 bg-slate-950/90 light:bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-xl transition-colors">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3">
+        {/* Brand & Title with Official Adaptive Logo */}
         <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-400/30">
-            <TrendingUp className="w-5 h-5 text-white" />
+          {onToggleMobileSidebar && (
+            <button
+              onClick={onToggleMobileSidebar}
+              className="lg:hidden p-1.5 rounded-xl text-slate-400 hover:text-white light:hover:text-slate-900 bg-slate-900/80 light:bg-slate-100 border border-slate-800 light:border-slate-300 transition-colors"
+              title="Open Navigation Menu"
+              aria-label="Open Navigation Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <DeltaHarvestLogo variant="header" theme={theme} size={36} />
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 light:text-teal-700 border border-emerald-500/30 hidden sm:inline">
+              v3.3
+            </span>
           </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
-                <span>DeltaHarvest</span>
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                  v3.3
-                </span>
-              </h1>
-              <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono hidden md:inline">
-                {totalTickers} Equities Tracked
-              </span>
-            </div>
-            <div className="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
-              <span>Updated: <strong className="text-slate-200 font-mono font-semibold">{formattedTime}</strong></span>
-              <span>•</span>
-              <span className="text-emerald-400/90 font-mono">Conservative Income Engine</span>
-            </div>
+
+          <div className="hidden xl:flex items-center space-x-2 text-xs text-slate-400 light:text-slate-500 pl-2 border-l border-slate-800 light:border-slate-200">
+            <span>Updated: <strong className="text-slate-200 light:text-slate-700 font-mono font-semibold">{formattedTime}</strong></span>
+            <span>•</span>
+            <span className="text-emerald-400/90 light:text-teal-600 font-mono">{totalTickers} Equities</span>
           </div>
         </div>
 
@@ -165,13 +171,13 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex-1 max-w-xs mx-2 hidden md:block">
           <button
             onClick={onOpenCommandPalette}
-            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 text-slate-400 hover:text-white transition-all text-xs group"
+            className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 light:bg-slate-100 light:hover:bg-slate-200/80 border border-slate-800 light:border-slate-300 text-slate-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 transition-all text-xs group shadow-inner"
           >
             <div className="flex items-center space-x-2">
               <Search className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
               <span>Search tickers, strategies...</span>
             </div>
-            <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-[10px] font-mono text-slate-400 border border-slate-700">
+            <kbd className="px-1.5 py-0.5 bg-slate-800 light:bg-white rounded text-[10px] font-mono text-slate-400 light:text-slate-500 border border-slate-700 light:border-slate-300">
               Ctrl+K
             </kbd>
           </button>

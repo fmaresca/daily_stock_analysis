@@ -388,6 +388,22 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                     Implied Volatility (IV) measures market panic or excitement. When IV Rank is high (&ge; 45%), option buyers overpay for insurance, allowing conservative option sellers to harvest unusually high cash yields.
                   </p>
                 </div>
+
+                {/* Concept 7: Institutional Redesign & Adaptive Logo */}
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/40 space-y-2.5 col-span-full">
+                  <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <span className="text-emerald-400">✨</span> Official Institutional Redesign &amp; Adaptive Logo
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    DeltaHarvest features an institutional trading desk aesthetic inspired by quantitative execution terminals:
+                  </p>
+                  <ul className="text-xs text-slate-300 list-disc list-inside space-y-1.5 pl-1">
+                    <li><strong>3D Faceted Delta Emblem:</strong> Chiseled Greek Delta (&Delta;) symbol in emerald, cyan, and oceanic teal facets paired with a dynamic orbital swoosh representing systematic options cash flow harvesting.</li>
+                    <li><strong>Adaptive Dark &amp; Light Theming:</strong> The logo and entire UI automatically adapt between Night Mode (dark obsidian with luminous cyan/emerald accents) and Day Mode (clean crisp white with deep navy slate typography).</li>
+                    <li><strong>Institutional Sidebar Navigation:</strong> Sleek left navigation rail providing one-click access to the End-of-Week Ritual, Portfolio Digest, US Equities Universe, Strategy Labs, Broker Order Staging, Reports, and System Diagnostics.</li>
+                    <li><strong>Financial Dashboard Hero Banner:</strong> High-level real-time KPI overview featuring Net Liquidity, Daily Theta velocity, Compliance Health Score, and Portfolio Graph yield trajectory curve.</li>
+                  </ul>
+                </div>
               </div>
             </div>
           )}
