@@ -217,12 +217,12 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
               Interactive Charts
             </button>
           )}
-          {onNavigateToWorkflow && (
+          {user?.role === 'ADMIN' && onNavigateToWorkflow && (
             <button
               onClick={onNavigateToWorkflow}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-200 border border-slate-700 transition-colors"
+              className="px-3 py-1.5 bg-purple-950/60 hover:bg-purple-900 text-xs font-semibold rounded-lg text-purple-200 border border-purple-700/50 transition-colors"
             >
-              Weekly Workflow
+              Master Workflow (Admin)
             </button>
           )}
           <button
@@ -260,10 +260,10 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
             <DollarSign className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="mt-2 text-2xl font-bold font-mono text-white">
-            ${(portfolio?.netLiquidity || 250000).toLocaleString()}
+            ${(portfolio?.netLiquidity ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
-            <span>Cash: ${(portfolio?.cashBalance || 50000).toLocaleString()}</span>
+            <span>Cash: ${(portfolio?.cashBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </p>
         </div>
 
