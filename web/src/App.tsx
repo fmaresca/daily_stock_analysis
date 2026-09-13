@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
+import { InstitutionalSidebar } from './components/InstitutionalSidebar';
+import { InstitutionalHeroBanner } from './components/ui/InstitutionalHeroBanner';
 import { DualMenuTree } from './components/DualMenuTree';
 import { CommandPalette } from './components/CommandPalette';
 import { LoadingSkeleton } from './components/ui/LoadingSkeleton';
@@ -187,6 +189,12 @@ export const App: React.FC = () => {
   const [customTickers, setCustomTickers] = useState<TickerMeta[]>([]);
   const [weeklyScreenersDataset, setWeeklyScreenersDataset] = useState<WeeklyScreenerDataset | null>(null);
   const [portfolioRefreshKey, setPortfolioRefreshKey] = useState<number>(0);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
+  // Computed Live Executive Portfolio Metrics
+  const liveExecutiveMetrics = useMemo(() => {
+    return calculateLiveExecutiveMetrics();
+  }, [portfolioRefreshKey]);
 
   // Theme State (Dark / Light Day-Night mode)
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -748,45 +756,85 @@ export const App: React.FC = () => {
     (activeTree === 'OPTIONS' && (activeOptionsTab === 'INCOME_SCREENER' || activeOptionsTab === 'DELTA_GREEKS' || activeOptionsTab === 'EXPIRATION_CADENCE'));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white">
-      {/* Header with Search, Watchlists, Reports, and Help triggers */}
-      <Header
-        summary={dataPayload?.summary || null}
-        lastUpdated={lastLiveFetchTime || dataPayload?.metadata.last_updated || ''}
-        totalTickers={universeTickers.length}
-        executiveMetrics={executiveMetrics}
-        onRefresh={fetchData}
-        onLiveRecalculate={() => handleLiveRecalculate(currentWatchlistSymbols)}
-        isLoading={isLoading}
-        isRecalculating={isRecalculating}
-        dataSource={dataSource}
-        autoSyncInterval={autoSyncSettings.intervalSeconds}
-        onChangeAutoSyncInterval={handleAutoSyncIntervalChange}
-        autoSyncCountdown={autoSyncCountdown}
-        marketHoursOnly={autoSyncSettings.marketHoursOnly}
-        onToggleMarketHoursOnly={handleToggleMarketHoursOnly}
-        isMarketOpen={isMarketOpen}
-        isThrottled={isThrottled}
-        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-        onOpenHelp={() => setIsHelpModalOpen(true)}
+    <div className="min-h-screen bg-slate-950 light:bg-slate-50 text-slate-100 light:text-slate-900 flex selection:bg-emerald-500 selection:text-white transition-colors">
+      {/* 1. Institutional Sidebar Navigation */}
+      <InstitutionalSidebar
+        activeTree={activeTree}
+        onSelectTree={(tree) => navigateTo(tree, activeOptionsTab, activeEquitiesTab)}
+        activeEquitiesTab={activeEquitiesTab}
+        onSelectEquitiesTab={handleSelectEquitiesTab}
+        activeOptionsTab={activeOptionsTab}
+        onSelectOptionsTab={handleSelectOptionsTab}
+        totalTickersCount={universeTickers.length}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        onOpenSimulator={() => setIsSimulatorModalOpen(true)}
         onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
+        onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
         onOpenTradier={() => setIsTradierModalOpen(true)}
         onOpenSchwab={() => setIsSchwabModalOpen(true)}
         onOpenAlerts={() => setIsAlertsModalOpen(true)}
-        onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
-        onOpenSimulator={() => setIsSimulatorModalOpen(true)}
-        onOpenExecutiveDigest={() => {
-          setActiveTree('OPTIONS');
-          setActiveOptionsTab('EXECUTIVE_DIGEST');
-        }}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
+        onOpenHelp={() => setIsHelpModalOpen(true)}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        freeCashAmount={getStoredCapitalState().freeCash}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Dual Navigation Tree: US Equities Analysis vs Options Engine */}
-        <DualMenuTree
+      {/* 2. Main Institutional Content Container */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header with Search, Watchlists, Reports, and Help triggers */}
+        <Header
+          summary={dataPayload?.summary || null}
+          lastUpdated={lastLiveFetchTime || dataPayload?.metadata.last_updated || ''}
+          totalTickers={universeTickers.length}
+          executiveMetrics={liveExecutiveMetrics}
+          onRefresh={fetchData}
+          onLiveRecalculate={() => handleLiveRecalculate(currentWatchlistSymbols)}
+          isLoading={isLoading}
+          isRecalculating={isRecalculating}
+          dataSource={dataSource}
+          autoSyncInterval={autoSyncSettings.intervalSeconds}
+          onChangeAutoSyncInterval={handleAutoSyncIntervalChange}
+          autoSyncCountdown={autoSyncCountdown}
+          marketHoursOnly={autoSyncSettings.marketHoursOnly}
+          onToggleMarketHoursOnly={handleToggleMarketHoursOnly}
+          isMarketOpen={isMarketOpen}
+          isThrottled={isThrottled}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onOpenHelp={() => setIsHelpModalOpen(true)}
+          onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
+          onOpenReports={() => setIsReportQueryModalOpen(true)}
+          onOpenTradier={() => setIsTradierModalOpen(true)}
+          onOpenSchwab={() => setIsSchwabModalOpen(true)}
+          onOpenAlerts={() => setIsAlertsModalOpen(true)}
+          onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
+          onOpenSimulator={() => setIsSimulatorModalOpen(true)}
+          onOpenExecutiveDigest={() => {
+            setActiveTree('OPTIONS');
+            setActiveOptionsTab('EXECUTIVE_DIGEST');
+          }}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+        />
+
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Institutional KPI Overview & Performance Area Chart Hero Banner */}
+          <InstitutionalHeroBanner
+            executiveMetrics={liveExecutiveMetrics}
+            totalTickersCount={universeTickers.length}
+            freeCashAmount={getStoredCapitalState().freeCash}
+            theme={theme}
+            onOpenExecutiveDigest={() => {
+              setActiveTree('OPTIONS');
+              setActiveOptionsTab('EXECUTIVE_DIGEST');
+            }}
+            onOpenSimulator={() => setIsSimulatorModalOpen(true)}
+          />
+
+          {/* Dual Navigation Tree: US Equities Analysis vs Options Engine */}
+          <DualMenuTree
           activeTree={activeTree}
           onSelectTree={(tree) => navigateTo(tree, activeOptionsTab, activeEquitiesTab)}
           activeEquitiesTab={activeEquitiesTab}
@@ -1545,6 +1593,7 @@ export const App: React.FC = () => {
           </div>
         </div>
       </footer>
+      </div>
 
       {/* Floating Back to Top Button */}
       <ScrollToTopButton />
