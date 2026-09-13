@@ -16,10 +16,15 @@ import {
   Clock,
   Menu,
   DollarSign,
+  User,
+  Users,
+  LogOut,
+  Key,
 } from './icons';
 import { DeltaHarvestLogo } from './ui/DeltaHarvestLogo';
-import { ScreenerSummary } from '../types/options';
+import { ScreenerSummary, MenuTreeType, OptionsTabType, EquitiesTabType } from '../types/options';
 import { analyzeSyncRateLimits } from '../utils/marketHoursAndAutoSync';
+import { useAuth } from '../context/AuthContext';
 import {
   calculateLiveExecutiveMetrics,
   ExecutiveDigestMetrics,
@@ -56,6 +61,7 @@ interface HeaderProps {
   onToggleMarketHoursOnly?: () => void;
   isMarketOpen?: boolean;
   isThrottled?: boolean;
+  onNavigateTo?: (tree: MenuTreeType, optionsTab?: OptionsTabType, equitiesTab?: EquitiesTabType) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -89,7 +95,10 @@ export const Header: React.FC<HeaderProps> = ({
   isMarketOpen = true,
   isThrottled = false,
   executiveMetrics,
+  onNavigateTo,
 }) => {
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAutoSyncMenuOpen, setIsAutoSyncMenuOpen] = useState(false);
   const [liveExecutiveMetrics, setLiveExecutiveMetrics] = useState<ExecutiveDigestMetrics>(
     () => executiveMetrics || calculateLiveExecutiveMetrics()
@@ -326,6 +335,91 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="hidden sm:inline">Night Mode</span>
                 </>
               )}
+            </button>
+          )}
+
+          {/* User Account / Tenant Profile Menu */}
+          {isAuthenticated && user ? (
+            <div className="relative">
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer shadow-sm shadow-emerald-500/10"
+                title={`Tenant Account: ${user.email} (${user.role})`}
+              >
+                <User className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="max-w-[85px] truncate text-slate-100">{user.displayName || user.email.split('@')[0]}</span>
+                <span
+                  className={`text-[9px] px-1 py-0.2 rounded font-mono font-bold ${
+                    user.role === 'ADMIN'
+                      ? 'bg-purple-950/80 text-purple-300 border border-purple-600/40'
+                      : 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/40'
+                  }`}
+                >
+                  {user.role}
+                </span>
+              </button>
+
+              {isUserMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-56 p-2 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 text-xs space-y-1 font-sans animate-fade-in">
+                  <div className="px-2.5 py-2 border-b border-slate-800 text-[11px]">
+                    <div className="font-bold text-white truncate">{user.displayName}</div>
+                    <div className="text-slate-400 font-mono truncate">{user.email}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      onNavigateTo ? onNavigateTo('DASHBOARD') : (window.location.href = '/dashboard');
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-900 text-slate-200 hover:text-white flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <User className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Private Workspace</span>
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onNavigateTo ? onNavigateTo('ADMIN_USERS') : (window.location.href = '/admin/users');
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-900 text-purple-300 hover:text-purple-200 flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <Users className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Admin User Console</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      onNavigateTo ? onNavigateTo('SETTINGS_PASSWORD') : (window.location.href = '/settings/password');
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-900 text-cyan-300 hover:text-cyan-200 flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <Key className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Change Password</span>
+                  </button>
+                  <div className="border-t border-slate-800 pt-1">
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => (onNavigateTo ? onNavigateTo('LOGIN') : (window.location.href = '/login'))}
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-950/40 transition-all cursor-pointer"
+              title="Sign In to DeltaHarvest Account"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Sign In</span>
             </button>
           )}
 

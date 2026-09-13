@@ -392,7 +392,17 @@ export interface FundamentalHealthData {
   roc_type?: 'CONSTRUCTIVE' | 'DESTRUCTIVE' | 'NONE';
 }
 
-export type MenuTreeType = 'WORKFLOW' | 'OPTIONS' | 'EQUITIES' | 'METHODOLOGY' | 'FAQ' | 'DISCLAIMER';
+export type MenuTreeType =
+  | 'WORKFLOW'
+  | 'OPTIONS'
+  | 'EQUITIES'
+  | 'METHODOLOGY'
+  | 'FAQ'
+  | 'DISCLAIMER'
+  | 'LOGIN'
+  | 'DASHBOARD'
+  | 'ADMIN_USERS'
+  | 'SETTINGS_PASSWORD';
 
 export type WorkflowStepType =
   | 'SCHWAB_POSITIONS_UPLOAD'

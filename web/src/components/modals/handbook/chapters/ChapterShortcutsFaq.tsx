@@ -276,7 +276,18 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             Both the <strong>Weekly Executive Master Report</strong> (Step 6) and the <strong>Executive Portfolio Health Digest</strong> feature native PDF rendering engineered for clean, ink-efficient text printing without background graphics. The platform sets <code>print-color-adjust: economy</code> so browser print engines naturally suppress heavy color fills and allow unchecking &quot;Background graphics&quot; without breaking readability. Additionally, a dedicated <strong>&quot;Text Form / No Backgrounds&quot;</strong> toggle is provided in the action toolbar; when active, it completely eliminates all dark card backgrounds, glassmorphism, and color blocks, rendering clean financial text, subtle 1px divider lines, and high-contrast typography optimized for archiving, executive memos, and physical printing.
           </p>
         </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-emerald-400">🔒</span>
+            <span>How does multi-tenant authentication and data isolation work in DeltaHarvest?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            DeltaHarvest enforces cryptographic <strong>tenant partitioning</strong> powered by Cloudflare D1 SQL schemas and edge functions. Every user account has an isolated cryptographic ID, authenticated via 100,000-iteration PBKDF2 Web Crypto hashing and HMAC-SHA256 JWT cookies. Under no circumstances can non-admin users view, query, or commingle with other users&apos; trades, watchlists, or portfolio balances (<code className="text-emerald-300 font-mono">WHERE user_id = session.user.id</code>). The primary Administrator (<strong>fjmaresca@gmail.com</strong>) has exclusive access to the <em>Admin User Console</em> for provisioning client accounts, setting temporary passwords, and suspending access.
+          </p>
+        </div>
       </div>
     </div>
   );
 };
+
