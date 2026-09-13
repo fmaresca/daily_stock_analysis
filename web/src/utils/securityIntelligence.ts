@@ -1698,23 +1698,33 @@ export function calculateSentimentVelocityAndScoring(
   momentum: 'Accelerating' | 'Steady' | 'Fading';
   fomoRisk: string;
 } {
-  // 1. Calculate PMCI (0 - 100)
+  // 1. Calculate PMCI (0 - 100) with Liquidity Filtering & Probability Calibration
   let pmci = 50;
   if (predictionMarkets.length > 0) {
     let weightedSum = 0;
     let weightTotal = 0;
 
     predictionMarkets.forEach((ev) => {
-      const prob = parseFloat(ev.probability.replace('%', '')) || 50;
+      const rawProb = parseFloat(ev.probability.replace('%', ''));
+      const prob = isNaN(rawProb) ? 50 : Math.min(99, Math.max(1, rawProb));
       let pWeight = 1.0;
-      if (ev.source.includes('Kalshi')) pWeight = 1.20; // CFTC regulated
-      else if (ev.source.includes('Polymarket')) pWeight = 1.15; // High liquidity
+      if (ev.source.includes('Kalshi')) pWeight = 1.25; // CFTC regulated exchange
+      else if (ev.source.includes('Polymarket')) pWeight = 1.15; // Liquid decentralized orderbook
       else if (ev.source.includes('PredictIt')) pWeight = 1.05;
-      else if (ev.source.includes('Manifold')) pWeight = 0.90;
+      else if (ev.source.includes('Manifold')) pWeight = 0.85; // Play-money calibration haircut
 
-      const volWeight = ev.volume_usd ? Math.min(1.2, Math.max(0.8, Math.log10(ev.volume_usd) / 5)) : 1.0;
+      // Liquidity filter: discount contracts with thin volume (<$1,000) or missing volume
+      const volumeUsd = ev.volume_usd ?? 0;
+      let volWeight = 0.4;
+      if (volumeUsd >= 50000) {
+        volWeight = Math.min(1.5, Math.log10(volumeUsd) / 4.0);
+      } else if (volumeUsd >= 5000) {
+        volWeight = 1.0;
+      } else if (volumeUsd >= 1000) {
+        volWeight = 0.7;
+      }
+
       const combinedWeight = pWeight * volWeight;
-
       weightedSum += prob * combinedWeight;
       weightTotal += combinedWeight;
     });
@@ -1724,9 +1734,9 @@ export function calculateSentimentVelocityAndScoring(
   pmci = Math.min(99, Math.max(10, pmci));
 
   // 2. Calculate SSVS (0 - 100)
-  const stBull = sentiment?.stocktwits_bullish_pct ?? 58;
+  const stBull = sentiment?.stocktwits_bullish_pct ?? 50;
   const redditBull = sentiment?.reddit_sentiment?.includes('Bull') ? 78 : sentiment?.reddit_sentiment?.includes('Bear') ? 32 : 50;
-  const twitterBull = sentiment?.twitter_volume_score ? Math.min(100, sentiment.twitter_volume_score * 0.9) : 65;
+  const twitterBull = sentiment?.twitter_volume_score ? Math.min(100, sentiment.twitter_volume_score * 0.9) : 60;
   const saQuant = sentiment?.seeking_alpha_quant_rating ? (sentiment.seeking_alpha_quant_rating / 5.0) * 100 : 70;
   const tvScore = sentiment?.tradingview_technical_rating?.includes('Strong') ? 88 : sentiment?.tradingview_technical_rating?.includes('Buy') ? 75 : 50;
 
@@ -1740,10 +1750,15 @@ export function calculateSentimentVelocityAndScoring(
   const divergence = (stBull > 75 && fundamentalScore > 75) ? 'Constructive Synergy' : (stBull > 80 && fundamentalScore < 50) ? 'Retail Speculation Divergence' : 'Aligned Normal';
 
   // 4. Calculate ICRRS (Integrated Catalyst Risk-Reward Score)
-  // Tech (30%) + Fund (25%) + PMCI (25%) + SSVS (20%)
+  // Standardize factors: Tech (30%) + Fund (25%) + PMCI (25%) + SSVS (20%)
+  const normTech = Math.min(100, Math.max(0, technicalScore));
+  const normFund = Math.min(100, Math.max(0, fundamentalScore));
+  const normPmci = Math.min(100, Math.max(0, pmci));
+  const normSsvs = Math.min(100, Math.max(0, ssvs));
+
   const icrrs = Math.min(
     99,
-    Math.max(10, Math.round(((0.30 * technicalScore) + (0.25 * fundamentalScore) + (0.25 * pmci) + (0.20 * ssvs)) * 10) / 10)
+    Math.max(10, Math.round(((0.30 * normTech) + (0.25 * normFund) + (0.25 * normPmci) + (0.20 * normSsvs)) * 10) / 10)
   );
 
   let action: 'HIGH_CONVICTION_HARVEST' | 'BUY_CSP_STEADY' | 'NEUTRAL_WHEEL' | 'HOLD_DEFENSIVE' = 'BUY_CSP_STEADY';
@@ -1760,6 +1775,54 @@ export function calculateSentimentVelocityAndScoring(
     divergence,
     momentum,
     fomoRisk,
+  };
+}
+
+export interface DynamicRiskRewardPlan {
+  entryPrice: number;
+  stopLossPrice: number;
+  targetPrice: number;
+  riskAmount: number;
+  rewardAmount: number;
+  riskRewardRatio: number;
+  isActionable: boolean;
+  atrMultipleUsed: number;
+}
+
+/**
+ * Computes dynamic volatility-calibrated stop-loss and target prices via ATR multiple
+ * and evaluates Risk-to-Reward feasibility against institutional hurdle thresholds (e.g. R/R >= 2.0).
+ */
+export function calculateDynamicRiskReward(
+  entryPrice: number,
+  atr: number,
+  kStopLossMultiplier: number = 2.0,
+  mTargetMultiplier: number = 4.0,
+  minRiskRewardRatio: number = 2.0
+): DynamicRiskRewardPlan {
+  const safeEntry = typeof entryPrice === 'number' && isFinite(entryPrice) && entryPrice > 0 ? entryPrice : 100.0;
+  const safeAtr = typeof atr === 'number' && isFinite(atr) && atr > 0 ? atr : safeEntry * 0.025;
+
+  const stopDistance = kStopLossMultiplier * safeAtr;
+  const targetDistance = mTargetMultiplier * safeAtr;
+
+  const stopLossPrice = Math.max(0.01, Math.round((safeEntry - stopDistance) * 100) / 100);
+  const targetPrice = Math.round((safeEntry + targetDistance) * 100) / 100;
+
+  const riskAmount = Math.round((safeEntry - stopLossPrice) * 100) / 100;
+  const rewardAmount = Math.round((targetPrice - safeEntry) * 100) / 100;
+  const riskRewardRatio = riskAmount > 0 ? Math.round((rewardAmount / riskAmount) * 100) / 100 : 0;
+  const isActionable = riskRewardRatio >= minRiskRewardRatio;
+
+  return {
+    entryPrice: safeEntry,
+    stopLossPrice,
+    targetPrice,
+    riskAmount,
+    rewardAmount,
+    riskRewardRatio,
+    isActionable,
+    atrMultipleUsed: kStopLossMultiplier,
   };
 }
 
