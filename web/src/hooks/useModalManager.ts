@@ -21,6 +21,8 @@ export function useModalManager() {
   const [isStagedModalOpen, setIsStagedModalOpen] = useState<boolean>(false);
   const [activeStagedOpportunity, setActiveStagedOpportunity] = useState<OptionOpportunity | null>(null);
   const [activeStagedSpread, setActiveStagedSpread] = useState<MultiLegSpread | null>(null);
+  const [isValuationModalOpen, setIsValuationModalOpen] = useState<boolean>(false);
+  const [valuationInitialTicker, setValuationInitialTicker] = useState<string>('NVDA');
 
   const openTickerAudit = useCallback((ticker: TickerMeta) => {
     setSelectedTicker(ticker);
@@ -69,6 +71,15 @@ export function useModalManager() {
     setIsStagedModalOpen(false);
   }, []);
 
+  const openValuation = useCallback((ticker: string = 'NVDA') => {
+    setValuationInitialTicker(ticker);
+    setIsValuationModalOpen(true);
+  }, []);
+
+  const closeValuation = useCallback(() => {
+    setIsValuationModalOpen(false);
+  }, []);
+
   const state: ModalState = {
     selectedTicker,
     selectedOpportunity,
@@ -87,6 +98,8 @@ export function useModalManager() {
     stagedOrder,
     activeStagedOpportunity,
     activeStagedSpread,
+    isValuationModalOpen,
+    valuationInitialTicker,
   };
 
   return {
@@ -108,6 +121,8 @@ export function useModalManager() {
     setIsStagedModalOpen,
     setActiveStagedOpportunity,
     setActiveStagedSpread,
+    setIsValuationModalOpen,
+    setValuationInitialTicker,
     openTickerAudit,
     closeTickerAudit,
     openOptionDetail,
@@ -118,5 +133,7 @@ export function useModalManager() {
     closeSimulator,
     openStagedModal,
     closeStagedModal,
+    openValuation,
+    closeValuation,
   };
 }

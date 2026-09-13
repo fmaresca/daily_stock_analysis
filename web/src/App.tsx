@@ -34,6 +34,7 @@ const ApiDiagnosticsModal = lazy(() => import('./components/ApiDiagnosticsModal'
 const BrokerOrderStagingModal = lazy(() => import('./components/BrokerOrderStagingModal').then(m => ({ default: m.BrokerOrderStagingModal })));
 const AlertSettingsModal = lazy(() => import('./components/AlertSettingsModal').then(m => ({ default: m.AlertSettingsModal })));
 const OptionsTradeQualityModal = lazy(() => import('./components/screener/OptionsTradeQualityModal').then(m => ({ default: m.OptionsTradeQualityModal })));
+const FundamentalValuationModal = lazy(() => import('./components/FundamentalValuationModal').then(m => ({ default: m.FundamentalValuationModal })));
 
 // Code-split heavy views & tabs
 const InteractiveChart = lazy(() => import('./components/InteractiveChart').then(m => ({ default: m.InteractiveChart })));
@@ -153,6 +154,8 @@ export const App: React.FC = () => {
     setActiveStagedSpread,
     openStagedModal,
     openOptionDetail,
+    openValuation,
+    closeValuation,
   } = useModalManager();
 
   // 4. Options Data Hook (Sync, WebSockets, Cache, REST fallback)
@@ -769,6 +772,7 @@ export const App: React.FC = () => {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onOpenSimulator={() => setIsSimulatorModalOpen(true)}
+        onOpenValuation={() => openValuation('NVDA')}
         onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
         onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
@@ -810,6 +814,7 @@ export const App: React.FC = () => {
           onOpenAlerts={() => setIsAlertsModalOpen(true)}
           onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
           onOpenSimulator={() => setIsSimulatorModalOpen(true)}
+          onOpenValuation={() => openValuation('NVDA')}
           onOpenExecutiveDigest={() => {
             setActiveTree('OPTIONS');
             setActiveOptionsTab('EXECUTIVE_DIGEST');
@@ -1282,6 +1287,7 @@ export const App: React.FC = () => {
           onOpenSchwab={() => setIsSchwabModalOpen(true)}
           onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
           onOpenSimulator={() => setIsSimulatorModalOpen(true)}
+          onOpenValuation={(t) => openValuation(t || 'NVDA')}
           onExportCSV={handleExportCSV}
           onExportExcel={handleExportExcel}
           onTriggerPrint={triggerPrintReport}
@@ -1298,6 +1304,10 @@ export const App: React.FC = () => {
           onOpenSimulator={() => {
             setIsHelpModalOpen(false);
             setIsSimulatorModalOpen(true);
+          }}
+          onOpenValuation={(t) => {
+            setIsHelpModalOpen(false);
+            openValuation(t || 'NVDA');
           }}
           onOpenTradier={() => {
             setIsHelpModalOpen(false);
@@ -1470,6 +1480,22 @@ export const App: React.FC = () => {
             initialDataSource={modalState.simulatorInitialData.dataSource || 'BARCHART'}
           />
         )}
+
+        {/* 11. DCF Intrinsic Valuation & DuPont Structural Terminal (v3.4) */}
+        {modalState.isValuationModalOpen && (
+          <ErrorBoundary fallbackTitle="DCF Valuation Terminal Recovered" onReset={() => closeValuation()}>
+            <FundamentalValuationModal
+              isOpen={modalState.isValuationModalOpen}
+              onClose={closeValuation}
+              initialTicker={modalState.valuationInitialTicker || 'NVDA'}
+              onNavigateToEquities={() => {
+                closeValuation();
+                setActiveTree('EQUITIES');
+                setActiveEquitiesTab('FUNDAMENTAL_HEALTH');
+              }}
+            />
+          </ErrorBoundary>
+        )}
       </Suspense>
 
       {/* Comprehensive Footer with SEO & Crawler-Friendly Internal Hyperlinks */}
@@ -1563,6 +1589,14 @@ export const App: React.FC = () => {
                     className="hover:text-emerald-400 transition-colors text-left cursor-pointer"
                   >
                     Trade Quality Scoring Simulator
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => openValuation('NVDA')}
+                    className="hover:text-teal-400 text-teal-300 font-medium transition-colors text-left cursor-pointer"
+                  >
+                    DCF Intrinsic Valuation &amp; DuPont (v3.4)
                   </button>
                 </li>
                 <li>

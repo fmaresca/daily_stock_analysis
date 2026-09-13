@@ -193,6 +193,7 @@ export interface TickerMeta {
   liquidity_warning?: string;
   spot_price: number;
   avg_volume_30: number;
+  volume?: number;
   sma_20: number;
   upper_bb: number;
   lower_bb: number;

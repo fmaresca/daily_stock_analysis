@@ -39,6 +39,7 @@ interface InstitutionalSidebarProps {
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
   onOpenSimulator?: () => void;
+  onOpenValuation?: () => void;
   onOpenWatchlists?: () => void;
   onOpenReports?: () => void;
   onOpenDiagnostics?: () => void;
@@ -62,6 +63,7 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
   theme = 'dark',
   onToggleTheme,
   onOpenSimulator,
+  onOpenValuation,
   onOpenWatchlists,
   onOpenReports,
   onOpenDiagnostics,
@@ -274,6 +276,21 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
               >
                 <Zap className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
                 {!isCollapsed && <span>Trade Simulator</span>}
+              </button>
+            )}
+
+            {/* DCF Valuation & DuPont Terminal (v3.4) */}
+            {onOpenValuation && (
+              <button
+                onClick={() => {
+                  onOpenValuation();
+                  onCloseMobile?.();
+                }}
+                className="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-semibold text-teal-300 hover:text-white bg-teal-950/30 hover:bg-teal-900/50 border border-teal-500/30 transition-all cursor-pointer group shadow-sm shadow-teal-500/10"
+                title="Open DCF Intrinsic Valuation & DuPont Structural Terminal (v3.4)"
+              >
+                <DollarSign className="w-4 h-4 text-teal-400 group-hover:scale-110 transition-transform shrink-0" />
+                {!isCollapsed && <span>DCF &amp; Valuation</span>}
               </button>
             )}
 
