@@ -6,8 +6,14 @@ pages_build_output_dir = "dist"
 ENVIRONMENT = "production"
 ADMIN_EMAIL = "fjmaresca@gmail.com"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "deltaharvest_production_db"
-database_id = "deltaharvest-d1-db"
-migrations_dir = "migrations"
+# Optional D1 Database binding:
+# If you have created a Cloudflare D1 database via `npx wrangler d1 create deltaharvest_production_db`,
+# uncomment the block below and replace database_id with your real 36-character UUID.
+# Alternatively, bind the D1 database directly in the Cloudflare Pages Dashboard under
+# Settings -> Functions -> D1 Database Bindings -> Variable: DB.
+#
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "deltaharvest_production_db"
+# database_id = "00000000-0000-0000-0000-000000000000"
+# migrations_dir = "migrations"
