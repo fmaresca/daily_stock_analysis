@@ -802,8 +802,19 @@ export const App: React.FC = () => {
   if (!isAuthenticated || activeTree === 'LOGIN') {
     return (
       <LoginView
-        onSuccess={() => {
-          navigateTo(isAdmin ? 'WORKFLOW' : 'DASHBOARD');
+        onSuccess={(loggedInUser) => {
+          const isTargetAdmin =
+            loggedInUser?.role === 'ADMIN' ||
+            loggedInUser?.email?.toLowerCase() === 'fjmaresca@gmail.com' ||
+            user?.role === 'ADMIN' ||
+            user?.email?.toLowerCase() === 'fjmaresca@gmail.com' ||
+            isAdmin;
+
+          if (isTargetAdmin) {
+            navigateTo('WORKFLOW', 'SCHWAB_POSITIONS_UPLOAD');
+          } else {
+            navigateTo('DASHBOARD');
+          }
         }}
       />
     );

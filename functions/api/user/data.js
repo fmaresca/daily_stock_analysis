@@ -51,23 +51,58 @@ export async function onRequestGet(context) {
     }
   }
 
-  // Local memory fallback
+  // Local memory fallback & Admin Seed Data
+  const isFrankAdmin = auth.user.email?.toLowerCase() === "fjmaresca@gmail.com" || auth.user.role === "ADMIN";
+
   const userTrades = localTenantStore.trades.filter((t) => t.user_id === userId);
   const userWatchlists = localTenantStore.watchlists.filter((w) => w.user_id === userId);
-  const userPortfolio = localTenantStore.portfolios[userId] || {
-    user_id: userId,
-    account_name: "Default Trading Account",
-    free_cash: 100000.0,
-    total_nav: 100000.0,
-  };
+
+  const defaultAdminTrades = [
+    { id: 'trade-cc-axti', user_id: userId, symbol: 'AXTI', strategy: 'COVERED_CALL', strike: 4.0, expiration: '2026-09-18', contracts: 5, premium_per_share: 0.35, status: 'OPEN', entry_date: '2026-09-11', notes: 'Living Trust Covered Call (500 shares collateral)' },
+    { id: 'trade-cc-blze', user_id: userId, symbol: 'BLZE', strategy: 'COVERED_CALL', strike: 7.5, expiration: '2026-09-18', contracts: 4, premium_per_share: 0.45, status: 'OPEN', entry_date: '2026-09-11', notes: 'Living Trust Covered Call (400 shares collateral)' },
+    { id: 'trade-cc-ionq', user_id: userId, symbol: 'IONQ', strategy: 'COVERED_CALL', strike: 17.5, expiration: '2026-09-18', contracts: 10, premium_per_share: 0.65, status: 'OPEN', entry_date: '2026-09-11', notes: 'Living Trust Covered Call (1,000 shares collateral)' },
+    { id: 'trade-cc-net', user_id: userId, symbol: 'NET', strategy: 'COVERED_CALL', strike: 110.0, expiration: '2026-09-18', contracts: 5, premium_per_share: 1.85, status: 'OPEN', entry_date: '2026-09-11', notes: 'Living Trust Covered Call (500 shares collateral)' },
+    { id: 'trade-cc-rtx', user_id: userId, symbol: 'RTX', strategy: 'COVERED_CALL', strike: 145.0, expiration: '2026-09-18', contracts: 5, premium_per_share: 0.95, status: 'OPEN', entry_date: '2026-09-11', notes: 'Living Trust Covered Call (500 shares collateral)' },
+    { id: 'trade-cc-tsla', user_id: userId, symbol: 'TSLA', strategy: 'COVERED_CALL', strike: 345.0, expiration: '2026-09-18', contracts: 2, premium_per_share: 4.20, status: 'OPEN', entry_date: '2026-09-11', notes: 'Living Trust Covered Call (200 shares collateral)' },
+    { id: 'trade-csp-pltr', user_id: userId, symbol: 'PLTR', strategy: 'CASH_SECURED_PUT', strike: 160.0, expiration: '2026-09-18', contracts: 10, premium_per_share: 2.10, status: 'OPEN', entry_date: '2026-09-11', notes: 'Living Trust Cash-Secured Put ($160k collateral)' },
+  ];
+
+  const defaultAdminWatchlists = [
+    { id: 'w-axti', user_id: userId, symbol: 'AXTI', created_at: '2026-09-12' },
+    { id: 'w-blze', user_id: userId, symbol: 'BLZE', created_at: '2026-09-12' },
+    { id: 'w-ionq', user_id: userId, symbol: 'IONQ', created_at: '2026-09-12' },
+    { id: 'w-lunr', user_id: userId, symbol: 'LUNR', created_at: '2026-09-12' },
+    { id: 'w-net', user_id: userId, symbol: 'NET', created_at: '2026-09-12' },
+    { id: 'w-rtx', user_id: userId, symbol: 'RTX', created_at: '2026-09-12' },
+    { id: 'w-tsla', user_id: userId, symbol: 'TSLA', created_at: '2026-09-12' },
+    { id: 'w-pltr', user_id: userId, symbol: 'PLTR', created_at: '2026-09-12' },
+  ];
+
+  const userPortfolio = isFrankAdmin
+    ? {
+        user_id: userId,
+        account_name: "Charles Schwab Living Trust",
+        free_cash: 579707.77,
+        cashBalance: 579707.77,
+        total_nav: 1058420.0,
+        netLiquidity: 1058420.0,
+      }
+    : localTenantStore.portfolios[userId] || {
+        user_id: userId,
+        account_name: "Default Trading Account",
+        free_cash: 0.0,
+        cashBalance: 0.0,
+        total_nav: 0.0,
+        netLiquidity: 0.0,
+      };
 
   return new Response(
     JSON.stringify({
       success: true,
       userId,
       portfolio: userPortfolio,
-      trades: userTrades,
-      watchlists: userWatchlists,
+      trades: userTrades.length > 0 ? userTrades : (isFrankAdmin ? defaultAdminTrades : []),
+      watchlists: userWatchlists.length > 0 ? userWatchlists : (isFrankAdmin ? defaultAdminWatchlists : []),
     }),
     { status: 200, headers: { "Content-Type": "application/json" } }
   );
