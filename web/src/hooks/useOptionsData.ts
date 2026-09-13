@@ -258,35 +258,49 @@ export function useOptionsData(currentWatchlistSymbols: string[]) {
     });
   }, []);
 
-  // Background auto-sync countdown loop
+  // Stable refs for timer execution without interval re-creation
+  const autoSyncSettingsRef = useRef(autoSyncSettings);
+  autoSyncSettingsRef.current = autoSyncSettings;
+
+  const isThrottledRef = useRef(isThrottled);
+  isThrottledRef.current = isThrottled;
+
+  const isBusyRef = useRef(isLoading || isRecalculating);
+  isBusyRef.current = isLoading || isRecalculating;
+
+  const handleLiveRecalculateRef = useRef(handleLiveRecalculate);
+  handleLiveRecalculateRef.current = handleLiveRecalculate;
+
+  // Background auto-sync countdown loop (stable 1-second cadence)
   useEffect(() => {
     const timer = setInterval(() => {
       const marketOpen = isUsMarketOpen();
       setIsMarketOpen(marketOpen);
 
-      if (autoSyncSettings.intervalSeconds <= 0 || isThrottled) {
+      const currentSettings = autoSyncSettingsRef.current;
+      if (currentSettings.intervalSeconds <= 0 || isThrottledRef.current) {
         return;
       }
 
-      if (autoSyncSettings.marketHoursOnly && !marketOpen) {
+      if (currentSettings.marketHoursOnly && !marketOpen) {
         return;
       }
 
-      if (isLoading || isRecalculating) {
+      if (isBusyRef.current) {
         return;
       }
 
       setAutoSyncCountdown((prev) => {
         if (prev <= 1) {
-          handleLiveRecalculate(watchlistSymbolsRef.current);
-          return autoSyncSettings.intervalSeconds;
+          handleLiveRecalculateRef.current(watchlistSymbolsRef.current);
+          return currentSettings.intervalSeconds;
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [autoSyncSettings, isThrottled, isLoading, isRecalculating, handleLiveRecalculate]);
+  }, []);
 
   // Initial load
   useEffect(() => {

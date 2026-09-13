@@ -6,7 +6,7 @@ import { calculateBarchartOpinion } from '../../utils/barchartEngine';
 import { calculateSMA, calculateRSI } from '../../utils/technicalIndicators';
 import { SECURITY_INTELLIGENCE_REGISTRY } from '../../utils/securityIntelligence';
 import { classifySectorAndBaseVol } from '../../utils/screenerHydrator';
-import { RefreshCw, Zap, TrendingUp, ShieldCheck, ExternalLink, CheckCircle2, AlertTriangle, Search, Target, Calendar } from '../icons';
+import { RefreshCw, CheckCircle2, AlertTriangle, Calendar } from '../icons';
 import {
   getNextWeeklyExpiration,
   getClosestFridayDteExpiration,
@@ -22,10 +22,13 @@ import {
   calculateEarningsDefendedStrike,
   isStoredInEarningsRegistry,
   fetchLiveEarningsInfo,
-  EarningsExpirationAnalysis,
-  StraddleImpliedMoveResult,
-  DefendedStrikeResult,
 } from '../../utils/earningsCalendar';
+import { normCdf, inverseNormalCdf, getNearestExchangeStrike } from '../../utils/financeMath';
+
+import { SimulatorSliders } from './simulator/SimulatorSliders';
+import { SimulatorBlueprintCard, SimulatedContractData } from './simulator/SimulatorBlueprintCard';
+import { SimulatorStraddleDefense } from './simulator/SimulatorStraddleDefense';
+import { SimulatorScoreGauge } from './simulator/SimulatorScoreGauge';
 
 export interface OptionsTradeQualitySimulatorProps {
   initialTicker?: string;
@@ -80,95 +83,6 @@ export interface PulledTechnicalData {
   updatedAt: string;
 }
 
-
-
-function normCdf(x: number): number {
-  const b1 = 0.31938153;
-  const b2 = -0.356563782;
-  const b3 = 1.781477937;
-  const b4 = -1.821255978;
-  const b5 = 1.330274429;
-  const p = 0.2316419;
-  const c = 0.39894228;
-
-  if (x >= 0.0) {
-    const k = 1.0 / (1.0 + p * x);
-    return 1.0 - c * Math.exp((-x * x) / 2.0) * k * (b1 + k * (b2 + k * (b3 + k * (b4 + k * b5))));
-  } else {
-    const k = 1.0 / (1.0 - p * x);
-    return c * Math.exp((-x * x) / 2.0) * k * (b1 + k * (b2 + k * (b3 + k * (b4 + k * b5))));
-  }
-}
-
-/**
- * Standard Acklam's Inverse Normal Cumulative Distribution Function (Probit)
- * Computes exact d1 from target delta to solve for option strike.
- */
-function inverseNormalCdf(p: number): number {
-  if (p <= 0.0001) return -3.75;
-  if (p >= 0.9999) return 3.75;
-
-  const a = [
-    -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2,
-    1.38357751867269e2, -3.066479806614716e1, 2.506628277459239e0,
-  ];
-  const b = [
-    -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2,
-    6.680131188771972e1, -1.328068155288572e1,
-  ];
-  const c = [
-    -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838e0,
-    -2.549732539343734e0, 4.374664141464968e0, 2.938163982698783e0,
-  ];
-  const d = [
-    7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996e0,
-    3.754408661907416e0,
-  ];
-
-  const pLow = 0.02425;
-  const pHigh = 1.0 - pLow;
-
-  if (p < pLow) {
-    const q = Math.sqrt(-2.0 * Math.log(p));
-    return (
-      (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
-    );
-  }
-  if (p <= pHigh) {
-    const q = p - 0.5;
-    const r = q * q;
-    return (
-      (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) *
-      q /
-      (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0)
-    );
-  }
-  const q = Math.sqrt(-2.0 * Math.log(1.0 - p));
-  return -(
-    (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-    ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
-  );
-}
-
-/**
- * Calculates standard US equity option exchange strike increments.
- * Snaps theoretical price to nearest tradeable listed strike price.
- */
-function getNearestExchangeStrike(theoreticalStrike: number, spot: number): number {
-  let interval = 1.0;
-  if (spot <= 25) {
-    interval = 0.5;
-  } else if (spot <= 100) {
-    interval = 1.0;
-  } else if (spot <= 200) {
-    interval = 2.5;
-  } else {
-    interval = 5.0;
-  }
-  return Math.round(theoreticalStrike / interval) * interval;
-}
-
 export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulatorProps> = ({
   initialTicker = '',
   initialExpiration = '',
@@ -217,7 +131,6 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   // Dynamic analysis of whether an earnings announcement occurs within the options expiration period
   const earningsAnalysis = useMemo(() => {
     if (!ticker || !expirationDate) return null;
-    // earningsCacheKey triggers re-analysis when live earnings are discovered and cached
     return checkEarningsInsideExpiration(ticker, expirationDate);
   }, [ticker, expirationDate, earningsCacheKey]);
 
@@ -233,7 +146,6 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
     const cleanSym = ticker.trim().toUpperCase();
     if (!cleanSym || cleanSym.length < 1) return;
 
-    // Skip if already in registry, cache, or broad market ETF
     if (isStoredInEarningsRegistry(cleanSym)) {
       return;
     }
@@ -287,7 +199,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   const expirationAnalysis = useMemo(() => {
     if (!expirationDate) return null;
     const parsed = parseDateYMD(expirationDate);
-    const dayOfWeek = parsed.getDay(); // 0 = Sun, 5 = Fri, 6 = Sat
+    const dayOfWeek = parsed.getDay();
     const isFri = dayOfWeek === 5;
     const holiday = isNyseHoliday(parsed);
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -311,7 +223,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   }, [expirationDate]);
 
   // Dynamically calculate nearest strike price and contract economics based on simulation inputs
-  const simulatedContract = useMemo(() => {
+  const simulatedContract: SimulatedContractData = useMemo(() => {
     const spot = pulledData?.spotPrice || 100.0;
     const sma50 = pulledData?.sma50;
     const effectiveDte = dte;
@@ -459,13 +371,6 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
     hasEarningsAlert,
   ]);
 
-  // Radial Gauge Math
-  const radius = 70;
-  const circumference = 2 * Math.PI * radius;
-  const arcLength = circumference * (260 / 360);
-  const progressRatio = Math.min(100, Math.max(0, result.compositeScore)) / 100;
-  const strokeDashoffset = arcLength * (1 - progressRatio);
-
   // Pull Technicals Handler for Barchart.com or MarketChameleon.com
   const handleFetchTechnicals = useCallback(async (targetSymbol?: string, targetSource?: 'BARCHART' | 'MARKETCHAMELEON') => {
     const sym = (targetSymbol || ticker).trim().toUpperCase();
@@ -547,7 +452,6 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       let mcSignalData: PulledTechnicalData['mcSignal'] | undefined = undefined;
 
       if (sourceToUse === 'BARCHART') {
-        // Barchart.com 13-indicator opinion calculation
         const bOpinion = calculateBarchartOpinion(sym, closes, spot);
         barchartOpinionData = {
           opinion_pct: bOpinion.opinion_pct,
@@ -556,11 +460,8 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
           buy_votes: bOpinion.buy_votes,
           sell_votes: bOpinion.sell_votes,
         };
-
-        // Calibrate Barchart IV Rank from historical volatility & sector profile
         resolvedIvRank = Math.min(95, Math.max(15, Math.round(profile.baseIvRank + ((hv30 - 25) * 1.2))));
       } else {
-        // MarketChameleon quantitative replication engine
         const isUptrend = spot > sma20 && sma20 > sma50 && sma50 > sma250;
         const isDowntrend = spot < sma20 && sma20 < sma50 && sma50 < sma250;
         const bullishCrossover = sma20 > sma50 && (closes.length > 5 && closes[closes.length - 5] <= sma50);
@@ -583,7 +484,6 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
         const vol1y = Math.round(hv30 * 10) / 10;
         const iv30 = Math.round(ivCurrent * 100 * 10) / 10;
 
-        // MarketChameleon IV % Rank relative to 52w range
         resolvedIvRank = Math.min(98, Math.max(10, Math.round(Math.min(90, Math.max(20, (iv30 / 60) * 100)))));
 
         mcSignalData = {
@@ -600,9 +500,6 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       const t = effectiveDte / 365.0;
       const v = ivDecimal;
 
-      // Conservative strike calculation:
-      // CSP: ~0.18 Delta strike below spot (around 4-6% OTM)
-      // CC: ~0.20 Delta strike above spot (around 4-6% OTM)
       const targetStrike = strategy === 'CASH_SECURED_PUT'
         ? Math.max(1, spot > 100 ? Math.floor((spot * 0.95) / 5) * 5 : spot > 20 ? Math.floor(spot * 0.95) : Math.floor(spot * 0.95 * 2) / 2)
         : spot > 100 ? Math.ceil((spot * 1.05) / 5) * 5 : spot > 20 ? Math.ceil(spot * 1.05) : Math.ceil(spot * 1.05 * 2) / 2;
@@ -617,16 +514,13 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       const calcRocPct = (premiumTotal / collateral) * 100;
       const calcAnnualizedRoC = Math.round((calcRocPct * (365 / effectiveDte)) * 10) / 10;
 
-      // Liquidity & Spread estimation
       const isUltraLiquid = ['SPY', 'QQQ', 'NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMD'].includes(sym);
       const calcSpread = isUltraLiquid ? 1.5 : profile.sector.includes('Technology') ? 3.2 : 4.5;
       const calcOpenInt = isUltraLiquid ? 8500 : 2200;
 
-      // Earnings Alert: Check if within DTE using dynamic earnings calendar
       const earningsCheck = checkEarningsInsideExpiration(sym, expirationDate);
       const hasEarnings = earningsCheck.hasEarningsInsideExpiration || intel?.decisionAction === 'AVOID_EARNINGS';
 
-      // 5. Apply hydrated values to simulator sliders
       setIvRank(resolvedIvRank);
       setDelta(calcDelta);
       setDistTo50Sma(clampedDist50);
@@ -635,7 +529,6 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       setOpenInterest(calcOpenInt);
       setHasEarningsAlert(hasEarnings);
 
-      // Save summary data object
       setPulledData({
         symbol: sym,
         source: sourceToUse,
@@ -694,11 +587,9 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
     }
   };
 
-
-
   return (
     <div className="bg-slate-950 text-slate-100 rounded-2xl border border-slate-800/80 shadow-2xl p-5 sm:p-7 max-w-5xl w-full mx-auto backdrop-blur-xl font-sans select-none">
-      {/* 1. Header Bar matching reference image */}
+      {/* 1. Header Bar */}
       <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-800/80">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-sm shadow-emerald-500/20">
@@ -723,7 +614,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
           <div className="flex items-center bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
             <button
               onClick={() => setStrategy('CASH_SECURED_PUT')}
-              className={`px-3 py-1 rounded-md font-semibold transition-all ${
+              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
                 strategy === 'CASH_SECURED_PUT'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-slate-200'
@@ -733,7 +624,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
             </button>
             <button
               onClick={() => setStrategy('COVERED_CALL')}
-              className={`px-3 py-1 rounded-md font-semibold transition-all ${
+              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
                 strategy === 'COVERED_CALL'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-slate-400 hover:text-slate-200'
@@ -1020,32 +911,6 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
           </div>
         )}
 
-        {/* Live Earnings Sync Progress & Latency Notification Banner */}
-        {isFetchingEarnings && (
-          <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/40 rounded-xl text-amber-300 text-xs flex items-center justify-between shadow-sm shadow-amber-500/10 animate-pulse">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
-                <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
-              </div>
-              <div>
-                <div className="font-bold flex items-center gap-2">
-                  <span>{earningsFetchStatus || `Pausing to fetch corporate earnings calendar for ${ticker}...`}</span>
-                  <span className="text-[9px] bg-amber-500/20 text-amber-200 px-1.5 py-0.5 rounded border border-amber-500/30 font-mono uppercase">
-                    Live SEC/Event Sync
-                  </span>
-                </div>
-                <p className="text-[11px] text-amber-400/80 mt-0.5 font-sans">
-                  Querying corporate reporting calendars &amp; disclosure feeds to determine earnings dates and ATM straddle defense. Expect a brief pause.
-                </p>
-              </div>
-            </div>
-            <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-amber-400 shrink-0">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-              <span>Fetching...</span>
-            </div>
-          </div>
-        )}
-
         {earningsSyncNotice && (
           <div className="mt-3 p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs flex items-center justify-between font-mono">
             <div className="flex items-center gap-2">
@@ -1100,580 +965,51 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       </div>
 
       {/* Dynamic Simulated Contract & Nearest Strike Blueprint Card */}
-      <div className="mb-5 bg-gradient-to-r from-slate-900/95 via-slate-900/80 to-slate-950 border border-emerald-500/30 rounded-xl p-4 shadow-lg shadow-emerald-950/20 backdrop-blur-md">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-800/80">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <Target className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Simulated Nearest Strike & Contract Blueprint
-                </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
-                  {strategy === 'COVERED_CALL' ? 'Covered Call (CC)' : 'Cash Secured Put (CSP)'}
-                </span>
-              </div>
-              <div className="text-sm font-medium text-slate-200 flex items-center gap-2 mt-0.5">
-                <span className="font-bold text-white font-mono">{ticker || 'UNDERLYING'}</span>
-                <span className="text-slate-500">•</span>
-                <span>Spot: <strong className="text-slate-200 font-mono">${simulatedContract.spotPrice.toFixed(2)}</strong></span>
-                <span className="text-slate-500">•</span>
-                <span>Exp: <strong className="text-slate-200">{simulatedContract.expirationFormatted}</strong> ({simulatedContract.dte} DTE)</span>
-              </div>
-            </div>
-          </div>
+      <SimulatorBlueprintCard
+        ticker={ticker}
+        strategy={strategy}
+        delta={delta}
+        simulatedContract={simulatedContract}
+        factorEarningsInStrike={factorEarningsInStrike}
+        setFactorEarningsInStrike={setFactorEarningsInStrike}
+      />
 
-          <div className="flex items-center gap-3">
-            {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike && (
-              <div className="text-right hidden sm:block pr-3 border-r border-slate-800">
-                <div className="flex items-center justify-end gap-1.5">
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
-                    Pure {delta.toFixed(2)}Δ Strike
-                  </span>
-                  <span className="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded border border-slate-700">
-                    Unadjusted
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 justify-end">
-                  <span className="text-lg font-bold text-slate-400 font-mono line-through decoration-rose-500/60">
-                    ${simulatedContract.unadjustedStrike.toFixed(2)}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setFactorEarningsInStrike(false)}
-                  className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-sans cursor-pointer block mt-0.5"
-                  title="Ignore earnings straddle defense and use pure delta strike"
-                >
-                  Use Pure Delta Strike
-                </button>
-              </div>
-            )}
+      {/* Straddle Defense & Earnings Alert Section */}
+      <SimulatorStraddleDefense
+        ticker={ticker}
+        isFetchingEarnings={isFetchingEarnings}
+        earningsAnalysis={earningsAnalysis}
+        simulatedContract={simulatedContract}
+        factorEarningsInStrike={factorEarningsInStrike}
+        setFactorEarningsInStrike={setFactorEarningsInStrike}
+      />
 
-            <div className="text-right">
-              <div className="flex items-center justify-end gap-1.5">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
-                  {simulatedContract.isEarningsActive && factorEarningsInStrike ? 'Recommended Defended Strike' : 'Nearest Exch. Strike'}
-                </span>
-                {simulatedContract.isEarningsActive && factorEarningsInStrike && (
-                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded border border-emerald-500/30">
-                    🛡️ Earnings-Defended
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 justify-end">
-                <span className="text-2xl font-black text-emerald-400 font-mono tracking-tight">
-                  ${simulatedContract.nearestStrike.toFixed(2)}
-                </span>
-                <span className={`px-1.5 py-0.5 rounded text-[11px] font-black uppercase ${
-                  strategy === 'COVERED_CALL' 
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                }`}>
-                  {strategy === 'COVERED_CALL' ? 'CALL' : 'PUT'}
-                </span>
-              </div>
-              {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike ? (
-                <span className="text-[10px] font-mono text-amber-400/90 block">
-                  Defended past ±${simulatedContract.straddleMove.impliedMoveDollar.toFixed(1)} jump
-                </span>
-              ) : !factorEarningsInStrike && simulatedContract.isEarningsActive ? (
-                <button
-                  type="button"
-                  onClick={() => setFactorEarningsInStrike(true)}
-                  className="text-[10px] text-emerald-400 hover:text-emerald-300 underline font-sans cursor-pointer block"
-                >
-                  Enable Earnings Defense (${simulatedContract.defendedResult.defendedStrike.toFixed(2)})
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
-        {/* Live Earnings Fetch In-Flight Banner */}
-        {isFetchingEarnings && !simulatedContract.isEarningsActive && (
-          <div className="mb-3.5 p-3.5 rounded-xl border border-amber-500/40 bg-amber-950/20 text-amber-200 text-xs shadow-sm shadow-amber-500/10">
-            <div className="flex items-center gap-2.5">
-              <RefreshCw className="w-4 h-4 animate-spin text-amber-400 shrink-0" />
-              <div>
-                <span className="font-bold text-amber-300 text-xs flex items-center gap-2">
-                  <span>Synchronizing Corporate Earnings Calendar for {ticker || 'Underlying'}...</span>
-                  <span className="text-[9px] bg-amber-500/20 text-amber-200 px-1.5 py-0.5 rounded border border-amber-500/30 font-mono uppercase">
-                    In Progress
-                  </span>
-                </span>
-                <p className="text-[11px] text-amber-400/80 mt-0.5 font-sans">
-                  The simulator is pausing to query live event feeds for announcement dates. The ATM Straddle Implied Move and Defended Strike will update as soon as the date is retrieved.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Earnings Straddle Implied Move Alert & Defense Banner */}
-        {simulatedContract.isEarningsActive && (
-          <div className={`mb-3.5 p-3.5 rounded-xl border ${
-            simulatedContract.clearsStraddle
-              ? 'bg-emerald-950/25 border-emerald-500/40 text-emerald-200'
-              : 'bg-rose-950/25 border-rose-500/40 text-rose-200'
-          }`}>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-2.5">
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className={`w-4 h-4 shrink-0 ${simulatedContract.clearsStraddle ? 'text-emerald-400' : 'text-rose-400 animate-pulse'}`} />
-                <span className="font-bold text-xs text-white flex items-center flex-wrap gap-1.5">
-                  <span>Earnings Announcement Inside Expiration Window: {earningsAnalysis?.earningsDate || 'Imminent'}</span>
-                  {earningsAnalysis?.fiscalQuarter && (
-                    <span className="text-slate-300">({earningsAnalysis.fiscalQuarter})</span>
-                  )}
-                  {earningsAnalysis?.timeOfDay && (
-                    <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700 font-mono">
-                      {earningsAnalysis.timeOfDay === 'AMC' ? 'After Close (AMC)' : earningsAnalysis.timeOfDay === 'BMO' ? 'Before Open (BMO)' : earningsAnalysis.timeOfDay}
-                    </span>
-                  )}
-                  {earningsAnalysis?.isConfirmed ? (
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">
-                      Confirmed Live
-                    </span>
-                  ) : (
-                    <span className="text-[9px] bg-amber-500/20 text-amber-300 font-medium px-1.5 py-0.5 rounded border border-amber-500/30">
-                      Projected Cycle
-                    </span>
-                  )}
-                  {earningsAnalysis?.daysBeforeExpiration !== null && earningsAnalysis?.daysBeforeExpiration !== undefined && (
-                    <span className="text-slate-300 font-normal">
-                      &bull; Reports {earningsAnalysis.daysBeforeExpiration} days before expiration
-                    </span>
-                  )}
-                </span>
-              </div>
-              <label className="flex items-center space-x-2 text-xs cursor-pointer font-medium select-none bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800">
-                <input
-                  type="checkbox"
-                  checked={factorEarningsInStrike}
-                  onChange={(e) => setFactorEarningsInStrike(e.target.checked)}
-                  className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-emerald-500/30 cursor-pointer"
-                />
-                <span className="text-slate-200">Factor Straddle Implied Move into Recommended Strike</span>
-              </label>
-            </div>
-
-            <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
-              <div className="bg-slate-950/70 p-2 rounded-lg border border-slate-800">
-                <span className="text-slate-400 text-[10px] block">ATM STRADDLE IMPLIED MOVE</span>
-                <span className="text-amber-400 font-bold text-sm">
-                  &plusmn;${simulatedContract.straddleMove.impliedMoveDollar.toFixed(2)} (&plusmn;{simulatedContract.straddleMove.impliedMovePct.toFixed(1)}%)
-                </span>
-                <span className="text-[9px] text-slate-500 block truncate">
-                  Expected 1-SD event jump
-                </span>
-              </div>
-              <div className="bg-slate-950/70 p-2 rounded-lg border border-slate-800">
-                <span className="text-slate-400 text-[10px] block">EXPECTED POST-EARNINGS RANGE</span>
-                <span className="text-slate-200 font-bold text-sm">
-                  ${simulatedContract.straddleMove.lowerExpectedBound.toFixed(2)} &ndash; ${simulatedContract.straddleMove.upperExpectedBound.toFixed(2)}
-                </span>
-                <span className="text-[9px] text-slate-500 block truncate">
-                  Downside / Upside jump envelope
-                </span>
-              </div>
-              <div className="bg-slate-950/70 p-2 rounded-lg border border-slate-800">
-                <span className="text-slate-400 text-[10px] block">EARNINGS STRIKE DEFENSE</span>
-                <span className={`font-bold text-sm flex items-center gap-1 ${
-                  simulatedContract.clearsStraddle ? 'text-emerald-400' : 'text-rose-400'
-                }`}>
-                  {simulatedContract.clearsStraddle ? '🛡️ Clears Straddle Bounds' : '⚠️ Inside Straddle Breach Zone'}
-                </span>
-                <span className="text-[9px] text-slate-400 block truncate">
-                  {simulatedContract.clearsStraddle
-                    ? `Cushion: $${simulatedContract.defendedResult.cushionPastStraddleDollar.toFixed(2)} (${simulatedContract.defendedResult.cushionPastStraddlePct.toFixed(1)}%) past bounds`
-                    : `Risk: Strike is $${Math.abs(simulatedContract.defendedResult.cushionPastStraddleDollar).toFixed(2)} within move`}
-                </span>
-              </div>
-            </div>
-
-            <p className="mt-2 text-[11px] text-slate-300 leading-relaxed font-sans">
-              {simulatedContract.defendedResult.recommendationNote}
-            </p>
-          </div>
-        )}
-
-        {/* Metric Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-xs">
-          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
-            <span className="text-slate-400 text-[10px] block">Strike Cushion (OTM)</span>
-            <span className="font-mono font-bold text-emerald-400 text-sm">
-              {simulatedContract.bufferPct >= 0 ? '+' : ''}{simulatedContract.bufferPct.toFixed(1)}%
-            </span>
-            <span className="text-[9px] text-slate-500 block truncate">
-              Theor: ${simulatedContract.theoreticalStrike.toFixed(2)}
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
-            <span className="text-slate-400 text-[10px] block">Target / Actual Δ</span>
-            <span className="font-mono font-bold text-cyan-400 text-sm">
-              {simulatedContract.targetDelta.toFixed(2)} / {simulatedContract.bsDelta.toFixed(2)}
-            </span>
-            <span className="text-[9px] text-slate-500 block truncate">
-              PoP ~{simulatedContract.popPct.toFixed(0)}%
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
-            <span className="text-slate-400 text-[10px] block">Est. Option Premium</span>
-            <span className="font-mono font-bold text-amber-400 text-sm">
-              ${simulatedContract.midPrice.toFixed(2)}
-            </span>
-            <span className="text-[9px] text-slate-500 block truncate">
-              Bid ${simulatedContract.bidPrice.toFixed(2)} / Ask ${simulatedContract.askPrice.toFixed(2)}
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
-            <span className="text-slate-400 text-[10px] block">Premium Income (1x)</span>
-            <span className="font-mono font-bold text-emerald-400 text-sm">
-              +${simulatedContract.premiumPerContract.toFixed(0)}
-            </span>
-            <span className="text-[9px] text-slate-500 block truncate">
-              Per 100-share lot
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
-            <span className="text-slate-400 text-[10px] block">Capital / Collateral</span>
-            <span className="font-mono font-bold text-slate-200 text-sm">
-              ${simulatedContract.collateralPerContract.toLocaleString()}
-            </span>
-            <span className="text-[9px] text-slate-500 block truncate">
-              {strategy === 'COVERED_CALL' ? '100 shares held' : 'Cash held in reserve'}
-            </span>
-          </div>
-
-          <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
-            <span className="text-slate-400 text-[10px] block">Break-Even / SMA50</span>
-            <span className="font-mono font-bold text-indigo-300 text-sm">
-              ${simulatedContract.breakEven.toFixed(2)}
-            </span>
-            <span className="text-[9px] text-slate-500 block truncate">
-              SMA50: ${simulatedContract.underlyingSma50.toFixed(2)} ({simulatedContract.strikeVsSmaPct >= 0 ? '+' : ''}{simulatedContract.strikeVsSmaPct.toFixed(1)}%)
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Main 3-Column Layout matching reference image */}
+      {/* 3. Main 3-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* Left Column: Sliders (5 cols) */}
-        <div className="lg:col-span-5 space-y-3.5 flex flex-col justify-between">
-          {/* Slider 1: IV Rank */}
-          <div className="bg-slate-900/80 border border-slate-800/90 rounded-xl p-3.5 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 14v-4" />
-                  <path d="M3.34 19a10 10 0 1 1 17.32 0" />
-                </svg>
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wide">
-                  IV Rank (0-100%)
-                </span>
-              </div>
-              <span className="text-xs font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                {ivRank}%
-              </span>
-            </div>
-
-            <div className="relative py-1">
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={ivRank}
-                onChange={(e) => setIvRank(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400 focus:outline-none"
-              />
-              <div className="flex justify-between items-center text-[10px] text-slate-500 mt-1 font-mono">
-                <span>0%</span>
-                <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                  ▲ Optimal Range (35%-70%) ▲
-                </span>
-                <span>100%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Slider 2: Option Delta */}
-          <div className="bg-slate-900/80 border border-slate-800/90 rounded-xl p-3.5 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-emerald-400 font-serif text-sm leading-none">Σ</span>
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wide">
-                  Option Delta (0.10-0.45)
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike && (
-                  <span className="text-[10px] font-mono text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30" title="Pure Black-Scholes Delta Strike before earnings defense">
-                    Pure Δ Strike: ${simulatedContract.unadjustedStrike.toFixed(2)}
-                  </span>
-                )}
-                <span className="text-xs font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                  {delta.toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            <div className="relative py-1">
-              <input
-                type="range"
-                min="0.10"
-                max="0.45"
-                step="0.01"
-                value={delta}
-                onChange={(e) => setDelta(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400 focus:outline-none"
-              />
-              <div className="flex justify-between items-center text-[10px] text-slate-500 mt-1 font-mono">
-                <span>0.10Δ</span>
-                <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                  ▲ Optimal Range ({strategy === 'CASH_SECURED_PUT' ? '0.15-0.25Δ' : '0.20-0.30Δ'}) ▲
-                </span>
-                <span>0.45Δ</span>
-              </div>
-            </div>
-
-            {/* Live Earnings Defense Status Pill */}
-            {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike && (
-              <div className="mt-2 text-[10px] text-amber-300/90 bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20 flex flex-wrap items-center justify-between gap-1.5">
-                <span>
-                  🛡️ Pure {delta.toFixed(2)}Δ strike is <strong>${simulatedContract.unadjustedStrike.toFixed(2)}</strong>, but contract is defended at <strong>${simulatedContract.nearestStrike.toFixed(2)}</strong> past the ±${simulatedContract.straddleMove.impliedMoveDollar.toFixed(1)} earnings jump.
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setFactorEarningsInStrike(false)}
-                  className="underline text-amber-200 hover:text-white font-bold cursor-pointer"
-                >
-                  Use ${simulatedContract.unadjustedStrike.toFixed(2)}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Slider 3: Distance to 50 SMA */}
-          <div className="bg-slate-900/80 border border-slate-800/90 rounded-xl p-3.5 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-                  <polyline points="16 7 22 7 22 13" />
-                </svg>
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wide">
-                  Dist. to 50 SMA (%)
-                </span>
-              </div>
-              <span className="text-xs font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                {distTo50Sma > 0 ? `+${distTo50Sma.toFixed(1)}%` : `${distTo50Sma.toFixed(1)}%`}
-              </span>
-            </div>
-
-            <div className="relative py-1">
-              <input
-                type="range"
-                min="-15"
-                max="15"
-                step="0.1"
-                value={distTo50Sma}
-                onChange={(e) => setDistTo50Sma(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400 focus:outline-none"
-              />
-              <div className="flex justify-between items-center text-[10px] text-slate-500 mt-1 font-mono">
-                <span>-15% (Under)</span>
-                <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                  ▲ Optimal (Strike &lt; 50 SMA) ▲
-                </span>
-                <span>+15% (Over)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional risk gate quick toggle */}
-          <div className="flex items-center justify-between px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/60 text-xs">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hasEarningsAlert}
-                onChange={(e) => setHasEarningsAlert(e.target.checked)}
-                className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-rose-500 focus:ring-rose-500/30 cursor-pointer"
-              />
-              <span className="text-slate-300">Earnings Within Expiration Window</span>
-            </label>
-            {hasEarningsAlert && (
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                simulatedContract.clearsStraddle
-                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                  : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
-              }`}>
-                {simulatedContract.clearsStraddle ? '-12 PTS (DEFENDED)' : '-40 PTS PENALTY'}
-              </span>
-            )}
-          </div>
+        <div className="lg:col-span-5">
+          <SimulatorSliders
+            strategy={strategy}
+            ivRank={ivRank}
+            setIvRank={setIvRank}
+            delta={delta}
+            setDelta={setDelta}
+            distTo50Sma={distTo50Sma}
+            setDistTo50Sma={setDistTo50Sma}
+            hasEarningsAlert={hasEarningsAlert}
+            setHasEarningsAlert={setHasEarningsAlert}
+            clearsStraddle={simulatedContract.clearsStraddle}
+            isEarningsActive={simulatedContract.isEarningsActive}
+            factorEarningsInStrike={factorEarningsInStrike}
+            setFactorEarningsInStrike={setFactorEarningsInStrike}
+            unadjustedStrike={simulatedContract.unadjustedStrike}
+            nearestStrike={simulatedContract.nearestStrike}
+            straddleMoveDollar={simulatedContract.straddleMove.impliedMoveDollar}
+          />
         </div>
 
-        {/* Center Column: Radial Gauge & Composite Score (4 cols) */}
-        <div className="lg:col-span-4 bg-slate-900/80 border border-slate-800/90 rounded-2xl p-5 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-            Composite Score
-          </span>
-
-          {/* SVG Circular Radial Gauge */}
-          <div className="relative w-44 h-44 flex items-center justify-center">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
-              <circle
-                cx="80"
-                cy="80"
-                r={radius}
-                fill="none"
-                stroke="#1e293b"
-                strokeWidth="12"
-                strokeDasharray={`${arcLength} ${circumference}`}
-                strokeLinecap="round"
-              />
-              <circle
-                cx="80"
-                cy="80"
-                r={radius}
-                fill="none"
-                stroke={
-                  result.compositeScore >= 85
-                    ? '#10b981'
-                    : result.compositeScore >= 70
-                    ? '#06b6d4'
-                    : result.compositeScore >= 50
-                    ? '#f59e0b'
-                    : '#f43f5e'
-                }
-                strokeWidth="12"
-                strokeDasharray={`${arcLength} ${circumference}`}
-                strokeLinecap="round"
-                className="transition-all duration-300 ease-out"
-                style={{
-                  filter:
-                    result.compositeScore >= 70
-                      ? 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.6))'
-                      : 'none',
-                }}
-              />
-            </svg>
-
-            {/* Centered Large Numeric Score & Verdict */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span className="text-4xl font-extrabold text-white tracking-tight font-mono">
-                {Math.round(result.compositeScore)}
-              </span>
-              <span
-                className={`text-xs font-extrabold tracking-wider uppercase mt-0.5 ${
-                  result.qualityVerdict === 'VERY HIGH'
-                    ? 'text-emerald-400'
-                    : result.qualityVerdict === 'HIGH'
-                    ? 'text-cyan-400'
-                    : result.qualityVerdict === 'MODERATE'
-                    ? 'text-amber-400'
-                    : 'text-rose-400'
-                }`}
-              >
-                {result.qualityVerdict}
-              </span>
-            </div>
-          </div>
-
-          <div className="text-center mt-3">
-            <p className="text-xs text-slate-300 font-medium">
-              {result.qualityDescription}
-            </p>
-          </div>
-        </div>
-
-        {/* Right Column: Score Breakdown (3 cols) */}
-        <div className="lg:col-span-3 bg-slate-900/80 border border-slate-800/90 rounded-2xl p-4 flex flex-col justify-between space-y-2.5">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Score Breakdown
-            </span>
-            <span className="text-[11px] font-mono text-slate-500 font-semibold">(MAX 100 PTS)</span>
-          </div>
-
-          {/* Bar 1: IV Rank Score */}
-          <div>
-            <div className="flex justify-between text-[11px] mb-1 font-mono">
-              <span className="text-slate-400">IV RANK SCORE (MAX 25)</span>
-              <span className="text-emerald-400 font-bold">{result.breakdown.ivScore.toFixed(1)}</span>
-            </div>
-            <div className="w-full bg-slate-800/80 h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-emerald-400 h-full rounded-full transition-all duration-300 shadow-sm shadow-emerald-400/50"
-                style={{ width: `${(result.breakdown.ivScore / 25) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Bar 2: Option Delta Score */}
-          <div>
-            <div className="flex justify-between text-[11px] mb-1 font-mono">
-              <span className="text-slate-400">OPTION DELTA SCORE (MAX 25)</span>
-              <span className="text-emerald-400 font-bold">{result.breakdown.deltaScore.toFixed(1)}</span>
-            </div>
-            <div className="w-full bg-slate-800/80 h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-emerald-400 h-full rounded-full transition-all duration-300 shadow-sm shadow-emerald-400/50"
-                style={{ width: `${(result.breakdown.deltaScore / 25) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Bar 3: Technical Score */}
-          <div>
-            <div className="flex justify-between text-[11px] mb-1 font-mono">
-              <span className="text-slate-400">TECHNICAL SCORE (MAX 25)</span>
-              <span className="text-emerald-400 font-bold">{result.breakdown.technicalScore.toFixed(1)}</span>
-            </div>
-            <div className="w-full bg-slate-800/80 h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-emerald-400 h-full rounded-full transition-all duration-300 shadow-sm shadow-emerald-400/50"
-                style={{ width: `${(result.breakdown.technicalScore / 25) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Bar 4: Return on Capital */}
-          <div>
-            <div className="flex justify-between text-[11px] mb-1 font-mono">
-              <span className="text-slate-400">RETURN ON CAPITAL (MAX 15)</span>
-              <span className="text-emerald-400 font-bold">{result.breakdown.returnScore.toFixed(1)}</span>
-            </div>
-            <div className="w-full bg-slate-800/80 h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-emerald-400 h-full rounded-full transition-all duration-300 shadow-sm shadow-emerald-400/50"
-                style={{ width: `${(result.breakdown.returnScore / 15) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Bar 5: Liquidity Score */}
-          <div>
-            <div className="flex justify-between text-[11px] mb-1 font-mono">
-              <span className="text-slate-400">LIQUIDITY SCORE (MAX 10)</span>
-              <span className="text-emerald-400 font-bold">{result.breakdown.liquidityScore.toFixed(1)}</span>
-            </div>
-            <div className="w-full bg-slate-800/80 h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-emerald-400 h-full rounded-full transition-all duration-300 shadow-sm shadow-emerald-400/50"
-                style={{ width: `${(result.breakdown.liquidityScore / 10) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
+        {/* Center & Right Column: Gauge and Score Breakdown */}
+        <SimulatorScoreGauge result={result} />
       </div>
 
       {/* 4. Footer Bar */}
@@ -1691,3 +1027,4 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
     </div>
   );
 };
+export default OptionsTradeQualitySimulator;

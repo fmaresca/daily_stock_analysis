@@ -360,3 +360,19 @@ export function scoreFromSliderInputs(params: {
     notes,
   };
 }
+
+export interface SliderScoringResult {
+  compositeScore: number;
+  breakdown: {
+    ivScore: number;
+    deltaScore: number;
+    technicalScore: number;
+    returnScore: number;
+    liquidityScore: number;
+  };
+  qualityVerdict: 'VERY HIGH' | 'HIGH' | 'MODERATE' | 'CAUTION' | 'DISQUALIFIED';
+  qualityDescription: string;
+  notes: string[];
+}
+
+
