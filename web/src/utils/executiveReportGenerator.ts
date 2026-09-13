@@ -42,9 +42,10 @@ export function calculateComplianceHealthScore(
 ): number {
   let score = 100;
 
-  // 1. Threatened positions (|delta| >= 0.40): -10 pts each
+  // 1. Threatened option positions (|delta| >= 0.40): -10 pts each
+  // Only derivative option contracts (CSPs, Covered Calls, Spreads) have assignment/roll threats; equities represent asset ownership
   const threatened = positions.filter(
-    (p) => p.type !== 'CASH' && p.type !== 'MMF' && Math.abs(p.delta) >= 0.40
+    (p) => p.type !== 'CASH' && p.type !== 'MMF' && p.type !== 'STOCK' && Math.abs(p.delta) >= 0.40
   );
   score -= threatened.length * 10;
 
@@ -114,10 +115,12 @@ export function calculateLiveExecutiveMetrics(
     const dailyTheta = Math.max(0, stress.totalDailyTheta);
     const monthlyRunRate = Math.round(dailyTheta * 30 * 100) / 100;
 
-    const threatened = positions.filter(
-      (p) => p.type !== 'CASH' && p.type !== 'MMF' && Math.abs(p.delta) >= 0.40
-    ).length;
-    const safe = positions.filter((p) => p.type !== 'CASH' && p.type !== 'MMF').length - threatened;
+    // Evaluate option contracts specifically for assignment risk and delta roll triggers
+    const optionContracts = positions.filter(
+      (p) => p.type !== 'CASH' && p.type !== 'MMF' && p.type !== 'STOCK'
+    );
+    const threatened = optionContracts.filter((p) => Math.abs(p.delta) >= 0.40).length;
+    const safe = optionContracts.filter((p) => Math.abs(p.delta) < 0.30).length;
 
     const healthScore = calculateComplianceHealthScore(positions, capital, netLiq);
 
@@ -135,7 +138,7 @@ export function calculateLiveExecutiveMetrics(
       betaWeightedDelta: stress.totalBetaDelta,
       directionalBias,
       complianceHealthScore: healthScore,
-      totalPositions: positions.filter((p) => p.type !== 'CASH' && p.type !== 'MMF').length,
+      totalPositions: optionContracts.length,
       safePositions: Math.max(0, safe),
       threatenedPositions: threatened,
       regTMarginUsed: Math.round(stress.regTMargin || capital.committedCollateral),
