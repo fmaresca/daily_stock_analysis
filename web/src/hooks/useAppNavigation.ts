@@ -8,6 +8,10 @@ export function parseRouteFromLocation(): RouteLocation {
   const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '');
   const path = hash ? `/${hash}` : rawPath;
 
+  if (path === '/login' || path === '/auth' || path === '/signin') return { tree: 'LOGIN' };
+  if (path === '/dashboard' || path === '/workspace' || path === '/portfolio') return { tree: 'DASHBOARD' };
+  if (path === '/admin/users' || path === '/admin' || path === '/users') return { tree: 'ADMIN_USERS' };
+  if (path === '/settings/password' || path === '/password') return { tree: 'SETTINGS_PASSWORD' };
   if (path === '/methodology' || path === '/rules') return { tree: 'METHODOLOGY' };
   if (path === '/faq' || path === '/questions') return { tree: 'FAQ' };
   if (path === '/disclaimer' || path === '/legal') return { tree: 'DISCLAIMER' };
@@ -39,7 +43,11 @@ export function useAppNavigation() {
 
       if (typeof window !== 'undefined') {
         let targetPath = '/';
-        if (tree === 'METHODOLOGY') targetPath = '/methodology';
+        if (tree === 'LOGIN') targetPath = '/login';
+        else if (tree === 'DASHBOARD') targetPath = '/dashboard';
+        else if (tree === 'ADMIN_USERS') targetPath = '/admin/users';
+        else if (tree === 'SETTINGS_PASSWORD') targetPath = '/settings/password';
+        else if (tree === 'METHODOLOGY') targetPath = '/methodology';
         else if (tree === 'FAQ') targetPath = '/faq';
         else if (tree === 'DISCLAIMER') targetPath = '/disclaimer';
         else if (tree === 'EQUITIES') {
@@ -63,6 +71,7 @@ export function useAppNavigation() {
       }
     },
     []
+
   );
 
   useEffect(() => {

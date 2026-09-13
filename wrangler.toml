@@ -4,3 +4,10 @@ pages_build_output_dir = "dist"
 
 [vars]
 ENVIRONMENT = "production"
+ADMIN_EMAIL = "fjmaresca@gmail.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "deltaharvest_production_db"
+database_id = "deltaharvest-d1-db"
+migrations_dir = "migrations"

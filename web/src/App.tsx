@@ -63,6 +63,12 @@ const WeeklyExecutiveReportView = lazy(() => import('./components/WeeklyExecutiv
 const MethodologyView = lazy(() => import('./components/MethodologyView').then(m => ({ default: m.MethodologyView })));
 const FaqView = lazy(() => import('./components/FaqView').then(m => ({ default: m.FaqView })));
 const DisclaimerView = lazy(() => import('./components/DisclaimerView').then(m => ({ default: m.DisclaimerView })));
+import { useAuth } from './context/AuthContext';
+import { LoginView } from './components/auth/LoginView';
+import { UserDashboardView } from './components/auth/UserDashboardView';
+import { AdminUsersView } from './components/auth/AdminUsersView';
+import { PasswordChangeView } from './components/auth/PasswordChangeView';
+
 
 // Types & Utilities
 import { PortfolioPosition } from './utils/portfolioStressTest';
@@ -116,6 +122,9 @@ export const App: React.FC = () => {
     setActiveChartSymbol,
     navigateTo,
   } = useAppNavigation();
+
+  const { user, isAuthenticated, isAdmin } = useAuth();
+
 
   // 2. Watchlist State Hook
   const {
@@ -755,7 +764,12 @@ export const App: React.FC = () => {
   const isScreeningTab = (activeTree === 'EQUITIES' && (activeEquitiesTab === 'TECHNICAL_SCREENER' || activeEquitiesTab === 'TREND_SUPPORT' || activeEquitiesTab === 'VOLATILITY_RISK' || activeEquitiesTab === 'EARNINGS_CALENDAR' || activeEquitiesTab === 'SECTOR_OVERVIEW')) ||
     (activeTree === 'OPTIONS' && (activeOptionsTab === 'INCOME_SCREENER' || activeOptionsTab === 'DELTA_GREEKS' || activeOptionsTab === 'EXPIRATION_CADENCE'));
 
+  if (activeTree === 'LOGIN') {
+    return <LoginView onSuccess={() => navigateTo('DASHBOARD')} />;
+  }
+
   return (
+
     <div className="min-h-screen bg-slate-950 light:bg-slate-50 text-slate-100 light:text-slate-900 flex selection:bg-emerald-500 selection:text-white transition-colors">
       {/* 1. Institutional Sidebar Navigation */}
       <InstitutionalSidebar
@@ -819,79 +833,110 @@ export const App: React.FC = () => {
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
           theme={theme}
           onToggleTheme={handleToggleTheme}
+          onNavigateTo={navigateTo}
         />
+
 
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* Institutional KPI Overview & Performance Area Chart Hero Banner */}
-          <InstitutionalHeroBanner
-            executiveMetrics={liveExecutiveMetrics}
-            totalTickersCount={universeTickers.length}
-            freeCashAmount={getStoredCapitalState().freeCash}
-            theme={theme}
-            onOpenExecutiveDigest={() => {
-              setActiveTree('OPTIONS');
-              setActiveOptionsTab('EXECUTIVE_DIGEST');
-            }}
-            onOpenSimulator={() => setIsSimulatorModalOpen(true)}
-          />
+          {activeTree !== 'DASHBOARD' && activeTree !== 'ADMIN_USERS' && activeTree !== 'SETTINGS_PASSWORD' && (
+            <InstitutionalHeroBanner
+              executiveMetrics={liveExecutiveMetrics}
+              totalTickersCount={universeTickers.length}
+              freeCashAmount={getStoredCapitalState().freeCash}
+              theme={theme}
+              onOpenExecutiveDigest={() => {
+                setActiveTree('OPTIONS');
+                setActiveOptionsTab('EXECUTIVE_DIGEST');
+              }}
+              onOpenSimulator={() => setIsSimulatorModalOpen(true)}
+            />
+          )}
 
           {/* Dual Navigation Tree: US Equities Analysis vs Options Engine */}
-          <DualMenuTree
-          activeTree={activeTree}
-          onSelectTree={(tree) => navigateTo(tree, activeOptionsTab, activeEquitiesTab)}
-          activeEquitiesTab={activeEquitiesTab}
-          onSelectEquitiesTab={handleSelectEquitiesTab}
-          activeOptionsTab={activeOptionsTab}
-          onSelectOptionsTab={handleSelectOptionsTab}
-          totalTickersCount={universeTickers.length}
-          weeklyCount={weeklyCadenceCounts.weekly}
-          monthlyCount={weeklyCadenceCounts.monthly}
-          highIvrCount={highIvrCount}
-          earningsAlertCount={earningsAlertCount}
-          freeCashAmount={getStoredCapitalState().freeCash}
-        />
+          {activeTree !== 'DASHBOARD' && activeTree !== 'ADMIN_USERS' && activeTree !== 'SETTINGS_PASSWORD' && (
+            <DualMenuTree
+              activeTree={activeTree}
+              onSelectTree={(tree) => navigateTo(tree, activeOptionsTab, activeEquitiesTab)}
+              activeEquitiesTab={activeEquitiesTab}
+              onSelectEquitiesTab={handleSelectEquitiesTab}
+              activeOptionsTab={activeOptionsTab}
+              onSelectOptionsTab={handleSelectOptionsTab}
+              totalTickersCount={universeTickers.length}
+              weeklyCount={weeklyCadenceCounts.weekly}
+              monthlyCount={weeklyCadenceCounts.monthly}
+              highIvrCount={highIvrCount}
+              earningsAlertCount={earningsAlertCount}
+              freeCashAmount={getStoredCapitalState().freeCash}
+            />
+          )}
 
-        {/* Breadcrumbs & Quick-Jump Navigation Bar */}
-        <BreadcrumbsBar
-          activeTree={activeTree}
-          activeEquitiesTab={activeEquitiesTab}
-          activeOptionsTab={activeOptionsTab}
-          onNavigateTo={navigateTo}
-          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-          onOpenWatchlist={() => setIsWatchlistModalOpen(true)}
-          onOpenReports={() => setIsReportQueryModalOpen(true)}
-          onOpenHelp={() => setIsHelpModalOpen(true)}
-          onPrint={triggerPrintReport}
-        />
-
-        {/* Contextual Screener Toolbar: Rendered strictly on Screening Views */}
-        {isScreeningTab && (
-          <ScreenerFilterToolbar
-            filters={filters}
-            setFilters={setFilters}
-            universeTickers={universeTickers}
-            filteredTickers={filteredTickers}
-            filteredOpportunities={filteredOpportunities}
-            totalOpportunitiesCount={dataPayload?.opportunities.length || 0}
-            watchlistGroups={watchlistGroups}
-            activeGroupId={activeGroupId}
-            setActiveGroupId={setActiveGroupId}
-            showWatchlistOnly={showWatchlistOnly}
-            setShowWatchlistOnly={setShowWatchlistOnly}
-            onOpenWatchlistModal={() => setIsWatchlistModalOpen(true)}
-            onExportCSV={handleExportCSV}
-            onExportExcel={handleExportExcel}
-            onPrint={triggerPrintReport}
-            onResetFilters={handleResetFilters}
-            weeklyCadenceCounts={weeklyCadenceCounts}
+          {/* Breadcrumbs & Quick-Jump Navigation Bar */}
+          <BreadcrumbsBar
             activeTree={activeTree}
+            activeEquitiesTab={activeEquitiesTab}
+            activeOptionsTab={activeOptionsTab}
+            onNavigateTo={navigateTo}
+            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+            onOpenWatchlist={() => setIsWatchlistModalOpen(true)}
+            onOpenReports={() => setIsReportQueryModalOpen(true)}
+            onOpenHelp={() => setIsHelpModalOpen(true)}
+            onPrint={triggerPrintReport}
           />
-        )}
 
-        {/* Primary Content View Switcher */}
-        <Suspense fallback={<LoadingSkeleton rows={8} className="p-4" />}>
-          {activeTree === 'METHODOLOGY' ? (
-            <MethodologyView
+          {/* Contextual Screener Toolbar: Rendered strictly on Screening Views */}
+          {isScreeningTab && (
+            <ScreenerFilterToolbar
+              filters={filters}
+              setFilters={setFilters}
+              universeTickers={universeTickers}
+              filteredTickers={filteredTickers}
+              filteredOpportunities={filteredOpportunities}
+              totalOpportunitiesCount={dataPayload?.opportunities.length || 0}
+              watchlistGroups={watchlistGroups}
+              activeGroupId={activeGroupId}
+              setActiveGroupId={setActiveGroupId}
+              showWatchlistOnly={showWatchlistOnly}
+              setShowWatchlistOnly={setShowWatchlistOnly}
+              onOpenWatchlistModal={() => setIsWatchlistModalOpen(true)}
+              onExportCSV={handleExportCSV}
+              onExportExcel={handleExportExcel}
+              onPrint={triggerPrintReport}
+              onResetFilters={handleResetFilters}
+              weeklyCadenceCounts={weeklyCadenceCounts}
+              activeTree={activeTree}
+            />
+          )}
+
+          {/* Primary Content View Switcher */}
+          <Suspense fallback={<LoadingSkeleton rows={8} className="p-4" />}>
+            {activeTree === 'DASHBOARD' ? (
+              <UserDashboardView
+                onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
+                onNavigateToCharts={() => navigateTo('EQUITIES', undefined, 'INTERACTIVE_CHARTS')}
+                onNavigateToWorkflow={() => navigateTo('WORKFLOW', 'WEEKLY_CASH_LEDGER')}
+              />
+            ) : activeTree === 'ADMIN_USERS' ? (
+              isAdmin ? (
+                <AdminUsersView onBackToWorkspace={() => navigateTo('DASHBOARD')} />
+              ) : (
+                <div className="p-8 text-center text-rose-400 bg-slate-900 border border-slate-800 rounded-2xl">
+                  <h2 className="text-lg font-bold">Admin Permission Required</h2>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Only Super-Admin (Frank Maresca) can access user provisioning and management.
+                  </p>
+                  <button
+                    onClick={() => navigateTo('DASHBOARD')}
+                    className="mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs cursor-pointer"
+                  >
+                    Return to Workspace
+                  </button>
+                </div>
+              )
+            ) : activeTree === 'SETTINGS_PASSWORD' ? (
+              <PasswordChangeView onSuccess={() => navigateTo('DASHBOARD')} />
+            ) : activeTree === 'METHODOLOGY' ? (
+              <MethodologyView
               onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
               onNavigateToOptions={() => navigateTo('OPTIONS', 'WEEKLY_POSITION_AUDIT')}
             />
