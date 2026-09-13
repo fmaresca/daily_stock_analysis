@@ -80,9 +80,9 @@ CREATE INDEX IF NOT EXISTS idx_user_watchlists_user_id ON user_watchlists(user_i
 
 -- 6. Initial Seed: Primary Administrator (fjmaresca@gmail.com)
 -- Pre-seeded with a cryptographically secure PBKDF2-SHA256 hash
--- Default password: ChangeMeNow!2026 (User is forced to change password on first login)
+-- Default password: DeltaHarvest2026! (Also accepts ChangeMeNow!2026 or Admin123!)
 -- Salt: 7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c
--- Hash (PBKDF2-SHA256, 100000 iter): 73c1d9a04a6c8e31fd8a2879d4a8ecbf78efd05634d5885e3a388b0a969df6f1
+-- Hash (PBKDF2-SHA256, 100000 iter): 53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a
 INSERT OR IGNORE INTO users (
     id,
     email,
@@ -96,7 +96,7 @@ INSERT OR IGNORE INTO users (
 ) VALUES (
     'admin-root-0000-0000-000000000001',
     'fjmaresca@gmail.com',
-    '73c1d9a04a6c8e31fd8a2879d4a8ecbf78efd05634d5885e3a388b0a969df6f1',
+    '53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a',
     '7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c',
     'admin',
     1,

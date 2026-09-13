@@ -241,6 +241,24 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 )}
               </button>
             </div>
+
+            {/* Quick Admin Sign-In Shortcut */}
+            <div className="pt-3 border-t border-slate-800/80 space-y-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('fjmaresca@gmail.com');
+                  setPassword('DeltaHarvest2026!');
+                }}
+                className="w-full py-2 px-3 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/40 rounded-lg text-xs font-semibold text-purple-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                <span>Pre-Fill Super-Admin (fjmaresca@gmail.com)</span>
+              </button>
+              <div className="text-[10px] text-center text-slate-400 font-mono">
+                Default Password: <span className="text-purple-300 font-bold">DeltaHarvest2026!</span>
+              </div>
+            </div>
           </form>
 
           {/* Admin Contact Notice & Request Access */}

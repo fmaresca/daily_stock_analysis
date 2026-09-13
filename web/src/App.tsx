@@ -68,6 +68,7 @@ import { LoginView } from './components/auth/LoginView';
 import { UserDashboardView } from './components/auth/UserDashboardView';
 import { AdminUsersView } from './components/auth/AdminUsersView';
 import { PasswordChangeView } from './components/auth/PasswordChangeView';
+import { Users } from './components/icons';
 
 
 // Types & Utilities
@@ -919,17 +920,41 @@ export const App: React.FC = () => {
             ) : activeTree === 'ADMIN_USERS' ? (
               isAdmin ? (
                 <AdminUsersView onBackToWorkspace={() => navigateTo('DASHBOARD')} />
+              ) : !isAuthenticated ? (
+                <div className="p-8 max-w-lg mx-auto text-center bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl space-y-4 my-12">
+                  <div className="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center mx-auto">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white">Administrator Access Required</h2>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    The <strong>Multi-Tenant Administration Console</strong> allows the Super-Administrator (<strong>fjmaresca@gmail.com</strong>) to provision new client logins, issue temporary passwords, and control tenant access.
+                  </p>
+                  <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
+                    <button
+                      onClick={() => navigateTo('LOGIN')}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold shadow cursor-pointer transition-all"
+                    >
+                      Sign In as Admin (fjmaresca@gmail.com)
+                    </button>
+                    <button
+                      onClick={() => navigateTo('WORKFLOW')}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                    >
+                      Return to Screener
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <div className="p-8 text-center text-rose-400 bg-slate-900 border border-slate-800 rounded-2xl">
-                  <h2 className="text-lg font-bold">Admin Permission Required</h2>
-                  <p className="text-xs text-slate-400 mt-2">
-                    Only Super-Admin (Frank Maresca) can access user provisioning and management.
+                <div className="p-8 max-w-lg mx-auto text-center bg-slate-900 border border-rose-500/40 rounded-2xl shadow-2xl space-y-4 my-12">
+                  <h2 className="text-lg font-bold text-rose-400">Admin Permission Required</h2>
+                  <p className="text-xs text-slate-300">
+                    Your account ({user?.email}) has <strong>CLIENT</strong> privileges. Only the Super-Administrator (<strong>fjmaresca@gmail.com</strong>) can access user provisioning.
                   </p>
                   <button
                     onClick={() => navigateTo('DASHBOARD')}
-                    className="mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs cursor-pointer"
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs cursor-pointer"
                   >
-                    Return to Workspace
+                    Return to Private Workspace
                   </button>
                 </div>
               )

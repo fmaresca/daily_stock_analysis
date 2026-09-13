@@ -191,7 +191,7 @@ const localMemoryDb = {
     {
       id: "admin-root-0000-0000-000000000001",
       email: PRIMARY_ADMIN_EMAIL,
-      password_hash: "73c1d9a04a6c8e31fd8a2879d4a8ecbf78efd05634d5885e3a388b0a969df6f1", // "ChangeMeNow!2026"
+      password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a", // "DeltaHarvest2026!"
       password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
       role: "admin",
       is_active: 1,
