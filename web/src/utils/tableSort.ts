@@ -90,18 +90,24 @@ export function getSortValue<T>(item: T, keyOrAccessor: keyof T | string | Value
     // Nested path support e.g. "extra_fields.rsi_14"
     if (keyOrAccessor.includes('.')) {
       const parts = keyOrAccessor.split('.');
-      let curr: any = item;
+      let curr: unknown = item;
       for (const p of parts) {
-        if (curr === null || curr === undefined) return undefined;
-        curr = curr[p];
+        if (curr === null || curr === undefined || typeof curr !== 'object') return undefined;
+        curr = (curr as Record<string, unknown>)[p];
       }
       return curr;
     }
 
-    return (item as any)[keyOrAccessor];
+    if (typeof item === 'object' && item !== null && keyOrAccessor in item) {
+      return (item as Record<string, unknown>)[keyOrAccessor];
+    }
+    return undefined;
   }
 
-  return (item as any)[keyOrAccessor];
+  if (typeof item === 'object' && item !== null && keyOrAccessor in item) {
+    return (item as Record<string, unknown>)[String(keyOrAccessor)];
+  }
+  return undefined;
 }
 
 /**

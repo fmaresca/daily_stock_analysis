@@ -352,7 +352,7 @@ export interface FilterState {
   maxRsi?: number;
   selectedSector?: string;
   safetyTier?: string;
-  sortBy: any;
+  sortBy: keyof OptionOpportunity | string;
   sortOrder: 'asc' | 'desc';
 }
 
