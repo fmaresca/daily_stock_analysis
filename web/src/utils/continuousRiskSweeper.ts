@@ -30,13 +30,17 @@ export function evaluateOpenPositionsRisk(): SweeperAlertEvent[] {
       const positions = JSON.parse(raw);
       if (Array.isArray(positions)) {
         for (const p of positions) {
-          // Check for 0.50 Delta breach
+          // Derivative option contracts only (CSPs, Covered Calls, Spreads, PMCC)
+          const isOptionContract = p.type !== 'STOCK' && p.type !== 'CASH' && p.type !== 'MMF';
+          if (!isOptionContract) continue;
+
+          // Check for 0.50 Delta breach (Defensive roll protocol)
           if (p.delta && Math.abs(p.delta) >= 0.45) {
             events.push({
               id: `SWEEP_DELTA_${p.symbol}_${Date.now()}`,
               type: 'DEFENSIVE_ROLL_TRIGGER',
               symbol: p.symbol,
-              message: `CRITICAL 0.50Δ THRESHOLD: ${p.symbol} delta is ${p.delta}Δ. Execute defensive roll out & down for net credit immediately.`,
+              message: `CRITICAL 0.50Δ THRESHOLD: ${p.symbol} option delta is ${p.delta}Δ. Execute defensive roll out & down for net credit immediately.`,
               timestamp: now,
             });
           }
