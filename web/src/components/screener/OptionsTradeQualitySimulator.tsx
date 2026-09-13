@@ -1126,10 +1126,36 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
           </div>
 
           <div className="flex items-center gap-3">
+            {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike && (
+              <div className="text-right hidden sm:block pr-3 border-r border-slate-800">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+                    Pure {delta.toFixed(2)}Δ Strike
+                  </span>
+                  <span className="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded border border-slate-700">
+                    Unadjusted
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 justify-end">
+                  <span className="text-lg font-bold text-slate-400 font-mono line-through decoration-rose-500/60">
+                    ${simulatedContract.unadjustedStrike.toFixed(2)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFactorEarningsInStrike(false)}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-sans cursor-pointer block mt-0.5"
+                  title="Ignore earnings straddle defense and use pure delta strike"
+                >
+                  Use Pure Delta Strike
+                </button>
+              </div>
+            )}
+
             <div className="text-right">
               <div className="flex items-center justify-end gap-1.5">
                 <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
-                  {simulatedContract.isEarningsActive && factorEarningsInStrike ? 'Defended Strike' : 'Nearest Exch. Strike'}
+                  {simulatedContract.isEarningsActive && factorEarningsInStrike ? 'Recommended Defended Strike' : 'Nearest Exch. Strike'}
                 </span>
                 {simulatedContract.isEarningsActive && factorEarningsInStrike && (
                   <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded border border-emerald-500/30">
@@ -1149,11 +1175,19 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
                   {strategy === 'COVERED_CALL' ? 'CALL' : 'PUT'}
                 </span>
               </div>
-              {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike && (
-                <span className="text-[10px] font-mono text-slate-400 block">
-                  Unadjusted Delta Strike: ${simulatedContract.unadjustedStrike.toFixed(2)}
+              {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike ? (
+                <span className="text-[10px] font-mono text-amber-400/90 block">
+                  Defended past ±${simulatedContract.straddleMove.impliedMoveDollar.toFixed(1)} jump
                 </span>
-              )}
+              ) : !factorEarningsInStrike && simulatedContract.isEarningsActive ? (
+                <button
+                  type="button"
+                  onClick={() => setFactorEarningsInStrike(true)}
+                  className="text-[10px] text-emerald-400 hover:text-emerald-300 underline font-sans cursor-pointer block"
+                >
+                  Enable Earnings Defense (${simulatedContract.defendedResult.defendedStrike.toFixed(2)})
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1379,9 +1413,16 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
                   Option Delta (0.10-0.45)
                 </span>
               </div>
-              <span className="text-xs font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                {delta.toFixed(2)}
-              </span>
+              <div className="flex items-center gap-2">
+                {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike && (
+                  <span className="text-[10px] font-mono text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30" title="Pure Black-Scholes Delta Strike before earnings defense">
+                    Pure Δ Strike: ${simulatedContract.unadjustedStrike.toFixed(2)}
+                  </span>
+                )}
+                <span className="text-xs font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  {delta.toFixed(2)}
+                </span>
+              </div>
             </div>
 
             <div className="relative py-1">
@@ -1402,6 +1443,22 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
                 <span>0.45Δ</span>
               </div>
             </div>
+
+            {/* Live Earnings Defense Status Pill */}
+            {simulatedContract.isEarningsActive && factorEarningsInStrike && simulatedContract.unadjustedStrike !== simulatedContract.nearestStrike && (
+              <div className="mt-2 text-[10px] text-amber-300/90 bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20 flex flex-wrap items-center justify-between gap-1.5">
+                <span>
+                  🛡️ Pure {delta.toFixed(2)}Δ strike is <strong>${simulatedContract.unadjustedStrike.toFixed(2)}</strong>, but contract is defended at <strong>${simulatedContract.nearestStrike.toFixed(2)}</strong> past the ±${simulatedContract.straddleMove.impliedMoveDollar.toFixed(1)} earnings jump.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFactorEarningsInStrike(false)}
+                  className="underline text-amber-200 hover:text-white font-bold cursor-pointer"
+                >
+                  Use ${simulatedContract.unadjustedStrike.toFixed(2)}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Slider 3: Distance to 50 SMA */}
