@@ -22,20 +22,9 @@ import { useModalManager } from './hooks/useModalManager';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import { useOptionsData } from './hooks/useOptionsData';
 
-// Code-split heavy modals (loaded on-demand when triggered by user)
-const HelpHandbookModal = lazy(() => import('./components/HelpHandbookModal').then(m => ({ default: m.HelpHandbookModal })));
-const WatchlistManagerModal = lazy(() => import('./components/WatchlistManagerModal').then(m => ({ default: m.WatchlistManagerModal })));
-const ReportQueryModal = lazy(() => import('./components/ReportQueryModal').then(m => ({ default: m.ReportQueryModal })));
-const TickerAuditModal = lazy(() => import('./components/TickerAuditModal').then(m => ({ default: m.TickerAuditModal })));
-const OptionDetailModal = lazy(() => import('./components/OptionDetailModal').then(m => ({ default: m.OptionDetailModal })));
-const IncomeCalculatorModal = lazy(() => import('./components/IncomeCalculatorModal').then(m => ({ default: m.IncomeCalculatorModal })));
-const SchwabSettingsModal = lazy(() => import('./components/SchwabSettingsModal').then(m => ({ default: m.SchwabSettingsModal })));
-const TradierSettingsModal = lazy(() => import('./components/TradierSettingsModal').then(m => ({ default: m.TradierSettingsModal })));
-const ApiDiagnosticsModal = lazy(() => import('./components/ApiDiagnosticsModal').then(m => ({ default: m.ApiDiagnosticsModal })));
-const BrokerOrderStagingModal = lazy(() => import('./components/BrokerOrderStagingModal').then(m => ({ default: m.BrokerOrderStagingModal })));
-const AlertSettingsModal = lazy(() => import('./components/AlertSettingsModal').then(m => ({ default: m.AlertSettingsModal })));
-const OptionsTradeQualityModal = lazy(() => import('./components/screener/OptionsTradeQualityModal').then(m => ({ default: m.OptionsTradeQualityModal })));
-const FundamentalValuationModal = lazy(() => import('./components/FundamentalValuationModal').then(m => ({ default: m.FundamentalValuationModal })));
+import { AppModalsContainer } from './components/modals/AppModalsContainer';
+import { useFilteredOpportunities } from './hooks/useFilteredOpportunities';
+import { useOrderStaging } from './hooks/useOrderStaging';
 
 // Code-split heavy views & tabs
 const InteractiveChart = lazy(() => import('./components/InteractiveChart').then(m => ({ default: m.InteractiveChart })));
@@ -78,14 +67,6 @@ import { WeeklyScreenerDataset } from './types/weeklyScreeners';
 import { startContinuousRiskSweeper, stopContinuousRiskSweeper } from './utils/continuousRiskSweeper';
 import { OptionContractData } from './utils/optionChainMatrix';
 import { calculateLiveExecutiveMetrics } from './utils/executiveReportGenerator';
-import {
-  stageSingleLegOrder,
-  stageMultiLegSpreadOrder,
-  AccountType,
-  PriceExecutionType,
-} from './utils/brokerOrderStaging';
-import { generateMultiLegSpreads, generateVolatilitySkew } from './utils/optionsMultiLeg';
-import { generateFundamentalHealthData } from './utils/fundamentalSolvency';
 import {
   TickerMeta,
   OptionOpportunity,
@@ -437,241 +418,38 @@ export const App: React.FC = () => {
     }
   };
 
-  // Order Staging Handlers
-  const handleStageOpportunity = (opp: OptionOpportunity) => {
-    const meta = universeTickers.find((t) => t.symbol === opp.symbol);
-    const staged = stageSingleLegOrder(opp, meta, 1, 'SCHWAB', 'REG_T_MARGIN', 'MIDPOINT');
-    openStagedModal(staged, opp, null);
-  };
-
-  const handleStageSpread = (spread: MultiLegSpread) => {
-    const order = stageMultiLegSpreadOrder(spread, 1, 'SCHWAB', 'REG_T_MARGIN', 'MIDPOINT');
-    openStagedModal(order, null, spread);
-  };
-
-  const handleStageContractFromChain = (contract: OptionContractData, spotPrice: number) => {
-    const isPut = contract.type === 'PUT';
-    const opp: OptionOpportunity = {
-      id: `CHAIN_${contract.underlyingSymbol}_${contract.strike}_${contract.type}`,
-      symbol: contract.underlyingSymbol,
-      name: contract.underlyingSymbol,
-      category: 'Equities',
-      sector: 'Technology',
-      liquidity_tier: 'Tier 1',
-      strategy: isPut ? 'CSP' : 'COVERED_CALL',
-      strategy_name: isPut ? 'Cash-Secured Put' : 'Covered Call',
-      expiration: contract.expiration,
-      dte: contract.dte,
-      current_price: spotPrice,
-      strike: contract.strike,
-      type: isPut ? 'put' : 'call',
-      bid: contract.bid,
-      ask: contract.ask,
-      mid: contract.mid,
-      collateral_required: isPut ? contract.strike * 100 : spotPrice * 100,
-      premium_total: Math.round(contract.mid * 100),
-      breakeven: isPut ? contract.strike - contract.mid : spotPrice - contract.mid,
-      cushion_pct: isPut ? Math.round(((spotPrice - contract.strike) / spotPrice) * 1000) / 10 : 0,
-      roc_pct: Math.round((contract.mid / (isPut ? contract.strike : spotPrice)) * 1000) / 10,
-      annualized_roc: Math.round((contract.mid / (isPut ? contract.strike : spotPrice)) * (365 / Math.max(1, contract.dte)) * 1000) / 10,
-      delta: contract.delta,
-      abs_delta: Math.abs(contract.delta),
-      theta: contract.theta,
-      pop_pct: Math.round((1 - Math.abs(contract.delta)) * 1000) / 10,
-      iv: contract.iv,
-      iv_rank: 35,
-      rsi: 50,
-      safety_tier: 'Option Chain Contract',
-      tier_color: 'cyan',
-      tags: ['OPTION_CHAIN', contract.type],
-      rating: 85,
-    };
-    handleStageOpportunity(opp);
-  };
-
-  const handleUpdateStagedQuantity = (qty: number) => {
-    if (modalState.activeStagedOpportunity) {
-      const meta = universeTickers.find((t) => t.symbol === modalState.activeStagedOpportunity?.symbol);
-      const updated = stageSingleLegOrder(
-        modalState.activeStagedOpportunity,
-        meta,
-        qty,
-        modalState.stagedOrder?.broker || 'SCHWAB',
-        modalState.stagedOrder?.accountType || 'REG_T_MARGIN',
-        modalState.stagedOrder?.pricingType || 'MIDPOINT'
-      );
-      setStagedOrder(updated);
-    } else if (modalState.activeStagedSpread) {
-      const updated = stageMultiLegSpreadOrder(
-        modalState.activeStagedSpread,
-        qty,
-        modalState.stagedOrder?.broker || 'SCHWAB',
-        modalState.stagedOrder?.accountType || 'REG_T_MARGIN',
-        modalState.stagedOrder?.pricingType || 'MIDPOINT'
-      );
-      setStagedOrder(updated);
-    }
-  };
-
-  const handleUpdateStagedAccountType = (acc: AccountType) => {
-    if (modalState.activeStagedOpportunity) {
-      const meta = universeTickers.find((t) => t.symbol === modalState.activeStagedOpportunity?.symbol);
-      const updated = stageSingleLegOrder(
-        modalState.activeStagedOpportunity,
-        meta,
-        modalState.stagedOrder?.quantity || 1,
-        modalState.stagedOrder?.broker || 'SCHWAB',
-        acc,
-        modalState.stagedOrder?.pricingType || 'MIDPOINT'
-      );
-      setStagedOrder(updated);
-    } else if (modalState.activeStagedSpread) {
-      const updated = stageMultiLegSpreadOrder(
-        modalState.activeStagedSpread,
-        modalState.stagedOrder?.quantity || 1,
-        modalState.stagedOrder?.broker || 'SCHWAB',
-        acc,
-        modalState.stagedOrder?.pricingType || 'MIDPOINT'
-      );
-      setStagedOrder(updated);
-    }
-  };
-
-  const handleUpdateStagedPricingType = (pricing: PriceExecutionType) => {
-    if (modalState.activeStagedOpportunity) {
-      const meta = universeTickers.find((t) => t.symbol === modalState.activeStagedOpportunity?.symbol);
-      const updated = stageSingleLegOrder(
-        modalState.activeStagedOpportunity,
-        meta,
-        modalState.stagedOrder?.quantity || 1,
-        modalState.stagedOrder?.broker || 'SCHWAB',
-        modalState.stagedOrder?.accountType || 'REG_T_MARGIN',
-        pricing
-      );
-      setStagedOrder(updated);
-    } else if (modalState.activeStagedSpread) {
-      const updated = stageMultiLegSpreadOrder(
-        modalState.activeStagedSpread,
-        modalState.stagedOrder?.quantity || 1,
-        modalState.stagedOrder?.broker || 'SCHWAB',
-        modalState.stagedOrder?.accountType || 'REG_T_MARGIN',
-        pricing
-      );
-      setStagedOrder(updated);
-    }
-  };
-
-  // Derived counts for tabs
-  const weeklyCadenceCounts = useMemo(() => {
-    let weekly = 0;
-    let monthly = 0;
-    universeTickers.forEach((t) => {
-      if (t.has_weeklys === false) monthly++;
-      else weekly++;
-    });
-    return { all: universeTickers.length, weekly, monthly };
-  }, [universeTickers]);
-
-  const highIvrCount = useMemo(() => {
-    return universeTickers.filter((t) => t.iv_rank >= 45).length;
-  }, [universeTickers]);
-
-  const earningsAlertCount = useMemo(() => {
-    return universeTickers.filter((t) => t.earnings_within_7d).length;
-  }, [universeTickers]);
-
-  // Filtered Tickers (for Tree 1 & Cadence views)
-  const filteredTickers = useMemo(() => {
-    return universeTickers.filter((t) => {
-      if (showWatchlistOnly && !currentWatchlistSymbols.includes(t.symbol)) {
-        return false;
-      }
-
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        const matchesSymbol = t.symbol.toLowerCase().includes(q);
-        const matchesName = t.name.toLowerCase().includes(q);
-        const matchesSector = t.sector.toLowerCase().includes(q);
-        if (!matchesSymbol && !matchesName && !matchesSector) return false;
-      }
-
-      if (filters.onlyHighIvr && t.iv_rank < 45) return false;
-      if (filters.onlyOversold && (t.rsi_14 ?? 50) >= 35) return false;
-      if (filters.onlyNearSupport && t.spot_price > (t.lower_bb ?? 0) * 1.02) return false;
-      if (filters.onlyEarningsAlert && !t.earnings_within_7d) return false;
-
-      if (filters.weeklyCadence === 'WEEKLY_ONLY' && t.has_weeklys === false) return false;
-      if (filters.weeklyCadence === 'MONTHLY_ONLY' && t.has_weeklys !== false) return false;
-
-      if (filters.liquidityTier && filters.liquidityTier !== 'ALL') {
-        if (!t.liquidity_tier.includes(filters.liquidityTier)) return false;
-      }
-
-      return true;
-    });
-  }, [
+  // 4. Order Staging Handlers Hook
+  const {
+    handleStageOpportunity,
+    handleStageSpread,
+    handleStageContractFromChain,
+    handleUpdateStagedQuantity,
+    handleUpdateStagedAccountType,
+    handleUpdateStagedPricingType,
+  } = useOrderStaging({
     universeTickers,
-    currentWatchlistSymbols,
-    showWatchlistOnly,
-    filters,
-  ]);
+    modalState,
+    openStagedModal,
+    setStagedOrder,
+  });
 
-  // Filtered Opportunities (for Tree 2 Options Screener)
-  const filteredOpportunities = useMemo(() => {
-    return allUniverseOpportunities.filter((o) => {
-      if (showWatchlistOnly && !currentWatchlistSymbols.includes(o.symbol)) {
-        return false;
-      }
-
-      if (filters.strategy && filters.strategy !== 'ALL') {
-        if (o.strategy !== filters.strategy) return false;
-      }
-
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        if (!o.symbol.toLowerCase().includes(q) && !o.name.toLowerCase().includes(q)) {
-          return false;
-        }
-      }
-
-      if (filters.weeklyCadence === 'WEEKLY_ONLY') {
-        const tMeta = universeTickers.find((t) => t.symbol === o.symbol);
-        if (tMeta && tMeta.has_weeklys === false) return false;
-      }
-      if (filters.weeklyCadence === 'MONTHLY_ONLY') {
-        const tMeta = universeTickers.find((t) => t.symbol === o.symbol);
-        if (tMeta && tMeta.has_weeklys !== false) return false;
-      }
-
-      if (filters.onlyHighIvr && o.iv_rank < 45) return false;
-      if (filters.onlyEarningsAlert && !o.earnings_within_7d) return false;
-
-      if (filters.liquidityTier && filters.liquidityTier !== 'ALL') {
-        if (!o.liquidity_tier?.includes(filters.liquidityTier)) return false;
-      }
-
-      return true;
-    });
-  }, [
+  // 5. Filtered Universe & Synthesized Spreads/Skews Hook
+  const {
+    weeklyCadenceCounts,
+    highIvrCount,
+    earningsAlertCount,
+    filteredTickers,
+    filteredOpportunities,
+    multiLegSpreads,
+    volatilitySkewData,
+    fundamentalHealthData,
+  } = useFilteredOpportunities({
+    universeTickers,
     allUniverseOpportunities,
     currentWatchlistSymbols,
     showWatchlistOnly,
     filters,
-    universeTickers,
-  ]);
-
-  // Synthesized Multi-Leg Spreads
-  const multiLegSpreads = useMemo(() => {
-    return generateMultiLegSpreads(filteredTickers, allUniverseOpportunities);
-  }, [filteredTickers, allUniverseOpportunities]);
-
-  const volatilitySkewData = useMemo(() => {
-    return generateVolatilitySkew(filteredTickers);
-  }, [filteredTickers]);
-
-  const fundamentalHealthData = useMemo(() => {
-    return generateFundamentalHealthData(filteredTickers);
-  }, [filteredTickers]);
+  });
 
   const handleAddCustomTickerMeta = (symbol: string) => {
     const cleanSym = symbol.trim().toUpperCase().replace(/[^A-Z0-9.\-_]/g, '');
@@ -1153,7 +931,7 @@ export const App: React.FC = () => {
                   tickers={filteredTickers}
                   watchlist={currentWatchlistSymbols}
                   onToggleWatchlist={handleToggleWatchlist}
-                  sortBy={filters.sortBy}
+                  sortBy={filters.sortBy as any}
                   sortOrder={filters.sortOrder}
                   onSort={handleSort}
                   onSelectTicker={(ticker) => setSelectedTicker(ticker)}
@@ -1355,7 +1133,7 @@ export const App: React.FC = () => {
 
                   <ScreenerTable
                     opportunities={filteredOpportunities}
-                    sortBy={filters.sortBy}
+                    sortBy={filters.sortBy as keyof OptionOpportunity}
                     sortOrder={filters.sortOrder}
                     onSort={handleSort}
                     onSelectOpportunity={(opp) => openOptionDetail(opp)}
@@ -1385,10 +1163,8 @@ export const App: React.FC = () => {
         </Suspense>
       </main>
 
-      {/* Modals Suite (Lazy Loaded on demand) */}
-      <Suspense fallback={null}>
-        {/* 1. Global Command Palette (Ctrl+K) */}
-        <CommandPalette
+      {/* 1. Global Command Palette (Ctrl+K) */}
+      <CommandPalette
           isOpen={modalState.isCommandPaletteOpen}
           onClose={() => setIsCommandPaletteOpen(false)}
           tickers={universeTickers}
@@ -1411,210 +1187,46 @@ export const App: React.FC = () => {
           onTriggerPrint={triggerPrintReport}
         />
 
-        {/* 2. Strategy & Help Handbook (?) */}
-        <HelpHandbookModal
-          isOpen={modalState.isHelpModalOpen}
-          onClose={() => setIsHelpModalOpen(false)}
-          onNavigate={(tree, optTab, eqTab) => {
-            setIsHelpModalOpen(false);
-            navigateTo(tree, optTab, eqTab);
-          }}
-          onOpenSimulator={() => {
-            setIsHelpModalOpen(false);
-            setIsSimulatorModalOpen(true);
-          }}
-          onOpenValuation={(t) => {
-            setIsHelpModalOpen(false);
-            openValuation(t || 'NVDA');
-          }}
-          onOpenTradier={() => {
-            setIsHelpModalOpen(false);
-            setIsTradierModalOpen(true);
-          }}
-          onOpenSchwab={() => {
-            setIsHelpModalOpen(false);
-            setIsSchwabModalOpen(true);
-          }}
-          onOpenDiagnostics={() => {
-            setIsHelpModalOpen(false);
-            setIsDiagnosticsOpen(true);
-          }}
-          onOpenReports={() => {
-            setIsHelpModalOpen(false);
-            setIsReportQueryModalOpen(true);
-          }}
-          onOpenWatchlists={() => {
-            setIsHelpModalOpen(false);
-            setIsWatchlistModalOpen(true);
-          }}
-          onOpenAlerts={() => {
-            setIsHelpModalOpen(false);
-            setIsAlertsModalOpen(true);
-          }}
-          onOpenCommandPalette={() => {
-            setIsHelpModalOpen(false);
-            setIsCommandPaletteOpen(true);
-          }}
-        />
+      {/* Centralized Modals Container */}
+      <AppModalsContainer
+        modalState={modalState}
+        setIsHelpModalOpen={setIsHelpModalOpen}
+        setIsTradierModalOpen={setIsTradierModalOpen}
+        setIsSchwabModalOpen={setIsSchwabModalOpen}
+        setIsDiagnosticsOpen={setIsDiagnosticsOpen}
+        setIsWatchlistModalOpen={setIsWatchlistModalOpen}
+        setIsReportQueryModalOpen={setIsReportQueryModalOpen}
+        setIsAlertsModalOpen={setIsAlertsModalOpen}
+        setIsSimulatorModalOpen={setIsSimulatorModalOpen}
+        setIsStagedModalOpen={setIsStagedModalOpen}
+        setIsCommandPaletteOpen={setIsCommandPaletteOpen}
+        setSelectedTicker={setSelectedTicker}
+        setSelectedOpportunity={setSelectedOpportunity}
+        setCalculatorOpportunity={setCalculatorOpportunity}
+        navigateTo={navigateTo}
+        openValuation={openValuation}
+        closeValuation={closeValuation}
+        setActiveTree={setActiveTree}
+        setActiveEquitiesTab={setActiveEquitiesTab}
+        handleStageOpportunity={handleStageOpportunity}
+        handleUpdateStagedQuantity={handleUpdateStagedQuantity}
+        handleUpdateStagedAccountType={handleUpdateStagedAccountType}
+        handleUpdateStagedPricingType={handleUpdateStagedPricingType}
+        watchlistGroups={watchlistGroups}
+        activeGroupId={activeGroupId}
+        setActiveGroupId={setActiveGroupId}
+        handleCreateWatchlist={handleCreateWatchlist}
+        handleRenameWatchlist={handleRenameWatchlist}
+        handleDeleteWatchlist={handleDeleteWatchlist}
+        handleUpdateGroupTickers={handleUpdateGroupTickers}
+        universeTickers={universeTickers}
+        allUniverseOpportunities={allUniverseOpportunities}
+        handleAddCustomTickerMeta={handleAddCustomTickerMeta}
+        handleLiveRecalculate={handleLiveRecalculate}
+        isRecalculating={isRecalculating}
+        summary={dataPayload?.summary || null}
+      />
 
-        {/* 3. Tradier API Settings Modal (Primary) */}
-        <TradierSettingsModal
-          isOpen={modalState.isTradierModalOpen}
-          onClose={() => setIsTradierModalOpen(false)}
-          onOpenSchwabSettings={() => {
-            setIsTradierModalOpen(false);
-            setIsSchwabModalOpen(true);
-          }}
-        />
-
-        {/* 3.1. Charles Schwab Retail Trader API Provisioning Modal (Fallback) */}
-        <SchwabSettingsModal
-          isOpen={modalState.isSchwabModalOpen}
-          onClose={() => setIsSchwabModalOpen(false)}
-        />
-
-        {/* 3.2. API Health & Automated Diagnostics Suite Modal */}
-        {modalState.isDiagnosticsOpen && (
-          <ErrorBoundary fallbackTitle="API Diagnostics Suite Recovered" onReset={() => setIsDiagnosticsOpen(false)}>
-            <ApiDiagnosticsModal
-              isOpen={modalState.isDiagnosticsOpen}
-              onClose={() => setIsDiagnosticsOpen(false)}
-              onOpenTradierSettings={() => {
-                setIsDiagnosticsOpen(false);
-                setIsTradierModalOpen(true);
-              }}
-              onOpenSchwabSettings={() => {
-                setIsDiagnosticsOpen(false);
-                setIsSchwabModalOpen(true);
-              }}
-            />
-          </ErrorBoundary>
-        )}
-
-        {/* 4. Multi-Watchlist Manager with Bulk & CSV/Excel Ingestion (W) */}
-        <WatchlistManagerModal
-          isOpen={modalState.isWatchlistModalOpen}
-          onClose={() => setIsWatchlistModalOpen(false)}
-          watchlistGroups={watchlistGroups}
-          activeGroupId={activeGroupId}
-          onSelectGroup={(id) => setActiveGroupId(id)}
-          onCreateGroup={handleCreateWatchlist}
-          onRenameGroup={handleRenameWatchlist}
-          onDeleteGroup={handleDeleteWatchlist}
-          onUpdateGroupTickers={handleUpdateGroupTickers}
-          availableUniverse={universeTickers}
-          onAddCustomTickerMeta={handleAddCustomTickerMeta}
-          onRecalculateTickers={handleLiveRecalculate}
-          isRecalculating={isRecalculating}
-        />
-
-        {/* 5. Report Queries & Multi-Format Exports (R) */}
-        {modalState.isReportQueryModalOpen && (
-          <ErrorBoundary fallbackTitle="Report Queries & Export View Recovered" onReset={() => setIsReportQueryModalOpen(false)}>
-            <ReportQueryModal
-              isOpen={modalState.isReportQueryModalOpen}
-              onClose={() => setIsReportQueryModalOpen(false)}
-              tickers={universeTickers}
-              opportunities={allUniverseOpportunities}
-              summary={dataPayload?.summary || null}
-            />
-          </ErrorBoundary>
-        )}
-
-        {/* 5. Ticker Detail 5-Part Audit Modal */}
-        {modalState.selectedTicker && (
-          <ErrorBoundary fallbackTitle="Ticker Detail View Recovered" onReset={() => setSelectedTicker(null)}>
-            <TickerAuditModal
-              ticker={modalState.selectedTicker}
-              opportunities={allUniverseOpportunities}
-              onClose={() => setSelectedTicker(null)}
-            />
-          </ErrorBoundary>
-        )}
-
-        {/* 6. Option Opportunity Detail Modal */}
-        {modalState.selectedOpportunity && (
-          <ErrorBoundary fallbackTitle="Option Details Recovered" onReset={() => setSelectedOpportunity(null)}>
-            <OptionDetailModal
-              opportunity={modalState.selectedOpportunity}
-              onClose={() => setSelectedOpportunity(null)}
-              onOpenCalculator={(opp) => {
-                setSelectedOpportunity(null);
-                setCalculatorOpportunity(opp);
-              }}
-              onStageOrder={(opp) => {
-                setSelectedOpportunity(null);
-                handleStageOpportunity(opp);
-              }}
-            />
-          </ErrorBoundary>
-        )}
-
-        {/* 7. Cash Income Calculator Modal */}
-        {modalState.calculatorOpportunity && (
-          <ErrorBoundary fallbackTitle="Income Calculator Recovered" onReset={() => setCalculatorOpportunity(null)}>
-            <IncomeCalculatorModal
-              opportunity={modalState.calculatorOpportunity}
-              onClose={() => setCalculatorOpportunity(null)}
-            />
-          </ErrorBoundary>
-        )}
-
-        {/* 8. Broker Order Staging & 1-Click Execution Payloads Modal */}
-        {modalState.isStagedModalOpen && modalState.stagedOrder && (
-          <ErrorBoundary fallbackTitle="Broker Staging Recovered" onReset={() => setIsStagedModalOpen(false)}>
-            <BrokerOrderStagingModal
-              isOpen={modalState.isStagedModalOpen}
-              onClose={() => setIsStagedModalOpen(false)}
-              stagedOrder={modalState.stagedOrder}
-              onQuantityChange={handleUpdateStagedQuantity}
-              onAccountTypeChange={handleUpdateStagedAccountType}
-              onPricingTypeChange={handleUpdateStagedPricingType}
-            />
-          </ErrorBoundary>
-        )}
-
-        {/* 9. Real-Time Alert Engine & Webhooks Modal */}
-        {modalState.isAlertsModalOpen && (
-          <AlertSettingsModal
-            isOpen={modalState.isAlertsModalOpen}
-            onClose={() => setIsAlertsModalOpen(false)}
-            tickers={universeTickers}
-            opportunities={allUniverseOpportunities}
-          />
-        )}
-
-        {/* 10. Quantitative Options Trade Quality Simulator Modal */}
-        {modalState.isSimulatorModalOpen && (
-          <OptionsTradeQualityModal
-            isOpen={modalState.isSimulatorModalOpen}
-            onClose={() => setIsSimulatorModalOpen(false)}
-            initialTicker={modalState.simulatorInitialData.ticker || ''}
-            initialExpiration={modalState.simulatorInitialData.expiration || ''}
-            initialIvRank={modalState.simulatorInitialData.ivRank || 48}
-            initialDelta={modalState.simulatorInitialData.delta || 0.18}
-            initialDistTo50Sma={modalState.simulatorInitialData.distTo50Sma || -5.1}
-            initialStrategy={modalState.simulatorInitialData.strategy || 'CASH_SECURED_PUT'}
-            initialDataSource={modalState.simulatorInitialData.dataSource || 'BARCHART'}
-          />
-        )}
-
-        {/* 11. DCF Intrinsic Valuation & DuPont Structural Terminal (v3.4) */}
-        {modalState.isValuationModalOpen && (
-          <ErrorBoundary fallbackTitle="DCF Valuation Terminal Recovered" onReset={() => closeValuation()}>
-            <FundamentalValuationModal
-              isOpen={modalState.isValuationModalOpen}
-              onClose={closeValuation}
-              initialTicker={modalState.valuationInitialTicker || 'NVDA'}
-              onNavigateToEquities={() => {
-                closeValuation();
-                setActiveTree('EQUITIES');
-                setActiveEquitiesTab('FUNDAMENTAL_HEALTH');
-              }}
-            />
-          </ErrorBoundary>
-        )}
-      </Suspense>
 
       {/* Comprehensive Footer with SEO & Crawler-Friendly Internal Hyperlinks */}
       <InstitutionalFooter
