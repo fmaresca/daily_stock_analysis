@@ -472,35 +472,38 @@ export function simulatePosition(
     regTMargin = currentValue * 0.5; // 50% Reg-T
     pmMargin = currentValue * 0.15; // 15% Portfolio Margin stress band
   } else if (pos.type === 'CSP') {
-    // Short Put
+    // Short Put (Cash-Secured Put)
     const curCalc = calculateBlackScholesOption(currentSpot, pos.strike, pos.dte, pos.iv);
     const simCalc = calculateBlackScholesOption(newSpot, pos.strike, newDte, newIv);
 
     currentValue = -pos.currentOptionPrice * 100 * pos.quantity;
     simulatedValue = -simCalc.putPrice * 100 * pos.quantity;
 
-    delta = pos.quantity * curCalc.putDelta * 100 * pos.beta;
+    // Short Put has positive delta exposure (bullish income strategy)
+    delta = pos.quantity * Math.abs(curCalc.putDelta) * 100 * pos.beta;
     theta = pos.quantity * -curCalc.putTheta * 100;
     vega = pos.quantity * -curCalc.vega * 100;
 
-    // Reg-T: 100% cash secured or 20% underlying
+    // Reg-T: 100% cash secured (Strike * 100 * contracts)
     regTMargin = pos.strike * 100 * pos.quantity;
     // Portfolio Margin: 15% stress loss
     pmMargin = Math.max(currentSpot * 0.15 * 100 * pos.quantity, Math.abs(currentValue));
   } else if (pos.type === 'COVERED_CALL') {
-    // Stock + Short Call
+    // Short Call Option Leg (underlying stock equity is accounted for separately in STOCK positions)
     const curCalc = calculateBlackScholesOption(currentSpot, pos.strike, pos.dte, pos.iv);
     const simCalc = calculateBlackScholesOption(newSpot, pos.strike, newDte, newIv);
 
-    currentValue = (currentSpot * 100 - pos.currentOptionPrice * 100) * pos.quantity;
-    simulatedValue = (newSpot * 100 - simCalc.callPrice * 100) * pos.quantity;
+    currentValue = -pos.currentOptionPrice * 100 * pos.quantity;
+    simulatedValue = -simCalc.callPrice * 100 * pos.quantity;
 
-    delta = pos.quantity * (1.0 - curCalc.callDelta) * 100 * pos.beta;
+    // Short Call has negative delta (hedges/reduces underlying stock long delta)
+    delta = -pos.quantity * curCalc.callDelta * 100 * pos.beta;
     theta = pos.quantity * -curCalc.callTheta * 100;
     vega = pos.quantity * -curCalc.vega * 100;
 
-    regTMargin = currentSpot * 100 * pos.quantity;
-    pmMargin = currentSpot * 0.15 * 100 * pos.quantity;
+    // Covered Call is 100% covered by long shares in account, zero additional naked call margin
+    regTMargin = 0;
+    pmMargin = 0;
   } else if (pos.type === 'CREDIT_SPREAD') {
     // Bull Put Spread
     const strikeLong = pos.strike2 || pos.strike - 10;
@@ -510,13 +513,14 @@ export function simulatePosition(
     const simShort = calculateBlackScholesOption(newSpot, pos.strike, newDte, newIv);
     const simLong = calculateBlackScholesOption(newSpot, strikeLong, newDte, newIv);
 
-    const curNetCredit = curShort.putPrice - curLong.putPrice;
-    const simNetCredit = simShort.putPrice - simLong.putPrice;
+    const curNetValue = -(curShort.putPrice - curLong.putPrice) * 100 * pos.quantity;
+    const simNetValue = -(simShort.putPrice - simLong.putPrice) * 100 * pos.quantity;
 
-    currentValue = curNetCredit * 100 * pos.quantity;
-    simulatedValue = (curNetCredit - simNetCredit) * 100 * pos.quantity;
+    currentValue = curNetValue;
+    simulatedValue = simNetValue;
 
-    delta = pos.quantity * (curShort.putDelta - curLong.putDelta) * 100 * pos.beta;
+    // Bull Put Spread is net bullish (positive delta): short put delta (positive) + long put delta (negative)
+    delta = pos.quantity * (Math.abs(curShort.putDelta) - Math.abs(curLong.putDelta)) * 100 * pos.beta;
     theta = pos.quantity * (curLong.putTheta - curShort.putTheta) * 100;
     vega = pos.quantity * (curLong.vega - curShort.vega) * 100;
 

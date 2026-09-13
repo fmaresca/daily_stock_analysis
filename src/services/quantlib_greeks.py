@@ -42,6 +42,9 @@ class OptionGreeksResult:
     is_american_early_exercise_optimal: bool
     intrinsic_value: float
     time_value: float
+    call_rho: float = 0.0
+    put_rho: float = 0.0
+    unrounded_price: float = 0.0
 
 
 class QuantLibGreeksEngine:
@@ -93,19 +96,22 @@ class QuantLibGreeksEngine:
         exp_qt = math.exp(-q * t)
         exp_rt = math.exp(-r * t)
 
+        call_rho = (strike * t * exp_rt * cdf_d2) / 100.0
+        put_rho = (-strike * t * exp_rt * cdf_neg_d2) / 100.0
+
         if is_call:
             # European Call Price
             price = spot * exp_qt * cdf_d1 - strike * exp_rt * cdf_d2
             delta = exp_qt * cdf_d1
             theta_annual = -(spot * sigma * exp_qt * pdf_d1) / (2.0 * math.sqrt(t)) - r * strike * exp_rt * cdf_d2 + q * spot * exp_qt * cdf_d1
-            rho = (strike * t * exp_rt * cdf_d2) / 100.0
+            rho = call_rho
             intrinsic = max(0.0, spot - strike)
         else:
             # European Put Price
             price = strike * exp_rt * cdf_neg_d2 - spot * exp_qt * cdf_neg_d1
             delta = -exp_qt * cdf_neg_d1
             theta_annual = -(spot * sigma * exp_qt * pdf_d1) / (2.0 * math.sqrt(t)) + r * strike * exp_rt * cdf_neg_d2 - q * spot * exp_qt * cdf_neg_d1
-            rho = (-strike * t * exp_rt * cdf_neg_d2) / 100.0
+            rho = put_rho
             intrinsic = max(0.0, strike - spot)
 
         # Gamma and Vega are identical for Calls and Puts
@@ -115,27 +121,21 @@ class QuantLibGreeksEngine:
 
         time_value = max(0.0, price - intrinsic)
 
-        # American Early Exercise Risk Model:
-        # Puts: Early exercise optimal when intrinsic > price or when interest on strike exceeds time value
-        # Calls: Early exercise optimal immediately prior to ex-dividend date when dividend > remaining call time value
+        # American Early Exercise Risk Model
         early_exercise_optimal = False
         early_assignment_risk = 0.0
 
         if not is_call:
-            # For Deep ITM Puts: intrinsic value vs interest carrying cost
             if spot < strike:
                 itm_pct = (strike - spot) / strike
-                # If time value is less than 0.5% of strike, high early assignment probability
                 if time_value < (strike * 0.005) or dte_days <= 2:
                     early_exercise_optimal = True
                     early_assignment_risk = min(98.0, 50.0 + itm_pct * 150.0)
                 else:
                     early_assignment_risk = min(60.0, itm_pct * 100.0)
             else:
-                # OTM Put: zero immediate assignment risk
                 early_assignment_risk = max(0.0, round((1.0 - cdf_neg_d2) * 5.0, 1))
         else:
-            # Call side early assignment (ex-div risk)
             if spot > strike and q > 0:
                 est_dividend_amount = spot * q
                 if est_dividend_amount > time_value:
@@ -154,7 +154,90 @@ class QuantLibGreeksEngine:
             is_american_early_exercise_optimal=early_exercise_optimal,
             intrinsic_value=round(intrinsic, 2),
             time_value=round(time_value, 2),
+            call_rho=round(call_rho, 4),
+            put_rho=round(put_rho, 4),
+            unrounded_price=price,
         )
+
+    def solve_implied_volatility(
+        self,
+        target_price: float,
+        spot: float,
+        strike: float,
+        dte_days: float,
+        option_type: str = "put",
+        risk_free_rate: Optional[float] = None,
+        dividend_yield: Optional[float] = None,
+    ) -> float:
+        """
+        Solves for Implied Volatility (IV as percentage e.g. 25.0) using Newton-Raphson
+        with Brent/bisection fallback.
+        """
+        if target_price <= 0.001 or spot <= 0.01 or strike <= 0.01:
+            return 0.0
+
+        r = self.risk_free_rate if risk_free_rate is None else risk_free_rate
+        q = self.dividend_yield if dividend_yield is None else dividend_yield
+        t = max(dte_days / 365.0, 0.0001)
+        is_call = option_type.lower() == "call"
+
+        exp_qt = math.exp(-q * t)
+        exp_rt = math.exp(-r * t)
+
+        intrinsic = max(0.0, (spot * exp_qt - strike * exp_rt) if is_call else (strike * exp_rt - spot * exp_qt))
+        if target_price <= intrinsic:
+            return 0.1
+
+        # Initial guess via Brenner-Subrahmanyam
+        sigma = min(3.0, max(0.05, math.sqrt(2.0 * math.pi / t) * (target_price / spot)))
+
+        # 1. Newton-Raphson (up to 25 iterations)
+        for _ in range(25):
+            sqrt_t = math.sqrt(t)
+            d1 = (math.log(spot / strike) + (r - q + 0.5 * sigma * sigma) * t) / (sigma * sqrt_t)
+            d2 = d1 - sigma * sqrt_t
+
+            if is_call:
+                price = spot * exp_qt * _norm_cdf(d1) - strike * exp_rt * _norm_cdf(d2)
+            else:
+                price = strike * exp_rt * _norm_cdf(-d2) - spot * exp_qt * _norm_cdf(-d1)
+
+            diff = price - target_price
+            if abs(diff) < 1e-4:
+                return round(sigma * 100.0, 2)
+
+            vega_unscaled = spot * exp_qt * _norm_pdf(d1) * sqrt_t
+            if vega_unscaled < 1e-7:
+                break
+
+            next_sigma = sigma - diff / vega_unscaled
+            if next_sigma <= 0.001 or next_sigma >= 5.0:
+                break
+            sigma = next_sigma
+
+        # 2. Bisection Fallback in [0.001, 5.0]
+        low, high = 0.001, 5.0
+        for _ in range(40):
+            mid = (low + high) / 2.0
+            sqrt_t = math.sqrt(t)
+            d1 = (math.log(spot / strike) + (r - q + 0.5 * mid * mid) * t) / (mid * sqrt_t)
+            d2 = d1 - mid * sqrt_t
+
+            if is_call:
+                price = spot * exp_qt * _norm_cdf(d1) - strike * exp_rt * _norm_cdf(d2)
+            else:
+                price = strike * exp_rt * _norm_cdf(-d2) - spot * exp_qt * _norm_cdf(-d1)
+
+            diff = price - target_price
+            if abs(diff) < 1e-4 or (high - low) < 1e-4:
+                return round(mid * 100.0, 2)
+
+            if diff > 0:
+                high = mid
+            else:
+                low = mid
+
+        return round(min(500.0, max(0.1, (low + high) / 2.0 * 100.0)), 2)
 
 
 quantlib_greeks_engine = QuantLibGreeksEngine()
