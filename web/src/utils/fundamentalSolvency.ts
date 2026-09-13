@@ -4,6 +4,7 @@
 
 import { TickerMeta, FundamentalHealthData } from '../types/options';
 import { getSecEdgarUrl } from './secEdgarRegistry';
+export * from './fundamentalValuation';
 
 export function generateFundamentalHealthData(tickers: TickerMeta[]): FundamentalHealthData[] {
   return tickers.map((ticker) => {

@@ -171,6 +171,16 @@ export async function evaluateAndDispatchAlerts(
       continue;
     }
 
+    // Volume confirmation guard: filter out anemic volume prints (<30% of 30D average) to prevent false alerts
+    const hasVolumeConfirmation =
+      t.avg_volume_30 === undefined ||
+      t.avg_volume_30 <= 0 ||
+      t.volume === undefined ||
+      t.volume >= t.avg_volume_30 * 0.3;
+    if (!hasVolumeConfirmation) {
+      continue;
+    }
+
     const isRsiOversold = settings.alertOnRsiOversold && t.rsi_14 !== undefined && t.rsi_14 < 35 && t.rsi_14 > 0;
     const isNearLowerBand =
       settings.alertOnBollingerBand &&
