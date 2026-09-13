@@ -11,8 +11,13 @@ import {
   Lock,
   User,
   Zap,
+  Clock,
+  Calendar,
+  Award,
+  Upload,
 } from '../icons';
 import { UserTradeItem, UserWatchlistItem, UserPortfolioItem } from '../../types/auth';
+import { OptionsTabType } from '../../types/options';
 import { PasswordChangeView } from './PasswordChangeView';
 
 import { LIVING_TRUST_OPTIONS_POSITIONS } from '../../utils/portfolioStressTest';
@@ -22,12 +27,14 @@ interface UserDashboardViewProps {
   onNavigateToScreener?: () => void;
   onNavigateToCharts?: () => void;
   onNavigateToWorkflow?: () => void;
+  onNavigateToWorkflowStep?: (step: OptionsTabType) => void;
 }
 
 export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
   onNavigateToScreener,
   onNavigateToCharts,
   onNavigateToWorkflow,
+  onNavigateToWorkflowStep,
 }) => {
   const { user, logout } = useAuth();
   const [trades, setTrades] = useState<UserTradeItem[]>([]);
@@ -35,6 +42,72 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
   const [portfolio, setPortfolio] = useState<UserPortfolioItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const WORKFLOW_STEPS: {
+    step: number;
+    tab: OptionsTabType;
+    title: string;
+    subtitle: string;
+    badge: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      step: 1,
+      tab: 'SCHWAB_POSITIONS_UPLOAD',
+      title: 'Upload Positions',
+      subtitle: 'Reconcile Schwab CSV export & cash reserves',
+      badge: 'Step 1',
+      icon: <Upload className="w-3.5 h-3.5" />,
+    },
+    {
+      step: 2,
+      tab: 'WEEKLY_CASH_LEDGER',
+      title: 'Cash & Tax Ledger',
+      subtitle: '$5k living expenses & §1256 carryover',
+      badge: 'Step 2',
+      icon: <DollarSign className="w-3.5 h-3.5" />,
+    },
+    {
+      step: 3,
+      tab: 'HOLDINGS_COVERED_CALLS',
+      title: 'Holdings Calls',
+      subtitle: 'Harvest 20Δ calls on long equity (≥100)',
+      badge: 'Step 3',
+      icon: <ShieldCheck className="w-3.5 h-3.5" />,
+    },
+    {
+      step: 4,
+      tab: 'ECONOMIC_CALENDAR',
+      title: 'Macro Calendar',
+      subtitle: 'FOMC, CPI, NFP, and binary catalysts',
+      badge: 'Step 4',
+      icon: <Calendar className="w-3.5 h-3.5" />,
+    },
+    {
+      step: 5,
+      tab: 'CASCADING_SCREENER',
+      title: 'Cascading Screener',
+      subtitle: 'Top Barchart & Chameleon options scans',
+      badge: 'Step 5',
+      icon: <TrendingUp className="w-3.5 h-3.5" />,
+    },
+    {
+      step: 6,
+      tab: 'WEEKLY_EXECUTIVE_REPORT',
+      title: 'Executive Report',
+      subtitle: 'Print-ready institutional digest & PDF',
+      badge: 'Step 6',
+      icon: <Award className="w-3.5 h-3.5" />,
+    },
+    {
+      step: 7,
+      tab: 'BROKER_STAGING',
+      title: 'Broker Staging',
+      subtitle: '1-click Schwab & IBKR bracket orders',
+      badge: 'Step 7',
+      icon: <Zap className="w-3.5 h-3.5" />,
+    },
+  ];
 
   // Modals
   const [isAddTradeOpen, setIsAddTradeOpen] = useState(false);
@@ -385,7 +458,13 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           </div>
           {onNavigateToWorkflow && (
             <button
-              onClick={onNavigateToWorkflow}
+              onClick={() => {
+                if (onNavigateToWorkflowStep) {
+                  onNavigateToWorkflowStep('SCHWAB_POSITIONS_UPLOAD');
+                } else {
+                  onNavigateToWorkflow();
+                }
+              }}
               className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-lg shadow-lg cursor-pointer transition-all shrink-0 flex items-center gap-2"
             >
               <span>Open 7-Step Workflow Ritual</span>
@@ -394,6 +473,81 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           )}
         </div>
       )}
+
+      {/* Guided 7-Step End-of-Week Quantitative Ritual Dashboard Grid */}
+      <div className="p-4 rounded-xl bg-slate-900/90 border border-emerald-500/30 shadow-xl space-y-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                <span>Guided 7-Step End-of-Week Quantitative Ritual</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  Weekend Ritual
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Execute the complete weekly options income protocol step-by-step from brokerage reconciliation to bracket execution.
+              </p>
+            </div>
+          </div>
+          {onNavigateToWorkflow && (
+            <button
+              onClick={() => {
+                if (onNavigateToWorkflowStep) {
+                  onNavigateToWorkflowStep('SCHWAB_POSITIONS_UPLOAD');
+                } else {
+                  onNavigateToWorkflow();
+                }
+              }}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-lg shadow-md hover:shadow-emerald-600/30 cursor-pointer transition-all flex items-center gap-1.5 shrink-0"
+            >
+              <span>Open Step 1 (Upload)</span>
+              <span>&rarr;</span>
+            </button>
+          )}
+        </div>
+
+        {/* 7 Step Interactive Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2.5 pt-1">
+          {WORKFLOW_STEPS.map((s) => (
+            <button
+              key={s.step}
+              onClick={() => {
+                if (onNavigateToWorkflowStep) {
+                  onNavigateToWorkflowStep(s.tab);
+                } else if (onNavigateToWorkflow) {
+                  onNavigateToWorkflow();
+                }
+              }}
+              className="p-2.5 rounded-xl bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/50 transition-all text-left group cursor-pointer flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 flex items-center justify-center text-[10px] font-mono font-bold group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    {s.step}
+                  </span>
+                  <span className="text-slate-500 group-hover:text-emerald-400 transition-colors">
+                    {s.icon}
+                  </span>
+                </div>
+                <p className="font-bold text-xs text-slate-200 group-hover:text-white transition-colors leading-tight">
+                  {s.title}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-snug">
+                  {s.subtitle}
+                </p>
+              </div>
+              <div className="mt-2 pt-1 border-t border-slate-900 flex items-center justify-between text-[10px] text-emerald-400/80 font-mono font-semibold">
+                <span>{s.badge}</span>
+                <span className="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Tenant Privacy & Partition Guarantee Banner */}
       {!isAdminUser && (

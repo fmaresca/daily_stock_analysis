@@ -107,25 +107,14 @@ export const App: React.FC = () => {
 
   const { user, isAuthenticated, isAdmin, isLoading: isAuthLoading } = useAuth();
 
-  // Redirect non-admin client accounts away from Master Living Trust views to their private workspace
+  // Redirect non-admin client accounts away from Admin User Management
   useEffect(() => {
     if (isAuthenticated && !isAdmin) {
-      const isPersonalTrustTab =
-        activeTree === 'WORKFLOW' ||
-        activeTree === 'ADMIN_USERS' ||
-        (activeTree === 'OPTIONS' &&
-          (activeOptionsTab === 'SCHWAB_POSITIONS_UPLOAD' ||
-           activeOptionsTab === 'WEEKLY_CASH_LEDGER' ||
-           activeOptionsTab === 'HOLDINGS_COVERED_CALLS' ||
-           activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ||
-           activeOptionsTab === 'EXECUTIVE_DIGEST' ||
-           activeOptionsTab === 'DEFENSIVE_ROLL_ASSISTANT'));
-
-      if (isPersonalTrustTab) {
+      if (activeTree === 'ADMIN_USERS') {
         navigateTo('DASHBOARD');
       }
     }
-  }, [isAuthenticated, isAdmin, activeTree, activeOptionsTab, navigateTo]);
+  }, [isAuthenticated, isAdmin, activeTree, navigateTo]);
 
   // 2. Watchlist State Hook
   const {
@@ -744,7 +733,8 @@ export const App: React.FC = () => {
               <UserDashboardView
                 onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
                 onNavigateToCharts={() => navigateTo('EQUITIES', undefined, 'INTERACTIVE_CHARTS')}
-                onNavigateToWorkflow={() => navigateTo('WORKFLOW', 'WEEKLY_CASH_LEDGER')}
+                onNavigateToWorkflow={() => navigateTo('WORKFLOW', 'SCHWAB_POSITIONS_UPLOAD')}
+                onNavigateToWorkflowStep={(step) => navigateTo('WORKFLOW', step)}
               />
             ) : activeTree === 'ADMIN_USERS' ? (
               isAdmin ? (
@@ -1170,9 +1160,13 @@ export const App: React.FC = () => {
           tickers={universeTickers}
           onSelectTicker={(t) => setSelectedTicker(t)}
           onNavigateTree={(tree, tab) => {
-            setActiveTree(tree);
-            if (tree === 'EQUITIES' && tab) setActiveEquitiesTab(tab as EquitiesTabType);
-            if (tree === 'OPTIONS' && tab) setActiveOptionsTab(tab as OptionsTabType);
+            if (tree === 'WORKFLOW') {
+              navigateTo('WORKFLOW', (tab as OptionsTabType) || 'SCHWAB_POSITIONS_UPLOAD');
+            } else {
+              setActiveTree(tree);
+              if (tree === 'EQUITIES' && tab) setActiveEquitiesTab(tab as EquitiesTabType);
+              if (tree === 'OPTIONS' && tab) setActiveOptionsTab(tab as OptionsTabType);
+            }
           }}
           onOpenHelp={() => setIsHelpModalOpen(true)}
           onOpenWatchlist={() => setIsWatchlistModalOpen(true)}

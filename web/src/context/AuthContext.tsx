@@ -204,7 +204,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin =
+    user?.role?.toUpperCase() === 'ADMIN' ||
+    user?.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
   const isAuthenticated = !!user;
 
   return (
