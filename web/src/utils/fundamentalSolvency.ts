@@ -3,6 +3,7 @@
  */
 
 import { TickerMeta, FundamentalHealthData } from '../types/options';
+import { getSecEdgarUrl } from './secEdgarRegistry';
 
 export function generateFundamentalHealthData(tickers: TickerMeta[]): FundamentalHealthData[] {
   return tickers.map((ticker) => {
@@ -188,7 +189,7 @@ export function generateFundamentalHealthData(tickers: TickerMeta[]): Fundamenta
       interest_coverage: 18.5,
       latest_10k_date: '2026-02-15',
       latest_10q_date: '2026-05-10',
-      sec_edgar_url: `https://www.sec.gov/edgar/searchedgar/companysearch`,
+      sec_edgar_url: getSecEdgarUrl(sym),
       institutional_ownership_pct: isETF ? 55.0 : 62.4,
       top_institutions: defaultHolders,
       is_fund_or_cef: isETF,

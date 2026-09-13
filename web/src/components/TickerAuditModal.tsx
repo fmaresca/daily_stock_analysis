@@ -33,6 +33,7 @@ import { SocialSentimentGauge } from './SocialSentimentGauge';
 import { BarchartOpinionCard } from './BarchartOpinionCard';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { exportToExcel } from '../utils/exportImport';
+import { getSecEdgarUrl, getSecFilingSearchUrl } from '../utils/secEdgarRegistry';
 
 type TickerDetailTab = 'OPTIONS_TECH' | 'NEWS_ANALYST' | 'PREDICTION_MARKETS' | 'SOCIAL_SENTIMENT';
 
@@ -69,7 +70,8 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   const upperBb = typeof ticker.upper_bb === 'number' && !isNaN(ticker.upper_bb) ? ticker.upper_bb : spotPrice * 1.07;
   const sma20 = typeof ticker.sma_20 === 'number' && !isNaN(ticker.sma_20) ? ticker.sma_20 : spotPrice;
   const rsi14 = typeof ticker.rsi_14 === 'number' && !isNaN(ticker.rsi_14) ? ticker.rsi_14 : 50;
-  const ivCurrent = typeof ticker.iv_current === 'number' && !isNaN(ticker.iv_current) ? ticker.iv_current : 25.0;
+  const rawIv = typeof ticker.iv_current === 'number' && !isNaN(ticker.iv_current) ? ticker.iv_current : 25.0;
+  const ivCurrent = rawIv <= 1.5 ? rawIv * 100 : rawIv;
   const hv30 = typeof ticker.hv_30 === 'number' && !isNaN(ticker.hv_30) ? ticker.hv_30 : 25.0;
   const ivRank = typeof ticker.iv_rank === 'number' && !isNaN(ticker.iv_rank) ? ticker.iv_rank : 35;
   const avgVolume30 = typeof ticker.avg_volume_30 === 'number' && !isNaN(ticker.avg_volume_30) ? ticker.avg_volume_30 : 1000000;
@@ -215,8 +217,8 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
     ].includes(ticker.symbol.toUpperCase());
 
   const primaryFilingLabel = isFundOrETF ? 'N-CSR / N-CSRS' : '10-K / 10-Q';
-  const secEdgarUrl = `https://www.sec.gov/edgar/browse/?CIK=${encodeURIComponent(ticker.symbol)}`;
-  const secSearchUrl = `https://www.sec.gov/edgar/searchedgar/companysearch?companyName=${encodeURIComponent(ticker.symbol)}`;
+  const secEdgarUrl = getSecEdgarUrl(ticker.symbol);
+  const secSearchUrl = getSecEdgarUrl(ticker.symbol);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -1058,7 +1060,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                       {isFundOrETF ? (
                         <>
                           <a
-                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=N-CSR`}
+                            href={getSecFilingSearchUrl(ticker.symbol, 'N-CSR')}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
@@ -1067,7 +1069,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                             <ExternalLink className="w-3 h-3 text-purple-400" />
                           </a>
                           <a
-                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=N-CSRS`}
+                            href={getSecFilingSearchUrl(ticker.symbol, 'N-CSRS')}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
@@ -1076,7 +1078,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                             <ExternalLink className="w-3 h-3 text-purple-400" />
                           </a>
                           <a
-                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=N-PORT`}
+                            href={getSecFilingSearchUrl(ticker.symbol, 'N-PORT')}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
@@ -1085,7 +1087,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                             <ExternalLink className="w-3 h-3 text-purple-400" />
                           </a>
                           <a
-                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=485BPOS`}
+                            href={getSecFilingSearchUrl(ticker.symbol, '485BPOS')}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
@@ -1097,7 +1099,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                       ) : (
                         <>
                           <a
-                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=10-K`}
+                            href={getSecFilingSearchUrl(ticker.symbol, '10-K')}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
@@ -1106,7 +1108,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                             <ExternalLink className="w-3 h-3 text-purple-400" />
                           </a>
                           <a
-                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=10-Q`}
+                            href={getSecFilingSearchUrl(ticker.symbol, '10-Q')}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
@@ -1115,7 +1117,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                             <ExternalLink className="w-3 h-3 text-purple-400" />
                           </a>
                           <a
-                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=8-K`}
+                            href={getSecFilingSearchUrl(ticker.symbol, '8-K')}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"
@@ -1124,7 +1126,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                             <ExternalLink className="w-3 h-3 text-purple-400" />
                           </a>
                           <a
-                            href={`https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(ticker.symbol)}&forms=DEF%2014A`}
+                            href={getSecFilingSearchUrl(ticker.symbol, 'DEF 14A')}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 transition-colors flex items-center justify-between text-[11px] font-medium text-slate-200"

@@ -48,7 +48,7 @@ function calculateGreeks(
   riskFreeRate: number = 0.045
 ) {
   const t = Math.max(1, dte) / 365.0;
-  const v = Math.max(0.05, iv);
+  const v = Math.max(0.05, iv > 1.0 ? iv / 100.0 : iv);
 
   const d1 = (Math.log(spot / strike) + (riskFreeRate + (v * v) / 2.0) * t) / (v * Math.sqrt(t));
   const d2 = d1 - v * Math.sqrt(t);
@@ -66,35 +66,26 @@ function calculateGreeks(
 }
 
 /**
- * Calculate Blended 14-day RSI from a series of close prices.
- * Combines 50% Welles Wilder Exponential RMA with 50% Cutler Simple Moving Average (SMA).
+ * Calculate Standard 14-day RSI from a series of close prices.
+ * Uses 100% J. Welles Wilder's Exponential Smoothing (RMA/MMA) across historical daily closes.
+ * Matches standard financial portals including TradingView, Barchart, Thinkorswim, Bloomberg, and Yahoo Finance.
  */
 function calculateRsi(closes: number[], period: number = 14): number {
-  if (closes.length < period + 1) return 50.0;
+  if (!closes || closes.length < period + 1) return 50.0;
 
-  // 1. Cutler's SMA RSI (last `period` closing diffs)
-  const recentCloses = closes.slice(-(period + 1));
-  let smaGains = 0;
-  let smaLosses = 0;
-  for (let i = 1; i < recentCloses.length; i++) {
-    const diff = recentCloses[i] - recentCloses[i - 1];
-    if (diff >= 0) smaGains += diff;
-    else smaLosses += Math.abs(diff);
-  }
-  const cutlerRsi = smaLosses === 0 ? 100.0 : 100.0 - (100.0 / (1.0 + (smaGains / smaLosses)));
-
-  // 2. Welles Wilder's RMA RSI (recursive EMA smoothing across full history)
-  let wilderGains = 0;
-  let wilderLosses = 0;
+  // First period: Simple Moving Average seed
+  let gains = 0;
+  let losses = 0;
   for (let i = 1; i <= period; i++) {
     const diff = closes[i] - closes[i - 1];
-    if (diff >= 0) wilderGains += diff;
-    else wilderLosses += Math.abs(diff);
+    if (diff >= 0) gains += diff;
+    else losses += Math.abs(diff);
   }
 
-  let avgGain = wilderGains / period;
-  let avgLoss = wilderLosses / period;
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
 
+  // Subsequent periods: J. Welles Wilder's recursive smoothing
   for (let i = period + 1; i < closes.length; i++) {
     const diff = closes[i] - closes[i - 1];
     const gain = diff > 0 ? diff : 0;
@@ -103,11 +94,10 @@ function calculateRsi(closes: number[], period: number = 14): number {
     avgLoss = (avgLoss * (period - 1) + loss) / period;
   }
 
-  const wilderRsi = avgLoss === 0 ? 100.0 : 100.0 - (100.0 / (1.0 + (avgGain / avgLoss)));
-
-  // 3. 50/50 Blended Result
-  const blended = (cutlerRsi + wilderRsi) / 2.0;
-  return Math.round(blended * 10) / 10;
+  if (avgLoss === 0) return 100.0;
+  const rs = avgGain / avgLoss;
+  const wilderRsi = 100.0 - (100.0 / (1.0 + rs));
+  return Math.round(wilderRsi * 10) / 10;
 }
 
 /**
@@ -318,7 +308,7 @@ export async function fetchClientSideLiveMarketData(
             rsi_14: 50.0,
             rsi_flag: 'NORMAL',
             hv_30: 25.0,
-            iv_current: 0.25,
+            iv_current: 25.0,
             iv_rank: 35,
             earnings_within_7d: false,
             next_earnings_date: 'N/A',
@@ -368,7 +358,7 @@ export async function fetchClientSideLiveMarketData(
           hv30 = Math.round(Math.sqrt(retVar * 252) * 1000) / 10;
         }
 
-        const ivCurrent = Math.max(0.18, Math.round((hv30 / 100.0) * 1000) / 1000);
+        const ivCurrent = Math.max(18.0, Math.round(hv30 * 1.15 * 10) / 10);
         const ivRank = existing?.iv_rank || Math.min(95, Math.max(15, Math.round(hv30 * 1.2)));
 
         const isCef = sym === 'CLM' || sym === 'CRF' || existing?.sector?.includes('CEF');
@@ -420,23 +410,27 @@ export async function fetchClientSideLiveMarketData(
   // Update existing opportunities with live spot prices and indicators
   const processedSymbols = new Set<string>();
   (existingPayload?.opportunities || []).forEach((opp) => {
-    const meta = tickerMap.get(opp.symbol);
-    if (meta) {
-      processedSymbols.add(meta.symbol);
-      const spot = meta.spot_price;
-      const cushionPct = Math.round((Math.abs(spot - opp.strike) / spot) * 1000) / 10;
+    const liveMeta = updatedTickers.find((t) => t.symbol === opp.symbol);
+    if (liveMeta) {
+      processedSymbols.add(liveMeta.symbol);
+      const spot = liveMeta.spot_price;
+      const cushionPct = opp.strategy === 'CSP'
+        ? Math.round((((spot - opp.strike) / spot) * 100) * 10) / 10
+        : Math.round((((opp.strike - spot) / spot) * 100) * 10) / 10;
       updatedOpportunities.push({
         ...opp,
         current_price: spot,
         cushion_pct: cushionPct,
-        sma_20: meta.sma_20,
-        upper_bb: meta.upper_bb,
-        lower_bb: meta.lower_bb,
-        rsi_14: meta.rsi_14,
-        rsi: meta.rsi_14,
-        rsi_flag: meta.rsi_flag,
-        hv_30: meta.hv_30,
-        iv_rank: meta.iv_rank,
+        sma_20: liveMeta.sma_20,
+        upper_bb: liveMeta.upper_bb,
+        lower_bb: liveMeta.lower_bb,
+        bb_width_pct: liveMeta.bb_width_pct,
+        rsi: liveMeta.rsi_14,
+        rsi_14: liveMeta.rsi_14,
+        rsi_flag: liveMeta.rsi_flag,
+        hv_30: liveMeta.hv_30,
+        iv: liveMeta.iv_current,
+        iv_rank: liveMeta.iv_rank,
       });
     } else {
       updatedOpportunities.push(opp);
@@ -450,7 +444,8 @@ export async function fetchClientSideLiveMarketData(
   updatedTickers.forEach((meta) => {
     if (processedSymbols.has(meta.symbol)) return;
     const spot = meta.spot_price;
-    const iv = meta.iv_current;
+    const rawIv = meta.iv_current || 25.0;
+    const iv = rawIv > 1.0 ? rawIv / 100.0 : rawIv;
 
     // 1. CSP: Strike anchored <= Lower BB (~0.15 - 0.20 Delta)
     const putStrike = Math.max(1, spot > 100 ? Math.floor(meta.lower_bb / 5) * 5 : spot > 20 ? Math.floor(meta.lower_bb) : Math.floor(meta.lower_bb * 2) / 2);
@@ -492,7 +487,7 @@ export async function fetchClientSideLiveMarketData(
         abs_delta: putGreeks.absDelta,
         theta: putGreeks.theta,
         pop_pct: putGreeks.popPct,
-        iv: Math.round(iv * 1000) / 10,
+        iv: Math.round(rawIv * 10) / 10,
         iv_rank: meta.iv_rank,
         hv_30: meta.hv_30,
         sma_20: meta.sma_20,
@@ -551,7 +546,7 @@ export async function fetchClientSideLiveMarketData(
         abs_delta: callGreeks.absDelta,
         theta: callGreeks.theta,
         pop_pct: callGreeks.popPct,
-        iv: Math.round(iv * 1000) / 10,
+        iv: Math.round(rawIv * 10) / 10,
         iv_rank: meta.iv_rank,
         hv_30: meta.hv_30,
         sma_20: meta.sma_20,
