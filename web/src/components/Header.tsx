@@ -222,8 +222,8 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Portfolio Health Pulse Badge */}
-          {onOpenExecutiveDigest && (
+          {/* Portfolio Health Pulse Badge (Super-Admin Frank Only) */}
+          {isAdmin && onOpenExecutiveDigest && (
             <button
               onClick={onOpenExecutiveDigest}
               className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold font-mono rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer whitespace-nowrap shadow-sm shadow-emerald-500/10 group"
@@ -236,6 +236,14 @@ export const Header: React.FC<HeaderProps> = ({
                 {liveExecutiveMetrics.dailyTheta >= 0 ? '+' : ''}${Math.round(liveExecutiveMetrics.dailyTheta)}/d
               </span>
             </button>
+          )}
+
+          {/* Client Tenant Status Badge */}
+          {!isAdmin && isAuthenticated && (
+            <div className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 whitespace-nowrap">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Client Workspace Active</span>
+            </div>
           )}
 
           {/* Tradier API Settings (Primary) */}

@@ -30,6 +30,7 @@ import {
   Users,
   LogOut,
   Key,
+  Lock,
 } from './icons';
 import { useAuth } from '../context/AuthContext';
 
@@ -134,64 +135,88 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
             </div>
           )}
           <nav className="space-y-1">
-            {/* 1. End-of-Week Ritual / Workflow */}
-            <button
-              onClick={() => {
-                onSelectTree('WORKFLOW');
-                if (
-                  activeOptionsTab !== 'SCHWAB_POSITIONS_UPLOAD' &&
-                  activeOptionsTab !== 'WEEKLY_CASH_LEDGER' &&
-                  activeOptionsTab !== 'HOLDINGS_COVERED_CALLS' &&
-                  activeOptionsTab !== 'ECONOMIC_CALENDAR' &&
-                  activeOptionsTab !== 'CASCADING_SCREENER' &&
-                  activeOptionsTab !== 'WEEKLY_EXECUTIVE_REPORT' &&
-                  activeOptionsTab !== 'BROKER_STAGING'
-                ) {
-                  onSelectOptionsTab('SCHWAB_POSITIONS_UPLOAD');
-                }
-                onCloseMobile?.();
-              }}
-              className={`${getItemClasses(activeTree === 'WORKFLOW')} w-full`}
-              title="Guided 7-Step End-of-Week Quantitative Ritual"
-            >
-              <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
-              {!isCollapsed && (
-                <div className="flex items-center justify-between w-full text-left">
-                  <span>Workflow Ritual</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    7 Steps
-                  </span>
-                </div>
-              )}
-            </button>
-
-            {/* 2. Portfolio Breakdown & Executive Digest */}
-            <button
-              onClick={() => {
-                onSelectTree('OPTIONS');
-                onSelectOptionsTab('EXECUTIVE_DIGEST');
-                onCloseMobile?.();
-              }}
-              className={`${getItemClasses(
-                activeTree === 'OPTIONS' &&
-                  (activeOptionsTab === 'EXECUTIVE_DIGEST' ||
-                    activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ||
-                    activeOptionsTab === 'WEEKLY_CASH_LEDGER')
-              )} w-full`}
-              title="Portfolio Breakdown & Executive Capital Digest"
-            >
-              <Briefcase className="w-4 h-4 text-teal-400 shrink-0" />
-              {!isCollapsed && (
-                <div className="flex items-center justify-between w-full text-left">
-                  <span>Portfolio</span>
-                  {freeCashAmount !== undefined && (
-                    <span className="text-[10px] font-mono text-emerald-400 font-semibold">
-                      ${Math.round(freeCashAmount / 1000)}k
-                    </span>
+            {/* 1. End-of-Week Ritual / Workflow (Super-Admin Frank Only) */}
+            {isAdmin ? (
+              <>
+                <button
+                  onClick={() => {
+                    onSelectTree('WORKFLOW');
+                    if (
+                      activeOptionsTab !== 'SCHWAB_POSITIONS_UPLOAD' &&
+                      activeOptionsTab !== 'WEEKLY_CASH_LEDGER' &&
+                      activeOptionsTab !== 'HOLDINGS_COVERED_CALLS' &&
+                      activeOptionsTab !== 'ECONOMIC_CALENDAR' &&
+                      activeOptionsTab !== 'CASCADING_SCREENER' &&
+                      activeOptionsTab !== 'WEEKLY_EXECUTIVE_REPORT' &&
+                      activeOptionsTab !== 'BROKER_STAGING'
+                    ) {
+                      onSelectOptionsTab('SCHWAB_POSITIONS_UPLOAD');
+                    }
+                    onCloseMobile?.();
+                  }}
+                  className={`${getItemClasses(activeTree === 'WORKFLOW')} w-full`}
+                  title="Guided 7-Step End-of-Week Quantitative Ritual (Super-Admin)"
+                >
+                  <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
+                  {!isCollapsed && (
+                    <div className="flex items-center justify-between w-full text-left">
+                      <span>Workflow Ritual</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        7 Steps
+                      </span>
+                    </div>
                   )}
-                </div>
-              )}
-            </button>
+                </button>
+
+                {/* 2. Portfolio Breakdown & Executive Digest */}
+                <button
+                  onClick={() => {
+                    onSelectTree('OPTIONS');
+                    onSelectOptionsTab('EXECUTIVE_DIGEST');
+                    onCloseMobile?.();
+                  }}
+                  className={`${getItemClasses(
+                    activeTree === 'OPTIONS' &&
+                      (activeOptionsTab === 'EXECUTIVE_DIGEST' ||
+                        activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ||
+                        activeOptionsTab === 'WEEKLY_CASH_LEDGER')
+                  )} w-full`}
+                  title="Portfolio Breakdown & Executive Capital Digest"
+                >
+                  <Briefcase className="w-4 h-4 text-teal-400 shrink-0" />
+                  {!isCollapsed && (
+                    <div className="flex items-center justify-between w-full text-left">
+                      <span>Trust Portfolio</span>
+                      {freeCashAmount !== undefined && (
+                        <span className="text-[10px] font-mono text-emerald-400 font-semibold">
+                          ${Math.round(freeCashAmount / 1000)}k
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              </>
+            ) : (
+              /* Non-admin / Client Workspace */
+              <button
+                onClick={() => {
+                  onSelectTree('DASHBOARD');
+                  onCloseMobile?.();
+                }}
+                className={`${getItemClasses(activeTree === 'DASHBOARD')} w-full`}
+                title="Client Workspace: Personal portfolio, private trades & custom watchlists"
+              >
+                <LayoutDashboard className="w-4 h-4 text-emerald-400 shrink-0" />
+                {!isCollapsed && (
+                  <div className="flex items-center justify-between w-full text-left">
+                    <span>My Workspace</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Private
+                    </span>
+                  </div>
+                )}
+              </button>
+            )}
 
             {/* 3. US Equities Universe */}
             <button
@@ -367,25 +392,27 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
             </div>
           )}
           <nav className="space-y-1">
-            {/* Admin User Console (Enabled for Admin or prompt) */}
-            <button
-              onClick={() => {
-                onSelectTree('ADMIN_USERS');
-                onCloseMobile?.();
-              }}
-              className={`${getItemClasses(activeTree === 'ADMIN_USERS')} w-full`}
-              title="Admin User Console: Provision user logins, manage tenant accounts & reset passwords"
-            >
-              <Users className="w-4 h-4 text-purple-400 shrink-0" />
-              {!isCollapsed && (
-                <div className="flex items-center justify-between w-full text-left">
-                  <span>Admin Console</span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-200 border border-purple-700/50 font-mono font-bold">
-                    ADMIN
-                  </span>
-                </div>
-              )}
-            </button>
+            {/* Admin User Console (Visible only to Admin) */}
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  onSelectTree('ADMIN_USERS');
+                  onCloseMobile?.();
+                }}
+                className={`${getItemClasses(activeTree === 'ADMIN_USERS')} w-full`}
+                title="Admin User Console: Provision user logins, manage tenant accounts & reset passwords"
+              >
+                <Users className="w-4 h-4 text-purple-400 shrink-0" />
+                {!isCollapsed && (
+                  <div className="flex items-center justify-between w-full text-left">
+                    <span>Admin Console</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-200 border border-purple-700/50 font-mono font-bold">
+                      ADMIN
+                    </span>
+                  </div>
+                )}
+              </button>
+            )}
 
             {/* Client Private Workspace */}
             <button
@@ -399,12 +426,25 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
               <LayoutDashboard className="w-4 h-4 text-emerald-400 shrink-0" />
               {!isCollapsed && (
                 <div className="flex items-center justify-between w-full text-left">
-                  <span>Client Workspace</span>
+                  <span>{isAdmin ? 'Client View Simulator' : 'My Workspace'}</span>
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-700/40 font-mono">
                     PRIVATE
                   </span>
                 </div>
               )}
+            </button>
+
+            {/* Password Settings */}
+            <button
+              onClick={() => {
+                onSelectTree('SETTINGS_PASSWORD');
+                onCloseMobile?.();
+              }}
+              className={`${getSubItemClasses(activeTree === 'SETTINGS_PASSWORD')} w-full`}
+              title="Update your login password"
+            >
+              <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              {!isCollapsed && <span>Change Password</span>}
             </button>
           </nav>
         </div>

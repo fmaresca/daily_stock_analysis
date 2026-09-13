@@ -124,8 +124,27 @@ export const App: React.FC = () => {
     navigateTo,
   } = useAppNavigation();
 
-  const { user, isAuthenticated, isAdmin } = useAuth();
+  const { user, isAuthenticated, isAdmin, isLoading: isAuthLoading } = useAuth();
 
+  // Redirect non-admin client accounts away from Master Living Trust views to their private workspace
+  useEffect(() => {
+    if (isAuthenticated && !isAdmin) {
+      const isPersonalTrustTab =
+        activeTree === 'WORKFLOW' ||
+        activeTree === 'ADMIN_USERS' ||
+        (activeTree === 'OPTIONS' &&
+          (activeOptionsTab === 'SCHWAB_POSITIONS_UPLOAD' ||
+           activeOptionsTab === 'WEEKLY_CASH_LEDGER' ||
+           activeOptionsTab === 'HOLDINGS_COVERED_CALLS' ||
+           activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ||
+           activeOptionsTab === 'EXECUTIVE_DIGEST' ||
+           activeOptionsTab === 'DEFENSIVE_ROLL_ASSISTANT'));
+
+      if (isPersonalTrustTab) {
+        navigateTo('DASHBOARD');
+      }
+    }
+  }, [isAuthenticated, isAdmin, activeTree, activeOptionsTab, navigateTo]);
 
   // 2. Watchlist State Hook
   const {
@@ -765,8 +784,29 @@ export const App: React.FC = () => {
   const isScreeningTab = (activeTree === 'EQUITIES' && (activeEquitiesTab === 'TECHNICAL_SCREENER' || activeEquitiesTab === 'TREND_SUPPORT' || activeEquitiesTab === 'VOLATILITY_RISK' || activeEquitiesTab === 'EARNINGS_CALENDAR' || activeEquitiesTab === 'SECTOR_OVERVIEW')) ||
     (activeTree === 'OPTIONS' && (activeOptionsTab === 'INCOME_SCREENER' || activeOptionsTab === 'DELTA_GREEKS' || activeOptionsTab === 'EXPIRATION_CADENCE'));
 
-  if (activeTree === 'LOGIN') {
-    return <LoginView onSuccess={() => navigateTo('DASHBOARD')} />;
+  // ------------------------------------------------------------------------
+  // FAIL-SAFE PRIVACY & TENANT ISOLATION GATE
+  // When an unauthenticated visitor accesses the application URL, they must
+  // NEVER see the internal Living Trust portfolio, cash ledger, or private records.
+  // Instead, immediately hold them at the LoginView and display access request info.
+  // ------------------------------------------------------------------------
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-200">
+        <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4" />
+        <p className="text-xs font-mono text-slate-400">Verifying Security Session & Tenant Authorization...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || activeTree === 'LOGIN') {
+    return (
+      <LoginView
+        onSuccess={() => {
+          navigateTo(isAdmin ? 'WORKFLOW' : 'DASHBOARD');
+        }}
+      />
+    );
   }
 
   return (
@@ -839,8 +879,8 @@ export const App: React.FC = () => {
 
 
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-          {/* Institutional KPI Overview & Performance Area Chart Hero Banner */}
-          {activeTree !== 'DASHBOARD' && activeTree !== 'ADMIN_USERS' && activeTree !== 'SETTINGS_PASSWORD' && (
+          {/* Institutional KPI Overview & Performance Area Chart Hero Banner (Admin Only) */}
+          {isAdmin && activeTree !== 'DASHBOARD' && activeTree !== 'ADMIN_USERS' && activeTree !== 'SETTINGS_PASSWORD' && (
             <InstitutionalHeroBanner
               executiveMetrics={liveExecutiveMetrics}
               totalTickersCount={universeTickers.length}

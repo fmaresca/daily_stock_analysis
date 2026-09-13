@@ -242,36 +242,30 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               </button>
             </div>
 
-            {/* Quick Admin Sign-In Shortcut */}
-            <div className="pt-3 border-t border-slate-800/80 space-y-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('fjmaresca@gmail.com');
-                  setPassword('DeltaHarvest2026!');
-                }}
-                className="w-full py-2 px-3 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/40 rounded-lg text-xs font-semibold text-purple-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
-                <span>Pre-Fill Super-Admin (fjmaresca@gmail.com)</span>
-              </button>
-              <div className="text-[10px] text-center text-slate-400 font-mono">
-                Default Password: <span className="text-purple-300 font-bold">DeltaHarvest2026!</span>
+            {/* Institutional Security Notice */}
+            <div className="pt-3 border-t border-slate-800/80 text-center space-y-2">
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Restricted Access • Session Encrypted</span>
               </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                DeltaHarvest is a private institutional analytics environment. Access is granted exclusively via administrator invitation.
+              </p>
             </div>
           </form>
 
-          {/* Admin Contact Notice & Request Access */}
+          {/* Request Access Callout */}
           <div className="mt-6 pt-5 border-t border-slate-800 text-center">
             <p className="text-xs text-slate-400">
-              New client or seeking investment access?
+              Need login credentials or seeking client access?
             </p>
             <button
               type="button"
               onClick={() => setIsRequestAccessOpen(true)}
-              className="mt-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-4 cursor-pointer"
+              className="mt-2.5 w-full py-2 px-3 bg-slate-800/90 hover:bg-slate-800 border border-emerald-500/40 hover:border-emerald-500/80 rounded-lg text-xs font-semibold text-emerald-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
             >
-              Request Account Setup / Contact Admin (Frank Maresca)
+              <Mail className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Request Login Privileges from Administrator</span>
             </button>
           </div>
         </div>
