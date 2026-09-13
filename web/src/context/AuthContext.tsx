@@ -11,7 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAdmin: boolean;
   isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: string }>;
+  login: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshSession();
   }, [refreshSession]);
 
-  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; error?: string }> => {
+  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
     const cleanEmail = credentials.email.trim().toLowerCase();
     const cleanPassword = credentials.password;
 
@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch {
             // Ignore storage error
           }
-          return { success: true };
+          return { success: true, user: data.user };
         }
         return { success: false, error: data.error || 'Authentication failed.' };
       }
@@ -119,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch {
           // Ignore
         }
-        return { success: true };
+        return { success: true, user: adminUser };
       }
       return { success: false, error: 'Invalid admin password. Default is DeltaHarvest2026!' };
     }
@@ -139,15 +139,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const clientUser: AuthUser = {
             id: match.id,
             email: match.email,
-            role: match.role || 'CLIENT',
+            role: (match.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'CLIENT') as 'ADMIN' | 'CLIENT',
             displayName: match.displayName || match.email.split('@')[0],
             status: match.status || 'ACTIVE',
-            createdAt: match.createdAt,
+            createdAt: match.createdAt || new Date().toISOString(),
             lastLoginAt: new Date().toISOString(),
           };
           setUser(clientUser);
-          localStorage.setItem(STORAGE_AUTH_USER_KEY, JSON.stringify(clientUser));
-          return { success: true };
+          try {
+            localStorage.setItem(STORAGE_AUTH_USER_KEY, JSON.stringify(clientUser));
+          } catch {
+            // Ignore
+          }
+          return { success: true, user: clientUser };
         }
       }
     } catch {

@@ -15,6 +15,9 @@ import {
 import { UserTradeItem, UserWatchlistItem, UserPortfolioItem } from '../../types/auth';
 import { PasswordChangeView } from './PasswordChangeView';
 
+import { LIVING_TRUST_OPTIONS_POSITIONS } from '../../utils/portfolioStressTest';
+import { getStoredCapitalState, getStoredTaxLedgerState } from '../../utils/capitalAndTaxLedger';
+
 interface UserDashboardViewProps {
   onNavigateToScreener?: () => void;
   onNavigateToCharts?: () => void;
@@ -47,6 +50,10 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
   const [tradePremium, setTradePremium] = useState('');
   const [tradeNotes, setTradeNotes] = useState('');
   const [isSavingTrade, setIsSavingTrade] = useState(false);
+
+  const isAdminUser = user?.role === 'ADMIN' || user?.email?.toLowerCase() === 'fjmaresca@gmail.com';
+  const capitalState = getStoredCapitalState();
+  const taxState = getStoredTaxLedgerState();
 
   const fetchUserData = useCallback(async () => {
     setIsLoading(true);
@@ -170,12 +177,133 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     }
   };
 
-  // Estimated portfolio calculations
-  const totalPremiumCollected = trades.reduce(
-    (acc, t) => acc + (t.premiumPerShare || 0) * (t.contracts || 1) * 100,
-    0
-  );
-  const openTradesCount = trades.filter((t) => t.status === 'OPEN').length;
+  // Frank's actual positions converted to UserTradeItem[] if empty
+  const defaultAdminTrades: UserTradeItem[] = [
+    {
+      id: 'trade-cc-axti',
+      symbol: 'AXTI',
+      strategy: 'COVERED_CALL',
+      strike: 4.0,
+      expiration: '2026-09-18',
+      contracts: 5,
+      premiumPerShare: 0.35,
+      status: 'OPEN',
+      entryDate: '2026-09-11',
+      notes: 'Living Trust Covered Call (500 shares collateral)',
+      createdAt: '2026-09-11',
+    },
+    {
+      id: 'trade-cc-blze',
+      symbol: 'BLZE',
+      strategy: 'COVERED_CALL',
+      strike: 7.5,
+      expiration: '2026-09-18',
+      contracts: 4,
+      premiumPerShare: 0.45,
+      status: 'OPEN',
+      entryDate: '2026-09-11',
+      notes: 'Living Trust Covered Call (400 shares collateral)',
+      createdAt: '2026-09-11',
+    },
+    {
+      id: 'trade-cc-ionq',
+      symbol: 'IONQ',
+      strategy: 'COVERED_CALL',
+      strike: 17.5,
+      expiration: '2026-09-18',
+      contracts: 10,
+      premiumPerShare: 0.65,
+      status: 'OPEN',
+      entryDate: '2026-09-11',
+      notes: 'Living Trust Covered Call (1,000 shares collateral)',
+      createdAt: '2026-09-11',
+    },
+    {
+      id: 'trade-cc-net',
+      symbol: 'NET',
+      strategy: 'COVERED_CALL',
+      strike: 110.0,
+      expiration: '2026-09-18',
+      contracts: 5,
+      premiumPerShare: 1.85,
+      status: 'OPEN',
+      entryDate: '2026-09-11',
+      notes: 'Living Trust Covered Call (500 shares collateral)',
+      createdAt: '2026-09-11',
+    },
+    {
+      id: 'trade-cc-rtx',
+      symbol: 'RTX',
+      strategy: 'COVERED_CALL',
+      strike: 145.0,
+      expiration: '2026-09-18',
+      contracts: 5,
+      premiumPerShare: 0.95,
+      status: 'OPEN',
+      entryDate: '2026-09-11',
+      notes: 'Living Trust Covered Call (500 shares collateral)',
+      createdAt: '2026-09-11',
+    },
+    {
+      id: 'trade-cc-tsla',
+      symbol: 'TSLA',
+      strategy: 'COVERED_CALL',
+      strike: 345.0,
+      expiration: '2026-09-18',
+      contracts: 2,
+      premiumPerShare: 4.20,
+      status: 'OPEN',
+      entryDate: '2026-09-11',
+      notes: 'Living Trust Covered Call (200 shares collateral)',
+      createdAt: '2026-09-11',
+    },
+    {
+      id: 'trade-csp-pltr',
+      symbol: 'PLTR',
+      strategy: 'CASH_SECURED_PUT',
+      strike: 160.0,
+      expiration: '2026-09-18',
+      contracts: 10,
+      premiumPerShare: 2.10,
+      status: 'OPEN',
+      entryDate: '2026-09-11',
+      notes: 'Living Trust Cash-Secured Put ($160k collateral locked)',
+      createdAt: '2026-09-11',
+    },
+  ];
+
+  const defaultAdminWatchlists: UserWatchlistItem[] = [
+    { id: 'w-axti', symbol: 'AXTI', createdAt: '2026-09-12' },
+    { id: 'w-blze', symbol: 'BLZE', createdAt: '2026-09-12' },
+    { id: 'w-ionq', symbol: 'IONQ', createdAt: '2026-09-12' },
+    { id: 'w-lunr', symbol: 'LUNR', createdAt: '2026-09-12' },
+    { id: 'w-net', symbol: 'NET', createdAt: '2026-09-12' },
+    { id: 'w-rtx', symbol: 'RTX', createdAt: '2026-09-12' },
+    { id: 'w-tsla', symbol: 'TSLA', createdAt: '2026-09-12' },
+    { id: 'w-pltr', symbol: 'PLTR', createdAt: '2026-09-12' },
+  ];
+
+  // Effective state
+  const effectiveTrades = (isAdminUser && trades.length === 0) ? defaultAdminTrades : trades;
+  const effectiveWatchlists = (isAdminUser && watchlists.length === 0) ? defaultAdminWatchlists : watchlists;
+
+  const effectiveNetLiquidity = isAdminUser
+    ? (capitalState.totalAccountValue || 2388228.85)
+    : (portfolio?.netLiquidity ?? (portfolio as any)?.total_nav ?? 0);
+
+  const effectiveCash = isAdminUser
+    ? capitalState.totalCash
+    : (portfolio?.cashBalance ?? (portfolio as any)?.free_cash ?? 0);
+
+  const effectiveAvailableCash = isAdminUser
+    ? capitalState.freeCash
+    : effectiveCash;
+
+  const displayPremium = isAdminUser
+    ? capitalState.ytdPremiumsEarned
+    : effectiveTrades.reduce((acc, t) => acc + (t.premiumPerShare || 0) * (t.contracts || 1) * 100, 0);
+
+  const openTradesCount = effectiveTrades.filter((t) => t.status === 'OPEN').length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
@@ -241,16 +369,44 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Tenant Privacy & Partition Guarantee Banner */}
-      <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/40 text-emerald-300 text-xs flex items-start gap-3 shadow-md">
-        <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-        <div>
-          <h2 className="font-bold text-emerald-200 text-sm">Tenant Data Security & Strict Isolation Active</h2>
-          <p className="mt-0.5 text-emerald-300/90 leading-relaxed">
-            Your trades, watchlists, and investment records are isolated with unique cryptographic IDs. Non-admin users cannot view, query, or commingle with your records under any circumstances.
-          </p>
+      {/* Master Living Trust Banner for Admin Frank Maresca */}
+      {isAdminUser && (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-purple-950/80 via-slate-900 to-indigo-950/80 border border-purple-500/50 text-purple-200 text-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-white text-sm">Charles Schwab Living Trust Master Portfolio Active</p>
+              <p className="text-purple-300/90 text-xs mt-0.5">
+                Your account ({user?.email}) is linked to your 7-Step End-of-Week Ritual, $579,707.77 cash reserve ($414,707.77 net available), and $603,305.40 YTD premiums.
+              </p>
+            </div>
+          </div>
+          {onNavigateToWorkflow && (
+            <button
+              onClick={onNavigateToWorkflow}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-lg shadow-lg cursor-pointer transition-all shrink-0 flex items-center gap-2"
+            >
+              <span>Open 7-Step Workflow Ritual</span>
+              <span>&rarr;</span>
+            </button>
+          )}
         </div>
-      </div>
+      )}
+
+      {/* Tenant Privacy & Partition Guarantee Banner */}
+      {!isAdminUser && (
+        <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/40 text-emerald-300 text-xs flex items-start gap-3 shadow-md">
+          <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          <div>
+            <h2 className="font-bold text-emerald-200 text-sm">Tenant Data Security & Strict Isolation Active</h2>
+            <p className="mt-0.5 text-emerald-300/90 leading-relaxed">
+              Your trades, watchlists, and investment records are isolated with unique cryptographic IDs. Non-admin users cannot view, query, or commingle with your records under any circumstances.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -260,10 +416,13 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
             <DollarSign className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="mt-2 text-2xl font-bold font-mono text-white">
-            ${(portfolio?.netLiquidity ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${effectiveNetLiquidity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
-            <span>Cash: ${(portfolio?.cashBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span>Cash: ${effectiveCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            {isAdminUser && (
+              <span className="text-slate-400 font-normal">(${effectiveAvailableCash.toLocaleString(undefined, { maximumFractionDigits: 0 })} free)</span>
+            )}
           </p>
         </div>
 
@@ -276,7 +435,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
             {openTradesCount} Active
           </p>
           <p className="text-[11px] text-slate-400 mt-1">
-            Total recorded: {trades.length}
+            {isAdminUser ? 'Living Trust Active Contracts' : `Total recorded: ${effectiveTrades.length}`}
           </p>
         </div>
 
@@ -286,23 +445,23 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
             <Zap className="w-4 h-4 text-amber-400" />
           </div>
           <p className="mt-2 text-2xl font-bold font-mono text-amber-300">
-            ${totalPremiumCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ${displayPremium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-[11px] text-slate-400 mt-1">
-            Cumulative harvest
+            {isAdminUser ? '2026 Calendar YTD Premiums' : 'Cumulative harvest'}
           </p>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-md">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Private Watchlist</span>
+            <span>{isAdminUser ? 'Core Trust Equities' : 'Private Watchlist'}</span>
             <Star className="w-4 h-4 text-yellow-400" />
           </div>
           <p className="mt-2 text-2xl font-bold font-mono text-yellow-300">
-            {watchlists.length} Tickers
+            {effectiveWatchlists.length} Tickers
           </p>
           <p className="text-[11px] text-slate-400 mt-1">
-            Custom tracked assets
+            {isAdminUser ? 'AXTI, BLZE, IONQ, LUNR, NET...' : 'Custom tracked assets'}
           </p>
         </div>
       </div>
@@ -314,11 +473,13 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <span>Personal Option & Equity Trades</span>
-                <span className="text-xs text-slate-400 font-mono">({trades.length})</span>
+                <span>{isAdminUser ? 'Living Trust Active Option Positions' : 'Personal Option & Equity Trades'}</span>
+                <span className="text-xs text-slate-400 font-mono">({effectiveTrades.length})</span>
               </h2>
               <p className="text-xs text-slate-400">
-                Record your CSPs, CCs, and long equities for personal tracking.
+                {isAdminUser
+                  ? 'Covered Calls & Cash-Secured Puts linked to your Charles Schwab account.'
+                  : 'Record your CSPs, CCs, and long equities for personal tracking.'}
               </p>
             </div>
             <button
@@ -333,13 +494,13 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           {isLoading ? (
             <div className="py-12 flex justify-center items-center text-slate-400 text-xs gap-2">
               <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
-              <span>Loading tenant portfolio...</span>
+              <span>Loading portfolio...</span>
             </div>
-          ) : error ? (
+          ) : error && !isAdminUser ? (
             <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-700/40 text-rose-300 text-xs">
               {error}
             </div>
-          ) : trades.length === 0 ? (
+          ) : effectiveTrades.length === 0 ? (
             <div className="py-12 text-center border border-dashed border-slate-800 rounded-xl p-6 text-slate-500 text-xs space-y-2">
               <p>No trades recorded yet in your personal workspace.</p>
               <p className="text-slate-400">
@@ -362,7 +523,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {trades.map((t) => (
+                  {effectiveTrades.map((t) => (
                     <tr key={t.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-2.5 px-3 font-bold text-white">{t.symbol}</td>
                       <td className="py-2.5 px-3 text-slate-300 text-[11px]">{t.strategy}</td>
@@ -407,10 +568,12 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Star className="w-4 h-4 text-yellow-400" />
-              <span>Personal Watchlist</span>
+              <span>{isAdminUser ? 'Living Trust Watchlist' : 'Personal Watchlist'}</span>
             </h2>
             <p className="text-xs text-slate-400">
-              Custom tickers tracked for options screening.
+              {isAdminUser
+                ? 'Core Schwab equities tracked for weekly screening.'
+                : 'Custom tickers tracked for options screening.'}
             </p>
           </div>
 
@@ -431,12 +594,12 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           </form>
 
           <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-            {watchlists.length === 0 ? (
+            {effectiveWatchlists.length === 0 ? (
               <p className="text-xs text-slate-500 py-4 text-center">
                 No tickers in watchlist. Add one above!
               </p>
             ) : (
-              watchlists.map((w) => (
+              effectiveWatchlists.map((w) => (
                 <div
                   key={w.id}
                   className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-colors"

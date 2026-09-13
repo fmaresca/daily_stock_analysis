@@ -3,8 +3,10 @@ import { useAuth } from '../../context/AuthContext';
 import { Lock, Mail, Eye, EyeOff, ShieldCheck, Zap, RefreshCw } from '../icons';
 import { DeltaHarvestLogo } from '../ui/DeltaHarvestLogo';
 
+import { AuthUser } from '../../types/auth';
+
 interface LoginViewProps {
-  onSuccess?: () => void;
+  onSuccess?: (user?: AuthUser) => void;
 }
 
 const STORAGE_REMEMBER_KEY = 'deltaharvest_remember_login_email';
@@ -62,9 +64,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       const result = await login({ email: trimmedEmail, password, rememberMe });
       if (result.success) {
         if (onSuccess) {
-          onSuccess();
+          onSuccess(result.user);
         } else if (typeof window !== 'undefined') {
-          window.location.href = '/dashboard';
+          const isTargetAdmin = result.user?.role === 'ADMIN' || trimmedEmail.toLowerCase() === 'fjmaresca@gmail.com';
+          window.location.href = isTargetAdmin ? '/workflow' : '/dashboard';
         }
       } else {
         setErrorMessage(result.error || 'Invalid credentials or account suspended.');
