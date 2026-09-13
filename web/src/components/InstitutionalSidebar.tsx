@@ -135,84 +135,172 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
             </div>
           )}
           <nav className="space-y-1">
-            {/* 1. End-of-Week Ritual / Workflow (Super-Admin Frank Only) */}
-            {isAdmin ? (
-              <>
+            {/* 1. End-of-Week Ritual / Workflow (7 Steps) */}
+            <button
+              onClick={() => {
+                onSelectTree('WORKFLOW');
+                if (
+                  activeOptionsTab !== 'SCHWAB_POSITIONS_UPLOAD' &&
+                  activeOptionsTab !== 'WEEKLY_CASH_LEDGER' &&
+                  activeOptionsTab !== 'HOLDINGS_COVERED_CALLS' &&
+                  activeOptionsTab !== 'ECONOMIC_CALENDAR' &&
+                  activeOptionsTab !== 'CASCADING_SCREENER' &&
+                  activeOptionsTab !== 'WEEKLY_EXECUTIVE_REPORT' &&
+                  activeOptionsTab !== 'BROKER_STAGING'
+                ) {
+                  onSelectOptionsTab('SCHWAB_POSITIONS_UPLOAD');
+                }
+                onCloseMobile?.();
+              }}
+              className={`${getItemClasses(activeTree === 'WORKFLOW')} w-full`}
+              title="Guided 7-Step End-of-Week Quantitative Ritual"
+            >
+              <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
+              {!isCollapsed && (
+                <div className="flex items-center justify-between w-full text-left">
+                  <span>Workflow Ritual</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    7 Steps
+                  </span>
+                </div>
+              )}
+            </button>
+
+            {/* 7-Step Expanded Sub-Navigation (When Workflow is Active) */}
+            {activeTree === 'WORKFLOW' && !isCollapsed && (
+              <div className="pl-4 pr-1 py-1 space-y-0.5 border-l-2 border-emerald-500/30 ml-3 my-1">
                 <button
                   onClick={() => {
                     onSelectTree('WORKFLOW');
-                    if (
-                      activeOptionsTab !== 'SCHWAB_POSITIONS_UPLOAD' &&
-                      activeOptionsTab !== 'WEEKLY_CASH_LEDGER' &&
-                      activeOptionsTab !== 'HOLDINGS_COVERED_CALLS' &&
-                      activeOptionsTab !== 'ECONOMIC_CALENDAR' &&
-                      activeOptionsTab !== 'CASCADING_SCREENER' &&
-                      activeOptionsTab !== 'WEEKLY_EXECUTIVE_REPORT' &&
-                      activeOptionsTab !== 'BROKER_STAGING'
-                    ) {
-                      onSelectOptionsTab('SCHWAB_POSITIONS_UPLOAD');
-                    }
+                    onSelectOptionsTab('SCHWAB_POSITIONS_UPLOAD');
                     onCloseMobile?.();
                   }}
-                  className={`${getItemClasses(activeTree === 'WORKFLOW')} w-full`}
-                  title="Guided 7-Step End-of-Week Quantitative Ritual (Super-Admin)"
+                  className={`${getSubItemClasses(activeOptionsTab === 'SCHWAB_POSITIONS_UPLOAD')} w-full text-left`}
+                  title="Step 1: Upload Schwab Positions"
                 >
-                  <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
-                  {!isCollapsed && (
-                    <div className="flex items-center justify-between w-full text-left">
-                      <span>Workflow Ritual</span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        7 Steps
-                      </span>
-                    </div>
-                  )}
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">1</span>
+                  <span className="truncate">1. Upload Positions</span>
                 </button>
-
-                {/* 2. Portfolio Breakdown & Executive Digest */}
                 <button
                   onClick={() => {
-                    onSelectTree('OPTIONS');
-                    onSelectOptionsTab('EXECUTIVE_DIGEST');
+                    onSelectTree('WORKFLOW');
+                    onSelectOptionsTab('WEEKLY_CASH_LEDGER');
                     onCloseMobile?.();
                   }}
-                  className={`${getItemClasses(
-                    activeTree === 'OPTIONS' &&
-                      (activeOptionsTab === 'EXECUTIVE_DIGEST' ||
-                        activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ||
-                        activeOptionsTab === 'WEEKLY_CASH_LEDGER')
-                  )} w-full`}
-                  title="Portfolio Breakdown & Executive Capital Digest"
+                  className={`${getSubItemClasses(activeOptionsTab === 'WEEKLY_CASH_LEDGER')} w-full text-left`}
+                  title="Step 2: Weekly Cash & Tax Ledger"
                 >
-                  <Briefcase className="w-4 h-4 text-teal-400 shrink-0" />
-                  {!isCollapsed && (
-                    <div className="flex items-center justify-between w-full text-left">
-                      <span>Trust Portfolio</span>
-                      {freeCashAmount !== undefined && (
-                        <span className="text-[10px] font-mono text-emerald-400 font-semibold">
-                          ${Math.round(freeCashAmount / 1000)}k
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">2</span>
+                  <span className="truncate">2. Cash & Tax Ledger</span>
                 </button>
-              </>
-            ) : (
-              /* Non-admin / Client Workspace */
+                <button
+                  onClick={() => {
+                    onSelectTree('WORKFLOW');
+                    onSelectOptionsTab('HOLDINGS_COVERED_CALLS');
+                    onCloseMobile?.();
+                  }}
+                  className={`${getSubItemClasses(activeOptionsTab === 'HOLDINGS_COVERED_CALLS')} w-full text-left`}
+                  title="Step 3: Covered Calls on Holdings"
+                >
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">3</span>
+                  <span className="truncate">3. Holdings Calls</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onSelectTree('WORKFLOW');
+                    onSelectOptionsTab('ECONOMIC_CALENDAR');
+                    onCloseMobile?.();
+                  }}
+                  className={`${getSubItemClasses(activeOptionsTab === 'ECONOMIC_CALENDAR')} w-full text-left`}
+                  title="Step 4: Macro Economic Calendar"
+                >
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">4</span>
+                  <span className="truncate">4. Economic Calendar</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onSelectTree('WORKFLOW');
+                    onSelectOptionsTab('CASCADING_SCREENER');
+                    onCloseMobile?.();
+                  }}
+                  className={`${getSubItemClasses(activeOptionsTab === 'CASCADING_SCREENER')} w-full text-left`}
+                  title="Step 5: Cascading Screener"
+                >
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">5</span>
+                  <span className="truncate">5. Cascading Screener</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onSelectTree('WORKFLOW');
+                    onSelectOptionsTab('WEEKLY_EXECUTIVE_REPORT');
+                    onCloseMobile?.();
+                  }}
+                  className={`${getSubItemClasses(activeOptionsTab === 'WEEKLY_EXECUTIVE_REPORT')} w-full text-left`}
+                  title="Step 6: Executive Master Report"
+                >
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">6</span>
+                  <span className="truncate">6. Executive Report</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onSelectTree('WORKFLOW');
+                    onSelectOptionsTab('BROKER_STAGING');
+                    onCloseMobile?.();
+                  }}
+                  className={`${getSubItemClasses(activeOptionsTab === 'BROKER_STAGING')} w-full text-left`}
+                  title="Step 7: Broker Order Staging"
+                >
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">7</span>
+                  <span className="truncate">7. Order Staging</span>
+                </button>
+              </div>
+            )}
+
+            {/* 2. Client / User Workspace */}
+            <button
+              onClick={() => {
+                onSelectTree('DASHBOARD');
+                onCloseMobile?.();
+              }}
+              className={`${getItemClasses(activeTree === 'DASHBOARD')} w-full`}
+              title="Dashboard Workspace: Personal portfolio, private trades & custom watchlists"
+            >
+              <LayoutDashboard className="w-4 h-4 text-emerald-400 shrink-0" />
+              {!isCollapsed && (
+                <div className="flex items-center justify-between w-full text-left">
+                  <span>My Workspace</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Portfolio
+                  </span>
+                </div>
+              )}
+            </button>
+
+            {/* 2b. Master Trust Portfolio (Admin Only) */}
+            {isAdmin && (
               <button
                 onClick={() => {
-                  onSelectTree('DASHBOARD');
+                  onSelectTree('OPTIONS');
+                  onSelectOptionsTab('EXECUTIVE_DIGEST');
                   onCloseMobile?.();
                 }}
-                className={`${getItemClasses(activeTree === 'DASHBOARD')} w-full`}
-                title="Client Workspace: Personal portfolio, private trades & custom watchlists"
+                className={`${getItemClasses(
+                  activeTree === 'OPTIONS' &&
+                    (activeOptionsTab === 'EXECUTIVE_DIGEST' ||
+                      activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ||
+                      activeOptionsTab === 'WEEKLY_CASH_LEDGER')
+                )} w-full`}
+                title="Portfolio Breakdown & Executive Capital Digest (Living Trust)"
               >
-                <LayoutDashboard className="w-4 h-4 text-emerald-400 shrink-0" />
+                <Briefcase className="w-4 h-4 text-teal-400 shrink-0" />
                 {!isCollapsed && (
                   <div className="flex items-center justify-between w-full text-left">
-                    <span>My Workspace</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Private
-                    </span>
+                    <span>Trust Portfolio</span>
+                    {freeCashAmount !== undefined && (
+                      <span className="text-[10px] font-mono text-emerald-400 font-semibold">
+                        ${Math.round(freeCashAmount / 1000)}k
+                      </span>
+                    )}
                   </div>
                 )}
               </button>

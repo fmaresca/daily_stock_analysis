@@ -19,6 +19,7 @@ import {
   BrainCircuit,
   DollarSign,
   Award,
+  Upload,
 } from './icons';
 import { TickerMeta, MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 import { getSecurityIntelligence } from '../utils/securityIntelligence';
@@ -143,8 +144,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
-      id: 'nav-weekly-cash-ledger',
-      title: 'Step 1: Cash, Disbursements & YTD Tax Ledger',
+      id: 'nav-workflow-step1-schwab-upload',
+      title: 'Step 1: Schwab Positions CSV Upload & Ingestion',
+      subtitle: 'Upload and parse latest Schwab portfolio positions CSV export to initialize the ritual',
+      icon: <Upload className="w-4 h-4 text-blue-400" />,
+      action: () => {
+        onNavigateTree('WORKFLOW', 'SCHWAB_POSITIONS_UPLOAD' as any);
+        onClose();
+      },
+    },
+    {
+      id: 'nav-workflow-step2-cash-ledger',
+      title: 'Step 2: Cash, Disbursements & YTD Tax Ledger',
       subtitle: 'Liquid cash balance, $5k living expense deduction, CSP collateral, and True Deployable Free Cash',
       icon: <DollarSign className="w-4 h-4 text-emerald-400" />,
       action: () => {
@@ -153,8 +164,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
-      id: 'nav-holdings-covered-calls',
-      title: 'Step 2: Holdings & 20Δ Covered Calls Suggester',
+      id: 'nav-workflow-step3-holdings-covered-calls',
+      title: 'Step 3: Holdings & 20Δ Covered Calls Suggester',
       subtitle: 'Long stock inventory, uncovered shares (≥100) detection, 20-Delta call generation, and CSP monitor',
       icon: <ShieldCheck className="w-4 h-4 text-indigo-400" />,
       action: () => {
@@ -163,8 +174,28 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
-      id: 'nav-weekly-executive-report',
-      title: 'Step 5: Weekly Executive Master Report',
+      id: 'nav-workflow-step4-macro-risk-calendar',
+      title: 'Step 4: Macro Indicators & Earnings Risk Calendar',
+      subtitle: 'High-impact economic catalysts (CPI, FOMC, NFP) and company earnings release blackouts',
+      icon: <Calendar className="w-4 h-4 text-amber-400" />,
+      action: () => {
+        onNavigateTree('WORKFLOW', 'ECONOMIC_CALENDAR');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-workflow-step5-cascading-screener',
+      title: 'Step 5: Cascading Options Screener (15Δ–25Δ & Cash Gate)',
+      subtitle: 'Multi-stage funnel: Quality → IVR → 15-25Δ → $15k/pos Cash Gate → Gemini Thinking',
+      icon: <TrendingUp className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        onNavigateTree('WORKFLOW', 'CASCADING_SCREENER');
+        onClose();
+      },
+    },
+    {
+      id: 'nav-workflow-step6-executive-report',
+      title: 'Step 6: Weekly Executive Master Report',
       subtitle: 'Consolidated master tabular report with CSV export and Print-to-PDF format',
       icon: <Award className="w-4 h-4 text-amber-400" />,
       action: () => {
@@ -173,22 +204,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
-      id: 'nav-weekly-audit',
-      title: 'End-of-Week Position Audit & Capital Center',
-      subtitle: 'Evaluate open CSPs, covered calls, 80% profit rules, threatened strikes, and cash ledger',
-      icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />,
+      id: 'nav-workflow-step7-broker-staging',
+      title: 'Step 7: Trade Execution Staging & Broker Orders',
+      subtitle: 'Finalize and stage options and equity order tickets for Tradier/Schwab broker execution',
+      icon: <Zap className="w-4 h-4 text-emerald-400" />,
       action: () => {
-        onNavigateTree('WORKFLOW', 'WEEKLY_POSITION_AUDIT');
+        onNavigateTree('WORKFLOW', 'BROKER_STAGING' as any);
         onClose();
       },
     },
     {
-      id: 'nav-cascading-screener',
-      title: 'Cascading Options Screener (15Δ–25Δ & Cash Gate)',
-      subtitle: 'Multi-stage funnel: Quality → IVR → 15-25Δ → $15k/pos Cash Gate → Gemini Thinking',
-      icon: <TrendingUp className="w-4 h-4 text-emerald-400" />,
+      id: 'nav-workflow-audit',
+      title: 'Workflow Audit: End-of-Week Position Audit & Capital Center',
+      subtitle: 'Evaluate open CSPs, covered calls, 80% profit rules, threatened strikes, and cash ledger',
+      icon: <ShieldCheck className="w-4 h-4 text-teal-400" />,
       action: () => {
-        onNavigateTree('WORKFLOW', 'CASCADING_SCREENER');
+        onNavigateTree('WORKFLOW', 'WEEKLY_POSITION_AUDIT');
         onClose();
       },
     },

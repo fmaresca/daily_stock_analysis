@@ -20,7 +20,13 @@ export function parseRouteFromLocation(): RouteLocation {
   if (path === '/charts' || path === '/chart') return { tree: 'EQUITIES', equitiesTab: 'INTERACTIVE_CHARTS' };
   if (path === '/solvency' || path === '/fundamentals') return { tree: 'EQUITIES', equitiesTab: 'FUNDAMENTAL_HEALTH' };
   if (path === '/options' || path === '/income') return { tree: 'OPTIONS', optionsTab: 'INCOME_SCREENER' };
-  if (path === '/workflow' || path === '/routine') return { tree: 'WORKFLOW', optionsTab: 'WEEKLY_CASH_LEDGER' };
+  if (path === '/workflow/cash' || path === '/workflow/step2') return { tree: 'WORKFLOW', optionsTab: 'WEEKLY_CASH_LEDGER' };
+  if (path === '/workflow/holdings' || path === '/workflow/step3') return { tree: 'WORKFLOW', optionsTab: 'HOLDINGS_COVERED_CALLS' };
+  if (path === '/workflow/calendar' || path === '/workflow/step4') return { tree: 'WORKFLOW', optionsTab: 'ECONOMIC_CALENDAR' };
+  if (path === '/workflow/screener' || path === '/workflow/step5') return { tree: 'WORKFLOW', optionsTab: 'CASCADING_SCREENER' };
+  if (path === '/workflow/report' || path === '/workflow/step6') return { tree: 'WORKFLOW', optionsTab: 'WEEKLY_EXECUTIVE_REPORT' };
+  if (path === '/workflow/staging' || path === '/workflow/step7') return { tree: 'WORKFLOW', optionsTab: 'BROKER_STAGING' };
+  if (path === '/workflow' || path === '/workflow/upload' || path === '/workflow/step1' || path === '/routine') return { tree: 'WORKFLOW', optionsTab: 'SCHWAB_POSITIONS_UPLOAD' };
   if (path === '/spreads') return { tree: 'OPTIONS', optionsTab: 'MULTI_LEG_SPREADS' };
   if (path === '/margin') return { tree: 'OPTIONS', optionsTab: 'PORTFOLIO_MARGIN_SIM' };
   if (path === '/tax') return { tree: 'OPTIONS', optionsTab: 'TAX_ALPHA_OPTIMIZER' };
@@ -61,6 +67,14 @@ export function useAppNavigation() {
           else if (optionsTab === 'TAX_ALPHA_OPTIMIZER') targetPath = '/tax';
           else if (optionsTab === 'BROKER_STAGING') targetPath = '/staging';
           else targetPath = '/options';
+        } else if (tree === 'WORKFLOW') {
+          if (optionsTab === 'WEEKLY_CASH_LEDGER') targetPath = '/workflow/cash';
+          else if (optionsTab === 'HOLDINGS_COVERED_CALLS') targetPath = '/workflow/holdings';
+          else if (optionsTab === 'ECONOMIC_CALENDAR') targetPath = '/workflow/calendar';
+          else if (optionsTab === 'CASCADING_SCREENER') targetPath = '/workflow/screener';
+          else if (optionsTab === 'WEEKLY_EXECUTIVE_REPORT') targetPath = '/workflow/report';
+          else if (optionsTab === 'BROKER_STAGING') targetPath = '/workflow/staging';
+          else targetPath = '/workflow';
         } else {
           targetPath = '/workflow';
         }

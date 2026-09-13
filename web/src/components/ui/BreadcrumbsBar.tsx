@@ -31,7 +31,7 @@ export const BreadcrumbsBar: React.FC<BreadcrumbsBarProps> = ({
       <div className="flex items-center space-x-2 text-slate-400">
         <span className="text-slate-500 font-semibold">📍 Location:</span>
         <button
-          onClick={() => onNavigateTo('WORKFLOW', 'WEEKLY_CASH_LEDGER')}
+          onClick={() => onNavigateTo('WORKFLOW', 'SCHWAB_POSITIONS_UPLOAD')}
           className={`hover:underline font-semibold cursor-pointer ${
             activeTree === 'WORKFLOW' ? 'text-emerald-400 font-bold' : 'text-slate-400'
           }`}
