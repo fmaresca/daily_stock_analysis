@@ -583,3 +583,80 @@ export function calculateDteFromExpiration(expirationDateStr: string): number {
   const dte = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   return Math.max(0, dte);
 }
+
+/**
+ * Normal CDF alias for compatibility with quantitative nomenclature.
+ */
+export const normCdf = normalCdf;
+
+/**
+ * Standard Acklam's Inverse Normal Cumulative Distribution Function (Probit)
+ * Computes exact d1 from target delta to solve for option strike.
+ * Highly stable with rational approximations across lower, central, and upper tails.
+ */
+export function inverseNormalCdf(p: number): number {
+  if (!isFiniteNumber(p) || p <= 0.0001) return -3.75;
+  if (p >= 0.9999) return 3.75;
+
+  const a = [
+    -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2,
+    1.38357751867269e2, -3.066479806614716e1, 2.506628277459239e0,
+  ];
+  const b = [
+    -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2,
+    6.680131188771972e1, -1.328068155288572e1,
+  ];
+  const c = [
+    -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838e0,
+    -2.549732539343734e0, 4.374664141464968e0, 2.938163982698783e0,
+  ];
+  const d = [
+    7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996e0,
+    3.754408661907416e0,
+  ];
+
+  const pLow = 0.02425;
+  const pHigh = 1.0 - pLow;
+
+  if (p < pLow) {
+    const q = Math.sqrt(-2.0 * Math.log(p));
+    return (
+      (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+    );
+  }
+  if (p <= pHigh) {
+    const q = p - 0.5;
+    const r = q * q;
+    return (
+      (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) *
+      q /
+      (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0)
+    );
+  }
+  const q = Math.sqrt(-2.0 * Math.log(1.0 - p));
+  return -(
+    (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+    ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+  );
+}
+
+/**
+ * Calculates standard US equity option exchange strike increments.
+ * Snaps theoretical price to nearest tradeable listed strike price based on equity spot bracket.
+ */
+export function getNearestExchangeStrike(theoreticalStrike: number, spot: number): number {
+  if (!isFiniteNumber(theoreticalStrike)) return 100;
+  const safeSpot = isFiniteNumber(spot) ? spot : theoreticalStrike;
+  let interval = 1.0;
+  if (safeSpot <= 25) {
+    interval = 0.5;
+  } else if (safeSpot <= 100) {
+    interval = 1.0;
+  } else if (safeSpot <= 200) {
+    interval = 2.5;
+  } else {
+    interval = 5.0;
+  }
+  return Math.round(theoreticalStrike / interval) * interval;
+}
