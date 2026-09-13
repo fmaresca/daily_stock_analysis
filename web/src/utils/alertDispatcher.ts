@@ -162,12 +162,22 @@ export async function evaluateAndDispatchAlerts(
   const alertMessages: string[] = [];
 
   for (const t of tickers) {
-    const isRsiOversold = settings.alertOnRsiOversold && t.rsi_14 !== undefined && t.rsi_14 < 35;
+    // Data sanity & liquidity filters: suppress alerts on zero price, illiquid tiers, or micro-cap volume
+    if (!t.spot_price || t.spot_price <= 0.5) continue;
+    if (t.liquidity_tier && (t.liquidity_tier.includes('Tier 4') || t.liquidity_tier.toLowerCase().includes('illiquid'))) {
+      continue;
+    }
+    if (t.avg_volume_30 !== undefined && t.avg_volume_30 > 0 && t.avg_volume_30 < 50000) {
+      continue;
+    }
+
+    const isRsiOversold = settings.alertOnRsiOversold && t.rsi_14 !== undefined && t.rsi_14 < 35 && t.rsi_14 > 0;
     const isNearLowerBand =
       settings.alertOnBollingerBand &&
       t.lower_bb !== undefined &&
+      t.lower_bb > 0 &&
       t.spot_price <= t.lower_bb * 1.02;
-    const isHighIvr = settings.alertOnHighIvr && t.iv_rank !== undefined && t.iv_rank >= 45;
+    const isHighIvr = settings.alertOnHighIvr && t.iv_rank !== undefined && t.iv_rank >= 45 && t.iv_rank <= 100;
 
     if (isRsiOversold || isNearLowerBand || isHighIvr) {
       const triggers: string[] = [];

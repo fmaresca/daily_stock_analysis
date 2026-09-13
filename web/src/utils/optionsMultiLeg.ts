@@ -7,6 +7,12 @@
  */
 
 import { TickerMeta, OptionOpportunity, MultiLegSpread, VolatilitySkewData } from '../types/options';
+import {
+  calculateBlackScholesGreeks,
+  calculateProbabilityOfProfit,
+  normalCdf,
+  roundToDecimals,
+} from './financeMath';
 
 /**
  * Synthesizes defined-risk vertical credit spreads and Iron Condors.
@@ -40,13 +46,16 @@ export function generateMultiLegSpreads(
       const shortStrike = csp.strike;
       const shortDelta = -Math.abs(csp.delta);
       const longStrike = Math.max(1, shortStrike - spreadWidth);
-      // Long leg is further OTM with delta ~ 0.06 - 0.09
-      const longDelta = Math.round((shortDelta * 0.42) * 1000) / 1000;
+      const dte = Math.max(1, csp.dte);
+      const iv = ticker.iv_current || csp.iv || 25;
 
-      // Long put cost is typically ~30% - 35% of short put premium
+      // Price long put analytically using Black-Scholes
+      const longCalc = calculateBlackScholesGreeks(spot, longStrike, dte, iv, 0.045, 0.012);
+      const longDelta = roundToDecimals(longCalc.putDelta, 3);
+      const longMid = Math.max(0.01, roundToDecimals(longCalc.putPrice, 2));
+
       const shortMid = csp.mid;
-      const longMid = Math.round((shortMid * 0.32) * 100) / 100;
-      const netCreditPerShare = Math.max(0.05, Math.round((shortMid - longMid) * 100) / 100);
+      const netCreditPerShare = Math.max(0.05, roundToDecimals(shortMid - longMid, 2));
       const netCreditTotal = Math.round(netCreditPerShare * 100);
 
       const actualWidth = shortStrike - longStrike;
@@ -54,10 +63,9 @@ export function generateMultiLegSpreads(
       const collateralRequired = Math.round(maxLossPerShare * 100);
 
       const rocPct = Math.round((netCreditTotal / collateralRequired) * 1000) / 10;
-      const dte = Math.max(1, csp.dte);
       const annualizedRoc = Math.round((rocPct * (365 / dte)) * 10) / 10;
       const cushionPct = Math.round((((spot - shortStrike) / spot) * 100) * 10) / 10;
-      const popPct = Math.round((1 - Math.abs(shortDelta)) * 1000) / 10;
+      const popPct = calculateProbabilityOfProfit(spot, shortStrike, netCreditPerShare, dte, iv, true);
 
       spreads.push({
         id: `bps-${ticker.symbol}-${shortStrike}-${longStrike}`,
@@ -96,11 +104,16 @@ export function generateMultiLegSpreads(
       const shortStrike = cc.strike;
       const shortDelta = Math.abs(cc.delta);
       const longStrike = shortStrike + spreadWidth;
-      const longDelta = Math.round((shortDelta * 0.42) * 1000) / 1000;
+      const dte = Math.max(1, cc.dte);
+      const iv = ticker.iv_current || cc.iv || 25;
+
+      // Price long call analytically using Black-Scholes
+      const longCalc = calculateBlackScholesGreeks(spot, longStrike, dte, iv, 0.045, 0.012);
+      const longDelta = roundToDecimals(longCalc.callDelta, 3);
+      const longMid = Math.max(0.01, roundToDecimals(longCalc.callPrice, 2));
 
       const shortMid = cc.mid;
-      const longMid = Math.round((shortMid * 0.32) * 100) / 100;
-      const netCreditPerShare = Math.max(0.05, Math.round((shortMid - longMid) * 100) / 100);
+      const netCreditPerShare = Math.max(0.05, roundToDecimals(shortMid - longMid, 2));
       const netCreditTotal = Math.round(netCreditPerShare * 100);
 
       const actualWidth = longStrike - shortStrike;
@@ -108,10 +121,9 @@ export function generateMultiLegSpreads(
       const collateralRequired = Math.round(maxLossPerShare * 100);
 
       const rocPct = Math.round((netCreditTotal / collateralRequired) * 1000) / 10;
-      const dte = Math.max(1, cc.dte);
       const annualizedRoc = Math.round((rocPct * (365 / dte)) * 10) / 10;
       const cushionPct = Math.round((((shortStrike - spot) / spot) * 100) * 10) / 10;
-      const popPct = Math.round((1 - shortDelta) * 1000) / 10;
+      const popPct = calculateProbabilityOfProfit(spot, shortStrike, netCreditPerShare, dte, iv, false);
 
       spreads.push({
         id: `bcs-${ticker.symbol}-${shortStrike}-${longStrike}`,
@@ -151,10 +163,15 @@ export function generateMultiLegSpreads(
       const putLong = Math.max(1, putShort - spreadWidth);
       const callShort = cc.strike;
       const callLong = callShort + spreadWidth;
+      const dte = Math.max(1, csp.dte);
+      const iv = ticker.iv_current || csp.iv || 25;
 
-      const putNetCredit = Math.max(0.05, Math.round((csp.mid * 0.68) * 100) / 100);
-      const callNetCredit = Math.max(0.05, Math.round((cc.mid * 0.68) * 100) / 100);
-      const totalNetCreditShare = Math.round((putNetCredit + callNetCredit) * 100) / 100;
+      const longPutCalc = calculateBlackScholesGreeks(spot, putLong, dte, iv, 0.045, 0.012);
+      const longCallCalc = calculateBlackScholesGreeks(spot, callLong, dte, iv, 0.045, 0.012);
+
+      const putNetCredit = Math.max(0.05, roundToDecimals(csp.mid - longPutCalc.putPrice, 2));
+      const callNetCredit = Math.max(0.05, roundToDecimals(cc.mid - longCallCalc.callPrice, 2));
+      const totalNetCreditShare = roundToDecimals(putNetCredit + callNetCredit, 2);
       const totalNetCredit = Math.round(totalNetCreditShare * 100);
 
       // Margin for Iron Condor is max width of one wing minus total credit collected
@@ -163,11 +180,18 @@ export function generateMultiLegSpreads(
       const collateralRequired = Math.round(maxLossPerShare * 100);
 
       const rocPct = Math.round((totalNetCredit / collateralRequired) * 1000) / 10;
-      const dte = Math.max(1, csp.dte);
       const annualizedRoc = Math.round((rocPct * (365 / dte)) * 10) / 10;
       const putCushion = Math.round((((spot - putShort) / spot) * 100) * 10) / 10;
-      // Combined POP is ~ 72% - 78%
-      const popPct = Math.round((1 - Math.abs(csp.delta) - Math.abs(cc.delta)) * 1000) / 10;
+
+      // Analytical Probability of Profit for Iron Condor: P(LowerBE <= S_T <= UpperBE)
+      const T = dte / 365.0;
+      const sigma = Math.max(0.01, iv / 100.0);
+      const lowerBe = putShort - totalNetCreditShare;
+      const upperBe = callShort + totalNetCreditShare;
+      const sqrtT = Math.sqrt(T);
+      const d2Upper = (Math.log(spot / upperBe) + (0.045 - 0.012 - 0.5 * sigma * sigma) * T) / (sigma * sqrtT);
+      const d2Lower = (Math.log(spot / lowerBe) + (0.045 - 0.012 - 0.5 * sigma * sigma) * T) / (sigma * sqrtT);
+      const popPct = roundToDecimals((normalCdf(d2Lower) - normalCdf(d2Upper)) * 100, 1);
 
       spreads.push({
         id: `ic-${ticker.symbol}-${putShort}-${callShort}`,
@@ -183,12 +207,12 @@ export function generateMultiLegSpreads(
         short_delta: -Math.abs(csp.delta),
         short_type: 'put',
         long_strike: putLong,
-        long_delta: -Math.abs(csp.delta) * 0.42,
+        long_delta: roundToDecimals(longPutCalc.putDelta, 3),
         long_type: 'put',
         call_short_strike: callShort,
         call_short_delta: Math.abs(cc.delta),
         call_long_strike: callLong,
-        call_long_delta: Math.abs(cc.delta) * 0.42,
+        call_long_delta: roundToDecimals(longCallCalc.callDelta, 3),
         spread_width: wingWidth,
         net_credit: totalNetCredit,
         max_loss: collateralRequired,
@@ -198,7 +222,7 @@ export function generateMultiLegSpreads(
         cushion_pct: putCushion,
         roc_pct: rocPct,
         annualized_roc: annualizedRoc,
-        pop_pct: Math.max(68, popPct),
+        pop_pct: Math.max(50, popPct),
         iv_rank: ticker.iv_rank,
         liquidity_tier: ticker.liquidity_tier,
         has_weeklys: ticker.has_weeklys !== false,

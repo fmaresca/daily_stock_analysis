@@ -91,7 +91,8 @@ export function calculateBlackScholesOption(
   rate: number = 0.045, // 4.5% Risk-free rate
   dividendYield: number = 0.012
 ) {
-  const T = Math.max(1, dte) / 365.0;
+  const safeDte = Math.max(0.001, dte);
+  const T = safeDte / 365.0;
   const sigma = Math.max(0.05, volatilityPct / 100.0);
 
   const d1 = (Math.log(spot / strike) + (rate - dividendYield + 0.5 * sigma * sigma) * T) / (sigma * Math.sqrt(T));
@@ -115,7 +116,8 @@ export function calculateBlackScholesOption(
   const putTheta = (term1 + rate * strike * expRate * normalCdf(-d2) - dividendYield * spot * expYield * normalCdf(-d1)) / 365.0;
 
   const vega = (spot * expYield * normalPdf(d1) * Math.sqrt(T)) / 100.0; // Per 1% IV change
-  const rho = (strike * T * expRate * normalCdf(d2)) / 100.0;
+  const callRho = (strike * T * expRate * normalCdf(d2)) / 100.0;
+  const putRho = (-strike * T * expRate * normalCdf(-d2)) / 100.0;
 
   return {
     callPrice,
@@ -126,7 +128,9 @@ export function calculateBlackScholesOption(
     callTheta,
     putTheta,
     vega,
-    rho,
+    rho: callRho,
+    callRho,
+    putRho,
   };
 }
 
@@ -316,7 +320,7 @@ export function generateOptionChainMatrix(
       gamma: Math.round(putCalc.gamma * 1000) / 1000,
       theta: Math.round(putCalc.putTheta * 100) / 100,
       vega: Math.round(putCalc.vega * 100) / 100,
-      rho: Math.round(putCalc.rho * 100) / 100,
+      rho: Math.round(putCalc.putRho * 100) / 100,
       inTheMoney: strike > spot,
       intrinsicValue: Math.max(0, Math.round((strike - spot) * 100) / 100),
       extrinsicValue: Math.round(Math.max(0, putMid - Math.max(0, strike - spot)) * 100) / 100,
