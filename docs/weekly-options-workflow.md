@@ -76,6 +76,19 @@ where:
 - $\text{Penalty}_{\text{cash buffer}} = 25$ if $\text{Free Cash} / \text{Net Liq} < 5\%$, $15$ if $< 10\%$, otherwise $0$.
 - Score is bounded in $[10, 100]$.
 
+### 3.5 Institutional Derivatives Tax Alpha & IRC Subchapter P Gateway
+Tax efficiency directly impacts net annual compound returns:
+1. **IRC §1256 Non-Equity Contracts**: Broad-based index options (SPX, NDX, RUT, XSP) receive statutory **60% Long-Term / 40% Short-Term** capital gains treatment, yielding an effective maximum federal rate of ~26.8% (compared to 40.8% ordinary rate). Replaced ETF equivalents (e.g. SPX over SPY) harvest hundreds of basis points in net tax alpha.
+2. **IRC §1092 Qualified Covered Calls (QCC)**: Prevents offsetting straddle loss-deferral rules by requiring covered calls to have $> 30$ DTE and not be deep-in-the-money (&le; 1 applicable benchmark strike below prior day close).
+3. **IRC §1091 Wash Sale Rules**: 61-day tracking window (30 days before, transaction date, 30 days after) ensures losses from substantially identical options contracts are added to replacement cost basis rather than disallowed.
+
+### 3.6 Defensive Down-and-Out Rolling Protocol
+When an active CSP or CC enters the threatened zone (spot within 2.5% of strike, or $|\Delta| \ge 0.40$):
+$$\text{Net Credit} = \text{STC/BTC Cost of Old Option} - \text{BTO/STO Premium of New Option}$$
+- Extend cycle by 7 to 30 DTE.
+- Roll down strike (for CSP) or up strike (for CC) to widen delta cushion.
+- Only execute if $\text{Net Credit} \ge \$0.00$, preserving capital velocity while lowering break-even cost basis.
+
 ---
 
 ## 4. Cascading Screening Funnel Specification
@@ -92,6 +105,7 @@ where:
 ## 5. File Manifest
 
 - `web/src/utils/capitalAndTaxLedger.ts`: Capital calculation engine, localStorage persistence, $603,305.40 YTD baseline, and audit heuristics.
+- `web/src/utils/taxAlphaOptimizer.ts`: IRC Subchapter P tax audit engine (§1256 index contracts, §1092 QCC rules, §1091 wash sales).
 - `web/src/utils/schwabPositionsParser.ts`: Schwab positions CSV parser, cash/MMF asset classification, and collateral reconciliation.
 - `web/src/utils/executiveReportGenerator.ts`: Dynamic 100-point compliance health score and live stress-tested theta run rate calculation.
 - `web/src/components/SchwabPositionsUploadView.tsx`: Step 1 Command Center (CSV ingestion, asset classification, and baseline synchronization).
@@ -100,9 +114,27 @@ where:
 - `web/src/components/EconomicCalendarView.tsx`: Step 4 Command Center (High-impact USD macro events with 3-tier fallback).
 - `web/src/components/CascadingScreenerView.tsx`: Step 5 Interactive Screener (Tri-screen funnel, TOS import, and Gemini Extended Thinking prompt bridge).
 - `web/src/components/WeeklyExecutiveReportView.tsx`: Step 6 Comprehensive Master Report (Multi-tier metrics, transactions audit trail, and print PDF).
-- `web/src/components/ExecutivePortfolioDigestView.tsx`: Interactive Executive Portfolio Digest (Interactive Threat Register Modal with 0.50Δ Roll Protocol & Binary Events Shock Buffer Modal with 90-day rolling fallback).
-- `web/src/utils/earningsCalendar.ts`: Corporate earnings calendar detection, straddle move estimation, and 90-day rolling fallback.
 - `web/src/components/BrokerStagingWorkbench.tsx`: Step 7 Order Workbench (Validated broker payloads, 80% profit brackets, and execution history).
-- `web/src/components/DualMenuTree.tsx`: Revamped navigation with 7-Step Weekly Workflow, Strategy Labs, and Equities Universe.
-- `web/src/components/HelpHandbookModal.tsx`: Educational handbook chapter on weekly routine, capital rules, FAQs, and institutional principles.
+- `web/src/components/OptionsTradeQualitySimulator.tsx`: 4-tab institutional simulator (Scoring & Dual-Yield, Expiration Payoff, Defensive Roll Matrix, Volatility & Dividend Guard).
+- `web/src/components/TaxAlphaOptimizerView.tsx`: IRC Subchapter P audit workbench, Section 1256 SPX tax alpha calculations, and QCC benchmark testing.
+- `web/src/components/DefensiveRollAssistantView.tsx`: Down-and-out/up-and-out credit roll engine for threatened options.
+- `web/src/components/PortfolioMarginSimulatorView.tsx`: FINRA 4210 TIMS &plusmn;15% stress test model for capital efficiency.
+- `web/src/components/InstitutionalSidebar.tsx`: Tactical tools navigation exposing Tax Alpha, Roll Assistant, and Portfolio Margin.
+- `web/src/components/HelpHandbookModal.tsx`: Educational handbook chapters, search, and direct interactive action triggers.
+- `web/src/components/modals/handbook/chapters/ChapterTradeQualityScoring.tsx`: Chapter 14 detailing the 4-tab simulator and ATM Straddle Implied Move.
+- `web/src/components/modals/handbook/chapters/ChapterTaxAlphaAudit.tsx`: Chapter 15 detailing institutional derivatives taxation and IRC Subchapter P.
 - `web/src/App.tsx`: Top-level router and contextual toolbar rendering.
+
+---
+
+## 6. Interactive Hyperlinks & Tactical Navigation
+
+| Target Tool | In-App Route | Sidebar Location | Handbook Chapter |
+| :--- | :--- | :--- | :--- |
+| **Trade Quality Simulator** | Modal (Toolbar / Actions) | Top Navbar / Actions | Chapter 14 |
+| **Tax Alpha Optimizer** | `OPTIONS` &rarr; `TAX_ALPHA_OPTIMIZER` | Tactical Tools &rarr; Tax Alpha (1256) | Chapter 15 |
+| **Defensive Roll Assistant** | `OPTIONS` &rarr; `DEFENSIVE_ROLL_ASSISTANT` | Tactical Tools &rarr; Roll Assistant | Chapter 14 / FAQ |
+| **Portfolio Margin Sim** | `OPTIONS` &rarr; `PORTFOLIO_MARGIN_SIM` | Tactical Tools &rarr; Portfolio Margin | Chapter 8 |
+| **Cascading Funnel** | `WORKFLOW` &rarr; `CASCADING_SCREENER` | 7-Step Workflow &rarr; Step 5 | Chapter 1 |
+| **Cash & Tax Ledger** | `WORKFLOW` &rarr; `WEEKLY_CASH_LEDGER` | 7-Step Workflow &rarr; Step 2 | Chapter 2 |
+

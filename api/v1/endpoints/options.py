@@ -1421,6 +1421,207 @@ def get_economic_calendar(t: Optional[str] = None, refresh: bool = False, scope:
         return fallback_result
 
 
+class CoveredCallScreenRequest(BaseModel):
+    symbols: List[str] = Field(default_factory=lambda: ["AAPL", "MSFT", "NVDA", "TSLA"])
+    min_dte: int = Field(7, ge=1, le=120)
+    max_dte: int = Field(60, ge=7, le=180)
+    target_delta_min: float = Field(0.15, ge=0.01, le=0.90)
+    target_delta_max: float = Field(0.40, ge=0.05, le=0.95)
+    min_ivp: float = Field(0.0, ge=0.0, le=100.0)
+    exclude_earnings: bool = Field(False)
+
+
+@router.post("/covered-calls/screen")
+def screen_covered_calls(
+    request: CoveredCallScreenRequest,
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Screens covered call opportunities for given symbols with liquidity, Greek,
+    yield, and AI strategy synthesis checks.
+    """
+    from src.services.options.market_data import OptionsMarketDataService
+    from src.pipeline.option_agent import OptionStrategyAgent
+
+    service = OptionsMarketDataService()
+    agent = OptionStrategyAgent()
+
+    results: Dict[str, List[Dict[str, Any]]] = {}
+    total_candidates = 0
+
+    for symbol in request.symbols:
+        sym = symbol.strip().upper()
+        if not sym:
+            continue
+        try:
+            candidates = service.screen_covered_calls_for_symbol(
+                symbol=sym,
+                min_dte=request.min_dte,
+                max_dte=request.max_dte,
+                target_delta_min=request.target_delta_min,
+                target_delta_max=request.target_delta_max,
+                min_ivp=request.min_ivp,
+                exclude_earnings=request.exclude_earnings,
+            )
+            scored = agent.synthesize_candidates(sym, candidates)
+            results[sym] = [c.to_dict() for c in scored]
+            total_candidates += len(results[sym])
+        except Exception as e:
+            logger.error(f"Failed to screen covered calls for {sym}: {e}")
+            results[sym] = []
+
+    return {
+        "status": "success",
+        "symbols": request.symbols,
+        "total_candidates": total_candidates,
+        "data": results,
+    }
+
+
+class RollOptimizerRequest(BaseModel):
+    symbol: str
+    current_strike: float
+    current_expiration: str
+    cost_basis: Optional[float] = None
+    target_min_dte: int = Field(14, ge=7)
+    target_max_dte: int = Field(60, ge=14)
+
+
+@router.post("/covered-calls/roll-optimizer")
+def optimize_covered_call_roll(
+    request: RollOptimizerRequest,
+    config: Config = Depends(get_config_dep),
+) -> Dict[str, Any]:
+    """
+    Ranks roll-out-and-up opportunities for an existing open Covered Call position.
+    """
+    from src.services.options.market_data import OptionsMarketDataService
+    from src.services.options.pricing import calculate_greeks
+    from src.services.options.yield_calculator import calculate_roll_opportunity
+
+    service = OptionsMarketDataService()
+    sym = request.symbol.strip().upper()
+    overview = service.fetch_stock_overview(sym)
+    spot = overview["spot"]
+    cost_basis = request.cost_basis or spot
+
+    # Estimate current call ask to buy back
+    cur_greeks = calculate_greeks(spot, request.current_strike, dte_days=7, iv=25.0, is_call=True)
+    btc_ask = cur_greeks.price
+
+    # Generate candidate rolls out and up
+    roll_candidates = []
+    higher_strikes = [
+        round(request.current_strike * 1.025, 1),
+        round(request.current_strike * 1.05, 1),
+        round(request.current_strike * 1.075, 1),
+    ]
+
+    from datetime import timedelta
+    for dte_add in [21, 35, 49]:
+        exp_date = (datetime.now() + timedelta(days=dte_add)).strftime("%Y-%m-%d")
+        for st in higher_strikes:
+            g = calculate_greeks(spot, st, dte_days=dte_add, iv=25.0, is_call=True)
+            cand_bid = round(g.price * 0.96, 2)
+            roll_op = calculate_roll_opportunity(
+                spot=spot,
+                cost_basis=cost_basis,
+                current_strike=request.current_strike,
+                current_call_ask=btc_ask,
+                candidate_strike=st,
+                candidate_bid=cand_bid,
+                candidate_expiration=exp_date,
+                candidate_dte=dte_add,
+                current_delta=cur_greeks.delta,
+                candidate_delta=g.delta,
+            )
+            roll_candidates.append({
+                "new_strike": roll_op.new_strike,
+                "new_expiration": roll_op.new_expiration,
+                "new_dte": roll_op.new_dte,
+                "new_bid": roll_op.new_bid,
+                "btc_ask": roll_op.btc_ask,
+                "net_credit": roll_op.net_credit,
+                "new_annualized_yield": roll_op.new_annualized_yield,
+                "delta_adjustment": roll_op.delta_adjustment,
+                "recommendation_score": roll_op.recommendation_score,
+                "rationale": roll_op.rationale,
+            })
+
+    roll_candidates.sort(key=lambda r: r["recommendation_score"], reverse=True)
+
+    return {
+        "status": "success",
+        "symbol": sym,
+        "spot_price": spot,
+        "cost_basis": cost_basis,
+        "current_strike": request.current_strike,
+        "current_expiration": request.current_expiration,
+        "buy_to_close_ask": btc_ask,
+        "rolls": roll_candidates,
+    }
+
+
+class PayoffCurveRequest(BaseModel):
+    spot: float
+    strike: float
+    premium: float
+    contracts: int = Field(1, ge=1)
+    cost_basis: Optional[float] = None
+
+
+@router.post("/covered-calls/payoff")
+def generate_covered_call_payoff(
+    request: PayoffCurveRequest,
+) -> Dict[str, Any]:
+    """
+    Generates profit/loss curve points at expiration across a range of underlying prices.
+    Covered Call Payoff = [min(S_T, K) - Cost_Basis + Premium] * 100 * Contracts
+    """
+    spot = request.spot
+    strike = request.strike
+    premium = request.premium
+    cost_basis = request.cost_basis or spot
+    shares = request.contracts * 100
+
+    min_price = max(0.0, round(spot * 0.70, 2))
+    max_price = round(spot * 1.30, 2)
+    step = (max_price - min_price) / 30.0
+
+    points = []
+    curr = min_price
+    while curr <= max_price + 1e-4:
+        # Stock P&L + Option P&L
+        stock_val = curr
+        call_payoff = -max(0.0, curr - strike)  # short call liability
+        net_per_share = (stock_val - cost_basis) + premium + call_payoff
+        total_pnl = net_per_share * shares
+
+        points.append({
+            "price": round(curr, 2),
+            "pnl": round(total_pnl, 2),
+            "pnl_per_share": round(net_per_share, 2),
+            "return_pct": round((net_per_share / cost_basis) * 100.0, 2),
+        })
+        curr += step
+
+    breakeven = cost_basis - premium
+    max_profit = (strike - cost_basis + premium) * shares if strike >= cost_basis else premium * shares
+
+    return {
+        "spot": spot,
+        "strike": strike,
+        "premium": premium,
+        "cost_basis": cost_basis,
+        "contracts": request.contracts,
+        "breakeven_price": round(breakeven, 2),
+        "max_profit": round(max_profit, 2),
+        "max_profit_pct": round((max_profit / (cost_basis * shares)) * 100.0, 2),
+        "points": points,
+    }
+
+
+
 
 
 

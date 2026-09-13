@@ -7,6 +7,7 @@ export interface ChapterShortcutsFaqProps {
   onOpenCommandPalette?: () => void;
   onOpenWatchlists?: () => void;
   onOpenReports?: () => void;
+  onOpenSimulator?: () => void;
 }
 
 export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
@@ -14,6 +15,7 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
   onOpenCommandPalette,
   onOpenWatchlists,
   onOpenReports,
+  onOpenSimulator,
 }) => {
   return (
     <div className="space-y-6">
@@ -31,6 +33,26 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             label: 'Command Palette (Ctrl+K)',
             location: 'Modal: Command Palette',
             onClick: onOpenCommandPalette,
+          },
+          {
+            label: 'Trade Quality Simulator',
+            location: 'Interactive Modal: 4-Tab Engine',
+            onClick: onOpenSimulator,
+          },
+          {
+            label: 'Tax Alpha Optimizer (1256)',
+            location: 'Options > Tax Alpha Optimizer',
+            onClick: () => onNavigate?.('OPTIONS', 'TAX_ALPHA_OPTIMIZER'),
+          },
+          {
+            label: 'Defensive Roll Assistant',
+            location: 'Options > Defensive Roll Assistant',
+            onClick: () => onNavigate?.('OPTIONS', 'DEFENSIVE_ROLL_ASSISTANT'),
+          },
+          {
+            label: 'Portfolio Margin Simulator',
+            location: 'Options > Portfolio Margin Sim',
+            onClick: () => onNavigate?.('OPTIONS', 'PORTFOLIO_MARGIN_SIM'),
           },
           {
             label: 'Frequently Asked Questions (FAQ)',
@@ -277,13 +299,45 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
           </p>
         </div>
 
-        <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-purple-500/30 space-y-1">
           <div className="text-xs font-bold text-white flex items-center gap-1.5">
-            <span className="text-emerald-400">🔒</span>
-            <span>How does multi-tenant authentication and data isolation work in DeltaHarvest?</span>
+            <span className="text-purple-400">📊</span>
+            <span>How does the 4-Tab Options Trade Quality Simulator evaluate options &amp; implied earnings moves?</span>
           </div>
           <p className="text-xs text-slate-400">
-            DeltaHarvest enforces cryptographic <strong>tenant partitioning</strong> powered by Cloudflare D1 SQL schemas and edge functions. Every user account has an isolated cryptographic ID, authenticated via 100,000-iteration PBKDF2 Web Crypto hashing and HMAC-SHA256 JWT cookies. Under no circumstances can non-admin users view, query, or commingle with other users&apos; trades, watchlists, or portfolio balances (<code className="text-emerald-300 font-mono">WHERE user_id = session.user.id</code>). The primary Administrator (<strong>fjmaresca@gmail.com</strong>) has exclusive access to the <em>Admin User Console</em> for provisioning client accounts, setting temporary passwords, and suspending access.
+            The <strong>Options Trade Quality Simulator</strong> features a unified 4-tab institutional interface:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Tab 1 (Scoring &amp; Dual-Yield Blueprint):</strong> Interactive parameter sliders (DTE, Delta, IV Rank, Cushion %, AROC %) and real-time computation of Static Yield (<code className="text-emerald-300 font-mono">Y_static = Premium / Spot</code>) vs. Assigned Yield (<code className="text-emerald-300 font-mono">Y_assigned = (Premium + (Strike - Spot)) / Spot</code>). Automatically detects corporate earnings within expiration and requires clearing the <strong>ATM Straddle Implied Move</strong> (<code className="text-cyan-300 font-mono">0.65*IV + 0.35*HistoricalMove</code>) with a 15% safety buffer.</li>
+            <li><strong>Tab 2 (Expiration Payoff Diagram):</strong> Visualizes net profit/loss profiles across price points, marking the exact Break-Even price (<code className="text-emerald-300 font-mono">S_BE = Strike - Premium</code> for CSPs, <code className="text-emerald-300 font-mono">Spot - Premium</code> for CCs), maximum profit caps, and assignment zones.</li>
+            <li><strong>Tab 3 (Defensive Roll Matrix):</strong> Computes down-and-out credit rolls when spot drops within 2.5% of strike or Delta reaches &ge;0.40, evaluating next-cycle strikes, DTE extension, and net credit.</li>
+            <li><strong>Tab 4 (Volatility &amp; Dividend Guard):</strong> Quantifies Variance Risk Premium (<code className="text-amber-300 font-mono">VRP = IV - RV_30d</code>) and flags early exercise risk if ex-dividend occurs before expiration and call extrinsic value is less than the dividend (<code className="text-rose-300 font-mono">C_ext &lt; Div</code>).</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-cyan-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-cyan-400">⚖️</span>
+            <span>How do IRC §1256 (60/40 rule) and §1092 Qualified Covered Calls (QCC) optimize my tax alpha?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Derivative taxation under U.S. Internal Revenue Code Subchapter P is audited through a 5-gateway evaluation hierarchy:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Gate 1 (§1256 Non-Equity Options):</strong> Broad-based cash-settled index options (SPX, NDX, RUT, XSP) qualify for <strong>60% Long-Term / 40% Short-Term capital gains tax rates</strong> (max federal blended ~26.8% vs. 40.8% ordinary rate), regardless of holding period, with annual 12/31 mark-to-market. Single-stock equity options and ETF options (SPY, QQQ) do <em>not</em> qualify.</li>
+            <li><strong>Gate 2 (§1092(c)(4) QCC Test):</strong> Writing a Covered Call on long stock creates an offsetting straddle unless it meets <strong>Qualified Covered Call (QCC)</strong> statutory benchmarks: DTE &gt; 30 days and strike not deep-in-the-money (&le; 1 applicable benchmark strike below prior day close). Non-QCC calls suspend stock holding periods or trigger loss deferral.</li>
+            <li><strong>Gate 3 (§1091 Wash Sales):</strong> Substantially identical contract purchases within 30 days before/after closing a loss position disallow loss deductions, adding the disallowed loss to the new position&apos;s cost basis.</li>
+            <li><strong>Gate 4 &amp; 5 (§1233 &amp; §1259):</strong> Protective puts terminate unheld long-term stock clocks; deep ITM synthetic hedges trigger constructive sales.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-amber-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-amber-400">🛡️</span>
+            <span>How does the Defensive Roll Assistant protect threatened CSPs and Covered Calls?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            The <strong>Defensive Roll Assistant</strong> monitors active positions against institutional defense triggers: when an underlying stock tests a short put strike within 2.5% or option delta reaches &ge;0.40 (or tested on the upside for covered calls), the engine calculates an optimal <em>down-and-out</em> or <em>up-and-out</em> roll. By extending the expiration cycle by 7 to 30 days, the investor buys back the threatened near-term contract and sells a lower-strike/higher-duration contract for an overall <strong>net credit</strong>, lowering break-even cost basis while avoiding forced assignment.
           </p>
         </div>
       </div>

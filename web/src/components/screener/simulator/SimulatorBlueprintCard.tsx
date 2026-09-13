@@ -211,6 +211,41 @@ export const SimulatorBlueprintCard: React.FC<SimulatorBlueprintCardProps> = ({
             SMA50: ${simulatedContract.underlyingSma50.toFixed(2)} ({simulatedContract.strikeVsSmaPct >= 0 ? '+' : ''}{simulatedContract.strikeVsSmaPct.toFixed(1)}%)
           </span>
         </div>
+
+        {/* Institutional Dual-Yield & Income Engine Enhancements */}
+        {strategy === 'COVERED_CALL' && (
+          <>
+            <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-lg p-2.5">
+              <span className="text-emerald-400/80 text-[10px] block font-semibold">Static Yield (Ann.)</span>
+              <span className="font-mono font-bold text-emerald-400 text-sm">
+                +{((simulatedContract.midPrice / simulatedContract.spotPrice) * (365 / Math.max(1, simulatedContract.dte)) * 100).toFixed(1)}%
+              </span>
+              <span className="text-[9px] text-slate-500 block truncate">
+                Uncalled flat return
+              </span>
+            </div>
+
+            <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-lg p-2.5">
+              <span className="text-cyan-400/80 text-[10px] block font-semibold">If-Called Return (Ann.)</span>
+              <span className="font-mono font-bold text-cyan-400 text-sm">
+                +{(((simulatedContract.midPrice + Math.max(0, simulatedContract.nearestStrike - simulatedContract.spotPrice)) / simulatedContract.spotPrice) * (365 / Math.max(1, simulatedContract.dte)) * 100).toFixed(1)}%
+              </span>
+              <span className="text-[9px] text-slate-500 block truncate">
+                With cap upside
+              </span>
+            </div>
+
+            <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
+              <span className="text-slate-400 text-[10px] block font-semibold">Downside Cushion</span>
+              <span className="font-mono font-bold text-slate-200 text-sm">
+                {((simulatedContract.midPrice / simulatedContract.spotPrice) * 100).toFixed(1)}%
+              </span>
+              <span className="text-[9px] text-slate-500 block truncate">
+                Premium buffer
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -205,7 +205,7 @@ export const useWatchlistQuoteStore = create<WatchlistQuoteState>()((set, get) =
       }
 
       // Set pending immediately so the UI can show a spinner right away
-      if (!existing || existing.status !== 'hydrating') {
+      if (!existing || existing.status !== 'pending') {
         set((s) => ({
           cache: {
             ...s.cache,

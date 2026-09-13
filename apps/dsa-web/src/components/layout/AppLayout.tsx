@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 import { Drawer } from '../common/Drawer';
 import { SidebarNav } from './SidebarNav';
@@ -8,7 +8,6 @@ import { DesktopUpdateIndicator } from './DesktopUpdateIndicator';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import { UiLanguageToggle } from '../i18n/UiLanguageToggle';
 import { useUiLanguage } from '../../contexts/UiLanguageContext';
-import { cn } from '../../utils/cn';
 
 interface AppLayoutProps {
   children?: React.ReactNode;

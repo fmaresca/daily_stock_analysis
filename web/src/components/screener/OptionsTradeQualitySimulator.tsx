@@ -29,6 +29,9 @@ import { SimulatorSliders } from './simulator/SimulatorSliders';
 import { SimulatorBlueprintCard, SimulatedContractData } from './simulator/SimulatorBlueprintCard';
 import { SimulatorStraddleDefense } from './simulator/SimulatorStraddleDefense';
 import { SimulatorScoreGauge } from './simulator/SimulatorScoreGauge';
+import { SimulatorPayoffTab } from './simulator/SimulatorPayoffTab';
+import { SimulatorRollOptimizerTab } from './simulator/SimulatorRollOptimizerTab';
+import { SimulatorIntelligenceTab } from './simulator/SimulatorIntelligenceTab';
 
 export interface OptionsTradeQualitySimulatorProps {
   initialTicker?: string;
@@ -113,6 +116,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   const [openInterest, setOpenInterest] = useState<number>(2400);
   const [hasEarningsAlert, setHasEarningsAlert] = useState<boolean>(false);
   const [factorEarningsInStrike, setFactorEarningsInStrike] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<'SCORING' | 'PAYOFF' | 'ROLLS' | 'INTEL'>('SCORING');
 
   // Dynamic Earnings Calendar Retrieval & Indication States
   const [isFetchingEarnings, setIsFetchingEarnings] = useState<boolean>(false);
@@ -984,33 +988,112 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
         setFactorEarningsInStrike={setFactorEarningsInStrike}
       />
 
-      {/* 3. Main 3-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* Left Column: Sliders (5 cols) */}
-        <div className="lg:col-span-5">
-          <SimulatorSliders
-            strategy={strategy}
-            ivRank={ivRank}
-            setIvRank={setIvRank}
-            delta={delta}
-            setDelta={setDelta}
-            distTo50Sma={distTo50Sma}
-            setDistTo50Sma={setDistTo50Sma}
-            hasEarningsAlert={hasEarningsAlert}
-            setHasEarningsAlert={setHasEarningsAlert}
-            clearsStraddle={simulatedContract.clearsStraddle}
-            isEarningsActive={simulatedContract.isEarningsActive}
-            factorEarningsInStrike={factorEarningsInStrike}
-            setFactorEarningsInStrike={setFactorEarningsInStrike}
-            unadjustedStrike={simulatedContract.unadjustedStrike}
-            nearestStrike={simulatedContract.nearestStrike}
-            straddleMoveDollar={simulatedContract.straddleMove.impliedMoveDollar}
-          />
-        </div>
+      {/* 3. Navigation Tabs: Scoring & Sliders | Payoff Curve | Roll Optimizer | Volatility & Dividend Guard */}
+      <div className="flex items-center gap-1.5 p-1 bg-slate-900/90 rounded-xl border border-slate-800 mb-5 overflow-x-auto text-xs">
+        <button
+          type="button"
+          onClick={() => setActiveTab('SCORING')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'SCORING'
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-700/20'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+          }`}
+        >
+          <span>📊 Scoring &amp; Sliders</span>
+        </button>
 
-        {/* Center & Right Column: Gauge and Score Breakdown */}
-        <SimulatorScoreGauge result={result} />
+        <button
+          type="button"
+          onClick={() => setActiveTab('PAYOFF')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'PAYOFF'
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-700/20'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+          }`}
+        >
+          <span>📈 Payoff Diagram</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('ROLLS')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'ROLLS'
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-700/20'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+          }`}
+        >
+          <span>🔄 Roll Optimizer</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('INTEL')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'INTEL'
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-700/20'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+          }`}
+        >
+          <span>🛡️ Volatility &amp; Dividend Guard</span>
+        </button>
       </div>
+
+      {/* Tab Content Display */}
+      {activeTab === 'SCORING' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          {/* Left Column: Sliders (5 cols) */}
+          <div className="lg:col-span-5">
+            <SimulatorSliders
+              strategy={strategy}
+              ivRank={ivRank}
+              setIvRank={setIvRank}
+              delta={delta}
+              setDelta={setDelta}
+              distTo50Sma={distTo50Sma}
+              setDistTo50Sma={setDistTo50Sma}
+              hasEarningsAlert={hasEarningsAlert}
+              setHasEarningsAlert={setHasEarningsAlert}
+              clearsStraddle={simulatedContract.clearsStraddle}
+              isEarningsActive={simulatedContract.isEarningsActive}
+              factorEarningsInStrike={factorEarningsInStrike}
+              setFactorEarningsInStrike={setFactorEarningsInStrike}
+              unadjustedStrike={simulatedContract.unadjustedStrike}
+              nearestStrike={simulatedContract.nearestStrike}
+              straddleMoveDollar={simulatedContract.straddleMove.impliedMoveDollar}
+            />
+          </div>
+
+          {/* Center & Right Column: Gauge and Score Breakdown */}
+          <SimulatorScoreGauge result={result} />
+        </div>
+      )}
+
+      {activeTab === 'PAYOFF' && (
+        <SimulatorPayoffTab
+          ticker={ticker}
+          strategy={strategy}
+          contract={simulatedContract}
+        />
+      )}
+
+      {activeTab === 'ROLLS' && (
+        <SimulatorRollOptimizerTab
+          ticker={ticker}
+          strategy={strategy}
+          contract={simulatedContract}
+        />
+      )}
+
+      {activeTab === 'INTEL' && (
+        <SimulatorIntelligenceTab
+          ticker={ticker}
+          strategy={strategy}
+          contract={simulatedContract}
+          pulledData={pulledData}
+          ivRank={ivRank}
+        />
+      )}
 
       {/* 4. Footer Bar */}
       <div className="flex flex-wrap items-center justify-between pt-4 mt-5 border-t border-slate-800/80 text-xs text-slate-500">
