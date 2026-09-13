@@ -17,12 +17,76 @@ import {
   MessageSquare,
   BrainCircuit,
   Calendar,
+  ExternalLink,
 } from './icons';
+import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 
 interface HelpHandbookModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onNavigate?: (tree: MenuTreeType, optionsTab?: OptionsTabType, equitiesTab?: EquitiesTabType) => void;
+  onOpenSimulator?: () => void;
+  onOpenTradier?: () => void;
+  onOpenSchwab?: () => void;
+  onOpenDiagnostics?: () => void;
+  onOpenReports?: () => void;
+  onOpenWatchlists?: () => void;
+  onOpenAlerts?: () => void;
+  onOpenCommandPalette?: () => void;
 }
+
+interface DirectActionItem {
+  label: string;
+  location: string;
+  onClick?: () => void;
+  badge?: string;
+}
+
+interface DirectActionBannerProps {
+  title?: string;
+  actions: DirectActionItem[];
+}
+
+const DirectActionBanner: React.FC<DirectActionBannerProps> = ({
+  title = 'Direct In-App Navigation',
+  actions,
+}) => {
+  return (
+    <div className="mb-4 p-3 bg-gradient-to-r from-slate-900/95 via-slate-800/80 to-slate-900/95 border border-emerald-500/30 rounded-xl shadow-lg shadow-black/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <span className="flex h-2 w-2 relative">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <div>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 font-mono">
+            {title}
+          </span>
+          <p className="text-[11px] text-slate-400">
+            Click any live action below to jump directly to this functionality in DeltaHarvest:
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {actions.map((act, idx) => (
+          <button
+            key={idx}
+            onClick={act.onClick}
+            disabled={!act.onClick}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-white border border-emerald-500/40 hover:border-emerald-400 text-xs font-medium transition-all shadow-sm group cursor-pointer disabled:opacity-50"
+            title={`Navigate directly to ${act.location}`}
+          >
+            <span>{act.label}</span>
+            <span className="text-[10px] text-slate-400 font-mono group-hover:text-emerald-200">
+              [{act.location}]
+            </span>
+            <ExternalLink className="w-3 h-3 text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 type HandbookTab =
   | 'LAYPERSON_PRIMER'
@@ -45,7 +109,19 @@ type HandbookTab =
   | 'LIQUIDITY_TIERS'
   | 'SHORTCUTS_FAQ';
 
-export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, onClose }) => {
+export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
+  isOpen,
+  onClose,
+  onNavigate,
+  onOpenSimulator,
+  onOpenTradier,
+  onOpenSchwab,
+  onOpenDiagnostics,
+  onOpenReports,
+  onOpenWatchlists,
+  onOpenAlerts,
+  onOpenCommandPalette,
+}) => {
   const [activeTab, setActiveTab] = useState<HandbookTab>('LAYPERSON_PRIMER');
 
   if (!isOpen) return null;
@@ -328,6 +404,26 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Options Income Screener',
+                    location: 'Options > Income Screener',
+                    onClick: () => onNavigate?.('OPTIONS', 'INCOME_SCREENER'),
+                  },
+                  {
+                    label: '100-Point Trade Quality Simulator',
+                    location: 'Interactive Modal',
+                    onClick: onOpenSimulator,
+                  },
+                  {
+                    label: 'Weekly 7-Step Workflow Ritual',
+                    location: 'Workflow > Step 1',
+                    onClick: () => onNavigate?.('WORKFLOW', 'SCHWAB_POSITIONS_UPLOAD'),
+                  },
+                ]}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Concept 1: What is an Option? */}
                 <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
@@ -423,6 +519,26 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Evaluates weekly Cash-Secured Puts (CSPs) and Covered Calls (CCs) using a rigorous 100-point composite model rewarding elevated implied volatility, optimal delta positioning (0.15–0.25Δ), moving average support buffers, and tight liquidity, while penalizing earnings binary event risks and assignment hazards.
                 </p>
               </div>
+
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Launch Interactive Simulator',
+                    location: 'Interactive Modal',
+                    onClick: onOpenSimulator,
+                  },
+                  {
+                    label: 'Options Income Screener Table',
+                    location: 'Options > Income Screener',
+                    onClick: () => onNavigate?.('OPTIONS', 'INCOME_SCREENER'),
+                  },
+                  {
+                    label: 'Earnings Calendar Guard',
+                    location: 'Equities > Earnings Calendar',
+                    onClick: () => onNavigate?.('EQUITIES', undefined, 'EARNINGS_CALENDAR'),
+                  },
+                ]}
+              />
 
               {/* 5 Scoring Dimensions Table */}
               <div className="glass-panel rounded-xl border border-slate-800 overflow-hidden text-xs">
@@ -575,6 +691,47 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Every weekend, systematic options income investors execute this strict 6-step ritual to audit cash, encumber weekly living disbursements ($5,000), manage holdings and 80% profit triggers, evaluate macro catalysts, run the Tri-Screen quant engine, obtain Gemini AI Extended Thinking trade selections in 3 markdown tables, and stage bracket orders in the broker workbench.
                 </p>
               </div>
+
+              <DirectActionBanner
+                title="7-Step Guided Workflow Direct Access"
+                actions={[
+                  {
+                    label: 'Step 1: Schwab Positions',
+                    location: 'Workflow > Upload',
+                    onClick: () => onNavigate?.('WORKFLOW', 'SCHWAB_POSITIONS_UPLOAD'),
+                  },
+                  {
+                    label: 'Step 2: Cash Ledger',
+                    location: 'Workflow > Cash Ledger',
+                    onClick: () => onNavigate?.('WORKFLOW', 'WEEKLY_CASH_LEDGER'),
+                  },
+                  {
+                    label: 'Step 3: Covered Calls',
+                    location: 'Workflow > Covered Calls',
+                    onClick: () => onNavigate?.('WORKFLOW', 'HOLDINGS_COVERED_CALLS'),
+                  },
+                  {
+                    label: 'Step 4: Macro & Earnings',
+                    location: 'Workflow > Macro Guard',
+                    onClick: () => onNavigate?.('WORKFLOW', 'ECONOMIC_CALENDAR'),
+                  },
+                  {
+                    label: 'Step 5: Cascading Screeners',
+                    location: 'Workflow > Cascading Funnel',
+                    onClick: () => onNavigate?.('WORKFLOW', 'CASCADING_SCREENER'),
+                  },
+                  {
+                    label: 'Step 6: Executive Report',
+                    location: 'Workflow > Executive Report',
+                    onClick: () => onNavigate?.('WORKFLOW', 'WEEKLY_EXECUTIVE_REPORT'),
+                  },
+                  {
+                    label: 'Step 7: Broker Staging',
+                    location: 'Workflow > Order Staging',
+                    onClick: () => onNavigate?.('WORKFLOW', 'BROKER_STAGING'),
+                  },
+                ]}
+              />
 
               {/* Universal Table Navigation & Sorting Tip */}
               <div className="bg-slate-900/90 border border-cyan-500/30 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs">
@@ -857,6 +1014,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Cascading Screener (Market Chameleon Tab)',
+                    location: 'Workflow > Cascading Screener',
+                    onClick: () => onNavigate?.('WORKFLOW', 'CASCADING_SCREENER'),
+                  },
+                  {
+                    label: 'Technical Screener (SMA Analysis)',
+                    location: 'Equities > Technical Screener',
+                    onClick: () => onNavigate?.('EQUITIES', undefined, 'TECHNICAL_SCREENER'),
+                  },
+                ]}
+              />
+
               {/* 3 Moving Averages */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-center">
@@ -935,6 +1107,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Automated screener agent tracking Top 1% Direction Strength, 13-indicator technical consensus, and weekly options availability from Barchart.com (with pluggable MarketChameleon.com integration).
                 </p>
               </div>
+
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Weekly Stock Screeners (Barchart 190898)',
+                    location: 'Equities > Weekly Stock Screeners',
+                    onClick: () => onNavigate?.('EQUITIES', undefined, 'WEEKLY_STOCK_SCREENERS'),
+                  },
+                  {
+                    label: 'Cascading Screener Funnel (Barchart Tab)',
+                    location: 'Workflow > Cascading Screener',
+                    onClick: () => onNavigate?.('WORKFLOW', 'CASCADING_SCREENER'),
+                  },
+                ]}
+              />
 
               {/* What is Barchart Direction Strength */}
               <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
@@ -1070,6 +1257,22 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              <DirectActionBanner
+                title="AI Options Income Direct Access"
+                actions={[
+                  {
+                    label: 'AI Options Income Analyzer',
+                    location: 'Options > AI Options Income',
+                    onClick: () => onNavigate?.('OPTIONS', 'AI_OPTIONS_INCOME'),
+                  },
+                  {
+                    label: 'Gemini Decision Hub (Extended Thinking)',
+                    location: 'Workflow > Cascading Screener',
+                    onClick: () => onNavigate?.('WORKFLOW', 'CASCADING_SCREENER'),
+                  },
+                ]}
+              />
+
               {/* 4 Quantitative Mandates */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-950/70 p-4 rounded-xl border border-violet-500/30 space-y-2">
@@ -1171,6 +1374,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Macroeconomic releases trigger predictable sector-level re-pricings, sudden volatility spikes, and Implied Volatility (IV) expansion. Understanding these transmission mechanisms allows income options traders to protect short strikes and avoid binary gap events.
                 </p>
               </div>
+
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Economic Indicators Calendar View',
+                    location: 'Equities > Economic Calendar',
+                    onClick: () => onNavigate?.('EQUITIES', undefined, 'ECONOMIC_CALENDAR'),
+                  },
+                  {
+                    label: 'Workflow Step 4: Macro & Earnings Guard',
+                    location: 'Workflow > Economic Calendar',
+                    onClick: () => onNavigate?.('WORKFLOW', 'ECONOMIC_CALENDAR'),
+                  },
+                ]}
+              />
 
               {/* Transmission Matrix Grid */}
               <div className="space-y-3">
@@ -1296,6 +1514,26 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Core Strategy Methodology View',
+                    location: 'Tree: Methodology',
+                    onClick: () => onNavigate?.('METHODOLOGY'),
+                  },
+                  {
+                    label: 'Defensive Roll Assistant (0.50Δ Trigger)',
+                    location: 'Options > Defensive Roll Assistant',
+                    onClick: () => onNavigate?.('OPTIONS', 'DEFENSIVE_ROLL_ASSISTANT'),
+                  },
+                  {
+                    label: 'Expiration Cadence Rules',
+                    location: 'Options > Expiration Cadence',
+                    onClick: () => onNavigate?.('OPTIONS', 'EXPIRATION_CADENCE'),
+                  },
+                ]}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Cash-Secured Put Rules */}
                 <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-3">
@@ -1376,6 +1614,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   How to read candlestick price action against Bollinger Bands and confirm optimal option strike entries.
                 </p>
               </div>
+
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Interactive Candlestick Charts',
+                    location: 'Equities > Interactive Charts',
+                    onClick: () => onNavigate?.('EQUITIES', undefined, 'INTERACTIVE_CHARTS'),
+                  },
+                  {
+                    label: 'Trend & Support Levels',
+                    location: 'Equities > Trend Support',
+                    onClick: () => onNavigate?.('EQUITIES', undefined, 'TREND_SUPPORT'),
+                  },
+                ]}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-slate-950/70 p-4 rounded-xl border border-sky-500/30 space-y-2">
@@ -1521,6 +1774,26 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Multi-Leg Vertical Spreads Table',
+                    location: 'Options > Multi-Leg Spreads',
+                    onClick: () => onNavigate?.('OPTIONS', 'MULTI_LEG_SPREADS'),
+                  },
+                  {
+                    label: 'Volatility Skew Radar',
+                    location: 'Options > Volatility Skew',
+                    onClick: () => onNavigate?.('OPTIONS', 'VOLATILITY_SKEW'),
+                  },
+                  {
+                    label: 'Poor Mans Covered Call (PMCC)',
+                    location: 'Options > PMCC Screener',
+                    onClick: () => onNavigate?.('OPTIONS', 'PMCC_SCREENER'),
+                  },
+                ]}
+              />
+
               {/* Strict Retention of 0.15 - 0.20 Delta Rule */}
               <div className="bg-emerald-950/20 p-4 rounded-xl border border-emerald-500/40 space-y-2">
                 <div className="flex items-center space-x-2 text-emerald-400 font-bold text-sm">
@@ -1607,6 +1880,16 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Protecting option sellers from balance-sheet bankruptcy risks and understanding CEF income mechanics.
                 </p>
               </div>
+
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Fundamental Solvency & SEC EDGAR Table',
+                    location: 'Equities > Fundamental Health',
+                    onClick: () => onNavigate?.('EQUITIES', undefined, 'FUNDAMENTAL_HEALTH'),
+                  },
+                ]}
+              />
 
               {/* Altman Z-Score Rule */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1698,6 +1981,26 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Portfolio Margin & Stress Test Simulator',
+                    location: 'Options > Portfolio Margin Sim',
+                    onClick: () => onNavigate?.('OPTIONS', 'PORTFOLIO_MARGIN_SIM'),
+                  },
+                  {
+                    label: 'Tax Alpha & Wash-Sale Optimizer',
+                    location: 'Options > Tax Alpha Optimizer',
+                    onClick: () => onNavigate?.('OPTIONS', 'TAX_ALPHA_OPTIMIZER'),
+                  },
+                  {
+                    label: 'Options Strategy Backtester',
+                    location: 'Options > Backtest Engine',
+                    onClick: () => onNavigate?.('OPTIONS', 'BACKTEST_MARGIN'),
+                  },
+                ]}
+              />
+
               {/* Backtest Alpha Advantage */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-2">
@@ -1765,6 +2068,31 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Bridging quantitative screening directly into error-free brokerage execution for Charles Schwab, Interactive Brokers (IBKR), and Thinkorswim.
                 </p>
               </div>
+
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Broker Staging Workbench',
+                    location: 'Workflow > Step 7: Broker Staging',
+                    onClick: () => onNavigate?.('WORKFLOW', 'BROKER_STAGING'),
+                  },
+                  {
+                    label: 'Tradier API Configuration',
+                    location: 'Modal: Tradier Settings',
+                    onClick: onOpenTradier,
+                  },
+                  {
+                    label: 'Schwab OAuth Configuration',
+                    location: 'Modal: Schwab Settings',
+                    onClick: onOpenSchwab,
+                  },
+                  {
+                    label: 'API Network Diagnostics',
+                    location: 'Modal: Diagnostics',
+                    onClick: onOpenDiagnostics,
+                  },
+                ]}
+              />
 
               {/* The 80% Profit-Decay Rule & Defensive Roll Rule */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1842,6 +2170,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Layered multi-source signals surfaced inside each ticker's Audit tab — enriching options decisions with crowd wisdom, professional consensus, and social heat.
                 </p>
               </div>
+
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Multi-Agent Trade Auditor',
+                    location: 'Options > Multi-Agent Audit',
+                    onClick: () => onNavigate?.('OPTIONS', 'MULTI_AGENT_AUDIT'),
+                  },
+                  {
+                    label: 'Sector Overview & Sentiment',
+                    location: 'Equities > Sector Overview',
+                    onClick: () => onNavigate?.('EQUITIES', undefined, 'SECTOR_OVERVIEW'),
+                  },
+                ]}
+              />
 
               {/* Analyst Price Target Bar */}
               <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-3">
@@ -1935,6 +2278,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   How the system fetches real-time data, calculates high-precision Greeks, and enforces portfolio-level safety gates before you place any order.
                 </p>
               </div>
+
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Executive Portfolio Digest',
+                    location: 'Options > Executive Digest',
+                    onClick: () => onNavigate?.('OPTIONS', 'EXECUTIVE_DIGEST'),
+                  },
+                  {
+                    label: 'Risk Alert Settings & Thresholds',
+                    location: 'Modal: Alert Settings',
+                    onClick: onOpenAlerts,
+                  },
+                ]}
+              />
 
               {/* Live Data Architecture */}
               <div className="bg-slate-950/70 p-4 rounded-xl border border-blue-500/30 space-y-3">
@@ -2169,6 +2527,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Expiration Cadence & DTE Matrix',
+                    location: 'Options > Expiration Cadence',
+                    onClick: () => onNavigate?.('OPTIONS', 'EXPIRATION_CADENCE'),
+                  },
+                  {
+                    label: 'Options Income Screener (DTE Filter)',
+                    location: 'Options > Income Screener',
+                    onClick: () => onNavigate?.('OPTIONS', 'INCOME_SCREENER'),
+                  },
+                ]}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-950/70 p-4 rounded-xl border border-emerald-500/30 space-y-2">
                   <div className="flex items-center justify-between">
@@ -2212,6 +2585,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Formulas and practical interpretation for systematic risk management.
                 </p>
               </div>
+
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Option Chain Matrix & Black-Scholes Greeks',
+                    location: 'Options > Option Chain Matrix',
+                    onClick: () => onNavigate?.('OPTIONS', 'OPTION_CHAIN_MATRIX'),
+                  },
+                  {
+                    label: 'Live Delta Greeks Table',
+                    location: 'Options > Delta Greeks',
+                    onClick: () => onNavigate?.('OPTIONS', 'DELTA_GREEKS'),
+                  },
+                ]}
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
@@ -2278,6 +2666,21 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                 </p>
               </div>
 
+              <DirectActionBanner
+                actions={[
+                  {
+                    label: 'Technical Screener (Tier Filter)',
+                    location: 'Equities > Technical Screener',
+                    onClick: () => onNavigate?.('EQUITIES', undefined, 'TECHNICAL_SCREENER'),
+                  },
+                  {
+                    label: 'Options Income Screener Table',
+                    location: 'Options > Income Screener',
+                    onClick: () => onNavigate?.('OPTIONS', 'INCOME_SCREENER'),
+                  },
+                ]}
+              />
+
               <div className="space-y-3">
                 <div className="bg-slate-950/70 p-3.5 rounded-xl border border-emerald-500/30 flex items-start space-x-3">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
@@ -2321,6 +2724,37 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({ isOpen, on
                   Speed up your workflow using built-in keyboard hotkeys.
                 </p>
               </div>
+
+              <DirectActionBanner
+                title="Shortcuts & System Features Direct Access"
+                actions={[
+                  {
+                    label: 'Command Palette (Ctrl+K)',
+                    location: 'Modal: Command Palette',
+                    onClick: onOpenCommandPalette,
+                  },
+                  {
+                    label: 'Frequently Asked Questions (FAQ)',
+                    location: 'Tree: FAQ',
+                    onClick: () => onNavigate?.('FAQ'),
+                  },
+                  {
+                    label: 'Custom Watchlist Manager (W)',
+                    location: 'Modal: Watchlists',
+                    onClick: onOpenWatchlists,
+                  },
+                  {
+                    label: 'Executive Reports Query (R)',
+                    location: 'Modal: Reports',
+                    onClick: onOpenReports,
+                  },
+                  {
+                    label: 'Regulatory Disclaimers',
+                    location: 'Tree: Disclaimer',
+                    onClick: () => onNavigate?.('DISCLAIMER'),
+                  },
+                ]}
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 flex items-center justify-between">

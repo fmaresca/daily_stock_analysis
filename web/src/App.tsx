@@ -1291,6 +1291,42 @@ export const App: React.FC = () => {
         <HelpHandbookModal
           isOpen={modalState.isHelpModalOpen}
           onClose={() => setIsHelpModalOpen(false)}
+          onNavigate={(tree, optTab, eqTab) => {
+            setIsHelpModalOpen(false);
+            navigateTo(tree, optTab, eqTab);
+          }}
+          onOpenSimulator={() => {
+            setIsHelpModalOpen(false);
+            setIsSimulatorModalOpen(true);
+          }}
+          onOpenTradier={() => {
+            setIsHelpModalOpen(false);
+            setIsTradierModalOpen(true);
+          }}
+          onOpenSchwab={() => {
+            setIsHelpModalOpen(false);
+            setIsSchwabModalOpen(true);
+          }}
+          onOpenDiagnostics={() => {
+            setIsHelpModalOpen(false);
+            setIsDiagnosticsOpen(true);
+          }}
+          onOpenReports={() => {
+            setIsHelpModalOpen(false);
+            setIsReportQueryModalOpen(true);
+          }}
+          onOpenWatchlists={() => {
+            setIsHelpModalOpen(false);
+            setIsWatchlistModalOpen(true);
+          }}
+          onOpenAlerts={() => {
+            setIsHelpModalOpen(false);
+            setIsAlertsModalOpen(true);
+          }}
+          onOpenCommandPalette={() => {
+            setIsHelpModalOpen(false);
+            setIsCommandPaletteOpen(true);
+          }}
         />
 
         {/* 3. Tradier API Settings Modal (Primary) */}
