@@ -24,6 +24,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const [applicantName, setApplicantName] = useState('');
   const [applicantEmail, setApplicantEmail] = useState('');
   const [applicantNote, setApplicantNote] = useState('');
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [requestSuccessMessage, setRequestSuccessMessage] = useState<string | null>(null);
+  const [requestErrorMessage, setRequestErrorMessage] = useState<string | null>(null);
 
   // Pre-load saved login name if previously selected
   useEffect(() => {
@@ -50,22 +53,25 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
 
     setIsSubmitting(true);
     try {
-      // Remember or remove login name based on preference
-      try {
-        if (rememberMe) {
+      if (rememberMe) {
+        try {
           localStorage.setItem(STORAGE_REMEMBER_KEY, trimmedEmail);
-        } else {
-          localStorage.removeItem(STORAGE_REMEMBER_KEY);
+        } catch {
+          // Ignore
         }
-      } catch {
-        // Ignore localStorage errors
+      } else {
+        try {
+          localStorage.removeItem(STORAGE_REMEMBER_KEY);
+        } catch {
+          // Ignore
+        }
       }
 
       const result = await login({ email: trimmedEmail, password, rememberMe });
       if (result.success) {
         if (onSuccess) {
           onSuccess(result.user);
-        } else if (typeof window !== 'undefined') {
+        } else {
           const isTargetAdmin = result.user?.role === 'ADMIN' || trimmedEmail.toLowerCase() === 'fjmaresca@gmail.com';
           window.location.href = isTargetAdmin ? '/workflow' : '/dashboard';
         }
@@ -77,17 +83,74 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     }
   };
 
-  const handleRequestAccessSubmit = (e: React.FormEvent) => {
+  const handleRequestAccessSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!applicantEmail) return;
+    const cleanEmail = applicantEmail.trim();
+    if (!cleanEmail) return;
 
-    // Build mailto URI for quick admin dispatch
-    const subject = encodeURIComponent(`DeltaHarvest Client Access Request: ${applicantName || applicantEmail}`);
-    const body = encodeURIComponent(
-      `Hello Frank,\n\nI am requesting client tenant access to DeltaHarvest Stock & Options Analytics.\n\nName: ${applicantName}\nEmail: ${applicantEmail}\nNotes / Trading Focus: ${applicantNote || 'Options and equity analytics'}\n\nThank you!`
-    );
-    window.location.href = `mailto:fjmaresca@gmail.com?subject=${subject}&body=${body}`;
-    setRequestAccessSent(true);
+    setIsSendingRequest(true);
+    setRequestErrorMessage(null);
+
+    const payload = {
+      name: applicantName.trim() || cleanEmail.split('@')[0],
+      email: cleanEmail,
+      note: applicantNote.trim(),
+    };
+
+    let apiSuccess = false;
+    let responseMsg = '';
+
+    // 1. Primary: Cloudflare Pages Edge Function (/api/auth/request-access)
+    try {
+      const resp = await fetch('/api/auth/request-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        apiSuccess = true;
+        responseMsg = data.message || 'Access request dispatched to administrator.';
+      }
+    } catch {
+      // Proceed to backend fallback
+    }
+
+    // 2. Secondary: Python FastAPI backend (/api/v1/auth/request-access)
+    if (!apiSuccess) {
+      try {
+        const resp2 = await fetch('/api/v1/auth/request-access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (resp2.ok) {
+          const data2 = await resp2.json();
+          apiSuccess = true;
+          responseMsg = data2.message || 'Access request dispatched to administrator.';
+        }
+      } catch {
+        // Both APIs unreachable or offline
+      }
+    }
+
+    setIsSendingRequest(false);
+
+    if (apiSuccess) {
+      setRequestSuccessMessage(
+        responseMsg || 'An automated email notification has been dispatched to Frank Maresca (fjmaresca@gmail.com).'
+      );
+      setRequestAccessSent(true);
+    } else {
+      // Fail-safe client-side mailto dispatch if APIs are unreachable
+      const subject = encodeURIComponent(`DeltaHarvest Client Access Request: ${applicantName || cleanEmail}`);
+      const body = encodeURIComponent(
+        `Hello Frank,\n\nI am requesting client tenant access to DeltaHarvest Stock & Options Analytics.\n\nName: ${applicantName}\nEmail: ${cleanEmail}\nNotes / Trading Focus: ${applicantNote || 'Options and equity analytics'}\n\nThank you!`
+      );
+      window.location.href = `mailto:fjmaresca@gmail.com?subject=${subject}&body=${body}`;
+      setRequestSuccessMessage('Draft opened in your email client to alert Frank Maresca (fjmaresca@gmail.com).');
+      setRequestAccessSent(true);
+    }
   };
 
   return (
@@ -287,25 +350,59 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
             </p>
 
             {requestAccessSent ? (
-              <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs text-center space-y-2">
-                <p className="font-bold">Email Client Dispatched</p>
-                <p className="text-slate-300 text-[11px]">
-                  Your mail client has been opened to alert the admin at <strong>fjmaresca@gmail.com</strong>.
-                  Once verified, your login credentials will be activated.
+              <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs text-center space-y-2.5 animate-fade-in">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <p className="font-bold text-sm text-white">Access Request Dispatched</p>
+                <p className="text-slate-300 text-xs leading-relaxed">
+                  {requestSuccessMessage || (
+                    <>
+                      An automated notification email has been transmitted to Super-Administrator Frank Maresca (
+                      <strong className="text-emerald-300">fjmaresca@gmail.com</strong>).
+                    </>
+                  )}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRequestAccessSent(false);
-                    setIsRequestAccessOpen(false);
-                  }}
-                  className="mt-3 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg"
-                >
-                  Done
-                </button>
+                <p className="text-[11px] text-slate-400">
+                  Once your tenant account is provisioned, you will receive confirmation and your temporary credentials at{' '}
+                  <strong className="text-white font-mono">{applicantEmail}</strong>.
+                </p>
+                <div className="pt-2 flex items-center justify-center gap-2">
+                  <a
+                    href={`mailto:fjmaresca@gmail.com?subject=${encodeURIComponent(
+                      `DeltaHarvest Access Request: ${applicantName || applicantEmail}`
+                    )}&body=${encodeURIComponent(
+                      `Hello Frank,\n\nFollowing up on my access request for DeltaHarvest:\n\nName: ${applicantName}\nEmail: ${applicantEmail}\nTrading Focus: ${applicantNote || 'Options & equity analytics'}\n\nThank you!`
+                    )}`}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors inline-flex items-center gap-1.5"
+                    title="Send a supplemental direct email from your local mail app"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Open in Mail App</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRequestAccessSent(false);
+                      setIsRequestAccessOpen(false);
+                      setApplicantName('');
+                      setApplicantEmail('');
+                      setApplicantNote('');
+                      setRequestSuccessMessage(null);
+                    }}
+                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleRequestAccessSubmit} className="space-y-3">
+                {requestErrorMessage && (
+                  <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/50 text-rose-300 text-xs">
+                    {requestErrorMessage}
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs text-slate-300 mb-1">Your Full Name</label>
                   <input
@@ -342,16 +439,26 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   <button
                     type="button"
                     onClick={() => setIsRequestAccessOpen(false)}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors"
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5"
+                    disabled={isSendingRequest}
+                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
                   >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Send Alert to Admin</span>
+                    {isSendingRequest ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Transmitting Alert...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Send Alert to Admin</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

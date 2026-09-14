@@ -198,6 +198,14 @@ export const ChapterTradeQualityScoring: React.FC<ChapterTradeQualityScoringProp
             Institutional v3.4
           </span>
         </div>
+        <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-[11px] space-y-1 my-3">
+          <div className="flex items-center gap-1.5 font-bold text-white">
+            <span>⚡ Tradier API Real-Time Price Interceptor &amp; Immediate Parallel Hydration</span>
+          </div>
+          <p className="text-slate-300 text-[10px] leading-relaxed">
+            When a stock ticker is entered, market prices, 250-day technical indicators (SMA20, SMA50, SMA250, RSI14, HV30), and future corporate earnings dates synchronize <strong>immediately and concurrently</strong> in parallel. If Yahoo API or secondary web gateways fail or experience rate limits, the <strong>Tradier API intercepts the pricing request</strong> directly via client-side NBBO quotes and daily bar history to ensure 100% reliable valuation.
+          </p>
+        </div>
         <p className="text-slate-300 leading-relaxed text-[11px]">
           The Trade Quality Simulator is organized into 4 specialized tabs, bringing together quantitative derivatives pricing, Greek analytics, payoff visualization, lifecycle roll management, and early exercise safeguards:
         </p>

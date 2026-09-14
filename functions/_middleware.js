@@ -33,6 +33,7 @@ export async function onRequest(context) {
   if (
     pathname === "/api/auth/login" ||
     pathname === "/api/auth/logout" ||
+    pathname === "/api/auth/request-access" ||
     pathname === "/api/economic-calendar" ||
     pathname === "/api/analyze-options"
   ) {

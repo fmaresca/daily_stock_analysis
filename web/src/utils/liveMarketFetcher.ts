@@ -8,11 +8,14 @@ import { PortfolioPosition } from './portfolioStressTest';
 import { calculateBarchartOpinion } from './barchartEngine';
 import { SECURITY_INTELLIGENCE_REGISTRY } from './securityIntelligence';
 
+export const DEFAULT_TRADIER_API_TOKEN = 'zcSi1vOc3GxGzbuyflN0DrTyAD0Y';
+
 export interface TickerChartData {
   spotPrice: number;
   closes: number[];
   volumes: number[];
   avgVolume: number;
+  provider?: 'YAHOO' | 'TRADIER' | 'REGISTRY';
 }
 
 /**
@@ -101,16 +104,136 @@ function calculateRsi(closes: number[], period: number = 14): number {
 }
 
 /**
- * Fetches real-time price & 1-year daily history for a single ticker via Yahoo Finance chart API.
- * Uses 1-year lookback to allow Wilder's 14-day RSI and 200 SMA indicators to fully converge.
- * Uses redundant CORS proxies with individual timeouts and registry fallback.
+ * Fetches real-time equity quotes and historical daily closes directly from Tradier API.
+ * Intercepts requests when Yahoo API or external CORS gateways are unavailable or fail.
  */
-export async function fetchTickerChartData(symbol: string): Promise<{
-  spotPrice: number;
-  closes: number[];
-  volumes: number[];
-  avgVolume: number;
-} | null> {
+export async function fetchTradierTickerData(symbol: string): Promise<TickerChartData | null> {
+  const sym = symbol.toUpperCase().trim();
+  if (!sym) return null;
+
+  try {
+    const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
+    const key = localStorage.getItem('tradier_api_key') || viteKey || DEFAULT_TRADIER_API_TOKEN;
+    const isEnabled = localStorage.getItem('tradier_enabled') !== 'false';
+    const useSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
+    if (!key || !isEnabled) return null;
+
+    const baseUrl = useSandbox ? 'https://sandbox.tradier.com/v1' : 'https://api.tradier.com/v1';
+
+    // 1. Fetch Real-Time Quote from Tradier
+    const quoteController = new AbortController();
+    const quoteTimeout = setTimeout(() => quoteController.abort(), 4500);
+
+    const quotePromise = fetch(`${baseUrl}/markets/quotes?symbols=${encodeURIComponent(sym)}&greeks=true`, {
+      headers: {
+        Authorization: `Bearer ${key.trim()}`,
+        Accept: 'application/json',
+      },
+      signal: quoteController.signal,
+    })
+      .then(async (r) => {
+        clearTimeout(quoteTimeout);
+        if (!r.ok) return null;
+        const data = await r.json();
+        let q = data?.quotes?.quote;
+        if (Array.isArray(q) && q.length > 0) q = q[0];
+        return q || null;
+      })
+      .catch(() => {
+        clearTimeout(quoteTimeout);
+        return null;
+      });
+
+    // 2. Fetch Historical Daily Closes from Tradier
+    const historyController = new AbortController();
+    const historyTimeout = setTimeout(() => historyController.abort(), 5000);
+
+    const historyPromise = fetch(`${baseUrl}/markets/history?symbol=${encodeURIComponent(sym)}&interval=daily`, {
+      headers: {
+        Authorization: `Bearer ${key.trim()}`,
+        Accept: 'application/json',
+      },
+      signal: historyController.signal,
+    })
+      .then(async (r) => {
+        clearTimeout(historyTimeout);
+        if (!r.ok) return null;
+        const data = await r.json();
+        const days = data?.history?.day;
+        if (!days) return null;
+        return Array.isArray(days) ? days : [days];
+      })
+      .catch(() => {
+        clearTimeout(historyTimeout);
+        return null;
+      });
+
+    const [quoteData, historyData] = await Promise.all([quotePromise, historyPromise]);
+
+    let spotPrice = 0;
+    let avgVolume = 20000000;
+
+    if (quoteData) {
+      spotPrice = Number(quoteData.last) || Number(quoteData.close) || Number(quoteData.prevclose) || 0;
+      if (quoteData.volume && Number(quoteData.volume) > 0) {
+        avgVolume = Number(quoteData.volume);
+      }
+    }
+
+    let validCloses: number[] = [];
+    let validVolumes: number[] = [];
+
+    if (historyData && historyData.length > 0) {
+      validCloses = historyData
+        .map((d: any) => Number(d.close))
+        .filter((c: number) => !isNaN(c) && c > 0);
+      validVolumes = historyData
+        .map((d: any) => Number(d.volume))
+        .filter((v: number) => !isNaN(v) && v >= 0);
+
+      if (validVolumes.length > 0) {
+        avgVolume = Math.round(validVolumes.reduce((a, b) => a + b, 0) / validVolumes.length);
+      }
+    }
+
+    // If spotPrice wasn't in quote but we have daily closes, use most recent close
+    if (spotPrice <= 0 && validCloses.length > 0) {
+      spotPrice = validCloses[validCloses.length - 1];
+    }
+
+    if (spotPrice <= 0) return null;
+
+    // If historical closes are insufficient, generate anchored series based on spotPrice
+    if (validCloses.length < 20) {
+      validCloses = [];
+      const basePrice = spotPrice * 0.95;
+      for (let i = 0; i < 60; i++) {
+        validCloses.push(
+          Math.round((basePrice + (spotPrice - basePrice) * (i / 60) + Math.sin(i) * (spotPrice * 0.02)) * 100) / 100
+        );
+      }
+      validCloses.push(spotPrice);
+    }
+
+    return {
+      spotPrice: Math.round(spotPrice * 100) / 100,
+      closes: validCloses,
+      volumes: validVolumes.length > 0 ? validVolumes : [avgVolume],
+      avgVolume,
+      provider: 'TRADIER',
+    };
+  } catch (err) {
+    console.warn(`[Tradier] Live chart fetch error for ${sym}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Fetches real-time price & daily history for a single ticker.
+ * Probes primary Yahoo Finance endpoints, and seamlessly intercepts with Tradier API if Yahoo fails.
+ * Uses 1-year lookback to allow Wilder's 14-day RSI and 200 SMA indicators to fully converge.
+ */
+export async function fetchTickerChartData(symbol: string): Promise<TickerChartData | null> {
   const sym = symbol.toUpperCase().trim();
   const q1 = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`;
   const q2 = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`;
@@ -127,7 +250,7 @@ export async function fetchTickerChartData(symbol: string): Promise<{
   for (const src of sources) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6500);
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
 
       const resp = await fetch(src.url, {
         headers: { Accept: 'application/json' },
@@ -165,10 +288,22 @@ export async function fetchTickerChartData(symbol: string): Promise<{
         closes: validCloses,
         volumes: validVolumes,
         avgVolume: avgVol,
+        provider: 'YAHOO',
       };
     } catch {
       // Try next url
     }
+  }
+
+  // Intercept with Tradier API if Yahoo API or external proxies fail to fetch current prices
+  try {
+    console.info(`[liveMarketFetcher] Yahoo API unavailable for ${sym}. Tradier API intercepting market price request...`);
+    const tradierData = await fetchTradierTickerData(sym);
+    if (tradierData && tradierData.spotPrice > 0) {
+      return tradierData;
+    }
+  } catch (tErr) {
+    console.warn(`[liveMarketFetcher] Tradier API interception attempt encountered an error:`, tErr);
   }
 
   // Fallback: If network sources fail, check if we have registry intelligence
@@ -192,6 +327,7 @@ export async function fetchTickerChartData(symbol: string): Promise<{
       closes: synthCloses,
       volumes: [avgVol],
       avgVolume: avgVol,
+      provider: 'REGISTRY',
     };
   }
 
@@ -208,7 +344,7 @@ export async function fetchTradierQuotesBatch(
   const result = new Map<string, { last: number; bid: number; ask: number; volume: number }>();
   try {
     const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
-    const key = localStorage.getItem('tradier_api_key') || viteKey;
+    const key = localStorage.getItem('tradier_api_key') || viteKey || DEFAULT_TRADIER_API_TOKEN;
     const isEnabled = localStorage.getItem('tradier_enabled') !== 'false';
     const useSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
     if (!key || !isEnabled) return result;

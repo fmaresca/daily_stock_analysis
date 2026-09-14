@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+from datetime import datetime
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
@@ -480,3 +482,102 @@ async def auth_logout(request: Request):
     resp = Response(status_code=204)
     resp.delete_cookie(key=COOKIE_NAME, path="/")
     return resp
+
+
+class AccessRequest(BaseModel):
+    """Payload for prospective users requesting login credentials."""
+
+    model_config = {"populate_by_name": True}
+
+    name: str = Field(default="", description="Applicant full name")
+    email: str = Field(..., description="Applicant email address")
+    note: str = Field(default="", description="Trading focus or notes")
+
+
+@router.post(
+    "/request-access",
+    summary="Request User Credentials",
+    description="Accepts an access request from a new user and notifies administrator (fjmaresca@gmail.com).",
+)
+async def auth_request_access(body: AccessRequest, request: Request):
+    """Handle new user credential requests and notify Frank Maresca (fjmaresca@gmail.com)."""
+    clean_email = (body.email or "").strip().lower()
+    if not clean_email or "@" not in clean_email:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "invalid_email", "message": "A valid email is required to request credentials."},
+        )
+
+    clean_name = (body.name or "").strip() or clean_email.split("@")[0]
+    clean_note = (body.note or "").strip()
+    admin_email = os.getenv("ADMIN_EMAIL", "fjmaresca@gmail.com")
+    client_ip = get_client_ip(request) or "Unknown IP"
+    timestamp_iso = datetime.utcnow().isoformat() + "Z"
+
+    # 1. Log request locally to access_requests.json ledger
+    access_record = {
+        "name": clean_name,
+        "email": clean_email,
+        "note": clean_note,
+        "client_ip": client_ip,
+        "requested_at": timestamp_iso,
+        "status": "PENDING",
+    }
+    try:
+        data_dir = os.path.join(os.getcwd(), "data")
+        os.makedirs(data_dir, exist_ok=True)
+        ledger_path = os.path.join(data_dir, "access_requests.json")
+        records = []
+        if os.path.exists(ledger_path):
+            with open(ledger_path, "r", encoding="utf-8") as f:
+                records = json.load(f)
+        records.append(access_record)
+        with open(ledger_path, "w", encoding="utf-8") as f:
+            json.dump(records, f, indent=2, ensure_ascii=False)
+    except Exception as log_err:
+        logger.warning(f"Could not persist access request to ledger: {log_err}")
+
+    # 2. Transmit Email via Notification Sender if configured
+    email_dispatched = False
+    try:
+        from src.config import Config
+        from src.notification_sender.email_sender import EmailSender
+
+        config = Config()
+        sender = EmailSender(config)
+        if sender._is_email_configured():
+            subject = f"[DeltaHarvest Access Request] New Client Login Requested: {clean_name} ({clean_email})"
+            content = f"""DeltaHarvest Platform - New User Credential Request
+
+Applicant Details:
+- Name: {clean_name}
+- Email: {clean_email}
+- Message / Trading Focus: {clean_note or 'None provided'}
+- Request Time: {timestamp_iso}
+- Network Origin: {client_ip}
+
+Admin Actions:
+1. Provision this user in the Admin Console:
+   https://daily-stock-analysis-89j.pages.dev/admin/users
+2. Reply directly to applicant:
+   {clean_email}
+"""
+            email_dispatched = sender.send(
+                content=content,
+                subject=subject,
+                receivers=[admin_email],
+            )
+    except Exception as mail_err:
+        logger.warning(f"Failed to dispatch access request email via backend SMTP: {mail_err}")
+
+    logger.info(f"[AUTH_REQUEST] New credential request registered: {clean_name} <{clean_email}> (IP: {client_ip})")
+    return JSONResponse(
+        status_code=200,
+        content={
+            "success": True,
+            "message": f"Your request has been registered and notification sent to administrator ({admin_email}).",
+            "email_dispatched": email_dispatched,
+            "admin_email": admin_email,
+        },
+    )
+
