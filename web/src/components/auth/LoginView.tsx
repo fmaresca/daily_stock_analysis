@@ -92,22 +92,21 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-slate-100">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="flex justify-center mb-3">
-          <DeltaHarvestLogo className="w-12 h-12" />
+      <div className="mx-auto w-full max-w-md text-center">
+        <div className="flex flex-col items-center justify-center mb-4">
+          <DeltaHarvestLogo variant="header" layout="vertical" size={52} />
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono font-medium">
+              Multi-Tenant Secure
+            </span>
+          </div>
+          <p className="mt-1.5 text-sm text-slate-400">
+            Options & Equity Analytics Platform
+          </p>
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
-          <span>DeltaHarvest</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono font-medium">
-            Multi-Tenant Secure
-          </span>
-        </h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Options & Equity Analytics Platform
-        </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
+      <div className="mt-6 mx-auto w-full max-w-md px-4 sm:px-0">
         <div className="bg-slate-900/90 py-8 px-6 shadow-2xl rounded-2xl border border-slate-800 backdrop-blur-md sm:px-10 relative overflow-hidden">
           {/* Subtle decorative glow */}
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />

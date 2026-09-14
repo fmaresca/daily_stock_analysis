@@ -10,6 +10,12 @@ export interface DeltaHarvestLogoProps {
    */
   variant?: 'full' | 'header' | 'mark' | 'icon';
   /**
+   * Layout alignment direction:
+   * - 'horizontal' (default): Mark on left, Wordmark on right
+   * - 'vertical': Mark on top, Wordmark centered underneath
+   */
+  layout?: 'horizontal' | 'vertical';
+  /**
    * Theme mode:
    * - 'dark': White/silver text, neon/cyan luminous accents, dark backdrop
    * - 'light': Navy/slate text, deep jewel teal/cyan accents, light backdrop
@@ -26,6 +32,7 @@ export interface DeltaHarvestLogoProps {
 
 export const DeltaHarvestLogo: React.FC<DeltaHarvestLogoProps> = ({
   variant = 'header',
+  layout = 'horizontal',
   theme = 'auto',
   size = 'md',
   className = '',
@@ -286,18 +293,28 @@ export const DeltaHarvestLogo: React.FC<DeltaHarvestLogoProps> = ({
       ? 'text-slate-400'
       : 'text-slate-400 light:text-slate-500';
 
+  const isVertical = layout === 'vertical';
+
   // Variant: Full or Header
   return (
-    <div className={`inline-flex items-center space-x-3 select-none ${className}`}>
+    <div
+      className={`inline-flex ${
+        isVertical ? 'flex-col items-center justify-center space-y-2.5' : 'items-center space-x-3'
+      } select-none ${className}`}
+    >
       {/* 3D Chiseled Delta Mark */}
       <div className="shrink-0 flex items-center justify-center">
         {renderMark(markSize)}
       </div>
 
       {/* Institutional Wordmark */}
-      <div className="flex flex-col justify-center leading-none">
+      <div
+        className={`flex flex-col justify-center leading-none ${
+          isVertical ? 'items-center text-center' : ''
+        }`}
+      >
         {/* DELTAHARVEST Primary Wordmark */}
-        <div className="flex items-center">
+        <div className={`flex items-center ${isVertical ? 'justify-center' : ''}`}>
           <span
             className={`font-extrabold tracking-[0.12em] uppercase font-sans ${titleColor}`}
             style={{
@@ -310,7 +327,7 @@ export const DeltaHarvestLogo: React.FC<DeltaHarvestLogoProps> = ({
         </div>
 
         {/* INSTITUTIONAL Sub-Wordmark */}
-        <div className="flex items-center mt-0.5">
+        <div className={`flex items-center mt-0.5 ${isVertical ? 'justify-center' : ''}`}>
           <span
             className={`font-semibold tracking-[0.32em] uppercase font-sans text-emerald-400 light:text-teal-700 ${subtitleColor}`}
             style={{
@@ -325,7 +342,9 @@ export const DeltaHarvestLogo: React.FC<DeltaHarvestLogoProps> = ({
         {/* Full Descriptor Subtitle (when variant === 'full' or showSubtitle is true) */}
         {(variant === 'full' || showSubtitle) && (
           <p
-            className={`text-[9px] font-mono tracking-wider uppercase mt-1 hidden sm:block ${tagColor}`}
+            className={`text-[9px] font-mono tracking-wider uppercase mt-1 hidden sm:block ${tagColor} ${
+              isVertical ? 'text-center' : ''
+            }`}
             style={{ letterSpacing: '0.08em' }}
           >
             SYSTEMATIC US EQUITIES QUANTITATIVE ANALYSIS | OPTIONS CASH FLOW HARVESTING | INSTITUTIONAL RISK MANAGEMENT
