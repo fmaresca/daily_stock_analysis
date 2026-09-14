@@ -83,6 +83,7 @@ export interface PulledTechnicalData {
   };
   hasEarningsAlert: boolean;
   nextEarningsDate?: string;
+  priceFeedProvider?: 'YAHOO' | 'TRADIER' | 'REGISTRY';
   updatedAt: string;
 }
 
@@ -144,50 +145,6 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
       setHasEarningsAlert(earningsAnalysis.hasEarningsInsideExpiration);
     }
   }, [earningsAnalysis?.hasEarningsInsideExpiration]);
-
-  // Automatically detect if ticker lacks stored earnings intelligence and pause to fetch live schedule
-  useEffect(() => {
-    const cleanSym = ticker.trim().toUpperCase();
-    if (!cleanSym || cleanSym.length < 1) return;
-
-    if (isStoredInEarningsRegistry(cleanSym)) {
-      return;
-    }
-
-    let isCancelled = false;
-    setIsFetchingEarnings(true);
-    setEarningsFetchStatus(`Pausing to fetch corporate earnings calendar for ${cleanSym}...`);
-
-    fetchLiveEarningsInfo(cleanSym, (status) => {
-      if (!isCancelled) {
-        setEarningsFetchStatus(status);
-      }
-    })
-      .then((entry) => {
-        if (!isCancelled) {
-          setIsFetchingEarnings(false);
-          setEarningsCacheKey((prev) => prev + 1);
-          setEarningsSyncNotice(
-            `Live Earnings Calendar Synced: ${entry.symbol} reports ${entry.nextEarningsDate} (${entry.timeOfDay || 'AMC'})`
-          );
-          setTimeout(() => {
-            setEarningsFetchStatus(null);
-            setEarningsSyncNotice(null);
-          }, 4500);
-        }
-      })
-      .catch((err) => {
-        if (!isCancelled) {
-          console.warn(`Could not sync live earnings for ${cleanSym}:`, err);
-          setIsFetchingEarnings(false);
-          setEarningsFetchStatus(null);
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [ticker]);
 
   // Live quick expiration targets based on NYSE holiday calendar
   const quickExpirations = useMemo(() => {
@@ -390,21 +347,42 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
     setFetchStatus(`Pulling ${sourceToUse === 'BARCHART' ? 'Barchart.com' : 'MarketChameleon.com'} technicals for ${sym}...`);
 
     try {
-      // 0. Synchronize corporate earnings calendar if not stored
-      if (!isStoredInEarningsRegistry(sym)) {
-        setIsFetchingEarnings(true);
-        setFetchStatus(`[1/3] Pausing to synchronize live corporate earnings calendar for ${sym}...`);
-        await fetchLiveEarningsInfo(sym, (status) => {
-          setEarningsFetchStatus(status);
-          setFetchStatus(`[1/3] ${status}`);
-        });
-        setIsFetchingEarnings(false);
-        setEarningsCacheKey((prev) => prev + 1);
-      }
+      // 0. Concurrently synchronize corporate earnings calendar & live market prices (Tradier intercepts if Yahoo fails)
+      setIsFetchingEarnings(true);
+      setEarningsFetchStatus(`Checking corporate earnings calendar for ${sym}...`);
 
-      // 1. Fetch live market price & daily closes
-      setFetchStatus(`[2/3] Pulling ${sourceToUse === 'BARCHART' ? 'Barchart.com' : 'MarketChameleon.com'} technicals for ${sym}...`);
-      const chartData = await fetchTickerChartData(sym);
+      const earningsPromise = !isStoredInEarningsRegistry(sym)
+        ? fetchLiveEarningsInfo(sym, (status) => setEarningsFetchStatus(status))
+            .then((entry) => {
+              setIsFetchingEarnings(false);
+              setEarningsCacheKey((prev) => prev + 1);
+              if (entry?.nextEarningsDate) {
+                setEarningsSyncNotice(
+                  `Live Earnings Calendar Synced: ${entry.symbol} reports ${entry.nextEarningsDate} (${entry.timeOfDay || 'AMC'})`
+                );
+                setTimeout(() => {
+                  setEarningsFetchStatus(null);
+                  setEarningsSyncNotice(null);
+                }, 4500);
+              }
+              return entry;
+            })
+            .catch((err) => {
+              console.warn(`Could not sync live earnings for ${sym}:`, err);
+              setIsFetchingEarnings(false);
+              setEarningsFetchStatus(null);
+              return null;
+            })
+        : (async () => {
+            setIsFetchingEarnings(false);
+            return null;
+          })();
+
+      // 1. Fetch live market price & daily closes immediately (Tradier API intercepts if Yahoo fails)
+      setFetchStatus(`Fetching live market price & ${sourceToUse === 'BARCHART' ? 'Barchart' : 'MarketChameleon'} technicals for ${sym}...`);
+      const chartDataPromise = fetchTickerChartData(sym);
+
+      const [chartData, _earningsResult] = await Promise.all([chartDataPromise, earningsPromise]);
       const profile = classifySectorAndBaseVol(sym, `${sym} Equity`);
       const intel = SECURITY_INTELLIGENCE_REGISTRY[sym];
 
@@ -558,10 +536,15 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
         },
         hasEarningsAlert: hasEarnings,
         nextEarningsDate: earningsCheck.earningsDate || undefined,
+        priceFeedProvider: chartData?.provider || 'YAHOO',
         updatedAt: new Date().toLocaleTimeString(),
       });
 
-      setFetchStatus(`Successfully hydrated ${sym} metrics from ${sourceToUse === 'BARCHART' ? 'Barchart.com' : 'MarketChameleon.com'}`);
+      if (chartData?.provider === 'TRADIER') {
+        setFetchStatus(`[Tradier API Intercept] Real-time market price $${spot.toFixed(2)} & NBBO technicals active for ${sym}`);
+      } else {
+        setFetchStatus(`Successfully hydrated ${sym} metrics from ${sourceToUse === 'BARCHART' ? 'Barchart.com' : 'MarketChameleon.com'}`);
+      }
       setTimeout(() => setFetchStatus(null), 4000);
     } catch (err: any) {
       console.error('Error fetching technicals for simulator:', err);
@@ -571,14 +554,15 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
     }
   }, [ticker, dataSource, strategy, expirationDate]);
 
-  // Automatically synchronize live market price, technicals & earnings calendar whenever ticker or dataSource changes
+  // Automatically synchronize live market price, technicals & earnings calendar immediately when ticker or dataSource changes
   useEffect(() => {
     const cleanSym = ticker.trim().toUpperCase();
     if (!cleanSym || cleanSym.length < 1) return;
 
+    // Fast 150ms debounce for rapid keyboard entry, triggering immediately after the ticker is entered
     const timer = setTimeout(() => {
       handleFetchTechnicals(cleanSym, dataSource);
-    }, 500);
+    }, 150);
 
     return () => clearTimeout(timer);
   }, [ticker, dataSource, handleFetchTechnicals]);
@@ -661,9 +645,19 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
             <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
               <span>Stock Ticker</span>
               {pulledData?.symbol && (
-                <span className="text-emerald-400 font-mono text-[10px] font-semibold">
-                  ${pulledData.spotPrice.toFixed(2)}
-                </span>
+                <div className="flex items-center gap-1.5 font-mono text-[10px] font-semibold">
+                  <span className="text-emerald-400">
+                    ${pulledData.spotPrice.toFixed(2)}
+                  </span>
+                  {pulledData.priceFeedProvider === 'TRADIER' && (
+                    <span
+                      className="text-[9px] bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 px-1 py-0.5 rounded font-sans font-medium"
+                      title="Live market pricing intercepted and hydrated via Tradier API"
+                    >
+                      Tradier
+                    </span>
+                  )}
+                </div>
               )}
             </label>
             <div className="relative">
@@ -672,7 +666,14 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value.toUpperCase())}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleFetchTechnicals();
+                  if (e.key === 'Enter' && ticker.trim()) {
+                    handleFetchTechnicals(ticker.trim().toUpperCase(), dataSource);
+                  }
+                }}
+                onBlur={() => {
+                  if (ticker.trim()) {
+                    handleFetchTechnicals(ticker.trim().toUpperCase(), dataSource);
+                  }
                 }}
                 placeholder="e.g. TSLA, NVDA, PLTR"
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-lg pl-3 pr-8 py-2 text-xs text-white font-mono font-bold uppercase placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"

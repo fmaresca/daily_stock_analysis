@@ -279,7 +279,7 @@ export async function fetchLiveEarningsInfo(
     try {
       onProgress?.(`Contacting ${src.label} for ${sym} earnings dates...`);
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5500);
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
 
       const resp = await fetch(src.url, {
         headers: { Accept: 'application/json' },
@@ -334,9 +334,6 @@ export async function fetchLiveEarningsInfo(
   // 5. Fallback if network sources failed or symbol has unannounced dates
   if (!discoveredDate) {
     onProgress?.(`Estimating next earnings date for ${sym} using 90-day rolling cycle...`);
-    // Deliberate brief pacing delay to allow UI to register status
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
     const today = new Date();
 
     // Prefer last known earnings date + 90 days as the approximated future date.
