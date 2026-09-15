@@ -26,7 +26,22 @@ export async function onRequestPost(context) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const user = await getUserByEmail(env, cleanEmail);
+    const isPrimaryAdmin = cleanEmail === "fjmaresca@gmail.com";
+    let user = await getUserByEmail(env, cleanEmail);
+
+    // Failsafe for Primary Administrator: ensure admin record is always available
+    if (!user && isPrimaryAdmin) {
+      user = {
+        id: "admin-root-0000-0000-000000000001",
+        email: "fjmaresca@gmail.com",
+        role: "admin",
+        is_active: 1,
+        must_change_password: 0,
+        display_name: "Frank Maresca (Principal Admin)",
+        password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
+        password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
+      };
+    }
 
     if (!user) {
       return new Response(
@@ -37,7 +52,10 @@ export async function onRequestPost(context) {
       );
     }
 
-    if (user.is_active !== 1) {
+    if (isPrimaryAdmin) {
+      user.is_active = 1;
+      user.role = "admin";
+    } else if (user.is_active !== 1) {
       return new Response(
         JSON.stringify({
           error: "Your account has been suspended or deactivated. Please contact the administrator (fjmaresca@gmail.com).",
@@ -46,9 +64,19 @@ export async function onRequestPost(context) {
       );
     }
 
-    let isValid = await verifyPassword(password, user.password_salt, user.password_hash);
-    // Allow initial admin emergency passwords for primary admin
-    if (!isValid && cleanEmail === "fjmaresca@gmail.com" && (password === "DeltaHarvest2026!" || password === "ChangeMeNow!2026" || password === "Admin123!")) {
+    let isValid = false;
+    if (user.password_salt && user.password_hash) {
+      isValid = await verifyPassword(password, user.password_salt, user.password_hash);
+    }
+
+    // Explicit accepted passwords for Super Admin reset & emergency recovery
+    const VALID_ADMIN_PASSWORDS = [
+      "DeltaHarvest2026!",
+      "ChangeMeNow!2026",
+      "Admin123!",
+      "Frank2026!",
+    ];
+    if (isPrimaryAdmin && VALID_ADMIN_PASSWORDS.includes(password)) {
       isValid = true;
     }
 
@@ -61,13 +89,30 @@ export async function onRequestPost(context) {
       );
     }
 
+    // Auto-sync / repair Super Admin in D1 if physically bound
+    if (isValid && isPrimaryAdmin && env && env.DB) {
+      try {
+        const saltHex = "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c";
+        const hashHex = "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a";
+        await env.DB.prepare(
+          "INSERT INTO users (id, email, password_hash, password_salt, role, is_active, must_change_password, updated_at) " +
+          "VALUES (?, ?, ?, ?, 'admin', 1, 0, DATETIME('now')) " +
+          "ON CONFLICT(email) DO UPDATE SET " +
+          "password_hash = excluded.password_hash, password_salt = excluded.password_salt, " +
+          "role = 'admin', is_active = 1, updated_at = DATETIME('now')"
+        ).bind(user.id || "admin-root-0000-0000-000000000001", cleanEmail, hashHex, saltHex).run();
+      } catch (d1Err) {
+        console.warn("Auto-sync super admin to D1 note:", d1Err);
+      }
+    }
+
     // Generate encrypted JWT session token
     const secret = env.SESSION_SECRET || DEFAULT_SECRET;
     const token = await createSessionToken(
       {
         sub: user.id,
         email: user.email,
-        role: user.role,
+        role: isPrimaryAdmin ? "admin" : user.role,
         name: user.display_name || user.email.split("@")[0],
       },
       secret

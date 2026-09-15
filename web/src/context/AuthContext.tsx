@@ -4,7 +4,7 @@ import { AuthUser, LoginCredentials } from '../types/auth';
 const STORAGE_AUTH_USER_KEY = 'deltaharvest_auth_user';
 const STORAGE_LOCAL_USERS_KEY = 'deltaharvest_local_users';
 export const PRIMARY_ADMIN_EMAIL = 'fjmaresca@gmail.com';
-export const DEFAULT_ADMIN_PASSWORDS = ['DeltaHarvest2026!', 'ChangeMeNow!2026', 'Admin123!'];
+export const DEFAULT_ADMIN_PASSWORDS = ['DeltaHarvest2026!', 'ChangeMeNow!2026', 'Admin123!', 'Frank2026!'];
 
 interface AuthContextType {
   user: AuthUser | null;
