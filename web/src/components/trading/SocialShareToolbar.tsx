@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ExternalLink, Copy, CheckCircle2 } from '../icons';
+import { DiscordAlertButton } from './DiscordAlertButton';
+import type { OptionsAlertData } from '../../utils/discordNotifier';
 
 // ─── Brand SVG Icons (inline, no external deps) ───────────────────────────────
 
@@ -21,12 +23,6 @@ const StockTwitsIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4
   </svg>
 );
 
-const DiscordIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028 14.09 14.09 0 001.226-1.994.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-  </svg>
-);
-
 const RedditIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" />
@@ -43,12 +39,18 @@ export interface ShareProps {
   strategy?: string;
   strikePrice?: number;
   expirationDate?: string;
+  dte?: number;
+  premiumMid?: number;
+  annualizedReturnPct?: number;
+  delta?: number;
+  popPct?: number;
+  breakEven?: number;
+  priceChangePct?: number;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const APP_URL = 'https://daily-stock-analysis-89j.pages.dev';
-const DISCORD_WEBHOOK_KEY = 'dh_discord_webhook_url';
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -66,194 +68,6 @@ function buildShareText(props: ShareProps): string {
     ` | Full Analysis: ${appUrl}`
   );
 }
-
-// ─── Discord Modal ────────────────────────────────────────────────────────────
-
-interface DiscordModalProps {
-  ticker: string;
-  shareText: string;
-  currentPrice: number;
-  rsi?: number;
-  ivRank?: number;
-  strategy?: string;
-  strikePrice?: number;
-  expirationDate?: string;
-  onClose: () => void;
-}
-
-const DiscordModal: React.FC<DiscordModalProps> = ({
-  ticker, shareText, currentPrice, rsi, ivRank, strategy, strikePrice, expirationDate, onClose,
-}) => {
-  const [webhookUrl, setWebhookUrl] = useState(
-    () => localStorage.getItem(DISCORD_WEBHOOK_KEY) ?? ''
-  );
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const saveWebhook = () => {
-    if (webhookUrl.trim()) localStorage.setItem(DISCORD_WEBHOOK_KEY, webhookUrl.trim());
-  };
-
-  const sendToDiscord = async () => {
-    if (!webhookUrl.trim()) {
-      setErrorMsg('Paste your Discord Webhook URL first.');
-      return;
-    }
-    saveWebhook();
-    setStatus('sending');
-    setErrorMsg('');
-
-    const appUrl = `${APP_URL}/?ticker=${ticker}`;
-    const payload = {
-      username: 'DeltaHarvest',
-      embeds: [
-        {
-          title: `📊 DeltaHarvest Setup: $${ticker}`,
-          color: 0x10b981, // emerald-500
-          url: appUrl,
-          fields: [
-            { name: 'Price', value: `$${currentPrice.toFixed(2)}`, inline: true },
-            { name: 'RSI (14)', value: rsi != null ? String(rsi) : 'N/A', inline: true },
-            { name: 'IV Rank', value: ivRank != null ? `${ivRank}%` : 'N/A', inline: true },
-            {
-              name: 'Strategy',
-              value: [
-                strategy ?? 'Stock Analysis',
-                strikePrice ? `$${strikePrice} strike` : '',
-                expirationDate ? `exp ${expirationDate}` : '',
-              ]
-                .filter(Boolean)
-                .join(' · '),
-              inline: false,
-            },
-            { name: 'Full Analysis', value: appUrl, inline: false },
-          ],
-          footer: { text: 'DeltaHarvest Institutional · daily-stock-analysis-89j.pages.dev' },
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    };
-
-    try {
-      const res = await fetch(webhookUrl.trim(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok || res.status === 204) {
-        setStatus('sent');
-      } else {
-        setErrorMsg(`Discord returned HTTP ${res.status}. Check your webhook URL.`);
-        setStatus('error');
-      }
-    } catch (e: any) {
-      setErrorMsg(e?.message ?? 'Network error');
-      setStatus('error');
-    }
-  };
-
-  // Close on backdrop click
-  const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
-      onClick={handleBackdrop}
-      id="discord-webhook-modal-backdrop"
-    >
-      <div
-        className="w-full max-w-md bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl p-5 space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <DiscordIcon className="w-5 h-5 text-indigo-400" />
-            <h3 className="text-sm font-bold text-white">Send to Discord</h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Preview */}
-        <div className="bg-slate-950/60 rounded-xl border border-slate-800 p-3 text-[11px] font-mono text-slate-300 leading-relaxed">
-          {shareText}
-        </div>
-
-        {/* Webhook URL input */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            Discord Webhook URL
-          </label>
-          <input
-            id="discord-webhook-input"
-            type="url"
-            value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
-            onBlur={saveWebhook}
-            placeholder="https://discord.com/api/webhooks/..."
-            className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white
-              placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-          />
-          <p className="text-[10px] text-slate-500">
-            Saved locally in your browser. Discord Server → Integrations → Webhooks.
-          </p>
-        </div>
-
-        {/* Error */}
-        {status === 'error' && (
-          <p className="text-[11px] text-rose-400 bg-rose-950/40 border border-rose-500/30 rounded-lg px-3 py-2">
-            ⚠ {errorMsg}
-          </p>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          <button
-            id="discord-send-btn"
-            onClick={sendToDiscord}
-            disabled={status === 'sending' || status === 'sent'}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold
-              bg-indigo-600 hover:bg-indigo-500 text-white transition-colors
-              disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {status === 'sending' ? (
-              <>
-                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                </svg>
-                Sending…
-              </>
-            ) : status === 'sent' ? (
-              <>✓ Sent to Discord!</>
-            ) : (
-              <>
-                <DiscordIcon className="w-3.5 h-3.5" />
-                Send Embed
-              </>
-            )}
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700
-              text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ─── Community Dropdown ───────────────────────────────────────────────────────
 
@@ -328,7 +142,6 @@ export const SocialShareToolbar: React.FC<ShareProps> = (props) => {
   const { ticker, currentPrice, rsi, ivRank, strategy, strikePrice, expirationDate } = props;
 
   const [copied, setCopied] = useState(false);
-  const [showDiscord, setShowDiscord] = useState(false);
   const [showCommunity, setShowCommunity] = useState(false);
 
   const communityRef = useRef<HTMLDivElement>(null);
@@ -337,6 +150,43 @@ export const SocialShareToolbar: React.FC<ShareProps> = (props) => {
   const appUrl = `${APP_URL}/?ticker=${ticker}`;
   const encoded = encodeURIComponent(shareText);
   const encodedUrl = encodeURIComponent(appUrl);
+
+  // Strategy narrowing and OptionsAlertData assembly for DiscordAlertButton
+  const VALID_STRATEGIES = ['Cash-Secured Put', 'Covered Call', 'Credit Spread', 'Iron Condor'] as const;
+  type ValidStrategy = typeof VALID_STRATEGIES[number];
+
+  const safeStrategy: ValidStrategy =
+    strategy && VALID_STRATEGIES.includes(strategy as ValidStrategy)
+      ? (strategy as ValidStrategy)
+      : 'Cash-Secured Put';
+
+  const alertData: OptionsAlertData | null =
+    strikePrice && expirationDate
+      ? {
+          ticker,
+          currentPrice,
+          priceChangePct: props.priceChangePct,
+          rsi,
+          ivRank,
+          strategy: safeStrategy,
+          strikePrice,
+          expirationDate,
+          dte:
+            props.dte ??
+            Math.max(
+              0,
+              Math.round(
+                (new Date(expirationDate).getTime() - Date.now()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            ),
+          premiumMid: props.premiumMid ?? 0,
+          annualizedReturnPct: props.annualizedReturnPct,
+          delta: props.delta,
+          popPct: props.popPct,
+          breakEven: props.breakEven,
+        }
+      : null;
 
   // Close community dropdown on outside click
   useEffect(() => {
@@ -375,21 +225,6 @@ export const SocialShareToolbar: React.FC<ShareProps> = (props) => {
 
   return (
     <>
-      {/* Discord Modal (portal-style overlay) */}
-      {showDiscord && (
-        <DiscordModal
-          ticker={ticker}
-          shareText={shareText}
-          currentPrice={currentPrice}
-          rsi={rsi}
-          ivRank={ivRank}
-          strategy={strategy}
-          strikePrice={strikePrice}
-          expirationDate={expirationDate}
-          onClose={() => setShowDiscord(false)}
-        />
-      )}
-
       {/* Toolbar strip */}
       <div
         id={`social-share-toolbar-${ticker}`}
@@ -455,15 +290,7 @@ export const SocialShareToolbar: React.FC<ShareProps> = (props) => {
         </button>
 
         {/* ── Discord ── */}
-        <button
-          id={`share-discord-${ticker}`}
-          onClick={() => setShowDiscord(true)}
-          className={`${btnDefault} text-[#5865F2] hover:text-white hover:bg-[#5865F2]/20 hover:border-[#5865F2]/40`}
-          title="Send to Discord via Webhook"
-        >
-          <DiscordIcon className="w-3.5 h-3.5" />
-          <span>Discord</span>
-        </button>
+        <DiscordAlertButton alertData={alertData} />
 
         {/* ── Community Dropdown ── */}
         <div ref={communityRef} className="relative">
