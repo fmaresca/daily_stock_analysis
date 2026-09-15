@@ -36,7 +36,8 @@ export async function onRequest(context) {
     pathname === "/api/auth/request-access" ||
     pathname === "/api/economic-calendar" ||
     pathname === "/api/analyze-options" ||
-    pathname === "/api/market-price"
+    pathname === "/api/market-price" ||
+    pathname.startsWith("/api/news/")
   ) {
     return context.next();
   }
