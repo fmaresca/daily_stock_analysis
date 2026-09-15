@@ -340,6 +340,20 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             The <strong>Defensive Roll Assistant</strong> monitors active positions against institutional defense triggers: when an underlying stock tests a short put strike within 2.5% or option delta reaches &ge;0.40 (or tested on the upside for covered calls), the engine calculates an optimal <em>down-and-out</em> or <em>up-and-out</em> roll. By extending the expiration cycle by 7 to 30 days, the investor buys back the threatened near-term contract and sells a lower-strike/higher-duration contract for an overall <strong>net credit</strong>, lowering break-even cost basis while avoiding forced assignment.
           </p>
         </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-indigo-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-indigo-400">💬</span>
+            <span>How do the Social Share Toolbar and Discord Webhook Alert Dispatcher work?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            The <strong>Social Share Toolbar</strong> located in the Ticker Audit technical boundary view enables instantaneous trade idea syndication across multiple channels:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Discord Webhook Dispatcher:</strong> Configure your personal or community Discord channel webhook URL. The terminal generates an institutional rich embed formatted with strategy-coded color themes (Emerald for CSPs, Cyan for Covered Calls, Amber for Spreads, Purple for Condors), technical indicators (RSI, IV Rank), collateral requirements, annualized return, POP, and break-even levels. Rate limits (HTTP 429) are gracefully handled with automatic retry back-off.</li>
+            <li><strong>Trader Networks &amp; Live Squawks:</strong> Direct one-click share deep-links to Telegram, WhatsApp, and StockTwits, plus direct launcher access to live trading squawks (FinancialJuice) and derivative discussion communities (r/thetagang, r/options, MarketChameleon).</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
