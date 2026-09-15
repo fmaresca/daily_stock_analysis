@@ -235,6 +235,34 @@ export async function fetchTradierTickerData(symbol: string): Promise<TickerChar
  */
 export async function fetchTickerChartData(symbol: string): Promise<TickerChartData | null> {
   const sym = symbol.toUpperCase().trim();
+  if (!sym) return null;
+
+  // Tier 0: First-Party Edge Proxy (/api/market-price) on Cloudflare Pages (zero CORS, Tradier NBBO + Yahoo edge fetch)
+  try {
+    const edgeController = new AbortController();
+    const edgeTimeout = setTimeout(() => edgeController.abort(), 3500);
+    const edgeResp = await fetch(`/api/market-price?symbol=${encodeURIComponent(sym)}`, {
+      headers: { Accept: 'application/json' },
+      signal: edgeController.signal,
+    });
+    clearTimeout(edgeTimeout);
+
+    if (edgeResp.ok) {
+      const edgeData = await edgeResp.json();
+      if (edgeData?.success && edgeData.spotPrice > 0) {
+        return {
+          spotPrice: Number(edgeData.spotPrice),
+          closes: Array.isArray(edgeData.closes) ? edgeData.closes : [],
+          volumes: Array.isArray(edgeData.volumes) ? edgeData.volumes : [],
+          avgVolume: Number(edgeData.avgVolume) || 20000000,
+          provider: (edgeData.provider as any) || 'TRADIER',
+        };
+      }
+    }
+  } catch {
+    // Edge API unavailable (e.g., local Vite dev server without functions), proceed to browser fallbacks
+  }
+
   const q1 = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`;
   const q2 = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`;
 

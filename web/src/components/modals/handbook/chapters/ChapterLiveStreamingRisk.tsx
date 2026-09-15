@@ -79,6 +79,9 @@ export const ChapterLiveStreamingRisk: React.FC<ChapterLiveStreamingRiskProps> =
           <p>
             <strong>Automatic Failover:</strong> If Tradier is offline or unconfigured, the system automatically falls back to <strong>Charles Schwab Retail Trader API</strong> (secondary fallback) and Yahoo Finance / CBOE directory snapshots.
           </p>
+          <p>
+            <strong>Cloudflare Edge Market Price Proxy:</strong> When deployed on Cloudflare Pages, requests to <code className="text-emerald-300 bg-emerald-950/60 px-1 rounded">/api/market-price</code> run directly on edge worker functions with zero CORS restrictions. The edge proxy queries broker-grade Tradier NBBO quotes and historical bars first, and falls back to server-side Yahoo Finance edge fetches, delivering lightning-fast price convergence to the browser.
+          </p>
         </div>
       </div>
 

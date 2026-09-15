@@ -35,7 +35,8 @@ export async function onRequest(context) {
     pathname === "/api/auth/logout" ||
     pathname === "/api/auth/request-access" ||
     pathname === "/api/economic-calendar" ||
-    pathname === "/api/analyze-options"
+    pathname === "/api/analyze-options" ||
+    pathname === "/api/market-price"
   ) {
     return context.next();
   }

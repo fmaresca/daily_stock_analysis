@@ -37,6 +37,7 @@ export interface SecurityIntelligence {
   liquidityScore: number; // 0 - 100
   volatilityEdgeScore: number; // 0 - 100
   targetPrice: number;
+  spotPrice?: number;
   upsidePct: number;
   keySupportPrice: number;
   keyResistancePrice: number;

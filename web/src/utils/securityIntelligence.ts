@@ -129,6 +129,7 @@ export function getSecurityIntelligence(
 
     return {
       ...reg,
+      spotPrice: meta?.spot_price || reg.spotPrice || (reg.keySupportPrice && reg.keyResistancePrice ? Math.round(((reg.keySupportPrice + reg.keyResistancePrice) / 2) * 100) / 100 : undefined),
       predictionMarkets: rawEvents,
       termStructure: termStruct,
       socialSentiment: enrichedSentiment,
@@ -205,6 +206,7 @@ export function getSecurityIntelligence(
     liquidityScore: isTier1 ? 95 : 70,
     volatilityEdgeScore: Math.min(99, ivr + 25),
     targetPrice: Math.round(spot * 1.12 * 100) / 100,
+    spotPrice: spot,
     upsidePct: 12.0,
     keySupportPrice: meta?.lower_bb ? Math.round(meta.lower_bb * 100) / 100 : Math.round(spot * 0.93 * 100) / 100,
     keyResistancePrice: meta?.upper_bb ? Math.round(meta.upper_bb * 100) / 100 : Math.round(spot * 1.07 * 100) / 100,
