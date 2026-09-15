@@ -15,6 +15,7 @@ import { InteractiveChart } from '../../InteractiveChart';
 import { BarchartOpinionCard } from '../../BarchartOpinionCard';
 import { calculateMarketChameleonPattern } from '../../../utils/securityIntelligence';
 import { SocialShareToolbar } from '../../trading/SocialShareToolbar';
+import { NewsCompactFeed } from '../../NewsCompactFeed';
 
 interface TickerOptionsTechTabProps {
   ticker: TickerMeta;
@@ -390,6 +391,13 @@ export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
           </div>
         );
       })()}
+
+      {/* SECTION 6: Recent News Stories & Volatility Drivers */}
+      <NewsCompactFeed
+        ticker={ticker.symbol}
+        limit={5}
+        onViewAllNews={onViewNewsAnalyst}
+      />
 
       {/* SECTION 7: Proposed Strategy */}
       <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
