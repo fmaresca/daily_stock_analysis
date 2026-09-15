@@ -168,12 +168,16 @@ async function fetchSecEdgar8K(ticker) {
 }
 
 // ─── Source 4: MarketChameleon HTML scrape ────────────────────────────────
+// Uses a non-backtracking linear scan so Cloudflare Workers never hit the
+// 50 ms regex CPU budget — no nested [\s\S]*? quantifiers.
+
+/** Entity-decode raw anchor text (alias of cleanText for spec compatibility). */
+const decodeHtmlEntities = cleanText;
 
 async function fetchMarketChameleonNews(ticker) {
   const url = `https://marketchameleon.com/Overview/${encodeURIComponent(ticker)}/News/`;
-  let res;
   try {
-    res = await fetch(url, {
+    const res = await fetch(url, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
@@ -183,78 +187,79 @@ async function fetchMarketChameleonNews(ticker) {
       },
       cf: { cacheTtl: 300 },
     });
+
+    if (!res.ok) return [];
+
+    const html = await res.text();
+
+    // Bail out on Cloudflare anti-bot challenge pages
+    if (
+      html.includes('cf-browser-verification') ||
+      html.includes('Just a moment') ||
+      html.includes('Enable JavaScript and cookies')
+    ) {
+      return [];
+    }
+
+    const items = [];
+
+    /**
+     * Non-backtracking regex — no nested [\s\S]*? quantifiers.
+     *
+     * Href alternation covers all MarketChameleon article path patterns
+     * confirmed in the live HTML:
+     *   /Article/…          (spec-supplied pattern)
+     *   /Financial-News/…   (MC aggregated external news)
+     *   /articles/…         (MC-authored analysis pieces)
+     * Plus absolute external https links for tipranks, seekingalpha, etc.
+     *
+     * [^>]+ in the tag — greedy, no inner groups → no backtracking risk.
+     * [^<]+  for text  — terminates at the first '<' → linear scan.
+     */
+    const articleRegex =
+      /<a[^>]+href="(\/Article\/[^"]+|\/Financial-News\/[^"]+|\/articles\/[^"]+|https?:\/\/[^"]+)"[^>]*>([^<]+)<\/a>/gi;
+
+    /** Known utility / chat / IR domains to skip. */
+    const BLOCKLIST = [
+      'olark.com',
+      'investor.apple.com',
+      'apple.com/investor',
+      'marketchameleon.com/register',
+      'marketchameleon.com/login',
+    ];
+
+    let match;
+
+    while ((match = articleRegex.exec(html)) !== null && items.length < 5) {
+      const rawLink = match[1];
+      const rawTitle = match[2].trim();
+
+      // Skip utility / nav / chat links (raised to 20 chars to avoid footer noise)
+      if (rawTitle.length <= 20) continue;
+      if (rawTitle.includes('Login') || rawTitle.includes('Register')) continue;
+      if (BLOCKLIST.some((d) => rawLink.includes(d))) continue;
+
+      const fullLink = rawLink.startsWith('/')
+        ? `https://marketchameleon.com${rawLink}`
+        : rawLink;
+
+      items.push({
+        id: crypto.randomUUID(),
+        title: decodeHtmlEntities(rawTitle),
+        link: fullLink,
+        source: 'MarketChameleon',
+        publishedAt: new Date().toISOString(),
+        category: 'news',
+      });
+    }
+
+    return items;
   } catch (_) {
+    // Fail gracefully on timeout, network error, or Cloudflare challenge
     return [];
   }
-
-  // Gracefully abort on anti-bot blocks
-  if (!res.ok || res.status === 403 || res.status === 503) return [];
-
-  let html;
-  try {
-    html = await res.text();
-  } catch (_) {
-    return [];
-  }
-
-  // Check for Cloudflare challenge page
-  if (
-    html.includes('cf-browser-verification') ||
-    html.includes('Just a moment') ||
-    html.includes('Enable JavaScript and cookies')
-  ) {
-    return [];
-  }
-
-  const items = [];
-  /**
-   * MarketChameleon markup (confirmed via live sample):
-   *   <div class="symov_news_item">
-   *     <p>
-   *       <a class="mplink[_external] symov_news_link" href="…">HEADLINE TEXT</a>
-   *     </p>
-   *     <p class="symov_news_source">
-   *       <cite>at publisher.com</cite>
-   *       <span>(Mon, 15-Sep 9:37 AM)</span>
-   *     </p>
-   *   </div>
-   */
-  const itemRx = /<div class="symov_news_item">([\s\S]*?)(?=<div class="symov_news_item">|<div id="symov_news_divider"|$)/gi;
-  let m;
-  while ((m = itemRx.exec(html)) !== null && items.length < 5) {
-    const block = m[1];
-
-    // Extract anchor
-    const anchorM = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i.exec(block);
-    if (!anchorM) continue;
-
-    let link = anchorM[1].trim();
-    // Resolve relative links
-    if (link.startsWith('/')) link = 'https://marketchameleon.com' + link;
-
-    const title = cleanText(anchorM[2]);
-    if (!title || title.length < 5) continue;
-
-    // Published date from <span>(…)</span>
-    const spanM = /<span>\s*\(([^)]+)\)\s*<\/span>/i.exec(block);
-    const publishedAt = spanM ? spanM[1].trim() : new Date().toUTCString();
-
-    // Publisher cite
-    const citeM = /<cite[^>]*>(?:at\s+)?([\s\S]*?)<\/cite>/i.exec(block);
-    const publisher = citeM ? cleanText(citeM[1]) : 'MarketChameleon';
-
-    items.push({
-      id: `mc-${ticker}-${hashStr(title)}`,
-      title,
-      link,
-      source: 'MarketChameleon',
-      publisher,
-      publishedAt,
-      category: 'news',
-    });
-  }
-  return items;
 }
+
 
 // ─── Main handler ─────────────────────────────────────────────────────────
 
