@@ -118,9 +118,10 @@ export async function onRequest(context) {
           }
         );
       }
-    } catch (tErr) {
-      console.warn(`[Edge Market Price] Tradier fetch failed for ${symbol}:`, tErr);
     }
+  } catch (tErr) {
+    console.warn(`[Edge Market Price] Tradier fetch failed for ${symbol}:`, tErr);
+  }
   }
 
   // Tier 2: Yahoo Finance (Direct Edge Fetch without browser CORS limitations)
