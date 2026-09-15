@@ -221,7 +221,7 @@ export async function getUserByEmail(env, email) {
     try {
       const stmt = env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?)").bind(cleanEmail);
       const user = await stmt.first();
-      return user || null;
+      if (user) return user;
     } catch (err) {
       console.warn("D1 query error in getUserByEmail, falling back to local store:", err);
     }
@@ -236,7 +236,7 @@ export async function getUserById(env, id) {
     try {
       const stmt = env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(id);
       const user = await stmt.first();
-      return user || null;
+      if (user) return user;
     } catch (err) {
       console.warn("D1 query error in getUserById, falling back to local store:", err);
     }
