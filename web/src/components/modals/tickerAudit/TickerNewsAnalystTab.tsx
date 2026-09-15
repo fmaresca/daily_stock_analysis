@@ -1,14 +1,13 @@
 import React from 'react';
 import {
   Award,
-  Newspaper,
-  Flame,
   Building,
   ExternalLink,
 } from '../../icons';
 import { TickerMeta } from '../../../types/options';
 import { AnalystPriceTargetBar } from '../../AnalystPriceTargetBar';
 import { getSecFilingSearchUrl } from '../../../utils/secEdgarRegistry';
+import { CompanyNewsFeed } from '../../CompanyNewsFeed';
 
 interface TickerNewsAnalystTabProps {
   ticker: TickerMeta;
@@ -119,58 +118,8 @@ export const TickerNewsAnalystTab: React.FC<TickerNewsAnalystTabProps> = ({
         </div>
       </div>
 
-      {/* News Catalyst Feed */}
-      <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-            <Newspaper className="w-4 h-4 text-blue-400" />
-            <span>Recent News Stories &amp; Volatility Drivers</span>
-          </h3>
-          <span className="text-[10px] text-slate-400 font-mono">
-            {(intel.recentNews || []).length} verified news items
-          </span>
-        </div>
-
-        <div className="space-y-3">
-          {(intel.recentNews || []).map((item: any) => (
-            <div
-              key={item.id}
-              className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700 transition-colors space-y-2"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center space-x-2">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                    {item.category}
-                  </span>
-                  <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                      item.sentiment === 'Bullish' || item.sentiment === 'Strong Bullish'
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                        : item.sentiment === 'Neutral'
-                        ? 'bg-slate-800 text-slate-300 border-slate-700'
-                        : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                    }`}
-                  >
-                    {item.sentiment}
-                  </span>
-                  <span className="text-slate-500 text-[11px] font-mono">{item.source}</span>
-                </div>
-                <span className="text-slate-500 text-[11px] font-mono">{item.timeAgo}</span>
-              </div>
-
-              <h4 className="text-xs font-bold text-white leading-snug">{item.headline}</h4>
-              <p className="text-[11px] text-slate-300 leading-relaxed">{item.summary}</p>
-
-              <div className="p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-500/30 text-[11px] text-indigo-200 flex items-start gap-2">
-                <Flame className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
-                <span>
-                  <strong className="text-indigo-300">Options Catalyst:</strong> {item.optionsImplication}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Live News Feed — multi-source with filter tabs */}
+      <CompanyNewsFeed ticker={ticker.symbol} />
 
       {/* Institutional 13F Ownership & SEC EDGAR Compliance Matrix */}
       <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
