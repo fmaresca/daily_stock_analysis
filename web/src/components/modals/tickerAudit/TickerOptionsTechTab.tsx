@@ -14,6 +14,7 @@ import { TickerMeta, OptionOpportunity } from '../../../types/options';
 import { InteractiveChart } from '../../InteractiveChart';
 import { BarchartOpinionCard } from '../../BarchartOpinionCard';
 import { calculateMarketChameleonPattern } from '../../../utils/securityIntelligence';
+import { SocialShareToolbar } from '../../trading/SocialShareToolbar';
 
 interface TickerOptionsTechTabProps {
   ticker: TickerMeta;
@@ -231,10 +232,22 @@ export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
 
       {/* SECTION 3: Technical Boundaries */}
       <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
-        <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-          <Layers className="w-4 h-4 text-indigo-400" />
-          <span>Part 3: Technical Boundaries, Bollinger Envelope &amp; Interactive Chart</span>
-        </h3>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+            <Layers className="w-4 h-4 text-indigo-400" />
+            <span>Part 3: Technical Boundaries, Bollinger Envelope &amp; Interactive Chart</span>
+          </h3>
+          {/* Social Share Toolbar — share this setup to Telegram, WhatsApp, StockTwits, Discord */}
+          <SocialShareToolbar
+            ticker={ticker.symbol}
+            currentPrice={spotPrice}
+            rsi={rsi14}
+            ivRank={ivRank}
+            strategy={bestCSP ? 'Cash-Secured Put' : bestCC ? 'Covered Call' : 'Stock Analysis'}
+            strikePrice={bestCSP?.strike ?? bestCC?.strike}
+            expirationDate={bestCSP?.expiration ?? bestCC?.expiration}
+          />
+        </div>
 
         {/* Embedded TradingView Lightweight Candlestick Chart */}
         <InteractiveChart ticker={ticker} opportunities={opportunities} height={300} />
