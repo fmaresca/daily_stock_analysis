@@ -10,11 +10,11 @@ export async function onRequestPost(context) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { name, email, note } = body;
+    const { name, email, note, requestType } = body;
 
     if (!email || typeof email !== "string" || !email.includes("@")) {
       return new Response(
-        JSON.stringify({ error: "A valid email address is required to request login credentials." }),
+        JSON.stringify({ error: "A valid email address is required to request login credentials or maintenance." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -22,6 +22,11 @@ export async function onRequestPost(context) {
     const cleanName = (name && typeof name === "string") ? name.trim() : email.split("@")[0];
     const cleanEmail = email.trim().toLowerCase();
     const cleanNote = (note && typeof note === "string") ? note.trim() : "";
+    const type = requestType === "PASSWORD_RESET"
+      ? "PASSWORD_RESET"
+      : requestType === "MAINTENANCE"
+      ? "MAINTENANCE"
+      : "NEW_ACCOUNT";
 
     const adminEmail = env.ADMIN_EMAIL || PRIMARY_ADMIN_EMAIL;
     const clientIp = request.headers.get("CF-Connecting-IP") || request.headers.get("X-Forwarded-For") || "Unknown IP";
@@ -29,27 +34,40 @@ export async function onRequestPost(context) {
     const timestampIso = new Date().toISOString();
     const timestampFormatted = new Date().toUTCString();
 
-    const subject = `[DeltaHarvest Access Request] New Client Login Requested: ${cleanName} (${cleanEmail})`;
+    const subjectPrefix = type === "PASSWORD_RESET"
+      ? "[DeltaHarvest Password Reset]"
+      : type === "MAINTENANCE"
+      ? "[DeltaHarvest Maintenance Support]"
+      : "[DeltaHarvest Access Request]";
 
-    const textContent = `DeltaHarvest Platform - New User Credential Request
+    const subjectTitle = type === "PASSWORD_RESET"
+      ? `Password Reset Requested: ${cleanName} (${cleanEmail})`
+      : type === "MAINTENANCE"
+      ? `Account Maintenance Requested: ${cleanName} (${cleanEmail})`
+      : `New Client Login Requested: ${cleanName} (${cleanEmail})`;
 
-An individual has submitted a request for login credentials to the DeltaHarvest Stock & Options Analytics Platform.
+    const subject = `${subjectPrefix} ${subjectTitle}`;
 
-Applicant Details:
+    const textContent = `DeltaHarvest Platform - ${subjectTitle}
+
+A user has submitted a request for login credentials or account maintenance.
+
+Request Type: ${type}
+Applicant / User Details:
 - Name: ${cleanName}
 - Email: ${cleanEmail}
-- Message / Trading Focus: ${cleanNote || 'None provided'}
+- Message / Details: ${cleanNote || 'None provided'}
 - Request Time: ${timestampFormatted} (${timestampIso})
 - Network Origin: IP ${clientIp}
 - User Agent: ${userAgent}
 
 Administrator Actions:
-1. Provision this user in the Admin Console:
+1. Manage users in the Admin Console:
    https://daily-stock-analysis-89j.pages.dev/admin/users
-2. Reply directly to applicant:
+2. Reply directly to user:
    ${cleanEmail}
 
-This is an automated security and access notification.`;
+This is an automated notification for administrator ${adminEmail}.`;
 
     const htmlContent = `<!DOCTYPE html>
 <html>
@@ -242,7 +260,39 @@ This is an automated security and access notification.`;
       }
     }
 
-    // Protocol 5: Webhook dispatch (if env.ADMIN_NOTIFICATION_WEBHOOK is configured)
+    // Protocol 5: FormSubmit direct email transport to adminEmail
+    if (!emailDelivered) {
+      try {
+        const fsResp = await fetch(`https://formsubmit.co/ajax/${adminEmail}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Origin": "https://daily-stock-analysis-89j.pages.dev",
+            "Referer": "https://daily-stock-analysis-89j.pages.dev/",
+          },
+          body: JSON.stringify({
+            _subject: subject,
+            name: cleanName,
+            email: cleanEmail,
+            requestType: type,
+            message: cleanNote || "No details provided",
+            _replyto: cleanEmail,
+          }),
+        });
+        if (fsResp.ok) {
+          const fsData = await fsResp.json().catch(() => ({}));
+          if (fsData && (fsData.success === true || fsData.success === "true")) {
+            emailDelivered = true;
+            deliveryMethods.push("FormSubmit Gateway");
+          }
+        }
+      } catch (e) {
+        console.warn("[request-access] FormSubmit dispatch error:", e);
+      }
+    }
+
+    // Protocol 6: Webhook dispatch (if env.ADMIN_NOTIFICATION_WEBHOOK is configured)
     if (env.ADMIN_NOTIFICATION_WEBHOOK) {
       try {
         await fetch(env.ADMIN_NOTIFICATION_WEBHOOK, {
@@ -250,6 +300,7 @@ This is an automated security and access notification.`;
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             event: "user.credential_request",
+            requestType: type,
             name: cleanName,
             email: cleanEmail,
             note: cleanNote,
@@ -264,7 +315,7 @@ This is an automated security and access notification.`;
       }
     }
 
-    // Protocol 6: Cloudflare D1 Database Request Audit Storage
+    // Protocol 7: Cloudflare D1 Database Request Audit Storage
     if (env.DB) {
       try {
         await env.DB.prepare(
@@ -289,18 +340,26 @@ This is an automated security and access notification.`;
       }
     }
 
+    const responseMsg = emailDelivered
+      ? `Your request has been registered and an automated notification was transmitted directly to Frank Maresca (${adminEmail}).`
+      : `Your request has been logged. Please click 'Open in Gmail / Email Client' to ensure your message is sent directly to Frank Maresca (${adminEmail}).`;
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Your login request has been registered and an automated notification was transmitted to Frank Maresca (${adminEmail}).`,
+        message: responseMsg,
         applicant: {
           name: cleanName,
           email: cleanEmail,
+          requestType: type,
         },
         delivery: {
           adminEmail,
           delivered: emailDelivered,
+          openMailto: !emailDelivered,
           protocols: deliveryMethods,
+          subject,
+          body: textContent,
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }

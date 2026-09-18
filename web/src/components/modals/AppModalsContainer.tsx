@@ -187,6 +187,22 @@ export const AppModalsContainer: React.FC<AppModalsContainerProps> = ({
           setIsHelpModalOpen(false);
           setIsCommandPaletteOpen(true);
         }}
+        onOpenEquityAnalysis={() => {
+          setIsHelpModalOpen(false);
+          const target = universeTickers.find((t) => t.symbol === 'TSLA') || universeTickers[0] || {
+            symbol: 'TSLA',
+            companyName: 'Tesla Inc',
+            currentPrice: 245.0,
+            priceChange: 0,
+            priceChangePercent: 0,
+            ivRank: 55,
+            ivPercentile: 50,
+            rsi14: 48,
+            historicalVol30d: 45,
+            updatedAt: new Date().toISOString(),
+          };
+          setSelectedTicker(target);
+        }}
       />
 
       {/* 2. Tradier API Settings Modal (Primary) */}

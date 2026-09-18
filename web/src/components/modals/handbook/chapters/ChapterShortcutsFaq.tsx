@@ -8,6 +8,7 @@ export interface ChapterShortcutsFaqProps {
   onOpenWatchlists?: () => void;
   onOpenReports?: () => void;
   onOpenSimulator?: () => void;
+  onOpenEquityAnalysis?: () => void;
 }
 
 export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
@@ -16,6 +17,7 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
   onOpenWatchlists,
   onOpenReports,
   onOpenSimulator,
+  onOpenEquityAnalysis,
 }) => {
   return (
     <div className="space-y-6">
@@ -33,6 +35,11 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             label: 'Command Palette (Ctrl+K)',
             location: 'Modal: Command Palette',
             onClick: onOpenCommandPalette,
+          },
+          {
+            label: 'Equity Analysis (Ticker Audit)',
+            location: 'Header & Sidebar: Equity Analysis',
+            onClick: onOpenEquityAnalysis,
           },
           {
             label: 'Trade Quality Simulator',
@@ -147,9 +154,9 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         </div>
 
         <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
-          <div className="text-xs font-bold text-white">What is the Ticker Audit Modal and how do I inspect a symbol?</div>
+          <div className="text-xs font-bold text-white">What is the Equity Analysis (Ticker Audit) Modal and how do I inspect a symbol?</div>
           <p className="text-xs text-slate-400">
-            Clicking on any ticker in the Primary Screener, Fundamental Health, or Command Palette (<code>Ctrl+K</code>) opens the 5-Part Institutional Audit Modal. It features an interactive TradingView candlestick chart with Bollinger Bands and strike overlays, 20 SMA &amp; RSI indicators, institutional 13F float breakdown, SEC EDGAR links, Wall Street price targets, prediction markets odds, and social sentiment velocity.
+            Clicking the <strong>Equity Analysis</strong> button in the top header or left sidebar, or clicking on any ticker in the Primary Screener, Fundamental Health, or Command Palette (<code>Ctrl+K</code>) opens the 5-Part Institutional Audit Modal. It features an interactive TradingView candlestick chart with Bollinger Bands and strike overlays, 20 SMA &amp; RSI indicators, institutional 13F float breakdown, SEC EDGAR links, Wall Street price targets, prediction markets odds, social sentiment velocity, and real-time news aggregation.
           </p>
         </div>
 

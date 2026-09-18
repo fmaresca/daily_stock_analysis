@@ -53,6 +53,7 @@ interface HelpHandbookModalProps {
   onOpenWatchlists?: () => void;
   onOpenAlerts?: () => void;
   onOpenCommandPalette?: () => void;
+  onOpenEquityAnalysis?: () => void;
 }
 
 type HandbookTab =
@@ -91,6 +92,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
   onOpenWatchlists,
   onOpenAlerts,
   onOpenCommandPalette,
+  onOpenEquityAnalysis,
 }) => {
   const [activeTab, setActiveTab] = useState<HandbookTab>('LAYPERSON_PRIMER');
 
@@ -488,6 +490,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
               onOpenWatchlists={onOpenWatchlists}
               onOpenReports={onOpenReports}
               onOpenSimulator={onOpenSimulator}
+              onOpenEquityAnalysis={onOpenEquityAnalysis}
             />
           )}
 

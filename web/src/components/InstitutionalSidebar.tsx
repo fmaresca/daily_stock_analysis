@@ -46,6 +46,7 @@ interface InstitutionalSidebarProps {
   onToggleTheme?: () => void;
   onOpenSimulator?: () => void;
   onOpenValuation?: () => void;
+  onOpenEquityAnalysis?: (symbol?: string) => void;
   onOpenWatchlists?: () => void;
   onOpenReports?: () => void;
   onOpenDiagnostics?: () => void;
@@ -70,6 +71,7 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
   onToggleTheme,
   onOpenSimulator,
   onOpenValuation,
+  onOpenEquityAnalysis,
   onOpenWatchlists,
   onOpenReports,
   onOpenDiagnostics,
@@ -321,6 +323,26 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
                   <span>Equities</span>
                   <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
                     {totalTickersCount}
+                  </span>
+                </div>
+              )}
+            </button>
+
+            {/* 3b. Dedicated Equity Analysis Card Trigger */}
+            <button
+              onClick={() => {
+                onOpenEquityAnalysis?.();
+                onCloseMobile?.();
+              }}
+              className={`${getItemClasses(false)} w-full text-blue-300 hover:text-white group`}
+              title="Open Comprehensive Equity Analysis Card (Technicals, Options, Analyst Ratings, News, DuPont DCF)"
+            >
+              <TrendingUp className="w-4 h-4 text-cyan-400 shrink-0 group-hover:scale-110 transition-transform" />
+              {!isCollapsed && (
+                <div className="flex items-center justify-between w-full text-left">
+                  <span>Equity Analysis</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    Card
                   </span>
                 </div>
               )}
