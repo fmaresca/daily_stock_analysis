@@ -31,6 +31,7 @@ import {
 } from './icons';
 import { SortableTh } from './ui/SortableTh';
 import { sortData, SortOrder } from '../utils/tableSort';
+import { PortfolioOverlayScanner } from './PortfolioOverlayScanner';
 
 interface HoldingsCoveredCallViewProps {
   onStageOrder?: (order: any) => void;
@@ -63,6 +64,14 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
       console.warn('Failed to save portfolio book:', e);
     }
   }, [positions]);
+
+  // View mode: Standard Ledger vs Advanced Buy-Write (OptionForge & Optopsy)
+  const [viewMode, setViewMode] = useState<'LEDGER' | 'ADVANCED_BUY_WRITE'>('LEDGER');
+  const [seedPosition, setSeedPosition] = useState<{ ticker: string; quantity: number; costBasis: number }>({
+    ticker: 'AAPL',
+    quantity: 300,
+    costBasis: 218.4,
+  });
 
   // Modal / Suggestion state
   const [selectedHoldingForCC, setSelectedHoldingForCC] = useState<{
@@ -268,7 +277,19 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setViewMode(viewMode === 'LEDGER' ? 'ADVANCED_BUY_WRITE' : 'LEDGER')}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+              viewMode === 'ADVANCED_BUY_WRITE'
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-lg shadow-cyan-500/20'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>{viewMode === 'ADVANCED_BUY_WRITE' ? '📋 Positions Ledger' : '⚡ Advanced Buy-Write Module'}</span>
+          </button>
+
           <button
             onClick={() => {
               const fresh = getSamplePortfolioBook();
@@ -291,6 +312,14 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
           </button>
         </div>
       </div>
+
+      {viewMode === 'ADVANCED_BUY_WRITE' ? (
+        <PortfolioOverlayScanner
+          initialPosition={seedPosition}
+          onStageOrder={onStageOrder}
+        />
+      ) : (
+        <>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -489,25 +518,54 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                       </td>
                       <td className="py-3 px-3 text-right">
                         {isUncovered ? (
-                          <button
-                            onClick={() =>
-                              setSelectedHoldingForCC({
-                                symbol: stk.symbol,
-                                shares: stk.uncoveredShares,
-                                spotPrice: stk.currentSpot,
-                                costBasis: stk.costBasis,
-                                ivr30: stk.marketChameleonIvr30 || 35,
-                                ivrRank: stk.marketChameleonIvrRank || 50,
-                                resistance: stk.resistanceLevel || stk.currentSpot * 1.05,
-                              })
-                            }
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1 ml-auto cursor-pointer"
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-                            <span>20&Delta; Suggestion</span>
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setSeedPosition({
+                                  ticker: stk.symbol,
+                                  quantity: stk.uncoveredShares,
+                                  costBasis: stk.costBasis,
+                                });
+                                setViewMode('ADVANCED_BUY_WRITE');
+                              }}
+                              className="px-2 py-1.5 rounded-lg text-xs font-bold bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 transition-all flex items-center gap-1 cursor-pointer"
+                              title="Launch Optopsy Delta & Risk Screener for this holding"
+                            >
+                              <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>Optopsy Scan</span>
+                            </button>
+                            <button
+                              onClick={() =>
+                                setSelectedHoldingForCC({
+                                  symbol: stk.symbol,
+                                  shares: stk.uncoveredShares,
+                                  spotPrice: stk.currentSpot,
+                                  costBasis: stk.costBasis,
+                                  ivr30: stk.marketChameleonIvr30 || 35,
+                                  ivrRank: stk.marketChameleonIvrRank || 50,
+                                  resistance: stk.resistanceLevel || stk.currentSpot * 1.05,
+                                })
+                              }
+                              className="px-2 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+                              <span>20&Delta;</span>
+                            </button>
+                          </div>
                         ) : (
-                          <span className="text-slate-500 text-[11px]">Optimal</span>
+                          <button
+                            onClick={() => {
+                              setSeedPosition({
+                                ticker: stk.symbol,
+                                quantity: stk.shares,
+                                costBasis: stk.costBasis,
+                              });
+                              setViewMode('ADVANCED_BUY_WRITE');
+                            }}
+                            className="px-2 py-1 rounded text-[11px] font-mono text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors cursor-pointer"
+                          >
+                            Scan Payoffs &rarr;
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -676,6 +734,8 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* MODAL: 20-Delta Covered Call Suggester */}
       {selectedHoldingForCC && ccRecommendation && (
