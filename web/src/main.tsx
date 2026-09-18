@@ -5,6 +5,12 @@ import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
+// Automatically recover from stale chunks after a new deployment rollout
+window.addEventListener('vite:preloadError', (event) => {
+  console.warn('Vite preload error detected, refreshing page for updated chunks...', event);
+  window.location.reload();
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary
