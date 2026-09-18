@@ -28,17 +28,41 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     this.setState({ errorInfo });
+
+    const isChunkError =
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('dynamically imported module') ||
+      error?.name === 'ChunkLoadError' ||
+      error?.message?.includes('Loading chunk');
+
+    if (isChunkError) {
+      const alreadyReloaded = sessionStorage.getItem('dh_eb_chunk_reload');
+      if (!alreadyReloaded) {
+        console.warn('ErrorBoundary detected chunk load error after deployment. Auto-reloading workspace...');
+        sessionStorage.setItem('dh_eb_chunk_reload', 'true');
+        window.location.reload();
+      }
+    }
   }
 
   private handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
+    sessionStorage.removeItem('dh_eb_chunk_reload');
     if (this.props.onReset) {
       this.props.onReset();
+    } else {
+      window.location.reload();
     }
   };
 
   public render() {
     if (this.state.hasError) {
+      const isChunkError =
+        this.state.error?.message?.includes('Failed to fetch dynamically imported module') ||
+        this.state.error?.message?.includes('dynamically imported module') ||
+        this.state.error?.name === 'ChunkLoadError' ||
+        this.state.error?.message?.includes('Loading chunk');
+
       return (
         <div className="p-6 my-4 bg-slate-900/90 border border-rose-500/40 rounded-2xl text-slate-200 shadow-xl max-w-2xl mx-auto backdrop-blur-md animate-in fade-in duration-200">
           <div className="flex items-start space-x-3">
@@ -47,11 +71,12 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-bold text-white tracking-tight">
-                {this.props.fallbackTitle || 'Component Render Error Recovered'}
+                {isChunkError ? 'New Version Deployed / Reload Required' : (this.props.fallbackTitle || 'Component Render Error Recovered')}
               </h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                {this.props.fallbackMessage ||
-                  'An unexpected rendering issue occurred in this section. The application prevented a crash.'}
+                {isChunkError
+                  ? 'DeltaHarvest was just updated on Cloudflare Pages. Click below to load the newest application release.'
+                  : (this.props.fallbackMessage || 'An unexpected rendering issue occurred in this section. The application prevented a crash.')}
               </p>
 
               {this.state.error && (
@@ -66,14 +91,14 @@ export class ErrorBoundary extends Component<Props, State> {
                   className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-md shadow-emerald-600/20"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Retry View</span>
+                  <span>{isChunkError ? 'Reload Latest Workspace' : 'Retry View'}</span>
                 </button>
                 {this.props.onReset && (
                   <button
                     onClick={this.props.onReset}
                     className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-colors"
                   >
-                    <span>Dismiss</span>
+                    <span>Reset Storage & Reload</span>
                   </button>
                 )}
               </div>

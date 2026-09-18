@@ -12,20 +12,22 @@ import {
 import { OptionStrategyType } from '../../types/optionsScreener.types';
 import { StagedBracketOrder, AccountType, PriceExecutionType } from '../../utils/brokerOrderStaging';
 
-// Lazy loaded modals
-const HelpHandbookModal = lazy(() => import('../HelpHandbookModal').then(m => ({ default: m.HelpHandbookModal })));
-const WatchlistManagerModal = lazy(() => import('../WatchlistManagerModal').then(m => ({ default: m.WatchlistManagerModal })));
-const ReportQueryModal = lazy(() => import('../ReportQueryModal').then(m => ({ default: m.ReportQueryModal })));
-const TickerAuditModal = lazy(() => import('../TickerAuditModal').then(m => ({ default: m.TickerAuditModal })));
-const OptionDetailModal = lazy(() => import('../OptionDetailModal').then(m => ({ default: m.OptionDetailModal })));
-const IncomeCalculatorModal = lazy(() => import('../IncomeCalculatorModal').then(m => ({ default: m.IncomeCalculatorModal })));
-const SchwabSettingsModal = lazy(() => import('../SchwabSettingsModal').then(m => ({ default: m.SchwabSettingsModal })));
-const TradierSettingsModal = lazy(() => import('../TradierSettingsModal').then(m => ({ default: m.TradierSettingsModal })));
-const ApiDiagnosticsModal = lazy(() => import('../ApiDiagnosticsModal').then(m => ({ default: m.ApiDiagnosticsModal })));
-const BrokerOrderStagingModal = lazy(() => import('../BrokerOrderStagingModal').then(m => ({ default: m.BrokerOrderStagingModal })));
-const AlertSettingsModal = lazy(() => import('../AlertSettingsModal').then(m => ({ default: m.AlertSettingsModal })));
-const OptionsTradeQualityModal = lazy(() => import('../screener/OptionsTradeQualityModal').then(m => ({ default: m.OptionsTradeQualityModal })));
-const FundamentalValuationModal = lazy(() => import('../FundamentalValuationModal').then(m => ({ default: m.FundamentalValuationModal })));
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
+
+// Lazy loaded modals with auto-recovery on deployment chunk invalidation
+const HelpHandbookModal = lazyWithRetry(() => import('../HelpHandbookModal').then(m => ({ default: m.HelpHandbookModal })), 'HelpHandbookModal');
+const WatchlistManagerModal = lazyWithRetry(() => import('../WatchlistManagerModal').then(m => ({ default: m.WatchlistManagerModal })), 'WatchlistManagerModal');
+const ReportQueryModal = lazyWithRetry(() => import('../ReportQueryModal').then(m => ({ default: m.ReportQueryModal })), 'ReportQueryModal');
+const TickerAuditModal = lazyWithRetry(() => import('../TickerAuditModal').then(m => ({ default: m.TickerAuditModal })), 'TickerAuditModal');
+const OptionDetailModal = lazyWithRetry(() => import('../OptionDetailModal').then(m => ({ default: m.OptionDetailModal })), 'OptionDetailModal');
+const IncomeCalculatorModal = lazyWithRetry(() => import('../IncomeCalculatorModal').then(m => ({ default: m.IncomeCalculatorModal })), 'IncomeCalculatorModal');
+const SchwabSettingsModal = lazyWithRetry(() => import('../SchwabSettingsModal').then(m => ({ default: m.SchwabSettingsModal })), 'SchwabSettingsModal');
+const TradierSettingsModal = lazyWithRetry(() => import('../TradierSettingsModal').then(m => ({ default: m.TradierSettingsModal })), 'TradierSettingsModal');
+const ApiDiagnosticsModal = lazyWithRetry(() => import('../ApiDiagnosticsModal').then(m => ({ default: m.ApiDiagnosticsModal })), 'ApiDiagnosticsModal');
+const BrokerOrderStagingModal = lazyWithRetry(() => import('../BrokerOrderStagingModal').then(m => ({ default: m.BrokerOrderStagingModal })), 'BrokerOrderStagingModal');
+const AlertSettingsModal = lazyWithRetry(() => import('../AlertSettingsModal').then(m => ({ default: m.AlertSettingsModal })), 'AlertSettingsModal');
+const OptionsTradeQualityModal = lazyWithRetry(() => import('../screener/OptionsTradeQualityModal').then(m => ({ default: m.OptionsTradeQualityModal })), 'OptionsTradeQualityModal');
+const FundamentalValuationModal = lazyWithRetry(() => import('../FundamentalValuationModal').then(m => ({ default: m.FundamentalValuationModal })), 'FundamentalValuationModal');
 
 export interface AppModalsContainerProps {
   modalState: {
