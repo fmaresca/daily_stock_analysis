@@ -28,21 +28,6 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     this.setState({ errorInfo });
-
-    const isChunkError =
-      error?.message?.includes('Failed to fetch dynamically imported module') ||
-      error?.message?.includes('dynamically imported module') ||
-      error?.name === 'ChunkLoadError' ||
-      error?.message?.includes('Loading chunk');
-
-    if (isChunkError) {
-      const alreadyReloaded = sessionStorage.getItem('dh_eb_chunk_reload');
-      if (!alreadyReloaded) {
-        console.warn('ErrorBoundary detected chunk load error after deployment. Auto-reloading workspace...');
-        sessionStorage.setItem('dh_eb_chunk_reload', 'true');
-        window.location.reload();
-      }
-    }
   }
 
   private handleReset = () => {

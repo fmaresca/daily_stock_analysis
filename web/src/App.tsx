@@ -46,7 +46,7 @@ const OptionsIncomeAnalyzer = lazyWithRetry(() => import('./components/OptionsIn
 const EconomicCalendarView = lazyWithRetry(() => import('./components/EconomicCalendarView').then(m => ({ default: m.EconomicCalendarView })), 'EconomicCalendarView');
 const WeeklyPositionAuditView = lazyWithRetry(() => import('./components/WeeklyPositionAuditView').then(m => ({ default: m.WeeklyPositionAuditView })), 'WeeklyPositionAuditView');
 const CascadingScreenerView = lazyWithRetry(() => import('./components/CascadingScreenerView').then(m => ({ default: m.CascadingScreenerView })), 'CascadingScreenerView');
-const SchwabPositionsUploadView = lazyWithRetry(() => import('./components/SchwabPositionsUploadView').then(m => ({ default: m.SchwabPositionsUploadView })), 'SchwabPositionsUploadView');
+import { SchwabPositionsUploadView } from './components/SchwabPositionsUploadView';
 const WeeklyCashLedgerView = lazyWithRetry(() => import('./components/WeeklyCashLedgerView').then(m => ({ default: m.WeeklyCashLedgerView })), 'WeeklyCashLedgerView');
 const HoldingsCoveredCallView = lazyWithRetry(() => import('./components/HoldingsCoveredCallView').then(m => ({ default: m.HoldingsCoveredCallView })));
 const WeeklyExecutiveReportView = lazyWithRetry(() => import('./components/WeeklyExecutiveReportView').then(m => ({ default: m.WeeklyExecutiveReportView })), 'WeeklyExecutiveReportView');
