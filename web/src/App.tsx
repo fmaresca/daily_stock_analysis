@@ -548,6 +548,14 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleOpenEquityAnalysis = (symbol?: string) => {
+    const sym = symbol || activeChartSymbol || (filteredTickers[0]?.symbol) || 'TSLA';
+    const target = universeTickers.find((t) => t.symbol === sym) || filteredTickers.find((t) => t.symbol === sym) || createFallbackTickerMeta(sym);
+    if (target) {
+      setSelectedTicker(target);
+    }
+  };
+
   const isScreeningTab = (activeTree === 'EQUITIES' && (activeEquitiesTab === 'TECHNICAL_SCREENER' || activeEquitiesTab === 'TREND_SUPPORT' || activeEquitiesTab === 'VOLATILITY_RISK' || activeEquitiesTab === 'EARNINGS_CALENDAR' || activeEquitiesTab === 'SECTOR_OVERVIEW')) ||
     (activeTree === 'OPTIONS' && (activeOptionsTab === 'INCOME_SCREENER' || activeOptionsTab === 'DELTA_GREEKS' || activeOptionsTab === 'EXPIRATION_CADENCE'));
 
@@ -603,6 +611,7 @@ export const App: React.FC = () => {
         onToggleTheme={handleToggleTheme}
         onOpenSimulator={() => setIsSimulatorModalOpen(true)}
         onOpenValuation={() => openValuation('NVDA')}
+        onOpenEquityAnalysis={handleOpenEquityAnalysis}
         onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
         onOpenReports={() => setIsReportQueryModalOpen(true)}
         onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
@@ -645,6 +654,7 @@ export const App: React.FC = () => {
           onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
           onOpenSimulator={() => setIsSimulatorModalOpen(true)}
           onOpenValuation={() => openValuation('NVDA')}
+          onOpenEquityAnalysis={handleOpenEquityAnalysis}
           onOpenExecutiveDigest={() => {
             setActiveTree('OPTIONS');
             setActiveOptionsTab('EXECUTIVE_DIGEST');

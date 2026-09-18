@@ -34,12 +34,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshSession = useCallback(async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
     try {
       const res = await fetch('/api/auth/session', {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json();
         if (data && data.authenticated && data.user) {
@@ -53,8 +59,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch {
-      // If network fails, keep cached localStorage user if active
+      // If network fails or timeouts, keep cached localStorage user if active
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   }, []);

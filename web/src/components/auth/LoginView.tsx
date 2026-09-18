@@ -28,6 +28,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const [requestSuccessMessage, setRequestSuccessMessage] = useState<string | null>(null);
   const [requestErrorMessage, setRequestErrorMessage] = useState<string | null>(null);
 
+  const [requestType, setRequestType] = useState<'NEW_ACCOUNT' | 'PASSWORD_RESET' | 'MAINTENANCE'>('NEW_ACCOUNT');
+  const [emailCopied, setEmailCopied] = useState(false);
+  const [deliveryDelivered, setDeliveryDelivered] = useState<boolean>(false);
+
   // Pre-load saved login name if previously selected
   useEffect(() => {
     try {
@@ -83,6 +87,22 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     }
   };
 
+  const generateMailtoUrl = () => {
+    const cleanEmail = applicantEmail.trim();
+    const typeLabel =
+      requestType === 'PASSWORD_RESET'
+        ? 'Password Reset'
+        : requestType === 'MAINTENANCE'
+        ? 'Account Maintenance & Support'
+        : 'New Client Account Request';
+
+    const subject = encodeURIComponent(`[DeltaHarvest] ${typeLabel}: ${applicantName || cleanEmail}`);
+    const body = encodeURIComponent(
+      `Hello Frank,\n\nI am requesting assistance with the DeltaHarvest Stock & Options Analytics Platform.\n\nRequest Type: ${typeLabel}\nName: ${applicantName}\nEmail: ${cleanEmail}\nDetails / Trading Focus:\n${applicantNote || 'Please provide access / assistance with my account.'}\n\nSent from DeltaHarvest Portal: https://daily-stock-analysis-89j.pages.dev/\n\nThank you!`
+    );
+    return `mailto:fjmaresca@gmail.com?subject=${subject}&body=${body}`;
+  };
+
   const handleRequestAccessSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = applicantEmail.trim();
@@ -95,9 +115,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       name: applicantName.trim() || cleanEmail.split('@')[0],
       email: cleanEmail,
       note: applicantNote.trim(),
+      requestType,
     };
 
     let apiSuccess = false;
+    let isDelivered = false;
     let responseMsg = '';
 
     // 1. Primary: Cloudflare Pages Edge Function (/api/auth/request-access)
@@ -110,6 +132,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       if (resp.ok) {
         const data = await resp.json();
         apiSuccess = true;
+        isDelivered = !!data.delivery?.delivered;
         responseMsg = data.message || 'Access request dispatched to administrator.';
       }
     } catch {
@@ -127,6 +150,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
         if (resp2.ok) {
           const data2 = await resp2.json();
           apiSuccess = true;
+          isDelivered = true;
           responseMsg = data2.message || 'Access request dispatched to administrator.';
         }
       } catch {
@@ -135,20 +159,22 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     }
 
     setIsSendingRequest(false);
+    setDeliveryDelivered(isDelivered);
 
-    if (apiSuccess) {
+    if (apiSuccess && isDelivered) {
       setRequestSuccessMessage(
-        responseMsg || 'An automated email notification has been dispatched to Frank Maresca (fjmaresca@gmail.com).'
+        responseMsg || 'An automated email notification has been successfully delivered to Frank Maresca (fjmaresca@gmail.com).'
       );
       setRequestAccessSent(true);
     } else {
-      // Fail-safe client-side mailto dispatch if APIs are unreachable
-      const subject = encodeURIComponent(`DeltaHarvest Client Access Request: ${applicantName || cleanEmail}`);
-      const body = encodeURIComponent(
-        `Hello Frank,\n\nI am requesting client tenant access to DeltaHarvest Stock & Options Analytics.\n\nName: ${applicantName}\nEmail: ${cleanEmail}\nNotes / Trading Focus: ${applicantNote || 'Options and equity analytics'}\n\nThank you!`
+      // Trigger client-side email client dispatch to guarantee email reaches fjmaresca@gmail.com
+      const mailto = generateMailtoUrl();
+      try {
+        window.location.href = mailto;
+      } catch {}
+      setRequestSuccessMessage(
+        'Your request has been logged. An email compose draft to Frank Maresca (fjmaresca@gmail.com) has been launched in your email app.'
       );
-      window.location.href = `mailto:fjmaresca@gmail.com?subject=${subject}&body=${body}`;
-      setRequestSuccessMessage('Draft opened in your email client to alert Frank Maresca (fjmaresca@gmail.com).');
       setRequestAccessSent(true);
     }
   };
@@ -157,7 +183,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-slate-100">
       <div className="mx-auto w-full max-w-md text-center">
         <div className="flex flex-col items-center justify-center mb-4">
-          <DeltaHarvestLogo variant="header" layout="vertical" size={52} />
+          <DeltaHarvestLogo variant="header" layout="vertical" size={52} theme="dark" />
           <div className="mt-3 flex items-center justify-center gap-2">
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono font-medium">
               Multi-Tenant Secure
@@ -237,10 +263,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setIsRequestAccessOpen(true)}
-                  className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                  onClick={() => {
+                    setRequestType('PASSWORD_RESET');
+                    setIsRequestAccessOpen(true);
+                  }}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
                 >
-                  Forgot or need setup?
+                  Forgot or need reset?
                 </button>
               </div>
               <div className="relative rounded-lg shadow-sm">
@@ -261,7 +290,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                   title={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -269,7 +298,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               </div>
             </div>
 
-            {/* Remember Login Name Checkbox */}
+            {/* Remember Me & Security Level */}
             <div className="flex items-center justify-between">
               <label className="flex items-center space-x-2 cursor-pointer select-none">
                 <input
@@ -283,7 +312,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 <span className="text-xs text-slate-300 font-medium">Remember login name</span>
               </label>
 
-              <span className="text-[11px] text-slate-500 font-mono">256-bit PBKDF2</span>
+              <span className="text-[11px] text-slate-500 font-mono">
+                256-bit PBKDF2
+              </span>
             </div>
 
             {/* Submit Button */}
@@ -319,67 +350,139 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
             </div>
           </form>
 
-          {/* Request Access Callout */}
-          <div className="mt-6 pt-5 border-t border-slate-800 text-center">
+          {/* Request Access / Maintenance Callout */}
+          <div className="mt-6 pt-5 border-t border-slate-800 text-center space-y-2">
             <p className="text-xs text-slate-400">
-              Need login credentials or seeking client access?
+              Need login credentials, account setup, or a password reset?
             </p>
-            <button
-              type="button"
-              onClick={() => setIsRequestAccessOpen(true)}
-              className="mt-2.5 w-full py-2 px-3 bg-slate-800/90 hover:bg-slate-800 border border-emerald-500/40 hover:border-emerald-500/80 rounded-lg text-xs font-semibold text-emerald-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-            >
-              <Mail className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Request Login Privileges from Administrator</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestType('NEW_ACCOUNT');
+                  setIsRequestAccessOpen(true);
+                }}
+                className="flex-1 py-2 px-3 bg-slate-800/90 hover:bg-slate-800 border border-emerald-500/40 hover:border-emerald-500/80 rounded-lg text-xs font-semibold text-emerald-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+              >
+                <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Request New Account</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestType('PASSWORD_RESET');
+                  setIsRequestAccessOpen(true);
+                }}
+                className="flex-1 py-2 px-3 bg-slate-800/90 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-xs font-semibold text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span>Password Reset</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Access Request / Admin Alert Modal */}
       {isRequestAccessOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-            <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              <span>DeltaHarvest Client Onboarding</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-slate-100">
+            <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span>
+                {requestType === 'PASSWORD_RESET'
+                  ? 'Password Reset & Account Recovery'
+                  : requestType === 'MAINTENANCE'
+                  ? 'Account Maintenance & Support'
+                  : 'Client Onboarding & Account Request'}
+              </span>
             </h3>
             <p className="text-xs text-slate-300 mb-4 leading-relaxed">
-              DeltaHarvest is a secure multi-tenant trading analytics system. Accounts are provisioned and administered directly by{' '}
-              <strong className="text-emerald-300">Frank Maresca (Admin)</strong>.
+              DeltaHarvest user credentials and security authorizations are administered directly by{' '}
+              <strong className="text-emerald-300">Frank Maresca (Super-Admin)</strong> at{' '}
+              <a href="mailto:fjmaresca@gmail.com" className="text-emerald-400 hover:underline">
+                fjmaresca@gmail.com
+              </a>.
             </p>
 
+            {/* Request Type Selector Tabs */}
+            {!requestAccessSent && (
+              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setRequestType('NEW_ACCOUNT')}
+                  className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    requestType === 'NEW_ACCOUNT'
+                      ? 'bg-emerald-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  New Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequestType('PASSWORD_RESET')}
+                  className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    requestType === 'PASSWORD_RESET'
+                      ? 'bg-amber-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Password Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequestType('MAINTENANCE')}
+                  className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    requestType === 'MAINTENANCE'
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Maintenance
+                </button>
+              </div>
+            )}
+
             {requestAccessSent ? (
-              <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs text-center space-y-2.5 animate-fade-in">
+              <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs text-center space-y-3 animate-fade-in">
                 <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto">
                   <ShieldCheck className="w-6 h-6" />
                 </div>
-                <p className="font-bold text-sm text-white">Access Request Dispatched</p>
-                <p className="text-slate-300 text-xs leading-relaxed">
-                  {requestSuccessMessage || (
-                    <>
-                      An automated notification email has been transmitted to Super-Administrator Frank Maresca (
-                      <strong className="text-emerald-300">fjmaresca@gmail.com</strong>).
-                    </>
-                  )}
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  Once your tenant account is provisioned, you will receive confirmation and your temporary credentials at{' '}
-                  <strong className="text-white font-mono">{applicantEmail}</strong>.
-                </p>
-                <div className="pt-2 flex items-center justify-center gap-2">
+                <div>
+                  <p className="font-bold text-sm text-white">Request Registered & Dispatched</p>
+                  <p className="text-slate-300 text-xs leading-relaxed mt-1">
+                    {requestSuccessMessage}
+                  </p>
+                </div>
+
+                <div className="p-3 bg-slate-900/90 rounded-lg border border-slate-800 text-left space-y-1 font-mono text-[11px] text-slate-300">
+                  <div><strong>Recipient:</strong> Frank Maresca (fjmaresca@gmail.com)</div>
+                  <div><strong>Your Email:</strong> {applicantEmail}</div>
+                  <div><strong>Category:</strong> {requestType}</div>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
                   <a
-                    href={`mailto:fjmaresca@gmail.com?subject=${encodeURIComponent(
-                      `DeltaHarvest Access Request: ${applicantName || applicantEmail}`
-                    )}&body=${encodeURIComponent(
-                      `Hello Frank,\n\nFollowing up on my access request for DeltaHarvest:\n\nName: ${applicantName}\nEmail: ${applicantEmail}\nTrading Focus: ${applicantNote || 'Options & equity analytics'}\n\nThank you!`
-                    )}`}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors inline-flex items-center gap-1.5"
-                    title="Send a supplemental direct email from your local mail app"
+                    href={generateMailtoUrl()}
+                    className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
+                    title="Open draft in Gmail or default mail app"
                   >
-                    <Mail className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Open in Mail App</span>
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Open in Gmail / Email Client</span>
                   </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = `To: fjmaresca@gmail.com\nSubject: [DeltaHarvest] ${requestType}: ${applicantName || applicantEmail}\nName: ${applicantName}\nEmail: ${applicantEmail}\nDetails: ${applicantNote || 'None'}`;
+                      navigator.clipboard.writeText(text);
+                      setEmailCopied(true);
+                      setTimeout(() => setEmailCopied(false), 3000);
+                    }}
+                    className="w-full sm:w-auto px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>{emailCopied ? '✓ Details Copied' : 'Copy Request Details'}</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -389,10 +492,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                       setApplicantEmail('');
                       setApplicantNote('');
                       setRequestSuccessMessage(null);
+                      setEmailCopied(false);
                     }}
-                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-colors cursor-pointer"
+                    className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors cursor-pointer"
                   >
-                    Done
+                    Close
                   </button>
                 </div>
               </div>
@@ -404,59 +508,73 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1">Your Full Name</label>
+                  <label className="block text-xs text-slate-300 mb-1 font-semibold">Your Full Name</label>
                   <input
                     type="text"
                     required
                     value={applicantName}
                     onChange={(e) => setApplicantName(e.target.value)}
-                    placeholder="e.g. Jane Doe"
-                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 focus:ring-1 focus:ring-emerald-500"
+                    placeholder="e.g. Frank Maresca"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1">Your Email</label>
+                  <label className="block text-xs text-slate-300 mb-1 font-semibold">
+                    {requestType === 'PASSWORD_RESET' ? 'Registered Email Address' : 'Your Email Address'}
+                  </label>
                   <input
                     type="email"
                     required
                     value={applicantEmail}
                     onChange={(e) => setApplicantEmail(e.target.value)}
                     placeholder="name@domain.com"
-                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 focus:ring-1 focus:ring-emerald-500 font-mono"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500 font-mono focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1">Trading Focus / Message (Optional)</label>
+                  <label className="block text-xs text-slate-300 mb-1 font-semibold">
+                    {requestType === 'PASSWORD_RESET'
+                      ? 'Reset Note / Context (Optional)'
+                      : requestType === 'MAINTENANCE'
+                      ? 'Issue or Maintenance Description'
+                      : 'Trading Focus / Message (Optional)'}
+                  </label>
                   <textarea
                     rows={2}
                     value={applicantNote}
                     onChange={(e) => setApplicantNote(e.target.value)}
-                    placeholder="e.g. Cash-Secured Puts, Covered Calls, Schwab integration..."
-                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 focus:ring-1 focus:ring-emerald-500"
+                    placeholder={
+                      requestType === 'PASSWORD_RESET'
+                        ? 'e.g. Lost access, need password reset for my account...'
+                        : requestType === 'MAINTENANCE'
+                        ? 'e.g. Update watchlist symbols, Schwab API keys, or permissions...'
+                        : 'e.g. Options conservative income, Cash-Secured Puts, Schwab integration...'
+                    }
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
                 <div className="pt-2 flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setIsRequestAccessOpen(false)}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
+                    className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSendingRequest}
-                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
                   >
                     {isSendingRequest ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Transmitting Alert...</span>
+                        <span>Transmitting Email...</span>
                       </>
                     ) : (
                       <>
                         <Mail className="w-3.5 h-3.5" />
-                        <span>Send Alert to Admin</span>
+                        <span>Send Request to fjmaresca@gmail.com</span>
                       </>
                     )}
                   </button>

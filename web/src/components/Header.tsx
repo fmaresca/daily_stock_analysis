@@ -51,6 +51,7 @@ interface HeaderProps {
   onOpenExecutiveDigest?: () => void;
   onOpenSimulator?: () => void;
   onOpenValuation?: () => void;
+  onOpenEquityAnalysis?: (symbol?: string) => void;
   onToggleMobileSidebar?: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
@@ -84,6 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExecutiveDigest,
   onOpenSimulator,
   onOpenValuation,
+  onOpenEquityAnalysis,
   onToggleMobileSidebar,
   theme = 'dark',
   onToggleTheme,
@@ -219,6 +221,18 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <DollarSign className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
               <span>DCF Valuation</span>
+            </button>
+          )}
+
+          {/* Dedicated Equity Analysis (Equity Card) Menu Button */}
+          {onOpenEquityAnalysis && (
+            <button
+              onClick={() => onOpenEquityAnalysis()}
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border border-blue-400/50 shadow-md shadow-blue-900/40 hover:shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap group ring-1 ring-blue-400/30"
+              title="Open Comprehensive Equity Analysis Card (Technicals, Options, Analyst Ratings, News, DuPont DCF)"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-cyan-200 group-hover:scale-110 transition-transform" />
+              <span>Equity Analysis</span>
             </button>
           )}
 
