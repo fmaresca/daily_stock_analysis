@@ -363,6 +363,21 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
           </p>
         </div>
 
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-emerald-400">⚡</span>
+            <span>How does the Advanced Buy-Write Module integrate OptionForge, Optopsy, and Trading-Skills models?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            The <strong>Advanced Buy-Write (Covered Call) Module</strong> combines three open-source options engineering methodologies into a seamless portfolio overlay:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>OptionForge Interactive Payoff Visualization:</strong> Generates real-time expiration P&amp;L curves for covered call structures (long 100 shares + short 1 call). Instantly updates Breakeven (<code className="text-cyan-300 font-mono">S_BE = Spot - Premium</code>), Max Profit (<code className="text-emerald-300 font-mono">(Strike - Spot) + Premium</code>), Downside Cushion (<code className="text-amber-300 font-mono">Premium / Spot</code>), and Annualized Yield on Capital (<code className="text-purple-300 font-mono">MaxProfit% * (365 / DTE)</code>) with live sensitivity sliders.</li>
+            <li><strong>Optopsy Dynamic Delta &amp; IVR Screener:</strong> Filters options across custom Delta sweet spots (Conservative 0.15–0.22&Delta;, Balanced 0.22–0.32&Delta;, Aggressive 0.32–0.42&Delta;) and optimal theta-decay cycles (21–45 DTE). Strikes are ranked using a multi-factor composite score that rewards elevated Implied Volatility Rank (IVR &gt; 50%) to harvest rich volatility premiums while enforcing bid-ask spread liquidity guards.</li>
+            <li><strong>Trading-Skills Early Dividend Assignment Risk Engine:</strong> Detects American-style early exercise hazards around corporate Ex-Dividend dates. If an Ex-Dividend date falls within the option holding period and the dividend amount exceeds remaining call extrinsic (time) value (<code className="text-rose-400 font-mono">Dividend &gt; Extrinsic</code>), the scanner raises an amber/rose early assignment alert so investors avoid forfeiting dividends or facing premature stock call-aways.</li>
+          </ul>
+        </div>
+
         <div className="bg-slate-950/60 p-3 rounded-xl border border-indigo-500/30 space-y-1">
           <div className="text-xs font-bold text-white flex items-center gap-1.5">
             <span className="text-indigo-400">💬</span>
