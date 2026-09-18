@@ -5,10 +5,9 @@ import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
-// Automatically recover from stale chunks after a new deployment rollout
+// Log Vite module preload errors without triggering infinite browser reload loops
 window.addEventListener('vite:preloadError', (event) => {
-  console.warn('Vite preload error detected, refreshing page for updated chunks...', event);
-  window.location.reload();
+  console.warn('Vite module preload error detected:', event);
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
