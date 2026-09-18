@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   DollarSign,
+  Zap,
 } from '../../icons';
 import { TickerMeta, OptionOpportunity } from '../../../types/options';
 import { InteractiveChart } from '../../InteractiveChart';
@@ -41,6 +42,7 @@ interface TickerOptionsTechTabProps {
   analystTargets: any;
   isTier4: boolean;
   onViewNewsAnalyst: () => void;
+  onOpenSimulator?: (ticker: string) => void;
 }
 
 export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
@@ -67,6 +69,7 @@ export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
   analystTargets,
   isTier4,
   onViewNewsAnalyst,
+  onOpenSimulator,
 }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
@@ -458,6 +461,17 @@ export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
               <span className="text-slate-400">Est. Cash Income (Weekly):</span>
               <span className="font-bold font-mono text-emerald-400">+${estimatedWeeklyPutPremium}</span>
             </div>
+
+            {onOpenSimulator && (
+              <button
+                type="button"
+                onClick={() => onOpenSimulator(ticker.symbol)}
+                className="w-full mt-2 py-1.5 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-semibold rounded-lg border border-emerald-500/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Simulate Put Strike in Simulator</span>
+              </button>
+            )}
           </div>
 
           {/* Covered Call Play */}
@@ -495,7 +509,47 @@ export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
                 +${bestCC ? bestCC.premium_total : Math.round(spotPrice * (ivCurrent / 100) * 0.12 * 100)}
               </span>
             </div>
+
+            {onOpenSimulator && (
+              <button
+                type="button"
+                onClick={() => onOpenSimulator(ticker.symbol)}
+                className="w-full mt-2 py-1.5 px-3 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 text-xs font-semibold rounded-lg border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Simulate Call Strike in Simulator</span>
+              </button>
+            )}
           </div>
+
+          {onOpenSimulator && (
+            <div className="sm:col-span-2 bg-gradient-to-r from-blue-950/40 via-indigo-950/40 to-slate-900/60 p-3 rounded-xl border border-blue-500/30 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>Options Strike Calculator &amp; Trade Simulator</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 bg-blue-500/20 text-blue-300 rounded border border-blue-500/30">
+                      {ticker.symbol} Preloaded
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Model custom Delta strikes (0.10–0.40), expiration cycles, POP, and simulated P&amp;L curves.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpenSimulator(ticker.symbol)}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Calculate Strikes ({ticker.symbol}) &rarr;</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

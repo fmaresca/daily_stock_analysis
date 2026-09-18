@@ -155,6 +155,7 @@ export const App: React.FC = () => {
     setActiveStagedSpread,
     openStagedModal,
     openOptionDetail,
+    openSimulator,
     openValuation,
     closeValuation,
   } = useModalManager();
@@ -1203,6 +1204,7 @@ export const App: React.FC = () => {
         setIsReportQueryModalOpen={setIsReportQueryModalOpen}
         setIsAlertsModalOpen={setIsAlertsModalOpen}
         setIsSimulatorModalOpen={setIsSimulatorModalOpen}
+        openSimulator={openSimulator}
         setIsStagedModalOpen={setIsStagedModalOpen}
         setIsCommandPaletteOpen={setIsCommandPaletteOpen}
         setSelectedTicker={setSelectedTicker}
