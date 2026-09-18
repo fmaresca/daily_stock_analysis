@@ -244,6 +244,21 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
           </p>
         </div>
 
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-blue-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-blue-400">🔍</span>
+            <span>How does the Equity Analysis Card work, and how do I search symbols and calculate option strikes?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Click <strong>Equity Analysis</strong> in the top header or institutional sidebar to launch the comprehensive Equity Analysis Card:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Dynamic Symbol Search:</strong> Type any US equity or ETF ticker symbol (e.g. <code>NVDA</code>, <code>TSLA</code>, <code>AAPL</code>, <code>AMD</code>, <code>SPY</code>) into the top search bar or click any quick-select chip.</li>
+            <li><strong>Immediate Market Quote Hydration:</strong> Clicking <em>Fetch Price</em> instantly retrieves real-time pricing via edge proxies and financial feeds, updating Wilder 14-day RSI, 20-day SMA, 2-SD Bollinger Bands, 30-day Historical Volatility (HV30), Implied Volatility (IV), and synthetic Cash-Secured Put and Covered Call option setups across all 4 card tabs.</li>
+            <li><strong>Direct Simulator Strike Calculator:</strong> Click the <strong>⚡ Trade Simulator</strong> or <strong>Calculate Strikes</strong> button in the card header or options tab to open the <em>Trade Quality Simulator</em> preloaded with that exact stock ticker, where you can model custom Delta bounds (0.10–0.40), expiration cycles, and simulated P&amp;L payout curves for both puts and calls.</li>
+          </ul>
+        </div>
+
         <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
           <div className="text-xs font-bold text-white flex items-center gap-1.5">
             <span className="text-emerald-400">💵</span>

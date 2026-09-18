@@ -65,6 +65,7 @@ export interface AppModalsContainerProps {
   setIsReportQueryModalOpen: (open: boolean) => void;
   setIsAlertsModalOpen: (open: boolean) => void;
   setIsSimulatorModalOpen: (open: boolean) => void;
+  openSimulator?: (data?: any) => void;
   setIsStagedModalOpen: (open: boolean) => void;
   setIsCommandPaletteOpen: (open: boolean) => void;
   setSelectedTicker: (ticker: TickerMeta | null) => void;
@@ -106,6 +107,7 @@ export const AppModalsContainer: React.FC<AppModalsContainerProps> = ({
   setIsReportQueryModalOpen,
   setIsAlertsModalOpen,
   setIsSimulatorModalOpen,
+  openSimulator,
   setIsStagedModalOpen,
   setIsCommandPaletteOpen,
   setSelectedTicker,
@@ -277,7 +279,16 @@ export const AppModalsContainer: React.FC<AppModalsContainerProps> = ({
           <TickerAuditModal
             ticker={modalState.selectedTicker}
             opportunities={allUniverseOpportunities}
+            availableTickers={universeTickers}
             onClose={() => setSelectedTicker(null)}
+            onOpenSimulator={(sym) => {
+              setSelectedTicker(null);
+              if (openSimulator) {
+                openSimulator({ ticker: sym, strategy: 'CASH_SECURED_PUT' });
+              } else {
+                setIsSimulatorModalOpen(true);
+              }
+            }}
           />
         </ErrorBoundary>
       )}
