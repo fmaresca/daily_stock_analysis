@@ -637,6 +637,7 @@ export interface EditTaxGainsModalProps {
   ytdPremiumsEarned: number;
   onSave: (data: {
     taxYear: number;
+    ytdPremiumsWritten: number;
     realizedGains: number;
     realizedLosses: number;
     lossCarryover: number;
@@ -651,6 +652,7 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
   onSave,
 }) => {
   const [inputTaxYear, setInputTaxYear] = useState<number>(taxState.currentTaxYear);
+  const [inputYtdPremiums, setInputYtdPremiums] = useState<number>(ytdPremiumsEarned);
   const [inputRealizedGains, setInputRealizedGains] = useState<number>(taxState.ytdRealizedCapitalGains);
   const [inputRealizedLosses, setInputRealizedLosses] = useState<number>(taxState.ytdRealizedCapitalLosses);
   const [inputTaxCarryover, setInputTaxCarryover] = useState<number>(taxState.priorYearLossCarryforward);
@@ -658,11 +660,12 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setInputTaxYear(taxState.currentTaxYear);
+      setInputYtdPremiums(ytdPremiumsEarned);
       setInputRealizedGains(taxState.ytdRealizedCapitalGains);
       setInputRealizedLosses(taxState.ytdRealizedCapitalLosses);
       setInputTaxCarryover(taxState.priorYearLossCarryforward);
     }
-  }, [isOpen, taxState]);
+  }, [isOpen, taxState, ytdPremiumsEarned]);
 
   if (!isOpen) return null;
 
@@ -670,6 +673,7 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
     e.preventDefault();
     onSave({
       taxYear: Number(inputTaxYear) || 2026,
+      ytdPremiumsWritten: Number(inputYtdPremiums),
       realizedGains: Number(inputRealizedGains),
       realizedLosses: Number(inputRealizedLosses),
       lossCarryover: Number(inputTaxCarryover),
@@ -702,6 +706,24 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
               required
             />
+          </div>
+
+          <div>
+            <label className="text-slate-300 block mb-1 font-semibold">
+              YTD Option Premiums Written ($)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={inputYtdPremiums}
+              onChange={(e) => setInputYtdPremiums(Number(e.target.value))}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono font-bold"
+              required
+            />
+            <span className="text-[10px] text-slate-500 mt-0.5 block">
+              Cumulative option premiums collected (calls &amp; puts) this tax year.
+            </span>
           </div>
 
           <div>
@@ -766,6 +788,10 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5 font-mono text-[11px]">
             <div className="flex justify-between text-slate-400">
+              <span>YTD Option Premiums:</span>
+              <span className="text-emerald-400">+${Number(inputYtdPremiums || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between text-slate-400">
               <span>Net Capital Gains / Losses:</span>
               <span className={Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}>
                 {Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) >= 0 ? '+' : ''}${(Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -778,7 +804,7 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
             <div className="flex justify-between text-white font-bold border-t border-slate-800 pt-1">
               <span>Estimated Net Taxable Income:</span>
               <span className="text-cyan-300">
-                ${Math.max(0, (ytdPremiumsEarned + Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) - Number(inputTaxCarryover || 0))).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                ${Math.max(0, (Number(inputYtdPremiums || 0) + Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) - Number(inputTaxCarryover || 0))).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </div>
           </div>
