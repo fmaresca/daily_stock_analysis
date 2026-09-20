@@ -23,6 +23,11 @@ import {
 import { SortableTh } from './ui/SortableTh';
 import { sortData } from '../utils/tableSort';
 import { BUNDLED_MACRO_SCHEDULE, PAST_WEEK_SCHEDULE } from '../data/macroScheduleData';
+import {
+  getUpcomingTradingWeek,
+  getPriorTradingWeek,
+  reanchorScheduleToWeek,
+} from '../utils/tradingWeekUtils';
 
 interface EconomicCalendarViewProps {
   onSelectSymbolForChart?: (symbol: string) => void;
@@ -56,6 +61,10 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       setSortOrder('asc');
     }
   };
+
+  // Dynamically resolved trading weeks (updates when component mounts; auto-advances each calendar day)
+  const upcomingWeek = useMemo(() => getUpcomingTradingWeek(), []);
+  const priorWeek = useMemo(() => getPriorTradingWeek(), []);
 
   // AI Macro Synthesis States
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
@@ -145,16 +154,18 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       }
     }
 
-    // Tier 3: In-Memory Schedule Fallback
+    // Tier 3: In-Memory Schedule Fallback (re-anchored to resolved trading week)
     if (!success) {
-      const fallbackList = targetScope === 'past' ? PAST_WEEK_SCHEDULE : BUNDLED_MACRO_SCHEDULE;
+      const resolvedWeek = targetScope === 'past' ? priorWeek : upcomingWeek;
+      const rawList = targetScope === 'past' ? PAST_WEEK_SCHEDULE : BUNDLED_MACRO_SCHEDULE;
+      const fallbackList = reanchorScheduleToWeek(rawList, resolvedWeek);
       setData({
         indicators: fallbackList,
         source: targetScope === 'past' ? 'faireconomy_media' : 'curated_macro_schedule',
         fallback: false,
         notice: targetScope === 'past'
-          ? 'Historical US macroeconomic releases from previous trading week (Sep 7 – Sep 11, 2026).'
-          : 'Active weekly macroeconomic catalyst radar & sector transmission schedule for upcoming week (Sep 14 – Sep 18, 2026).',
+          ? `Historical US macroeconomic releases from previous trading week (${priorWeek.label}).`
+          : `Active weekly macroeconomic catalyst radar & sector transmission schedule for upcoming week (${upcomingWeek.label}).`,
         last_updated: new Date().toISOString(),
       });
       success = true;
@@ -363,8 +374,8 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 {scheduleScope === 'upcoming'
-                  ? 'Upcoming Trading Week (Sep 14 – Sep 18, 2026) • Normalized to US Eastern Time (ET) with deterministic sector & proxy ETF mapping.'
-                  : 'Past Trading Week (Sep 7 – Sep 11, 2026 Archive) • Actual prints normalized to US Eastern Time (ET).'}
+                  ? `Upcoming Trading Week (${upcomingWeek.label}) • Normalized to US Eastern Time (ET) with deterministic sector & proxy ETF mapping.`
+                  : `Past Trading Week (${priorWeek.label} Archive) • Actual prints normalized to US Eastern Time (ET).`}
               </p>
             </div>
           </div>
@@ -384,10 +395,10 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
-              title="Show Upcoming Week catalysts (Sep 14 – Sep 18, 2026)"
+              title={`Show Upcoming Week catalysts (${upcomingWeek.label})`}
             >
               <Calendar className="w-3.5 h-3.5 text-blue-200" />
-              <span>Upcoming Week (Sep 14 – 18)</span>
+              <span>{`Upcoming Week (${upcomingWeek.shortLabel})`}</span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/25 text-blue-100">Next</span>
             </button>
             <button
@@ -400,10 +411,10 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
                   ? 'bg-slate-700 text-white shadow-md shadow-slate-700/30 ring-1 ring-slate-500/50'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
-              title="Show Past Week releases (Sep 7 – Sep 11, 2026)"
+              title={`Show Past Week releases (${priorWeek.label})`}
             >
               <span>⏪</span>
-              <span>Past Week (Sep 7 – 11)</span>
+              <span>{`Past Week (${priorWeek.shortLabel})`}</span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">Archive</span>
             </button>
           </div>
