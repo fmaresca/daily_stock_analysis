@@ -89,6 +89,18 @@ $$\text{Net Credit} = \text{STC/BTC Cost of Old Option} - \text{BTO/STO Premium 
 - Roll down strike (for CSP) or up strike (for CC) to widen delta cushion.
 - Only execute if $\text{Net Credit} \ge \$0.00$, preserving capital velocity while lowering break-even cost basis.
 
+### 3.7 Weekly Covered Call Harvest Radar & Configurable Delta Calibration (20Δ Default)
+In Step 3 (`HoldingsCoveredCallView`), long equity holdings with unhedged blocks ($\ge 100$ shares) are dynamically scanned against the upcoming weekly Friday expiration (5–7 DTE, adjusted for NYSE holidays via OCC Rule 1106).
+- **Target Delta Flexibility**: Default is anchored at **0.20Δ** (~80% PoP), but users can recalibrate across four presets (**15Δ Safe**, **20Δ Standard**, **25Δ Balanced**, **30Δ Aggressive**), adjust via $\pm 1\Delta$ steppers and continuous slider (0.05Δ to 0.48Δ), or type an exact target delta directly. Changes persist to `localStorage`.
+- **Black-Scholes Strike Inversion**:
+  $$K_{\text{call}} = S \cdot \exp\left(\left(r + \frac{\sigma^2}{2}\right) T - \Phi^{-1}(\Delta) \cdot \sigma \sqrt{T}\right)$$
+  The resulting theoretical strike is anchored at or above technical resistance / 20-SMA baseline and snapped to exchange-traded increments ($0.50, $1.00, $2.50, $5.00) via `getNearestExchangeStrike`.
+- **ATM Straddle Implied Move Defense**:
+  $$\text{Straddle Move} = S \cdot \sigma \cdot \sqrt{T} \cdot 0.84$$
+  Verifies that short call strikes clear the expected $+1\text{ SD}$ bounds ($\text{Strike} \ge \text{Spot} + \text{StraddleMove}$) to safeguard against earnings or volatility spikes.
+- **1-Click Simulator Integration**:
+  Every candidate row and individual recommendation modal includes a **"Simulate" / "Audit in 100-Pt Simulator"** bridge, opening `OptionsTradeQualitySimulator` with pre-hydrated ticker, expiration, delta, strategy, and IV rank for multi-factor scoring and payoff analysis.
+
 ---
 
 ## 4. Cascading Screening Funnel Specification

@@ -955,6 +955,7 @@ export const App: React.FC = () => {
                 <HoldingsCoveredCallView
                   onStageOrder={handleStageOpportunity}
                   onNavigateToScreener={() => setActiveOptionsTab('CASCADING_SCREENER')}
+                  onOpenSimulator={openSimulator}
                 />
               ) : activeOptionsTab === 'WEEKLY_EXECUTIVE_REPORT' ? (
                 <WeeklyExecutiveReportView

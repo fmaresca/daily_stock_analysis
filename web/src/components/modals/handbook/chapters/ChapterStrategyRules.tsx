@@ -83,7 +83,7 @@ export const ChapterStrategyRules: React.FC<ChapterStrategyRulesProps> = ({
             </li>
             <li className="flex items-start space-x-2">
               <Check className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-              <span><strong>Delta Range:</strong> Targeting ~0.15 to 0.20 Delta to preserve upside run room.</span>
+              <span><strong>Delta Range:</strong> Default 0.20 Delta (~80% PoP), manually customizable from 0.15Δ Safe up to 0.30Δ High Yield via the Step 3 Harvest Radar calibration controls and Simulator.</span>
             </li>
             <li className="flex items-start space-x-2">
               <Check className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
