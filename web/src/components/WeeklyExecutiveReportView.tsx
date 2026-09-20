@@ -51,9 +51,11 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
       setRefreshKey((k) => k + 1);
     };
     window.addEventListener('deltaharvest_portfolio_updated', handleUpdate);
+    window.addEventListener('deltaharvest_workflow_reset', handleUpdate);
     window.addEventListener('storage', handleUpdate);
     return () => {
       window.removeEventListener('deltaharvest_portfolio_updated', handleUpdate);
+      window.removeEventListener('deltaharvest_workflow_reset', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
   }, []);

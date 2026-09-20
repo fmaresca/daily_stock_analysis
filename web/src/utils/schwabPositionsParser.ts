@@ -54,6 +54,7 @@ export interface ParsedSchwabPositionsResult {
     snyxx: number;
     snaxx: number;
     coreCash: number;
+    otherMmf?: number;
     totalCashToCoverCsp: number;
   };
   equities: ParsedEquityHolding[];
@@ -86,6 +87,8 @@ export function parseSchwabPositionsCsv(
   let snyxx = 0;
   let snaxx = 0;
   let coreCash = 0;
+  let otherMmf = 0;
+  let hasParsedCashLines = false;
 
   const equities: ParsedEquityHolding[] = [];
   const openCSPs: ParsedOptionPosition[] = [];
@@ -135,7 +138,7 @@ export function parseSchwabPositionsCsv(
       continue;
     }
 
-    // 1. Cash & Money Market
+    // 1. Cash & Money Market Funds (Dynamic pool summation)
     if (
       assetTypeCol.toLowerCase().includes('cash') ||
       assetTypeCol.toLowerCase().includes('money market') ||
@@ -143,26 +146,31 @@ export function parseSchwabPositionsCsv(
       symbolCol === 'SNAXX' ||
       symbolCol === 'SWVXX' ||
       symbolCol === 'SNSXX' ||
+      (symbolCol.endsWith('XX') && symbolCol.length === 5) ||
       symbolCol.toLowerCase().includes('cash') ||
       descCol.toLowerCase().includes('bank deposit') ||
       descCol.toLowerCase().includes('cash') ||
       descCol.toLowerCase().includes('sweep')
     ) {
       const val = mktValCol > 0 ? mktValCol : qtyCol > 0 ? qtyCol : 0;
+      if (val > 0) {
+        hasParsedCashLines = true;
+      }
       if (symbolCol === 'SNYXX') {
-        snyxx = val > 0 ? val : 202775.94;
+        snyxx += val;
       } else if (symbolCol === 'SNAXX') {
-        snaxx = val > 0 ? val : 77341.30;
+        snaxx += val;
+      } else if (symbolCol === 'SWVXX' || symbolCol === 'SNSXX' || (symbolCol.endsWith('XX') && symbolCol.length === 5)) {
+        otherMmf += val;
       } else if (
         symbolCol.toLowerCase().includes('cash & cash investments') ||
         descCol.toLowerCase().includes('bank deposit') ||
-        descCol.toLowerCase().includes('sweep')
+        descCol.toLowerCase().includes('sweep') ||
+        symbolCol.toLowerCase().includes('cash')
       ) {
-        coreCash = val > 0 ? val : 299590.53;
-      } else if (val > 0) {
         coreCash += val;
-      } else if (symbolCol.toLowerCase().includes('cash')) {
-        coreCash = 299590.53;
+      } else if (val > 0) {
+        otherMmf += val;
       }
       continue;
     }
@@ -185,25 +193,40 @@ export function parseSchwabPositionsCsv(
       }
     }
 
-    // 3. Option
+    // 3. Option (Calls & Puts)
     if (
       assetTypeCol.toLowerCase() === 'option' ||
       symbolCol.endsWith(' C') ||
       symbolCol.endsWith(' P') ||
       descCol.startsWith('CALL') ||
-      descCol.startsWith('PUT')
+      descCol.startsWith('PUT') ||
+      descCol.includes(' CALL ') ||
+      descCol.includes(' PUT ') ||
+      /\b(CALL|PUT)\b/i.test(descCol)
     ) {
-      // Option symbol parse: e.g. "PANW 09/11/2026 327.50 P" or "AXTI 09/18/2026 70.00 C"
-      const isPut = symbolCol.endsWith(' P') || descCol.startsWith('PUT');
-      const isCall = symbolCol.endsWith(' C') || descCol.startsWith('CALL');
-      const type = isPut ? 'PUT' : 'CALL';
+      // Robust detection of Put vs Call
+      const isPut = symbolCol.endsWith(' P') || descCol.startsWith('PUT') || descCol.includes(' PUT ') || /\bPUT\b/i.test(descCol) || /[0-9]P[0-9]/.test(symbolCol);
+      const type: 'PUT' | 'CALL' = isPut ? 'PUT' : 'CALL';
 
       const parts = symbolCol.split(/\s+/);
-      const underlying = parts[0] || '';
+      const underlying = parts[0] || (descCol.split(/\s+/)[1] || '');
       const expDate = parts[1] || '';
-      const strike = parts[2] ? parseFloat(parts[2]) : 0;
+      
+      // Determine strike from symbol, regex, or description
+      let strike = parts[2] ? parseFloat(parts[2]) : 0;
+      if (isNaN(strike) || strike === 0) {
+        const symMatch = symbolCol.match(/\s+(\d+(?:\.\d+)?)\s+[CP]$/i);
+        if (symMatch) {
+          strike = parseFloat(symMatch[1]);
+        } else {
+          const descMatch = descCol.match(/\$(\d+(?:\.\d+)?)/);
+          if (descMatch) strike = parseFloat(descMatch[1]);
+        }
+      }
+
       const contracts = Math.abs(qtyCol);
-      const collateral = isPut ? strike * contracts * 100 : 0;
+      // Collateral required for open Cash-Secured Puts (100% cash-backed): strike * contracts * 100
+      const collateral = isPut && qtyCol < 0 ? strike * contracts * 100 : 0;
       const is80Pct = gainPctCol >= 80;
 
       const optPos: ParsedOptionPosition = {
@@ -232,26 +255,31 @@ export function parseSchwabPositionsCsv(
     }
   }
 
-  // Fallbacks if zero from empty fields
-  if (snyxx === 0 && snaxx === 0 && coreCash === 0) {
+  // Fallbacks if zero from completely empty fields (e.g. mock test without any cash rows)
+  if (!hasParsedCashLines && snyxx === 0 && snaxx === 0 && coreCash === 0 && otherMmf === 0) {
     snyxx = 202775.94;
     snaxx = 77341.30;
     coreCash = 299590.53;
   }
 
-  const totalCashToCoverCsp = Math.round((snyxx + snaxx + coreCash) * 100) / 100;
+  // Dynamically calculate total cash based upon cash and money market funds (before any deductions)
+  const totalCashToCoverCsp = Math.round((snyxx + snaxx + coreCash + otherMmf) * 100) / 100;
+
+  // Total cash collateral required to 100% cover all open Cash Secured Puts
   const totalCommittedCspCollateral = Math.round(
     openCSPs.reduce((sum, p) => sum + p.collateralRequired, 0) * 100
   ) / 100;
 
+  // Step 1: Available Cash Before Living Expenses (Total Liquid Cash minus Open Put Liabilities)
   const availableCashBeforeLivingExpenses = Math.max(
     0,
     Math.round((totalCashToCoverCsp - totalCommittedCspCollateral) * 100) / 100
   );
 
+  // Step 2: Net Free Cash for New CSPs (Available Cash minus default $5,000 Living Expenses)
   const netFreeCashForNewCsps = Math.max(
     0,
-    Math.round((totalCashToCoverCsp - totalCommittedCspCollateral - weeklyLivingExpenses) * 100) / 100
+    Math.round((availableCashBeforeLivingExpenses - weeklyLivingExpenses) * 100) / 100
   );
 
   const targetPerPosition = 100000;
@@ -330,6 +358,31 @@ export function parseSchwabPositionsCsv(
       beta: 0,
       costBasisTotal: snaxx,
       marketValueTotal: snaxx,
+      gainDollar: 0,
+      gainPct: 0,
+      account: accountName,
+    });
+  }
+
+  if (otherMmf > 0) {
+    portfolioPositions.push({
+      id: 'POS_MMF_OTHER',
+      symbol: 'MMF Reserve',
+      companyName: 'Schwab Money Market Reserve (Deemed Cash)',
+      type: 'MMF',
+      quantity: otherMmf,
+      spotPrice: 1.0,
+      strike: 0,
+      dte: 0,
+      entryPrice: 1.0,
+      currentOptionPrice: 0,
+      iv: 0,
+      delta: 0,
+      theta: 0,
+      vega: 0,
+      beta: 0,
+      costBasisTotal: otherMmf,
+      marketValueTotal: otherMmf,
       gainDollar: 0,
       gainPct: 0,
       account: accountName,
@@ -490,6 +543,7 @@ export function parseSchwabPositionsCsv(
       snyxx,
       snaxx,
       coreCash,
+      otherMmf: otherMmf > 0 ? otherMmf : undefined,
     },
     lastUpdated: new Date().toISOString(),
   };
@@ -504,6 +558,7 @@ export function parseSchwabPositionsCsv(
       snyxx,
       snaxx,
       coreCash,
+      otherMmf: otherMmf > 0 ? otherMmf : undefined,
       totalCashToCoverCsp,
     },
     equities,

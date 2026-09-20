@@ -160,14 +160,28 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
   const [toastMessage, setToastMessage] = useState<string>('');
   const [copiedBarchartTickers, setCopiedBarchartTickers] = useState<boolean>(false);
 
-  // Sync with Schwab CSV portfolio uploads
+  // Sync with Schwab CSV portfolio uploads & clean reset on workflow initialization
   useEffect(() => {
     const handlePortfolioUpdate = () => {
       const schwabSyms = getSchwabImportedEquities().join(', ');
       setTosTickersInput(schwabSyms);
     };
+    const handleWorkflowReset = () => {
+      setBarchartDataset(null);
+      setMcDataset(null);
+      setTosWatchlistDataset(null);
+      setImportedBriefing('');
+      setParsedGeminiResult(null);
+      const schwabSyms = getSchwabImportedEquities().join(', ');
+      setTosTickersInput(schwabSyms);
+    };
+
     window.addEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
-    return () => window.removeEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+    window.addEventListener('deltaharvest_workflow_reset', handleWorkflowReset);
+    return () => {
+      window.removeEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+      window.removeEventListener('deltaharvest_workflow_reset', handleWorkflowReset);
+    };
   }, []);
 
   // Funnel Stage Controls (Tab 4: Gemini Decision Hub)

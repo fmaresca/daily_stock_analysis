@@ -69,12 +69,20 @@ export const BrokerStagingWorkbench: React.FC<BrokerStagingWorkbenchProps> = ({
   };
   const sortedHistory = useMemo(() => sortData(orderHistory, histSortKey, histSortOrder), [orderHistory, histSortKey, histSortOrder]);
 
-  // Reload history when entering HISTORY tab
+  // Reload history when entering HISTORY tab or when workflow reset occurs
   useEffect(() => {
     if (activeCategory === 'HISTORY') {
       setOrderHistory(getSubmittedOrders());
     }
   }, [activeCategory]);
+
+  useEffect(() => {
+    const handleWorkflowReset = () => {
+      setOrderHistory(getSubmittedOrders());
+    };
+    window.addEventListener('deltaharvest_workflow_reset', handleWorkflowReset);
+    return () => window.removeEventListener('deltaharvest_workflow_reset', handleWorkflowReset);
+  }, []);
 
   const handleClearHistory = () => {
     if (window.confirm('Are you sure you want to clear the order execution audit log?')) {

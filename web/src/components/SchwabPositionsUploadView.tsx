@@ -21,6 +21,7 @@ import { saveCapitalState, saveTaxLedgerState, getStoredTaxLedgerState } from '.
 import { getSamplePortfolioBook } from '../utils/portfolioStressTest';
 import { TaxLedgerState } from '../types/options';
 import { autoSyncSchwabPortfolioPrices } from '../utils/liveMarketFetcher';
+import { executeWeeklyWorkflowCleanReset } from '../utils/weeklyWorkflowReset';
 
 interface SchwabPositionsUploadViewProps {
   onNavigateToCashLedger: () => void;
@@ -33,11 +34,30 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
   const [parsedData, setParsedData] = useState<ParsedSchwabPositionsResult | null>(null);
   const [rawFileName, setRawFileName] = useState<string>('');
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string>('');
+  const [resetNotice, setResetNotice] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
+
+  const handleManualReset = () => {
+    executeWeeklyWorkflowCleanReset();
+    setParsedData(null);
+    setRawFileName('');
+    setUploadSuccessMsg('');
+    setErrorMessage('');
+    setResetNotice(
+      'Clean Build Reset Complete: Wiped all prior positions, purged upcoming week screened stocks & staged orders, and reset cash balance encumbrance to default $5,000 living expenses.'
+    );
+  };
 
   const processCsvText = (text: string, filename: string) => {
     try {
       setErrorMessage('');
+
+      // CRITICAL: Execute Weekly Workflow Clean Reset PRIOR to ingesting new Schwab CSV
+      executeWeeklyWorkflowCleanReset();
+      setResetNotice(
+        'Weekend Workflow Ritual Active: Wiped prior week positions, purged screened stocks & staged orders, and cleanly reset cash encumbrance to default $5,000 living expenses.'
+      );
+
       const parsed = parseSchwabPositionsCsv(text);
       setParsedData(parsed);
       setRawFileName(filename);
@@ -78,7 +98,7 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
       );
 
       setUploadSuccessMsg(
-        `Successfully ingested ${parsed.accountName}: ${parsed.equities.length} Equities, ${parsed.openCSPs.length} Open CSPs, ${parsed.coveredCalls.length} Covered Calls, and $${parsed.capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })} Total Liquid Cash!`
+        `Successfully ingested ${parsed.accountName}: ${parsed.equities.length} Equities, ${parsed.openCSPs.length} Open CSPs, ${parsed.coveredCalls.length} Covered Calls. Dynamic Total Cash: $${parsed.capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })} (backed out $${parsed.totalCommittedCspCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })} CSP collateral, encumbered $5,000 living expenses -> Net Free Cash: $${parsed.netFreeCashForNewCsps.toLocaleString(undefined, { minimumFractionDigits: 2 })}).`
       );
     } catch (err: any) {
       console.error('Failed to parse Schwab positions CSV:', err);
@@ -111,10 +131,12 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
   };
 
   const handleLoadBaseline = () => {
-    // Generate fresh baseline book and simulate CSV ingestion
-    const sampleBook = getSamplePortfolioBook();
-    localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(sampleBook));
-    
+    // Execute clean reset routine prior to baseline simulation
+    executeWeeklyWorkflowCleanReset();
+    setResetNotice(
+      'Weekend Workflow Ritual Active: Wiped prior week positions, purged screened stocks & staged orders, and cleanly reset cash encumbrance to default $5,000 living expenses.'
+    );
+
     // Create mock Schwab text format for Living Trust-Options ...609 from latest real export
     const mockCsv = `"Positions for account Living Trust-Options ...609 as of 11:35 AM ET, 2026/09/12",,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,
@@ -150,11 +172,20 @@ Positions Total,,--,--,--,--,"$2,388,228.85 ","$2,379,278.10 ","$6,928.21 ",0.29
             <span>Upload Charles Schwab Account Positions (Close of Trading)</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Step 1 of the Weekend Routine: Ingest your Charles Schwab positions CSV as of Friday's market close. Automatically parses Bank Core Cash, Money Market Funds (SNYXX, SNAXX), open options (CSPs &amp; CCs), and stock lots.
+            Step 1 of the Weekend Routine: Ingest your Charles Schwab positions CSV as of Friday's market close. Automatically cleans prior positions/screened stocks, sums dynamic Cash &amp; Money Market Funds, backs out open CSP collateral, and encumbers $5,000 living expenses.
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
+          <button
+            onClick={handleManualReset}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/40 flex items-center space-x-1.5 transition-colors cursor-pointer"
+            title="Cleanly wipe all prior positions, screened stocks, and staged orders for a fresh weekly build"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-rose-400" />
+            <span>Start New Week (Clean Reset)</span>
+          </button>
+
           <button
             onClick={handleLoadBaseline}
             className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 flex items-center space-x-1.5 transition-colors cursor-pointer"
@@ -172,6 +203,22 @@ Positions Total,,--,--,--,--,"$2,388,228.85 ","$2,379,278.10 ","$6,928.21 ",0.29
           </button>
         </div>
       </div>
+
+      {/* Reset Notice Banner */}
+      {resetNotice && (
+        <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/40 text-cyan-300 text-xs flex items-center justify-between shadow-lg">
+          <div className="flex items-center space-x-2.5">
+            <Sparkles className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+            <span>{resetNotice}</span>
+          </div>
+          <button
+            onClick={() => setResetNotice('')}
+            className="text-cyan-400 hover:text-white text-xs underline cursor-pointer ml-2"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Success / Error Banners */}
       {uploadSuccessMsg && (
@@ -279,6 +326,12 @@ Positions Total,,--,--,--,--,"$2,388,228.85 ","$2,379,278.10 ","$6,928.21 ",0.29
                   <span>SNAXX (Prime):</span>
                   <span className="font-mono text-cyan-300">${parsedData.cashBreakdown.snaxx.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
+                {parsedData.cashBreakdown.otherMmf && parsedData.cashBreakdown.otherMmf > 0 ? (
+                  <div className="flex justify-between">
+                    <span>Other MMF:</span>
+                    <span className="font-mono text-cyan-300">${parsedData.cashBreakdown.otherMmf.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                ) : null}
               </div>
             </div>
 
