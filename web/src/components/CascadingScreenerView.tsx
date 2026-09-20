@@ -231,29 +231,40 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     setTimeout(() => setToastMessage(''), 4500);
   };
 
+  // Helper to fetch screener JSON with path fallback
+  const fetchScreenerJson = async (filename: string): Promise<WeeklyScreenerDataset | null> => {
+    try {
+      const res = await fetch('./data/' + filename + '?t=' + Date.now());
+      if (res.ok) return await res.json();
+    } catch {
+      // try root path
+    }
+    try {
+      const res2 = await fetch('/data/' + filename + '?t=' + Date.now());
+      if (res2.ok) return await res2.json();
+    } catch (err) {
+      console.warn(`Could not load ${filename}:`, err);
+    }
+    return null;
+  };
+
   // Load Barchart Top 1% Dataset
   useEffect(() => {
     if (initialWeeklyDataset && !barchartDataset) {
       setBarchartDataset(initialWeeklyDataset);
     } else if (!barchartDataset) {
-      fetch('./data/weekly_screeners.json?t=' + Date.now())
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data) setBarchartDataset(data);
-        })
-        .catch((err) => console.warn('Could not load weekly_screeners.json:', err));
+      fetchScreenerJson('weekly_screeners.json').then((data) => {
+        if (data) setBarchartDataset(data);
+      });
     }
   }, [initialWeeklyDataset, barchartDataset]);
 
   // Load MarketChameleon Dataset
   useEffect(() => {
     if (!mcDataset) {
-      fetch('./data/weekly_screeners_marketchameleon.json?t=' + Date.now())
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data) setMcDataset(data);
-        })
-        .catch((err) => console.warn('Could not load weekly_screeners_marketchameleon.json:', err));
+      fetchScreenerJson('weekly_screeners_marketchameleon.json').then((data) => {
+        if (data) setMcDataset(data);
+      });
     }
   }, [mcDataset]);
 
@@ -264,50 +275,17 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed && Array.isArray(parsed.records)) {
-            const bannedSyms = new Set([
-              'AAPL',
-              'MSFT',
-              'AMZN',
-              'GOOGL',
-              'META',
-              'AMD',
-              'AVGO',
-              'TSM',
-              'QCOM',
-              'MU',
-              'ASML',
-              'MARA',
-              'SOFI',
-              'RIVN',
-              'AI',
-              'PATH',
-              'SNOW',
-              'CRWD',
-              'MDB',
-              'DELL',
-              'NOW',
-              'ARM',
-              'SMCI',
-            ]);
-            const hasBanned = parsed.records.some((r: any) => bannedSyms.has(r.symbol));
-            if (!hasBanned) {
-              setTosWatchlistDataset(parsed);
-              return;
-            } else {
-              localStorage.removeItem('deltaharvest_tos_barchart_watchlist');
-            }
+          if (parsed && Array.isArray(parsed.records) && parsed.records.length > 0) {
+            setTosWatchlistDataset(parsed);
+            return;
           }
         } catch {
           // ignore
         }
       }
-      fetch('./data/weekly_screeners_barchart_custom.json?t=' + Date.now())
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data) setTosWatchlistDataset(data);
-        })
-        .catch((err) => console.warn('Could not load weekly_screeners_barchart_custom.json:', err));
+      fetchScreenerJson('weekly_screeners_barchart_custom.json').then((data) => {
+        if (data) setTosWatchlistDataset(data);
+      });
     }
   }, [tosWatchlistDataset]);
 
@@ -854,10 +832,10 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
   };
 
   // Bridge screened stocks to Gemini Decision Hub
-  const handleSendScreenedToGemini = (source: 'BARCHART' | 'MC' | 'TOS' | 'ALL_SCREENED') => {
-    setGeminiCandidateSource(source);
+  const handleSendScreenedToGemini = (_source?: 'BARCHART' | 'MC' | 'TOS' | 'ALL_SCREENED') => {
+    setGeminiCandidateSource('ALL_SCREENED');
     setActiveSubTab('GEMINI_DECISION_HUB');
-    showToast(`Loaded candidate universe into Gemini Extended Thinking Decision Hub!`);
+    showToast(`Loaded consolidated candidate universe into Gemini Extended Thinking Decision Hub!`);
   };
 
   // Handler to parse pasted Gemini markdown response
@@ -981,40 +959,58 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
 
   // Synthesize candidate opportunities for Gemini AI prompt from screened stocks or holdings
   const synthesizedCandidateOpps = useMemo(() => {
-    const opps: OptionOpportunity[] = [...allOpportunities];
-    const existingSymbols = new Set(opps.map((o) => o.symbol));
-
     let candidateRecords: WeeklyScreenerRecord[] = [];
     if (geminiCandidateSource === 'BARCHART' && barchartDataset) {
-      candidateRecords = barchartDataset.records;
+      candidateRecords = barchartDataset.records || [];
     } else if (geminiCandidateSource === 'MC' && mcDataset) {
-      candidateRecords = mcDataset.records;
+      candidateRecords = mcDataset.records || [];
     } else if (geminiCandidateSource === 'TOS' && tosWatchlistDataset) {
-      candidateRecords = tosWatchlistDataset.records;
+      candidateRecords = tosWatchlistDataset.records || [];
     } else if (geminiCandidateSource === 'ALL_SCREENED') {
       const pool = [
+        ...(tosWatchlistDataset?.records || []),
         ...(barchartDataset?.records || []),
         ...(mcDataset?.records || []),
-        ...(tosWatchlistDataset?.records || []),
       ];
       const seen = new Set<string>();
       for (const r of pool) {
-        if (!seen.has(r.symbol)) {
-          seen.add(r.symbol);
+        if (r.symbol && !seen.has(r.symbol.toUpperCase())) {
+          seen.add(r.symbol.toUpperCase());
           candidateRecords.push(r);
         }
       }
     }
 
-    // Convert screened records into synthetic option opportunities if not already present
+    // Hydrate all screened records first with full quantitative metrics
+    const hydratedOpps: OptionOpportunity[] = [];
+    const seenSymbols = new Set<string>();
+
     for (const item of candidateRecords) {
-      if (!existingSymbols.has(item.symbol)) {
-        existingSymbols.add(item.symbol);
-        const tMeta = tickerMetaMap.get(item.symbol.toUpperCase());
-        opps.push(hydrateOptionOpportunity(item, tMeta));
+      if (!item.symbol) continue;
+      const upper = item.symbol.toUpperCase();
+      if (!seenSymbols.has(upper)) {
+        seenSymbols.add(upper);
+        const tMeta = tickerMetaMap.get(upper);
+        hydratedOpps.push(hydrateOptionOpportunity(item, tMeta));
       }
     }
-    return opps;
+
+    // Supplement with any opportunities from allOpportunities that were not in candidateRecords
+    for (const opp of allOpportunities) {
+      if (!opp.symbol) continue;
+      const upper = opp.symbol.toUpperCase();
+      if (!seenSymbols.has(upper)) {
+        seenSymbols.add(upper);
+        const hasWeekly = opp.has_weeklys ?? isWeeklyCadence(upper, tickerMetaMap.get(upper)?.has_weeklys);
+        hydratedOpps.push({
+          ...opp,
+          has_weeklys: hasWeekly,
+          expiration_cadence: opp.expiration_cadence || (hasWeekly ? 'Weekly' : 'Monthly Only'),
+        });
+      }
+    }
+
+    return hydratedOpps;
   }, [allOpportunities, geminiCandidateSource, barchartDataset, mcDataset, tosWatchlistDataset, tickerMetaMap]);
 
   // Stage 1-4 Filtered Opportunities for Gemini AI
@@ -1075,12 +1071,48 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     return Math.min(5, Math.floor(capitalState.freeCash / effectiveAlloc));
   }, [capitalState.freeCash, maxPositionCollateral]);
 
-  // Construct Institutional Gemini Pro Options Prompt
+  // Construct Institutional Gemini Pro Options Prompt with comprehensive screened candidate pool
+  const candidatePromptPool = useMemo(() => {
+    const pool: OptionOpportunity[] = [];
+    const seen = new Set<string>();
+
+    // 1. Add finalCandidates that passed the user's active filter sliders first
+    for (const c of finalCandidates) {
+      const sym = c.symbol.toUpperCase();
+      if (!seen.has(sym)) {
+        seen.add(sym);
+        pool.push(c);
+      }
+    }
+
+    // 2. Supplement with all qualifying screened candidates from synthesizedCandidateOpps
+    // so Gemini AI Pro receives a rich multi-source universe (up to 25 candidates)
+    // to perform inverse-volatility sizing and populate Tables 1, 2, and 3
+    if (pool.length < 25) {
+      for (const opp of synthesizedCandidateOpps) {
+        const sym = opp.symbol.toUpperCase();
+        if (!seen.has(sym)) {
+          if (strictCboeWeeklysOnly && opp.has_weeklys === false) continue;
+          if (opp.strategy && opp.strategy !== strategyMode) continue;
+          const collateral = opp.collateral_required || opp.strike * 100;
+          if (collateral > 200000) continue;
+          if (capitalState.freeCash > 0 && collateral > capitalState.freeCash) continue;
+
+          seen.add(sym);
+          pool.push(opp);
+          if (pool.length >= 25) break;
+        }
+      }
+    }
+
+    return pool;
+  }, [finalCandidates, synthesizedCandidateOpps, strictCboeWeeklysOnly, strategyMode, capitalState.freeCash]);
+
   const generateGeminiThinkingPrompt = () => {
     return generateInstitutionalGeminiPrompt({
       capitalState,
       maxPositionCollateral,
-      opportunities: finalCandidates,
+      opportunities: candidatePromptPool,
       tickers,
     });
   };
@@ -1448,6 +1480,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
           isAiModalOpen={isAiModalOpen}
           setIsAiModalOpen={setIsAiModalOpen}
           generateGeminiThinkingPrompt={generateGeminiThinkingPrompt}
+          candidatePromptCount={candidatePromptPool.length}
           copiedPrompt={copiedPrompt}
           handleCopyPrompt={handleCopyPrompt}
           importedBriefing={importedBriefing}

@@ -42,7 +42,15 @@ export function generateInstitutionalGeminiPrompt({
   const maxPositions = Math.max(1, Math.min(5, Math.floor(deployableCash / (effectiveAlloc || 15000)) || 1));
 
   // Build candidate dataset directly from the consolidated screener state (strictly weekly options only)
-  const validOpportunities = opportunities.filter((o) => o.has_weeklys !== false);
+  const seenSymbols = new Set<string>();
+  const validOpportunities = opportunities.filter((o) => {
+    if (o.has_weeklys === false) return false;
+    const sym = (o.symbol || '').toUpperCase();
+    if (!sym || seenSymbols.has(sym)) return false;
+    seenSymbols.add(sym);
+    return true;
+  });
+
   const candidateRows = validOpportunities.slice(0, 25).map((o, idx) => {
     const tMeta = tickers.find((t) => t.symbol === o.symbol);
     const barchartText = tMeta?.barchart_opinion
@@ -53,7 +61,8 @@ export function generateInstitutionalGeminiPrompt({
     const mcTrend = o.trend || tMeta?.market_chameleon?.primary_trend || (o.rating >= 80 ? 'Strong Uptrend' : 'Uptrend');
     const rsi = (o.rsi !== undefined ? o.rsi : (tMeta?.rsi_14 ?? 50)).toFixed(1);
     const rawIv = o.iv !== undefined ? o.iv : (tMeta?.iv_current ?? 0.35);
-    const iv = (rawIv * 100).toFixed(1);
+    const ivNorm = rawIv > 1 ? rawIv : rawIv * 100;
+    const iv = ivNorm.toFixed(1);
     const ivRank = o.iv_rank !== undefined ? o.iv_rank : (tMeta?.iv_rank ?? 45);
     const cushion = o.cushion_pct ? o.cushion_pct.toFixed(1) : (((o.current_price - o.strike) / o.current_price) * 100).toFixed(1);
     const vol = tMeta?.avg_volume_30
