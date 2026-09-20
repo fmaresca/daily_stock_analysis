@@ -339,9 +339,10 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     }
   };
 
-  // Handle Save YTD Capital Gains, Losses & Carryforward
+  // Handle Save YTD Capital Gains, Losses, Carryforward & Option Premiums Written
   const handleSaveTaxGains = (data: {
     taxYear: number;
+    ytdPremiumsWritten: number;
     realizedGains: number;
     realizedLosses: number;
     lossCarryover: number;
@@ -349,18 +350,29 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     const updatedTax: TaxLedgerState = {
       ...taxState,
       currentTaxYear: data.taxYear,
+      ytdPremiumsEarned: data.ytdPremiumsWritten,
       ytdRealizedCapitalGains: data.realizedGains,
       ytdRealizedCapitalLosses: data.realizedLosses,
       priorYearLossCarryforward: data.lossCarryover,
     };
     setTaxState(updatedTax);
     saveTaxLedgerState(updatedTax);
+
+    // Keep capitalState.ytdPremiumsEarned in sync
+    const updatedCap: AccountCapitalState = {
+      ...capitalState,
+      ytdPremiumsEarned: data.ytdPremiumsWritten,
+      lastUpdated: new Date().toISOString(),
+    };
+    setCapitalState(updatedCap);
+    saveCapitalState(updatedCap);
+
     setIsEditTaxGainsOpen(false);
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('deltaharvest_portfolio_updated', {
-          detail: { source: 'tax_gains_updated', taxLedger: updatedTax },
+          detail: { source: 'tax_gains_updated', taxLedger: updatedTax, capital: updatedCap },
         })
       );
     }
