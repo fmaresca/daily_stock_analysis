@@ -703,17 +703,22 @@ export function calculateNetTaxableMetrics(ledger: TaxLedgerState) {
   };
 }
 
-import { checkEarningsInsideExpiration } from './earningsCalendar';
+import { checkEarningsInsideExpiration, calculateStraddleImpliedMove } from './earningsCalendar';
+import { normCdf, inverseNormalCdf, getNearestExchangeStrike } from './financeMath';
+import { getNextWeeklyExpiration } from './nyseHolidayCalendar';
 
-export interface CoveredCall20DeltaResult {
+export interface CoveredCallDeltaResult {
   strike: number;
-  delta: number;
+  delta: number; // Actual Black-Scholes delta
+  targetDelta: number; // User-selected target delta (e.g. 0.20)
   dte: number;
   expiration: string;
   estPremium: number;
   annualizedYield: number;
   weeklyYield: number;
   downsideCushion: number;
+  breakeven: number;
+  popPct: number; // Probability of Profit (1 - Delta) %
   totalDollarIncome: number;
   ivr30: number;
   ivr30Rank: number;
@@ -723,12 +728,26 @@ export interface CoveredCall20DeltaResult {
   hasEarningsBlackout: boolean;
   earningsDate: string | null;
   earningsTimingDescription?: string;
+  clearsStraddle: boolean;
+  straddleMoveDollar: number;
+  straddleMovePct: number;
 }
+
+export type CoveredCall20DeltaResult = CoveredCallDeltaResult;
 
 /**
  * Resolves the upcoming Friday expiration date for weekly options (5-7 DTE target)
+ * Aware of NYSE exchange holidays (e.g. Good Friday) and local timezone conventions.
  */
 export function getNextWeeklyFriday(baseDate: Date = new Date()): { dateStr: string; dte: number } {
+  try {
+    const weeklyExp = getNextWeeklyExpiration(baseDate);
+    if (weeklyExp && weeklyExp.dateString) {
+      return { dateStr: weeklyExp.dateString, dte: weeklyExp.dte };
+    }
+  } catch {
+    // Fallback to mathematical calculation if calendar module unavailable
+  }
   const d = new Date(baseDate);
   d.setHours(0, 0, 0, 0);
   const dayOfWeek = d.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
@@ -743,47 +762,68 @@ export function getNextWeeklyFriday(baseDate: Date = new Date()): { dateStr: str
 }
 
 /**
- * Calculates 20-Delta Covered Call Strike for Long Stock Holdings (Step 3 Harvest Radar)
- * Targets soonest weekly Friday (5-7 DTE), factoring in IVR30, technical resistance,
- * cost-basis clearance check, and quarterly earnings announcement blackouts.
+ * Calculates Covered Call Strike for Long Stock Holdings (Step 3 Harvest Radar)
+ * Powered by Black-Scholes inversion (matching OptionsTradeQualitySimulator),
+ * user-configurable target delta (default 0.20Δ), technical resistance anchoring,
+ * ATM straddle implied move defense, and quarterly earnings announcement blackouts.
  */
-export function calculateSuggestedCoveredCall20Delta(
+export function calculateSuggestedCoveredCallDelta(
   spotPrice: number,
   ivr30: number = 25,
   ivr30Rank: number = 40,
   technicalResistance?: number,
   costBasis?: number,
   symbol?: string,
-  shares: number = 100
-): CoveredCall20DeltaResult {
+  shares: number = 100,
+  targetDelta: number = 0.20
+): CoveredCallDeltaResult {
   const { dateStr: expDate, dte } = getNextWeeklyFriday();
-  const targetDelta = 0.20;
+  const effectiveDte = Math.max(1, dte);
+  const T = effectiveDte / 365.0;
+  const rate = 0.045;
   const ivNorm = (ivr30 > 1 ? ivr30 / 100 : ivr30) || 0.25;
 
-  // Expected move for weekly DTE: Spot * IV * sqrt(dte/365) * 0.84 (for 20 Delta)
-  const expectedMove = spotPrice * ivNorm * Math.sqrt(dte / 365.0) * 0.84;
-  let rawStrike = spotPrice + expectedMove;
+  // Clamped target delta between 0.05 and 0.48 (sweet spot 0.15 - 0.30)
+  const safeTargetDelta = Math.max(0.05, Math.min(0.48, targetDelta));
 
-  // If technical resistance provided and higher, anchor at or above resistance
+  // 1. Black-Scholes strike inversion (from Simulator): solve strike from target delta
+  // d1 = inverseNormalCdf(safeTargetDelta)
+  // S_T = Spot * exp((r + sigma^2/2)*T - d1*sigma*sqrt(T))
+  const d1Target = inverseNormalCdf(safeTargetDelta);
+  let theoreticalStrike = spotPrice * Math.exp((rate + (ivNorm * ivNorm) / 2.0) * T - d1Target * ivNorm * Math.sqrt(T));
+  theoreticalStrike = Math.max(spotPrice * 1.002, theoreticalStrike);
+
+  // 2. Technical alignment: Anchor at or above technical resistance / 20-SMA baseline if higher
   if (technicalResistance && technicalResistance > spotPrice) {
-    rawStrike = Math.max(rawStrike, technicalResistance);
+    theoreticalStrike = Math.max(theoreticalStrike, technicalResistance);
   }
 
-  // Standardize strike to clean increments
-  const strike = spotPrice > 150
-    ? Math.ceil(rawStrike / 5) * 5
-    : spotPrice > 40
-    ? Math.ceil(rawStrike)
-    : Math.ceil(rawStrike * 2) / 2;
+  // 3. Exchange increment snapping using standard exchange intervals ($0.50, $1.00, $2.50, $5.00)
+  const strike = getNearestExchangeStrike(theoreticalStrike, spotPrice);
 
-  // Option premium estimate without artificial price floor (per user specification)
-  const estPremium = Math.max(0.05, Math.round(spotPrice * ivNorm * Math.sqrt(dte / 365.0) * 0.20 * 100) / 100);
+  // 4. In-The-Money / At-The-Money Straddle Implied Move calculation (from Simulator)
+  const straddleMove = calculateStraddleImpliedMove(spotPrice, ivNorm, effectiveDte, symbol);
+  const clearsStraddle = strike >= straddleMove.upperExpectedBound;
+
+  // 5. Exact Black-Scholes analytical valuation and Greeks at actual exchange strike
+  const d1Actual = (Math.log(spotPrice / strike) + (rate + (ivNorm * ivNorm) / 2.0) * T) / (ivNorm * Math.sqrt(T));
+  const d2Actual = d1Actual - ivNorm * Math.sqrt(T);
+
+  const rawDelta = normCdf(d1Actual);
+  const actualDelta = Math.min(0.50, Math.max(0.05, Math.round(Math.abs(rawDelta) * 100) / 100));
+  const popPct = Math.round((1.0 - actualDelta) * 100);
+
+  const callPrice = spotPrice * normCdf(d1Actual) - strike * Math.exp(-rate * T) * normCdf(d2Actual);
+  const estPremium = Math.max(0.05, Math.round(callPrice * 100) / 100);
+
+  // Financial yields
   const weeklyYield = spotPrice > 0 ? (estPremium / spotPrice) * 100 : 0;
-  const annualizedYield = spotPrice > 0 ? Math.round(((estPremium / spotPrice) * (365 / dte) * 100) * 10) / 10 : 0;
+  const annualizedYield = spotPrice > 0 ? Math.round(((estPremium / spotPrice) * (365 / effectiveDte) * 100) * 10) / 10 : 0;
   const downsideCushion = weeklyYield;
+  const breakeven = Math.round((spotPrice - estPremium) * 100) / 100;
   const totalDollarIncome = Math.round(estPremium * shares * 100) / 100;
 
-  // Check if strike is below the original cost basis (Option B: Pure 20Δ above spot with prominent amber warning)
+  // Check if strike is below original cost basis (Option B: Pure Delta with prominent amber warning)
   const isBelowCostBasis = costBasis !== undefined && costBasis > 0 && strike < costBasis;
 
   // Check earnings announcement collision (Option A: Safety Blackout)
@@ -797,15 +837,21 @@ export function calculateSuggestedCoveredCall20Delta(
     earningsTimingDescription = timing.timingDescription;
   }
 
+  const deltaPct = Math.round(safeTargetDelta * 100);
+  const otmPct = (((strike - spotPrice) / spotPrice) * 100).toFixed(1);
+
   return {
     strike,
-    delta: targetDelta,
-    dte,
+    delta: actualDelta,
+    targetDelta: safeTargetDelta,
+    dte: effectiveDte,
     expiration: expDate,
     estPremium,
     annualizedYield,
     weeklyYield: Math.round(weeklyYield * 100) / 100,
     downsideCushion: Math.round(downsideCushion * 100) / 100,
+    breakeven,
+    popPct,
     totalDollarIncome,
     ivr30: Math.round(ivNorm * 100),
     ivr30Rank,
@@ -814,8 +860,36 @@ export function calculateSuggestedCoveredCall20Delta(
     hasEarningsBlackout,
     earningsDate,
     earningsTimingDescription,
-    technicalJustification: `20Δ strike ($${strike.toFixed(2)}) anchored +${(((strike - spotPrice) / spotPrice) * 100).toFixed(1)}% above spot, above 20-SMA baseline with ${ivr30Rank}% IV Rank.`,
+    clearsStraddle,
+    straddleMoveDollar: straddleMove.impliedMoveDollar,
+    straddleMovePct: straddleMove.impliedMovePct,
+    technicalJustification: `${deltaPct}Δ target strike ($${strike.toFixed(2)}) positioned +${otmPct}% OTM via Black-Scholes inversion (Actual: ${actualDelta}Δ, PoP: ${popPct}%, IV: ${Math.round(ivNorm * 100)}%).`,
   };
+}
+
+/**
+ * Backward-compatible wrapper for 20-Delta Covered Call calculation
+ */
+export function calculateSuggestedCoveredCall20Delta(
+  spotPrice: number,
+  ivr30: number = 25,
+  ivr30Rank: number = 40,
+  technicalResistance?: number,
+  costBasis?: number,
+  symbol?: string,
+  shares: number = 100,
+  targetDelta: number = 0.20
+): CoveredCall20DeltaResult {
+  return calculateSuggestedCoveredCallDelta(
+    spotPrice,
+    ivr30,
+    ivr30Rank,
+    technicalResistance,
+    costBasis,
+    symbol,
+    shares,
+    targetDelta
+  );
 }
 
 export { parseGeminiMarkdownTables } from './geminiMarkdownParser';

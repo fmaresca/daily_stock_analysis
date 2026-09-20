@@ -92,7 +92,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
   initialExpiration = '',
   initialStrategy = 'CASH_SECURED_PUT',
   initialIvRank = 48,
-  initialDelta = 0.18,
+  initialDelta = 0.20,
   initialDistTo50Sma = -5.1,
   initialDataSource = 'BARCHART',
   onClose,

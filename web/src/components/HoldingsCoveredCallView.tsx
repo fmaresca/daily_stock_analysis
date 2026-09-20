@@ -5,7 +5,9 @@ import {
   getSamplePortfolioBook,
 } from '../utils/portfolioStressTest';
 import {
+  calculateSuggestedCoveredCallDelta,
   calculateSuggestedCoveredCall20Delta,
+  CoveredCallDeltaResult,
   CoveredCall20DeltaResult,
   getNextWeeklyFriday,
   getStoredCapitalState,
@@ -38,11 +40,13 @@ import { PortfolioOverlayScanner } from './PortfolioOverlayScanner';
 interface HoldingsCoveredCallViewProps {
   onStageOrder?: (order: any) => void;
   onNavigateToScreener?: () => void;
+  onOpenSimulator?: (initialData?: any) => void;
 }
 
 export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = ({
   onStageOrder,
   onNavigateToScreener,
+  onOpenSimulator,
 }) => {
   // Load portfolio positions from localStorage
   const [positions, setPositions] = useState<PortfolioPosition[]>(() => {
@@ -85,6 +89,41 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
     ivrRank: number;
     resistance: number;
   } | null>(null);
+
+  // Configurable Target Delta for Weekly Covered Call Harvest Radar (defaults to 0.20Δ)
+  const [harvestTargetDelta, setHarvestTargetDelta] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('deltaharvest_harvest_target_delta');
+      if (saved) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed >= 0.05 && parsed <= 0.48) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return 0.20;
+  });
+
+  const handleUpdateHarvestDelta = (deltaVal: number) => {
+    const clamped = Math.max(0.05, Math.min(0.48, Math.round(deltaVal * 100) / 100));
+    setHarvestTargetDelta(clamped);
+    try {
+      localStorage.setItem('deltaharvest_harvest_target_delta', clamped.toString());
+    } catch {
+      // ignore
+    }
+  };
+
+  // Configurable Target Delta inside the Holding Covered Call Modal
+  const [modalTargetDelta, setModalTargetDelta] = useState<number>(harvestTargetDelta);
+
+  useEffect(() => {
+    if (selectedHoldingForCC) {
+      setModalTargetDelta(harvestTargetDelta);
+    }
+  }, [selectedHoldingForCC, harvestTargetDelta]);
 
   const [isAddPositionModalOpen, setIsAddPositionModalOpen] = useState(false);
   const [newSymbol, setNewSymbol] = useState('AAPL');
@@ -249,19 +288,20 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
     }
   }, [toastMessage]);
 
-  // Compute 20-Delta Covered Call recommendation for the selected modal holding
+  // Compute Covered Call recommendation for the selected modal holding
   const ccRecommendation = useMemo(() => {
     if (!selectedHoldingForCC) return null;
-    return calculateSuggestedCoveredCall20Delta(
+    return calculateSuggestedCoveredCallDelta(
       selectedHoldingForCC.spotPrice,
       selectedHoldingForCC.ivr30,
       selectedHoldingForCC.ivrRank,
       selectedHoldingForCC.resistance,
       selectedHoldingForCC.costBasis,
       selectedHoldingForCC.symbol,
-      selectedHoldingForCC.shares
+      selectedHoldingForCC.shares,
+      modalTargetDelta
     );
-  }, [selectedHoldingForCC]);
+  }, [selectedHoldingForCC, modalTargetDelta]);
 
   // Automated Weekly Covered Call Harvest Radar (Uncovered Equity Lots)
   const uncoveredHarvestCandidates = useMemo(() => {
@@ -269,14 +309,15 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
       .filter((stk) => stk.uncoveredShares >= 100)
       .map((stk) => {
         const contracts = Math.floor(stk.uncoveredShares / 100);
-        const recommendation = calculateSuggestedCoveredCall20Delta(
+        const recommendation = calculateSuggestedCoveredCallDelta(
           stk.currentSpot,
           stk.marketChameleonIvr30 || 35,
           stk.marketChameleonIvrRank || 50,
           stk.resistanceLevel || stk.currentSpot * 1.05,
           stk.costBasis,
           stk.symbol,
-          stk.uncoveredShares
+          stk.uncoveredShares,
+          harvestTargetDelta
         );
         return {
           symbol: stk.symbol,
@@ -290,7 +331,7 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
           recommendation,
         };
       });
-  }, [stockPairs]);
+  }, [stockPairs, harvestTargetDelta]);
 
   const totalHarvestContracts = useMemo(() => {
     return uncoveredHarvestCandidates.reduce((acc, c) => acc + c.contracts, 0);
@@ -343,7 +384,7 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
           symbol: c.symbol,
           name: c.symbol,
           strategy: 'COVERED_CALL',
-          strategy_name: 'Weekly Covered Call Harvest (20Δ)',
+          strategy_name: `Weekly Covered Call Harvest (${Math.round(harvestTargetDelta * 100)}Δ)`,
           action: 'SELL_TO_OPEN',
           quantity: c.contracts,
           strike: c.recommendation.strike,
@@ -357,13 +398,14 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
           mid: c.recommendation.estPremium,
           current_price: c.spotPrice,
           collateral_required: 0,
-          tags: ['WEEKLY_CC_HARVEST', '20_DELTA'],
+          tags: ['WEEKLY_CC_HARVEST', `${Math.round(harvestTargetDelta * 100)}_DELTA`],
+          notes: `Target: ${Math.round(harvestTargetDelta * 100)}Δ (${harvestTargetDelta.toFixed(2)}), BS Delta: ${c.recommendation.delta}, PoP: ${c.recommendation.popPct}%, APR: ${c.recommendation.annualizedYield}%`,
         });
       }
     });
 
     setPositions((prev) => [...prev, ...newPositions]);
-    setToastMessage(`✓ Successfully staged ${targets.length} weekly covered call tranches (${targets.reduce((a, b) => a + b.contracts, 0)} contracts, +$${(includeBlackouts ? totalHarvestDollarIncome : safeHarvestDollarIncome).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} income)!`);
+    setToastMessage(`✓ Successfully staged ${targets.length} weekly covered call tranches (${targets.reduce((a, b) => a + b.contracts, 0)} contracts, +$${(includeBlackouts ? totalHarvestDollarIncome : safeHarvestDollarIncome).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} income at ${Math.round(harvestTargetDelta * 100)}Δ target)!`);
   };
 
   // Stage single weekly call from Harvest Radar
@@ -395,7 +437,7 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
         symbol: c.symbol,
         name: c.symbol,
         strategy: 'COVERED_CALL',
-        strategy_name: 'Weekly Covered Call Harvest (20Δ)',
+        strategy_name: `Weekly Covered Call Harvest (${Math.round(harvestTargetDelta * 100)}Δ)`,
         action: 'SELL_TO_OPEN',
         quantity: c.contracts,
         strike: c.recommendation.strike,
@@ -409,10 +451,11 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
         mid: c.recommendation.estPremium,
         current_price: c.spotPrice,
         collateral_required: 0,
-        tags: ['WEEKLY_CC_HARVEST', '20_DELTA'],
+        tags: ['WEEKLY_CC_HARVEST', `${Math.round(harvestTargetDelta * 100)}_DELTA`],
+        notes: `Target: ${Math.round(harvestTargetDelta * 100)}Δ, BS Delta: ${c.recommendation.delta}, PoP: ${c.recommendation.popPct}%, APR: ${c.recommendation.annualizedYield}%`,
       });
     }
-    setToastMessage(`✓ Staged ${c.contracts}x ${c.symbol} $${c.recommendation.strike} Call (+${c.recommendation.totalDollarIncome.toLocaleString('en-US', { style: 'currency', currency: 'USD' })})`);
+    setToastMessage(`✓ Staged ${c.contracts}x ${c.symbol} $${c.recommendation.strike} Call at ${Math.round(harvestTargetDelta * 100)}Δ (+${c.recommendation.totalDollarIncome.toLocaleString('en-US', { style: 'currency', currency: 'USD' })})`);
   };
 
   // 80% Profit Handlers: Close (BTC) and Roll to Next Week
@@ -437,7 +480,7 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
   };
 
   const handleRollShortCall = (ccId: string | undefined, symbol: string, currentStrike: number, quantity: number, currentPrice: number, spotPrice: number, costBasis?: number) => {
-    const rec = calculateSuggestedCoveredCall20Delta(spotPrice, 35, 50, spotPrice * 1.05, costBasis, symbol, quantity * 100);
+    const rec = calculateSuggestedCoveredCallDelta(spotPrice, 35, 50, spotPrice * 1.05, costBasis, symbol, quantity * 100, harvestTargetDelta);
     const netCredit = Math.max(0.01, rec.estPremium - currentPrice);
 
     if (onStageOrder) {
@@ -676,14 +719,14 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-black text-white tracking-tight">
-                      Weekly Covered Call Harvest Radar (20&Delta;)
+                      Weekly Covered Call Harvest Radar ({Math.round(harvestTargetDelta * 100)}&Delta;)
                     </h3>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
                       {uncoveredHarvestCandidates.length} Positions Available
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Targeting upcoming Friday weekly expiration ({getNextWeeklyFriday().dateStr}, {getNextWeeklyFriday().dte} DTE). Generates systematic income on uncovered share blocks while defending cost-basis and avoiding earnings blackouts.
+                    Targeting upcoming Friday weekly expiration ({getNextWeeklyFriday().dateStr}, {getNextWeeklyFriday().dte} DTE). Powered by Black-Scholes inversion, resistance anchoring, ATM straddle defense, and cost-basis guardrails.
                   </p>
                 </div>
               </div>
@@ -705,13 +748,121 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                     ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-emerald-600/30'
                     : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                 }`}
-                title="Stage all recommended 20 Delta weekly covered calls that are cleared of earnings collisions into Step 7 Workbench"
+                title={`Stage all recommended ${Math.round(harvestTargetDelta * 100)} Delta weekly covered calls that are cleared of earnings collisions into Step 7 Workbench`}
               >
                 <Zap className="w-4 h-4" />
                 <span>
-                  Stage All {safeHarvestCandidates.reduce((a, b) => a + b.contracts, 0)} Safe Weekly Calls (+${safeHarvestDollarIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})
+                  Stage All {safeHarvestCandidates.reduce((a, b) => a + b.contracts, 0)} Safe Weekly Calls ({Math.round(harvestTargetDelta * 100)}&Delta;) (+${safeHarvestDollarIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})
                 </span>
               </button>
+            </div>
+          </div>
+
+          {/* Interactive Target Delta Quantitative Calibration Bar */}
+          <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/90 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
+                <Sliders className="w-4 h-4 text-cyan-400" />
+                <span>Harvest Delta:</span>
+                <span className="px-2 py-0.5 rounded-lg font-mono font-bold text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                  {Math.round(harvestTargetDelta * 100)}&Delta; ({(harvestTargetDelta).toFixed(2)})
+                </span>
+              </div>
+
+              {/* Quick Preset Pills */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { label: '15Δ Safe (85% PoP)', delta: 0.15 },
+                  { label: '20Δ Standard (80% PoP)', delta: 0.20 },
+                  { label: '25Δ Balanced (75% PoP)', delta: 0.25 },
+                  { label: '30Δ High Yield (70% PoP)', delta: 0.30 },
+                ].map((p) => {
+                  const isSelected = Math.abs(harvestTargetDelta - p.delta) < 0.005;
+                  return (
+                    <button
+                      key={p.delta}
+                      type="button"
+                      onClick={() => handleUpdateHarvestDelta(p.delta)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                        isSelected
+                          ? 'bg-cyan-600 text-white border-cyan-400 shadow-sm shadow-cyan-600/40'
+                          : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
+                      }`}
+                      title={`Recalibrate all weekly calls to target ${p.label}`}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Slider & Fine-Tune Stepper */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleUpdateHarvestDelta(harvestTargetDelta - 0.01)}
+                disabled={harvestTargetDelta <= 0.06}
+                className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs font-bold border border-slate-700 cursor-pointer disabled:opacity-40"
+                title="Decrease target delta by 1Δ"
+              >
+                -1&Delta;
+              </button>
+              <div className="w-28 flex items-center">
+                <input
+                  type="range"
+                  min={0.08}
+                  max={0.42}
+                  step={0.01}
+                  value={harvestTargetDelta}
+                  onChange={(e) => handleUpdateHarvestDelta(parseFloat(e.target.value))}
+                  className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleUpdateHarvestDelta(harvestTargetDelta + 0.01)}
+                disabled={harvestTargetDelta >= 0.45}
+                className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs font-bold border border-slate-700 cursor-pointer disabled:opacity-40"
+                title="Increase target delta by 1Δ"
+              >
+                +1&Delta;
+              </button>
+
+              {/* Direct numeric input */}
+              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-0.5" title="Type custom target delta (e.g. 18 for 0.18Δ)">
+                <input
+                  type="number"
+                  min={5}
+                  max={48}
+                  step={1}
+                  value={Math.round(harvestTargetDelta * 100)}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10);
+                    if (!isNaN(parsed) && parsed >= 5 && parsed <= 48) {
+                      handleUpdateHarvestDelta(parsed / 100);
+                    }
+                  }}
+                  className="w-8 bg-transparent text-right font-mono font-bold text-xs text-cyan-300 focus:outline-none"
+                />
+                <span className="text-[11px] font-mono text-cyan-400 font-bold">&Delta;</span>
+              </div>
+
+              {/* Reset to 20Δ Default */}
+              {Math.abs(harvestTargetDelta - 0.20) >= 0.005 && (
+                <button
+                  type="button"
+                  onClick={() => handleUpdateHarvestDelta(0.20)}
+                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-cyan-300 text-[10px] font-mono border border-slate-700 transition-all cursor-pointer"
+                  title="Reset target delta to 20Δ platform default"
+                >
+                  Reset (20&Delta;)
+                </button>
+              )}
+
+              <span className="text-[10px] text-slate-400 hidden xl:inline font-mono">
+                BS Inversion: S&middot;exp((r+&sigma;&sup2;/2)T &minus; &Phi;&sup1;(&Delta;)&sigma;&radic;T)
+              </span>
             </div>
           </div>
 
@@ -746,15 +897,20 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                         <div className="text-[10px] text-slate-400 font-sans">{c.contracts} contract{c.contracts > 1 ? 's' : ''}</div>
                       </td>
                       <td className="py-3 px-3">
-                        <div className="font-bold text-emerald-300 text-sm">
-                          ${rec.strike.toFixed(2)} Call
+                        <div className="font-bold text-emerald-300 text-sm flex items-center gap-1.5">
+                          <span>${rec.strike.toFixed(2)} Call</span>
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            {rec.delta}&Delta;
+                          </span>
                         </div>
-                        <div className="text-[10px] text-slate-400 flex items-center gap-1.5 font-sans">
+                        <div className="text-[10px] text-slate-400 flex flex-wrap items-center gap-1.5 font-sans mt-0.5">
                           <span>{rec.expiration} ({rec.dte}d)</span>
                           <span>•</span>
-                          <span className="text-cyan-300 font-mono">{rec.delta}&Delta;</span>
+                          <span className="text-emerald-400 font-mono font-semibold" title="Probability of Profit">{rec.popPct}% PoP</span>
                           <span>•</span>
                           <span className="text-slate-300">+{(((rec.strike - c.spotPrice) / c.spotPrice) * 100).toFixed(1)}% OTM</span>
+                          <span>•</span>
+                          <span className="text-slate-400" title="Breakeven = Spot - Premium">BE: ${rec.breakeven.toFixed(2)}</span>
                         </div>
                       </td>
                       <td className="py-3 px-3">
@@ -796,10 +952,39 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                               📅 Earnings Cleared
                             </span>
                           )}
+
+                          {rec.clearsStraddle ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] block" title={`Strike clears expected ±$${rec.straddleMoveDollar.toFixed(2)} (${rec.straddleMovePct}%) straddle bounds`}>
+                              ✓ Clears &plusmn;${rec.straddleMoveDollar.toFixed(2)} Straddle
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] block" title={`Strike is within expected straddle move`}>
+                              ⚠️ Inside &plusmn;${rec.straddleMoveDollar.toFixed(2)} Straddle
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onOpenSimulator) {
+                                onOpenSimulator({
+                                  ticker: c.symbol,
+                                  expiration: rec.expiration,
+                                  delta: rec.targetDelta,
+                                  strategy: 'COVERED_CALL',
+                                  ivRank: rec.ivr30Rank,
+                                });
+                              }
+                            }}
+                            className="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 border border-slate-700 hover:border-cyan-500/40 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                            title={`Audit & simulate ${c.symbol} in 100-Point Options Trade Quality Simulator`}
+                          >
+                            <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                            <span className="hidden sm:inline">Simulate</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleStageSingleWeeklyCall(c)}
@@ -1016,9 +1201,10 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                                 })
                               }
                               className="px-2 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1 cursor-pointer"
+                              title={`Suggest ${Math.round(harvestTargetDelta * 100)}Δ covered call recommendation`}
                             >
                               <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-                              <span>20&Delta;</span>
+                              <span>{Math.round(harvestTargetDelta * 100)}&Delta; Call</span>
                             </button>
                           </div>
                         ) : (
@@ -1231,10 +1417,10 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                 </span>
                 <div>
                   <h3 className="text-lg font-black text-white">
-                    20&Delta; Covered Call Recommendation
+                    {Math.round(modalTargetDelta * 100)}&Delta; Covered Call Recommendation
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Calculated for {selectedHoldingForCC.shares} uncovered shares of {selectedHoldingForCC.symbol}
+                    Calculated for {selectedHoldingForCC.shares} uncovered shares of {selectedHoldingForCC.symbol} (Target: {(modalTargetDelta).toFixed(2)}&Delta;)
                   </p>
                 </div>
               </div>
@@ -1244,6 +1430,76 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
               >
                 ✕
               </button>
+            </div>
+
+            {/* Modal Interactive Target Delta Quantitative Calibration Bar */}
+            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
+                <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Target Delta:</span>
+                <span className="px-2 py-0.5 rounded-lg font-mono font-bold text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                  {Math.round(modalTargetDelta * 100)}&Delta; ({(modalTargetDelta).toFixed(2)})
+                </span>
+              </div>
+
+              {/* Quick Preset Pills */}
+              <div className="flex items-center gap-1">
+                {[
+                  { label: '15Δ Safe', delta: 0.15 },
+                  { label: '20Δ Standard', delta: 0.20 },
+                  { label: '25Δ Balanced', delta: 0.25 },
+                  { label: '30Δ Aggressive', delta: 0.30 },
+                ].map((p) => {
+                  const isSelected = Math.abs(modalTargetDelta - p.delta) < 0.005;
+                  return (
+                    <button
+                      key={p.delta}
+                      type="button"
+                      onClick={() => setModalTargetDelta(p.delta)}
+                      className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                        isSelected
+                          ? 'bg-cyan-600 text-white border-cyan-400 shadow-sm shadow-cyan-600/40'
+                          : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Steppers & Slider */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setModalTargetDelta((prev) => Math.max(0.05, Math.round((prev - 0.01) * 100) / 100))}
+                  disabled={modalTargetDelta <= 0.06}
+                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold border border-slate-700 cursor-pointer disabled:opacity-40"
+                  title="Decrease target delta by 1Δ"
+                >
+                  -1&Delta;
+                </button>
+                <div className="w-20 flex items-center">
+                  <input
+                    type="range"
+                    min={0.08}
+                    max={0.42}
+                    step={0.01}
+                    value={modalTargetDelta}
+                    onChange={(e) => setModalTargetDelta(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-slate-700 rounded appearance-none cursor-pointer accent-cyan-400"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalTargetDelta((prev) => Math.min(0.48, Math.round((prev + 0.01) * 100) / 100))}
+                  disabled={modalTargetDelta >= 0.45}
+                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold border border-slate-700 cursor-pointer disabled:opacity-40"
+                  title="Increase target delta by 1Δ"
+                >
+                  +1&Delta;
+                </button>
+              </div>
             </div>
 
             {/* Input Attributes */}
@@ -1266,9 +1522,14 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
             <div className="bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Target Contract</span>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[11px] font-mono font-bold">
-                  {ccRecommendation.dte} DTE Weekly
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[11px] font-mono font-bold">
+                    {ccRecommendation.popPct}% PoP
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[11px] font-mono font-bold">
+                    {ccRecommendation.dte} DTE Weekly
+                  </span>
+                </div>
               </div>
 
               <div className="flex items-baseline gap-3">
@@ -1276,7 +1537,7 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                   ${ccRecommendation.strike.toFixed(2)} Call
                 </span>
                 <span className="text-slate-400 font-mono text-sm">
-                  ({ccRecommendation.delta}&Delta;)
+                  ({ccRecommendation.delta}&Delta; BS • BE: ${ccRecommendation.breakeven.toFixed(2)})
                 </span>
               </div>
 
@@ -1302,50 +1563,73 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <button
-                onClick={() => setSelectedHoldingForCC(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white cursor-pointer"
-              >
-                Close
-              </button>
-              <button
+                type="button"
                 onClick={() => {
-                  const contracts = Math.floor(selectedHoldingForCC.shares / 100);
-                  const newCcPos: PortfolioPosition = {
-                    id: `cc-${Date.now()}`,
-                    symbol: selectedHoldingForCC.symbol,
-                    type: 'COVERED_CALL',
-                    quantity: contracts,
-                    spotPrice: selectedHoldingForCC.spotPrice,
-                    strike: ccRecommendation.strike,
-                    dte: ccRecommendation.dte,
-                    entryPrice: ccRecommendation.estPremium,
-                    currentOptionPrice: ccRecommendation.estPremium,
-                    iv: selectedHoldingForCC.ivr30 / 100,
-                    delta: ccRecommendation.delta,
-                    theta: 0.08,
-                    vega: 0.05,
-                    beta: 1.0,
-                  };
-                  setPositions((prev) => [...prev, newCcPos]);
-                  if (onStageOrder) {
-                    onStageOrder({
-                      symbol: selectedHoldingForCC.symbol,
-                      action: 'SELL_TO_OPEN',
-                      quantity: contracts,
-                      strike: ccRecommendation.strike,
-                      optionType: 'CALL',
-                      limitPrice: ccRecommendation.estPremium,
+                  if (onOpenSimulator) {
+                    onOpenSimulator({
+                      ticker: selectedHoldingForCC.symbol,
+                      expiration: ccRecommendation.expiration,
+                      delta: modalTargetDelta,
+                      strategy: 'COVERED_CALL',
+                      ivRank: selectedHoldingForCC.ivrRank,
                     });
                   }
                   setSelectedHoldingForCC(null);
                 }}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 transition-all flex items-center gap-1.5 cursor-pointer shadow"
+                title={`Open ${selectedHoldingForCC.symbol} in 100-Point Trade Quality Simulator`}
               >
-                <Zap className="w-4 h-4" />
-                <span>Adopt &amp; Stage {Math.floor(selectedHoldingForCC.shares / 100)}x Call Order</span>
+                <Sliders className="w-4 h-4 text-cyan-400" />
+                <span>Audit in 100-Pt Simulator</span>
               </button>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSelectedHoldingForCC(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    const contracts = Math.floor(selectedHoldingForCC.shares / 100);
+                    const newCcPos: PortfolioPosition = {
+                      id: `cc-${Date.now()}`,
+                      symbol: selectedHoldingForCC.symbol,
+                      type: 'COVERED_CALL',
+                      quantity: contracts,
+                      spotPrice: selectedHoldingForCC.spotPrice,
+                      strike: ccRecommendation.strike,
+                      dte: ccRecommendation.dte,
+                      entryPrice: ccRecommendation.estPremium,
+                      currentOptionPrice: ccRecommendation.estPremium,
+                      iv: selectedHoldingForCC.ivr30 / 100,
+                      delta: ccRecommendation.delta,
+                      theta: 0.08,
+                      vega: 0.05,
+                      beta: 1.0,
+                    };
+                    setPositions((prev) => [...prev, newCcPos]);
+                    if (onStageOrder) {
+                      onStageOrder({
+                        symbol: selectedHoldingForCC.symbol,
+                        action: 'SELL_TO_OPEN',
+                        quantity: contracts,
+                        strike: ccRecommendation.strike,
+                        optionType: 'CALL',
+                        limitPrice: ccRecommendation.estPremium,
+                      });
+                    }
+                    setSelectedHoldingForCC(null);
+                  }}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Zap className="w-4 h-4" />
+                  <span>Adopt &amp; Stage {Math.floor(selectedHoldingForCC.shares / 100)}x Call Order</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

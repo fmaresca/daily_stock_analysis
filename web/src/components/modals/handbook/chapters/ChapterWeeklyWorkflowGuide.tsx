@@ -184,7 +184,7 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
               <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 font-mono font-bold flex items-center justify-center text-xs">
                 3
               </span>
-              <span className="font-bold text-indigo-300 text-sm">Step 3: Holdings &amp; 20&Delta; Calls (HoldingsCoveredCallView)</span>
+              <span className="font-bold text-indigo-300 text-sm">Step 3: Holdings &amp; Covered Calls Harvest Radar (Configurable &Delta;)</span>
             </div>
             <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
               Route: WORKFLOW &rarr; HOLDINGS_COVERED_CALLS
@@ -193,20 +193,23 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             <div className="space-y-1.5">
-              <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
+              <strong className="text-white block font-semibold">⚙️ Automated System Calculations &amp; Simulator Synergy:</strong>
               <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                <li><strong>Automated 20&Delta; Weekly Harvest Radar:</strong> Scans all equity holdings for unhedged blocks (&ge;100 shares), automatically resolving the upcoming Friday weekly expiration (5-7 DTE) and calculating optimal 20&Delta; strikes above resistance.</li>
-                <li><strong>Cost-Basis &amp; Earnings Safety Guardrails:</strong> Flags whether strikes clear cost basis (warning if underwater) and checks quarterly earnings dates to pause automatic staging during earnings blackout weeks.</li>
-                <li><strong>Dual 80% Profit Triggers:</strong> Flags calls and CSPs that hit &ge;80% profit capture, offering both 1-click <em>Close (BTC)</em> to unlock shares/collateral and <em>Roll to Next Week</em> for net credit.</li>
-                <li><strong>1-Click Batch Staging:</strong> <em>Stage All Safe Weekly Calls</em> pushes all earnings-cleared covered call orders into Step 7 in a single transaction.</li>
+                <li><strong>Configurable Target Delta Calibration (20&Delta; Default):</strong> Automatically targets the upcoming weekly Friday expiration (5-7 DTE, holiday adjusted) using Black-Scholes inversion: <code>K = S &middot; exp((r + &sigma;&sup2;/2)T - &Phi;&macr;&sup1;(&Delta;)&sigma;&radic;T)</code>. Users can recalibrate to 15&Delta; Safe (85% PoP), 20&Delta; Standard, 25&Delta; Balanced, 30&Delta; High Yield, or type any custom delta directly.</li>
+                <li><strong>ATM Straddle Implied Move Defense:</strong> Quantifies the &plusmn;1 SD straddle jump (<code>Spot &middot; &sigma; &middot; &radic;T &middot; 0.84</code>) and flags whether the strike clears the straddle bounds to protect against unexpected volatility spikes.</li>
+                <li><strong>Cost-Basis &amp; Earnings Safety Guardrails:</strong> Checks position cost basis (warning if underwater) and audits corporate earnings dates to pause automatic staging during quarterly earnings gap risk.</li>
+                <li><strong>1-Click Simulator Integration:</strong> Every harvest candidate features a <em>&quot;Simulate&quot;</em> action button that launches the 100-Point Options Trade Quality Simulator pre-loaded with the symbol, expiration, delta, and IV rank for complete Greeks and payoff analysis.</li>
+                <li><strong>Dual 80% Profit Triggers:</strong> Automatically flags calls and CSPs achieving &ge;80% profit capture for 1-click <em>Close (BTC)</em> or <em>Roll &rarr;</em> for net credit.</li>
               </ul>
             </div>
 
             <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-              <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
+              <strong className="text-amber-300 block font-semibold">👤 Manual Intervention &amp; Customization Controls:</strong>
               <ol className="text-slate-300 space-y-1 list-decimal list-inside">
-                <li><strong>Harvest Uncovered Shares:</strong> Review the Harvest Radar at the top of Step 3 and click <strong>&quot;Stage All Safe Weekly Calls&quot;</strong> to harvest weekly premium across all uncovered share blocks.</li>
-                <li><strong>Manage 80% Profit Triggers:</strong> For contracts hitting 80% profit, select <strong>Close (BTC)</strong> to free underlying shares or <strong>Roll &rarr;</strong> to capture net credit into next Friday.</li>
+                <li><strong>Adjust Harvest Target Delta:</strong> Use the calibration bar at the top of Step 3 to select quick preset pills (15&Delta;, 20&Delta;, 25&Delta;, 30&Delta;), fine-tune via &plusmn;1&Delta; steppers, slide the continuous bar, or type an exact integer delta percentage.</li>
+                <li><strong>Fine-Tune Per-Position Delta:</strong> Click into an individual holding to open the Covered Call Recommendation modal, adjust the target delta dynamically for that specific trade, or click <em>&quot;Audit in 100-Pt Simulator&quot;</em> to view the full quantitative score breakdown.</li>
+                <li><strong>Harvest Uncovered Lots:</strong> Click <strong>&quot;Stage All Safe Weekly Calls&quot;</strong> to stage all earnings-cleared covered call orders into Step 7 in a single batch.</li>
+                <li><strong>Manage 80% Profit Triggers:</strong> For contracts hitting 80% profit, select <strong>Close (BTC)</strong> to unlock shares or <strong>Roll &rarr;</strong> to extend into next Friday.</li>
               </ol>
             </div>
           </div>

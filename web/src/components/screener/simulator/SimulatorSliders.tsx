@@ -92,10 +92,51 @@ export const SimulatorSliders: React.FC<SimulatorSlidersProps> = ({
                 Pure Δ Strike: ${unadjustedStrike.toFixed(2)}
               </span>
             )}
-            <span className="text-xs font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-              {delta.toFixed(2)}
-            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setDelta(Math.max(0.05, Math.round((delta - 0.01) * 100) / 100))}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-mono font-bold border border-slate-700 cursor-pointer"
+                title="Decrease delta by 0.01"
+              >
+                -1&Delta;
+              </button>
+              <span className="text-xs font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                {delta.toFixed(2)}&Delta;
+              </span>
+              <button
+                type="button"
+                onClick={() => setDelta(Math.min(0.48, Math.round((delta + 0.01) * 100) / 100))}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-mono font-bold border border-slate-700 cursor-pointer"
+                title="Increase delta by 0.01"
+              >
+                +1&Delta;
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Quick Delta Presets */}
+        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+          {[
+            { label: '15Δ Safe', val: 0.15 },
+            { label: '20Δ Standard', val: 0.20 },
+            { label: '25Δ Balanced', val: 0.25 },
+            { label: '30Δ Aggressive', val: 0.30 },
+          ].map((p) => (
+            <button
+              key={p.val}
+              type="button"
+              onClick={() => setDelta(p.val)}
+              className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition-all cursor-pointer border ${
+                Math.abs(delta - p.val) < 0.005
+                  ? 'bg-emerald-600 text-white border-emerald-400'
+                  : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 border-slate-700'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
 
         <div className="relative py-1">
