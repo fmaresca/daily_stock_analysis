@@ -703,21 +703,64 @@ export function calculateNetTaxableMetrics(ledger: TaxLedgerState) {
   };
 }
 
+import { checkEarningsInsideExpiration } from './earningsCalendar';
+
+export interface CoveredCall20DeltaResult {
+  strike: number;
+  delta: number;
+  dte: number;
+  expiration: string;
+  estPremium: number;
+  annualizedYield: number;
+  weeklyYield: number;
+  downsideCushion: number;
+  totalDollarIncome: number;
+  ivr30: number;
+  ivr30Rank: number;
+  technicalJustification: string;
+  isBelowCostBasis: boolean;
+  costBasis?: number;
+  hasEarningsBlackout: boolean;
+  earningsDate: string | null;
+  earningsTimingDescription?: string;
+}
+
 /**
- * Calculates 20-Delta Covered Call Strike for Long Stock Holdings (Step 9b)
- * Targets 5-7 DTE, factoring in IVR30 and resistance.
+ * Resolves the upcoming Friday expiration date for weekly options (5-7 DTE target)
+ */
+export function getNextWeeklyFriday(baseDate: Date = new Date()): { dateStr: string; dte: number } {
+  const d = new Date(baseDate);
+  d.setHours(0, 0, 0, 0);
+  const dayOfWeek = d.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+  let daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+  // If today is Wed (3), Thu (4), or Fri (5), target next week's Friday for healthy weekly theta (5-9 DTE)
+  if (daysUntilFriday <= 2) {
+    daysUntilFriday += 7;
+  }
+  const targetDate = new Date(d.getTime() + daysUntilFriday * 86400000);
+  const dateStr = targetDate.toISOString().split('T')[0];
+  return { dateStr, dte: daysUntilFriday };
+}
+
+/**
+ * Calculates 20-Delta Covered Call Strike for Long Stock Holdings (Step 3 Harvest Radar)
+ * Targets soonest weekly Friday (5-7 DTE), factoring in IVR30, technical resistance,
+ * cost-basis clearance check, and quarterly earnings announcement blackouts.
  */
 export function calculateSuggestedCoveredCall20Delta(
   spotPrice: number,
   ivr30: number = 25,
   ivr30Rank: number = 40,
-  technicalResistance?: number
-) {
-  const dte = 5; // Target next Friday
+  technicalResistance?: number,
+  costBasis?: number,
+  symbol?: string,
+  shares: number = 100
+): CoveredCall20DeltaResult {
+  const { dateStr: expDate, dte } = getNextWeeklyFriday();
   const targetDelta = 0.20;
   const ivNorm = (ivr30 > 1 ? ivr30 / 100 : ivr30) || 0.25;
 
-  // Expected move for 5 DTE: Spot * IV * sqrt(5/365) * 0.84 (for 20 Delta)
+  // Expected move for weekly DTE: Spot * IV * sqrt(dte/365) * 0.84 (for 20 Delta)
   const expectedMove = spotPrice * ivNorm * Math.sqrt(dte / 365.0) * 0.84;
   let rawStrike = spotPrice + expectedMove;
 
@@ -733,11 +776,26 @@ export function calculateSuggestedCoveredCall20Delta(
     ? Math.ceil(rawStrike)
     : Math.ceil(rawStrike * 2) / 2;
 
-  const estPremium = Math.max(0.15, Math.round(spotPrice * ivNorm * Math.sqrt(dte / 365.0) * 0.20 * 100) / 100);
-  const annualizedYield = Math.round(((estPremium / spotPrice) * (365 / dte) * 100) * 10) / 10;
+  // Option premium estimate without artificial price floor (per user specification)
+  const estPremium = Math.max(0.05, Math.round(spotPrice * ivNorm * Math.sqrt(dte / 365.0) * 0.20 * 100) / 100);
+  const weeklyYield = spotPrice > 0 ? (estPremium / spotPrice) * 100 : 0;
+  const annualizedYield = spotPrice > 0 ? Math.round(((estPremium / spotPrice) * (365 / dte) * 100) * 10) / 10 : 0;
+  const downsideCushion = weeklyYield;
+  const totalDollarIncome = Math.round(estPremium * shares * 100) / 100;
 
-  // Expiration Friday date
-  const expDate = new Date(Date.now() + dte * 86400000).toISOString().split('T')[0];
+  // Check if strike is below the original cost basis (Option B: Pure 20Δ above spot with prominent amber warning)
+  const isBelowCostBasis = costBasis !== undefined && costBasis > 0 && strike < costBasis;
+
+  // Check earnings announcement collision (Option A: Safety Blackout)
+  let hasEarningsBlackout = false;
+  let earningsDate: string | null = null;
+  let earningsTimingDescription = 'No earnings collision in weekly cycle';
+  if (symbol) {
+    const timing = checkEarningsInsideExpiration(symbol, expDate);
+    hasEarningsBlackout = timing.hasEarningsInsideExpiration;
+    earningsDate = timing.earningsDate;
+    earningsTimingDescription = timing.timingDescription;
+  }
 
   return {
     strike,
@@ -746,9 +804,17 @@ export function calculateSuggestedCoveredCall20Delta(
     expiration: expDate,
     estPremium,
     annualizedYield,
+    weeklyYield: Math.round(weeklyYield * 100) / 100,
+    downsideCushion: Math.round(downsideCushion * 100) / 100,
+    totalDollarIncome,
     ivr30: Math.round(ivNorm * 100),
     ivr30Rank,
-    technicalJustification: `20Δ strike anchored +${(((strike - spotPrice) / spotPrice) * 100).toFixed(1)}% above spot, above 20-SMA baseline with ${ivr30Rank}% IV Rank.`,
+    isBelowCostBasis,
+    costBasis,
+    hasEarningsBlackout,
+    earningsDate,
+    earningsTimingDescription,
+    technicalJustification: `20Δ strike ($${strike.toFixed(2)}) anchored +${(((strike - spotPrice) / spotPrice) * 100).toFixed(1)}% above spot, above 20-SMA baseline with ${ivr30Rank}% IV Rank.`,
   };
 }
 
