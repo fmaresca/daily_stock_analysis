@@ -1,4 +1,5 @@
 import { OptionOpportunity, TickerMeta } from '../types/options';
+import { isWeeklyCadence } from './capitalAndTaxLedger';
 
 /**
  * Creates a fully typed fallback TickerMeta instance with standard default properties.
@@ -146,6 +147,8 @@ export function synthesizeAllUniverseOpportunities(
         tier_color: t.iv_rank >= 45 ? 'emerald' : 'blue',
         tags: ['CUSTOM_TICKER', 'LIVE_SYNTHESIS', 'CSP_HARVEST'],
         rating: Math.min(99, Math.max(60, Math.round(83.5 + (putAnnualized / 2)))),
+        has_weeklys: isWeeklyCadence(t.symbol, t.has_weeklys),
+        expiration_cadence: isWeeklyCadence(t.symbol, t.has_weeklys) ? 'Weekly' : 'Monthly Only',
       };
 
       const cc: OptionOpportunity = {
@@ -190,6 +193,8 @@ export function synthesizeAllUniverseOpportunities(
         tier_color: t.iv_rank >= 45 ? 'emerald' : 'blue',
         tags: ['CUSTOM_TICKER', 'LIVE_SYNTHESIS', 'CC_HARVEST'],
         rating: Math.min(99, Math.max(60, Math.round(82.0 + (callAnnualized / 2)))),
+        has_weeklys: isWeeklyCadence(t.symbol, t.has_weeklys),
+        expiration_cadence: isWeeklyCadence(t.symbol, t.has_weeklys) ? 'Weekly' : 'Monthly Only',
       };
 
       oppMap.set(csp.id, csp);

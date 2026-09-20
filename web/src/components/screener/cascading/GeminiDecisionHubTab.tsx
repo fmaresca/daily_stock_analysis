@@ -48,6 +48,7 @@ export interface GeminiDecisionHubTabProps {
   isAiModalOpen: boolean;
   setIsAiModalOpen: (val: boolean) => void;
   generateGeminiThinkingPrompt: () => string;
+  candidatePromptCount?: number;
   copiedPrompt: boolean;
   handleCopyPrompt: () => void;
   importedBriefing: string;
@@ -85,6 +86,7 @@ export const GeminiDecisionHubTab: React.FC<GeminiDecisionHubTabProps> = React.m
   isAiModalOpen,
   setIsAiModalOpen,
   generateGeminiThinkingPrompt,
+  candidatePromptCount,
   copiedPrompt,
   handleCopyPrompt,
   importedBriefing,
@@ -507,7 +509,7 @@ export const GeminiDecisionHubTab: React.FC<GeminiDecisionHubTabProps> = React.m
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-slate-300">Generated Institutional Prompt</span>
                   <span className="text-[11px] text-slate-500 font-mono">
-                    {finalCandidates.length} candidate contracts pre-formatted
+                    {candidatePromptCount ?? finalCandidates.length} candidate contracts pre-formatted
                   </span>
                 </div>
                 <textarea

@@ -271,7 +271,7 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
                 <li><strong>Tab 1 (Barchart Top 1%):</strong> Automated screener with 100% buy consensus across 13 technical moving averages and MACDs. Supports <strong>&quot;Fetch Live Quotes&quot;</strong> (re-hydrating live market prices via Tradier) and <strong>&quot;Upload CSV&quot;</strong> for latest Friday exports.</li>
                 <li><strong>Tab 2 (MarketChameleon Momentum):</strong> Momentum equities with RSI 50–70, IV30 &gt; 30%, and CBOE weekly registry verification. Features <strong>&quot;Fetch Live Quotes&quot;</strong> and <strong>&quot;Upload CSV&quot;</strong> alongside Prescreen Builder.</li>
                 <li><strong>Tab 3 (ThinkorSwim View 190898):</strong> Automatically computes 13-indicator Barchart opinion consensus, stability arrows, and options cadence for any custom or TOS tickers.</li>
-                <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Ingests liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), strictly eliminates non-weekly options via CBOE Weeklys Gate, filters candidate contracts within 0.15–0.25&Delta;, formats institutional prompt, and parses 3 markdown tables.</li>
+                <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Consolidates all Tri-Screen sources (ThinkorSwim + Barchart View 190898 + MarketChameleon) into a unified multi-candidate prompt (up to 25 screened candidate contracts), enforces liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), verifies CBOE weekly options, and auto-parses Gemini&apos;s 3 markdown tables.</li>
               </ul>
             </div>
 
