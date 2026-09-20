@@ -121,9 +121,11 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
             <div className="space-y-1.5">
               <strong className="text-white block font-semibold">⚙️ Automated System Ingestion:</strong>
               <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                <li><strong>CSV Position Ingestion:</strong> Automatically ingests export files directly from Charles Schwab accounts as of the close of trading for the week.</li>
-                <li><strong>Asset Breakdown:</strong> Classifies rows into Bank Sweep Cash, Money Market Funds (SNYXX, SNAXX), Open Option Contracts (CSPs and Covered Calls), and Equities.</li>
-                <li><strong>Baseline Auto-Seed:</strong> Pre-loads verified week-ending baseline positions ($573,820.76 liquid cash pool and $263,250.00 CSP encumbrance) with one click.</li>
+                <li><strong>Pre-Ingestion Clean Reset Routine:</strong> Automatically runs just prior to new Schwab CSV ingestion. Clears all stale positions, purges prior week screened stocks (ThinkorSwim, Barchart, MarketChameleon), wipes prior AI recommendations, and clears staged orders, resetting cash encumbrances to only the default $5,000 living expenses.</li>
+                <li><strong>Dynamic Cash Pool Summation:</strong> Dynamically sums all cash and money market funds (Bank Deposit Core Sweep, SNYXX, SNAXX, and reserve MMFs) prior to any deductions.</li>
+                <li><strong>Automatic Open CSP Collateral Backout:</strong> Computes <code className="text-amber-300 font-mono">Strike &times; Contracts &times; 100</code> for every open cash-secured put and backs out the collateral liability to determine Available Cash before living expenses.</li>
+                <li><strong>Default Living Expenses Encumbrance:</strong> Reserves exactly $5,000 in weekly living expenses, producing accurate Net Free Cash for new CSPs.</li>
+                <li><strong>Baseline Auto-Seed:</strong> Pre-loads verified week-ending baseline positions with a clean reset in one click.</li>
               </ul>
             </div>
 
@@ -131,7 +133,7 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
               <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
               <ol className="text-slate-300 space-y-1 list-decimal list-inside">
                 <li><strong>Export from Schwab:</strong> Log into Charles Schwab, navigate to Positions, and click &quot;Export&quot; as of Friday&apos;s close.</li>
-                <li><strong>Upload CSV:</strong> Drag-and-drop or select your CSV file in the dropzone.</li>
+                <li><strong>Upload CSV or Reset:</strong> Click &quot;Start New Week (Clean Reset)&quot; or directly drag-and-drop/select your CSV file in the dropzone (which auto-triggers the clean reset).</li>
                 <li><strong>Verify Balances:</strong> Review categorized cards, then click <strong>&quot;Proceed to Step 2: Cash Balance &rarr;&quot;</strong>.</li>
               </ol>
             </div>

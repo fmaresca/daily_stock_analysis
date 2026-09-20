@@ -480,6 +480,7 @@ export interface AccountCapitalState {
     snyxx: number; // Schwab NY Municipal Money Ultra, e.g. $202,775.94
     snaxx: number; // Schwab Prime Advantage Money Ultra, e.g. $77,341.30
     coreCash: number; // Cash & Cash Investments sweep, e.g. $293,703.52
+    otherMmf?: number; // Other Money Market Funds (e.g. SWVXX, SNSXX), if any
   };
   lastUpdated: string;
 }

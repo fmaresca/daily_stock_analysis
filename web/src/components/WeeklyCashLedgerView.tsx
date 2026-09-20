@@ -22,6 +22,7 @@ import {
   parseSchwabPositionsCsv,
   syncImportedEquitiesToWatchlist,
 } from '../utils/schwabPositionsParser';
+import { executeWeeklyWorkflowCleanReset } from '../utils/weeklyWorkflowReset';
 import { autoSyncSchwabPortfolioPrices } from '../utils/liveMarketFetcher';
 import { LiveTransactionModal } from './LiveTransactionModal';
 import { LiquidCapitalWaterfall } from './cash/LiquidCapitalWaterfall';
@@ -111,9 +112,11 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     };
 
     window.addEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+    window.addEventListener('deltaharvest_workflow_reset', handlePortfolioUpdate);
     window.addEventListener('storage', handlePortfolioUpdate);
     return () => {
       window.removeEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
+      window.removeEventListener('deltaharvest_workflow_reset', handlePortfolioUpdate);
       window.removeEventListener('storage', handlePortfolioUpdate);
     };
   }, [positions]);
@@ -126,6 +129,9 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
       const text = (evt.target?.result as string) || '';
       if (!text) return;
       try {
+        // Execute clean reset routine prior to CSV ingestion
+        executeWeeklyWorkflowCleanReset();
+
         const parsed = parseSchwabPositionsCsv(text);
         setCapitalState(parsed.capitalState);
         saveCapitalState(parsed.capitalState);
