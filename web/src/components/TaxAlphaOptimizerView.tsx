@@ -23,9 +23,10 @@ import {
 export const TaxAlphaOptimizerView: React.FC = () => {
   const storedYtd = useMemo(() => {
     try {
-      return getStoredCapitalState().ytdPremiumsEarned || 603305.40;
+      const cap = getStoredCapitalState();
+      return cap.ytdPremiumsEarned ?? 0;
     } catch {
-      return 603305.40;
+      return 0;
     }
   }, []);
 

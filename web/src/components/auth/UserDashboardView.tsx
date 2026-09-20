@@ -21,7 +21,8 @@ import { OptionsTabType } from '../../types/options';
 import { PasswordChangeView } from './PasswordChangeView';
 
 import { LIVING_TRUST_OPTIONS_POSITIONS } from '../../utils/portfolioStressTest';
-import { getStoredCapitalState, getStoredTaxLedgerState } from '../../utils/capitalAndTaxLedger';
+import { getStoredCapitalState, getStoredTaxLedgerState, getNextWeeklyExpiration } from '../../utils/capitalAndTaxLedger';
+import { getSchwabImportedEquities } from '../../utils/schwabPositionsParser';
 
 interface UserDashboardViewProps {
   onNavigateToScreener?: () => void;
@@ -356,9 +357,50 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     { id: 'w-pltr', symbol: 'PLTR', createdAt: '2026-09-12' },
   ];
 
+  // Dynamically load active positions from portfolio book
+  const dynamicAdminTrades: UserTradeItem[] = React.useMemo(() => {
+    try {
+      const bookRaw = localStorage.getItem('deltaharvest_portfolio_book');
+      if (bookRaw) {
+        const parsed = JSON.parse(bookRaw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const options = parsed.filter((p: any) => p.type === 'COVERED_CALL' || p.type === 'CSP');
+          if (options.length > 0) {
+            return options.map((p: any, idx: number) => ({
+              id: `book-trade-${p.id || idx}`,
+              symbol: p.symbol,
+              strategy: p.type === 'CSP' ? 'CASH_SECURED_PUT' : 'COVERED_CALL',
+              strike: p.strike,
+              expiration: p.expiration || getNextWeeklyExpiration().dateString,
+              contracts: Math.abs(p.quantity),
+              premiumPerShare: p.entryPrice || 1.0,
+              status: 'OPEN' as const,
+              entryDate: p.entryDate || new Date().toISOString().split('T')[0],
+              notes: `${p.account || 'Active Account'} ${p.type === 'CSP' ? 'Cash-Secured Put' : 'Covered Call'}`,
+              createdAt: p.entryDate || new Date().toISOString().split('T')[0],
+            }));
+          }
+        }
+      }
+    } catch {}
+    return defaultAdminTrades;
+  }, []);
+
+  const dynamicAdminWatchlists: UserWatchlistItem[] = React.useMemo(() => {
+    const syms = getSchwabImportedEquities();
+    if (syms.length > 0) {
+      return syms.map((s, idx) => ({
+        id: `w-dynamic-${s.toLowerCase()}-${idx}`,
+        symbol: s,
+        createdAt: new Date().toISOString().split('T')[0],
+      }));
+    }
+    return defaultAdminWatchlists;
+  }, []);
+
   // Effective state
-  const effectiveTrades = (isAdminUser && trades.length === 0) ? defaultAdminTrades : trades;
-  const effectiveWatchlists = (isAdminUser && watchlists.length === 0) ? defaultAdminWatchlists : watchlists;
+  const effectiveTrades = (isAdminUser && trades.length === 0) ? dynamicAdminTrades : trades;
+  const effectiveWatchlists = (isAdminUser && watchlists.length === 0) ? dynamicAdminWatchlists : watchlists;
 
   const effectiveNetLiquidity = isAdminUser
     ? (capitalState.totalAccountValue || 2388228.85)

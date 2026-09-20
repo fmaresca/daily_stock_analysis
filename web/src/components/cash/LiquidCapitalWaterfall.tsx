@@ -12,6 +12,7 @@ import {
   MAX_SINGLE_EQUITY_POSITION_LIMIT,
   DEFAULT_PER_POSITION_BUDGET,
 } from '../../utils/capitalAndTaxLedger';
+import { getSchwabImportedEquities } from '../../utils/schwabPositionsParser';
 
 export interface LiquidCapitalWaterfallProps {
   capitalState: AccountCapitalState;
@@ -68,7 +69,7 @@ export const LiquidCapitalWaterfall: React.FC<LiquidCapitalWaterfallProps> = Rea
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-black text-white tracking-wide">
-                  Account: {capitalState.accountName || 'Living Trust-Options ...609'}
+                  Account: {capitalState.accountName || 'Active Options Account'}
                 </span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30">
                   Primary CSP Account
@@ -172,7 +173,7 @@ export const LiquidCapitalWaterfall: React.FC<LiquidCapitalWaterfallProps> = Rea
           <div className="flex items-center space-x-2">
             <span className="text-[11px] font-bold text-slate-300">Equities Ingested into Watchlist:</span>
             <div className="flex items-center gap-1.5 font-mono font-bold">
-              {(activeEquities.length > 0 ? activeEquities.map((e) => e.symbol) : ['AXTI', 'BLZE', 'IONQ', 'LUNR', 'NET', 'RTX', 'TSLA']).map((sym) => (
+              {(activeEquities.length > 0 ? activeEquities.map((e) => e.symbol) : getSchwabImportedEquities()).map((sym) => (
                 <span
                   key={sym}
                   className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[10px]"
@@ -334,7 +335,9 @@ export const LiquidCapitalWaterfall: React.FC<LiquidCapitalWaterfallProps> = Rea
               -${capitalState.committedCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
             <span className="text-[10px] text-slate-400 block truncate" title={activeCSPs.map((p) => `${p.symbol} $${p.strike}P`).join(', ')}>
-              Locked in {activeCSPs.length} open put write{activeCSPs.length === 1 ? '' : 's'} ({activeCSPs.map((p) => `${p.symbol} $${p.strike}P`).join(', ') || 'PLTR $160P'})
+              {activeCSPs.length > 0
+                ? `Locked in ${activeCSPs.length} open put write${activeCSPs.length === 1 ? '' : 's'} (${activeCSPs.map((p) => `${p.symbol} $${p.strike}P`).join(', ')})`
+                : 'No open cash-secured puts'}
             </span>
           </div>
 

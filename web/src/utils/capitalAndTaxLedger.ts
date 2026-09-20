@@ -284,8 +284,8 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
       state.totalCash = DEFAULT_TOTAL_AVAILABLE_CASH;
     }
 
-    // Auto-migrate if prior YTD premium balance is understated (< $100,000 or legacy $45,942.09)
-    if (!state.priorYtdPremiumBalance || state.priorYtdPremiumBalance < 100000 || state.priorYtdPremiumBalance === 45942.09) {
+    // Auto-migrate if prior YTD premium balance is uninitialized or legacy test fixture
+    if (state.priorYtdPremiumBalance === undefined || state.priorYtdPremiumBalance === null || state.priorYtdPremiumBalance === 45942.09) {
       state.priorYtdPremiumBalance = DEFAULT_PRIOR_YTD_PREMIUM_BALANCE;
     }
 
@@ -370,7 +370,7 @@ export function getStoredTaxLedgerState(): TaxLedgerState {
           saveTaxLedgerState(fresh);
           return fresh;
         }
-        if (!parsed.ytdPremiumsEarned || parsed.ytdPremiumsEarned < 100000 || parsed.ytdPremiumsEarned === 51514.11) {
+        if (parsed.ytdPremiumsEarned === undefined || parsed.ytdPremiumsEarned === null || parsed.ytdPremiumsEarned === 51514.11) {
           parsed.ytdPremiumsEarned = DEFAULT_YTD_PREMIUMS_EARNED;
           saveTaxLedgerState(parsed);
         }
@@ -706,6 +706,7 @@ export function calculateNetTaxableMetrics(ledger: TaxLedgerState) {
 import { checkEarningsInsideExpiration, calculateStraddleImpliedMove } from './earningsCalendar';
 import { normCdf, inverseNormalCdf, getNearestExchangeStrike } from './financeMath';
 import { getNextWeeklyExpiration } from './nyseHolidayCalendar';
+export { getNextWeeklyExpiration };
 
 export interface CoveredCallDeltaResult {
   strike: number;
@@ -1067,3 +1068,24 @@ export function auditPositionsWeeklyStatus(
     healthyPositions,
   };
 }
+
+/**
+ * Standard CBOE Weekly Options Directory symbols
+ */
+export const CBOE_WEEKLY_SYMBOLS = new Set([
+  'SPY', 'QQQ', 'IWM', 'TSLA', 'AAPL', 'NVDA', 'MSFT', 'AMZN', 'GOOGL', 'META',
+  'PLTR', 'AMD', 'PANW', 'NET', 'IONQ', 'RTX', 'COIN', 'SOFI', 'MARA', 'DELL',
+  'NOW', 'AVGO', 'SMCI', 'BABA', 'NFLX', 'DIS', 'JPM', 'BAC', 'XLE', 'XLF', 'XLK',
+]);
+
+/**
+ * Evaluates whether an equity symbol has weekly options (Friday expiries).
+ * Respects ticker metadata `has_weeklys` flag if provided, otherwise matches against CBOE registry.
+ */
+export function isWeeklyCadence(symbol: string, metaHasWeeklys?: boolean): boolean {
+  if (metaHasWeeklys !== undefined && metaHasWeeklys !== null) {
+    return Boolean(metaHasWeeklys);
+  }
+  return CBOE_WEEKLY_SYMBOLS.has((symbol || '').trim().toUpperCase());
+}
+

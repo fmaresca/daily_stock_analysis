@@ -2,7 +2,9 @@ import React, { useState, useMemo } from 'react';
 import {
   LiveTransactionEntry,
   recordLiveTransaction,
+  getNextWeeklyExpiration,
 } from '../utils/capitalAndTaxLedger';
+import { getSchwabImportedEquities } from '../utils/schwabPositionsParser';
 import {
   DollarSign,
   TrendingUp,
@@ -28,23 +30,26 @@ export const LiveTransactionModal: React.FC<LiveTransactionModalProps> = ({
   defaultCategory = 'PUT_WRITTEN',
   defaultSymbol = '',
 }) => {
+  // Preset portfolio equities from active Schwab portfolio import
+  const knownPortfolioEquities = useMemo(() => {
+    const syms = getSchwabImportedEquities();
+    return syms.length > 0 ? syms : ['SPY', 'QQQ', 'NVDA', 'AAPL', 'TSLA'];
+  }, []);
+
   const [category, setCategory] = useState<'PUT_WRITTEN' | 'CALL_WRITTEN' | 'STOCK_BUY' | 'STOCK_SELL'>(
     defaultCategory
   );
-  const [symbol, setSymbol] = useState(defaultSymbol || 'PLTR');
+  const [symbol, setSymbol] = useState(defaultSymbol || (knownPortfolioEquities[0] || 'SPY'));
   const [strike, setStrike] = useState<number>(165);
   const [quantity, setQuantity] = useState<number>(10);
   const [price, setPrice] = useState<number>(1.25);
   const [spotPrice, setSpotPrice] = useState<number>(170.20);
   const [delta, setDelta] = useState<number>(-0.20);
   const [dte, setDte] = useState<number>(6);
-  const [expiration, setExpiration] = useState<string>('2026-09-11');
+  const [expiration, setExpiration] = useState<string>(() => getNextWeeklyExpiration().dateString);
   const [costBasisPerShare, setCostBasisPerShare] = useState<number>(150);
   const [notes, setNotes] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
-
-  // Preset portfolio equities
-  const knownPortfolioEquities = ['PANW', 'PLTR', 'TSLA', 'NET', 'BLZE', 'AXTI', 'IONQ', 'RTX', 'LUNR'];
 
   // Calculations for options
   const isPut = category === 'PUT_WRITTEN';

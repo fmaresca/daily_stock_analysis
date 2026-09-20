@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PortfolioPosition, PositionType } from '../../utils/portfolioStressTest';
+import { getStoredCapitalState } from '../../utils/capitalAndTaxLedger';
 import { Plus } from '../icons';
 
 export interface AddPositionModalProps {
@@ -46,7 +47,7 @@ export const AddPositionModal: React.FC<AddPositionModalProps> = ({
       beta: isLiquid ? 0 : 1.0,
       costBasisTotal: isLiquid ? Number(newQuantity) : undefined,
       marketValueTotal: isLiquid ? Number(newQuantity) : undefined,
-      account: 'Living Trust-Options ...609',
+      account: getStoredCapitalState().accountName || 'Active Account',
     };
     onAddPosition(pos);
     onClose();
