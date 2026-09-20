@@ -6,6 +6,7 @@ import { calculateBarchartOpinion } from '../../utils/barchartEngine';
 import { calculateSMA, calculateRSI } from '../../utils/technicalIndicators';
 import { SECURITY_INTELLIGENCE_REGISTRY } from '../../utils/securityIntelligence';
 import { classifySectorAndBaseVol } from '../../utils/screenerHydrator';
+import { isWeeklyCadence } from '../../utils/capitalAndTaxLedger';
 import { RefreshCw, CheckCircle2, AlertTriangle, Calendar } from '../icons';
 import {
   getNextWeeklyExpiration,
@@ -474,7 +475,7 @@ export const OptionsTradeQualitySimulator: React.FC<OptionsTradeQualitySimulator
           vol1y,
           iv30,
           stockIdea: isUptrend && rsi14 >= 50 && rsi14 <= 70 ? 'Momentum Stocks (6M Alpha)' : 'Standard Watchlist',
-          isCboeWeekly: ['SPY', 'QQQ', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'TSLA', 'META', 'AMD', 'PLTR', 'DELL', 'NOW'].includes(sym),
+          isCboeWeekly: isWeeklyCadence(sym),
         };
       }
 

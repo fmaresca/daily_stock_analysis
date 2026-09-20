@@ -15,6 +15,7 @@ import {
 import {
   getStoredCapitalState,
   parseGeminiMarkdownTables,
+  isWeeklyCadence,
 } from '../utils/capitalAndTaxLedger';
 import { generateInstitutionalGeminiPrompt } from '../utils/geminiPromptTemplates';
 import {
@@ -769,10 +770,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
             const signalStrength = opinionResult.signal_strength;
             const signalDirection = opinionResult.signal_direction;
 
-            const hasWeekly = [
-              'SPY', 'QQQ', 'IWM', 'TSLA', 'AAPL', 'NVDA', 'MSFT', 'AMZN', 'GOOGL', 'META',
-              'PLTR', 'AMD', 'PANW', 'NET', 'IONQ', 'RTX', 'COIN', 'SOFI', 'MARA'
-            ].includes(sym);
+            const hasWeekly = isWeeklyCadence(sym, tickerMetaMap.get(sym)?.has_weeklys);
             const cadence = hasWeekly ? 'Weekly' : 'Monthly Only';
 
             let recommendedStrat = 'BULL_PUT_SPREAD';

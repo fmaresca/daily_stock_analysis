@@ -132,10 +132,10 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
 
     lines.push(`1. EXECUTIVE CAPITAL & LIQUIDITY WATERFALL`);
     lines.push(`Total Liquid Brokerage Cash,$${capitalState.totalCash.toFixed(2)}`);
-    lines.push(`Encumbered Planned Disbursements (Living Expenses),-$${(capitalState.totalEncumberedDisbursements || 5000).toFixed(2)}`);
+    lines.push(`Encumbered Planned Disbursements (Living Expenses),-$${(capitalState.totalEncumberedDisbursements || 0).toFixed(2)}`);
     lines.push(`Committed CSP Collateral (100% Cash-Secured),-$${totalCspCollateral.toFixed(2)}`);
     lines.push(`True Deployable Free Cash,$${capitalState.freeCash.toFixed(2)}`);
-    lines.push(`Single Equity Security CSP Limit,$200000.00 (STRICT MAX)`);
+    lines.push(`Single Equity Security CSP Limit,$${(capitalState.singleEquityPositionLimit || 200000).toFixed(2)} (STRICT MAX)`);
     lines.push(`Target Allocation per Position,$${(capitalState.maxPerPositionAllocation || 100000).toFixed(2)}`);
     lines.push(`Max Concurrent Positions Permitted,${capitalState.maxAllowedPositions} (Capped at 5 max)`);
     lines.push(`Long Stock Equity Value,$${totalStockEquity.toFixed(2)}`);
@@ -211,7 +211,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
               <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
                 Weekly Options Executive Master Report
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Step 10 Output
+                  Step 6 Output
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
@@ -279,7 +279,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
                 DELTAHARVEST OPTIONS INCOME MASTER DIGEST
               </h1>
               <span className="text-xs text-slate-400 font-mono print:text-gray-600">
-                Audit Cycle: {reportDate} • 100% Cash-Secured Mandate • Living Trust-Options ...609
+                Audit Cycle: {reportDate} • 100% Cash-Secured Mandate • {capitalState.accountName || 'Active Account'}
               </span>
             </div>
             <div className="text-right font-mono">
@@ -309,7 +309,7 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
             <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 print:bg-gray-100 print:border-gray-300">
               <span className="text-slate-400 block text-[11px] print:text-gray-600">Encumbered Disbursements</span>
               <span className="text-base font-bold text-rose-400 mt-0.5 block print:text-rose-700">
-                -${(capitalState.totalEncumberedDisbursements || 5000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                -${(capitalState.totalEncumberedDisbursements || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-[10px] text-slate-500 block print:text-gray-500">Weekly Living Expense</span>
             </div>
@@ -319,7 +319,9 @@ export const WeeklyExecutiveReportView: React.FC<WeeklyExecutiveReportViewProps>
               <span className="text-base font-bold text-amber-400 mt-0.5 block print:text-amber-700">
                 -${totalCspCollateral.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
-              <span className="text-[10px] text-slate-500 block print:text-gray-500">100% Cash-Backed (PANW + PLTR)</span>
+              <span className="text-[10px] text-slate-500 block print:text-gray-500">
+                100% Cash-Backed {cspPositions.length > 0 ? `(${cspPositions.map((p) => p.symbol).join(' + ')})` : '(No Open CSPs)'}
+              </span>
             </div>
 
             <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/40 print:bg-emerald-50 print:border-emerald-300">

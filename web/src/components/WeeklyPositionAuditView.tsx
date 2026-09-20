@@ -526,7 +526,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
               <Clock className="w-4 h-4 text-emerald-400" />
               <h3 className="text-sm font-bold text-white">Active Positions Ledger ({positions.length})</h3>
               <span className="text-[11px] font-mono text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                Living Trust-Options ...609
+                {capitalState.accountName || positions[0]?.account || 'Active Account'}
               </span>
               {marketStatusMsg && (
                 <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/50 border border-cyan-500/30 px-2 py-0.5 rounded-full flex items-center space-x-1">

@@ -222,6 +222,29 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
     };
   }, [positions]);
 
+  const capitalState = useMemo(() => getStoredCapitalState(positions), [positions]);
+
+  const auditSummary = useMemo(() => {
+    const stockCount = stockPairs.length;
+    const ccTranches = stockPairs.reduce((sum, sp) => sum + (sp.activeCoveredCalls?.length || 0), 0);
+    const triggerSymbols = stockPairs
+      .filter((sp) => sp.activeCoveredCalls?.some((c) => (c.gainPct !== undefined ? c.gainPct >= 80 : (c.pnlPercent ?? 0) >= 80)))
+      .map((sp) => sp.symbol);
+    const cspSymbols = openCSPs.map((p) => p.symbol);
+    
+    let text = `Account audit: ${stockCount} long equity holding${stockCount === 1 ? '' : 's'}, ${ccTranches} covered call tranche${ccTranches === 1 ? '' : 's'}`;
+    if (triggerSymbols.length > 0) {
+      text += ` (with 80% profit close triggers on ${triggerSymbols.join(' & ')})`;
+    }
+    if (openCSPs.length > 0) {
+      text += `, and ${openCSPs.length} open CSP${openCSPs.length === 1 ? '' : 's'} (${cspSymbols.join(' & ')})`;
+    } else {
+      text += ', and 0 open CSPs';
+    }
+    text += '.';
+    return text;
+  }, [stockPairs, openCSPs]);
+
   // Sorting state for stockPairs (Table 1: Long Equities & Covered Calls)
   const [stockSortKey, setStockSortKey] = useState<string>('symbol');
   const [stockSortOrder, setStockSortOrder] = useState<SortOrder>('asc');
@@ -598,14 +621,14 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                   Holdings, Covered Calls &amp; Cash-Secured Puts
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Step 4 &amp; 5 Ledger
+                  Step 3 Ledger
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold">
-                  Living Trust-Options ...609
+                  {capitalState.accountName || 'Active Account'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Real account audit: 7 long equity holdings, 7 covered call tranches (with 80% profit close triggers on BLZE &amp; TSLA), and 2 open CSPs (PANW &amp; PLTR).
+                {auditSummary}
               </p>
             </div>
           </div>
@@ -631,10 +654,10 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
               localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(fresh));
             }}
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
-            title="Reset positions to Living Trust-Options ...609 Schwab ground truth"
+            title="Reset positions to sample portfolio baseline"
           >
             <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Reset to Living Trust Account</span>
+            <span>Reset to Baseline</span>
           </button>
 
           <button

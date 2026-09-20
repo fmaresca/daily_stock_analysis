@@ -34,6 +34,7 @@ import { MarketChameleonPrescreenModal } from './MarketChameleonPrescreenModal';
 import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescreen';
 import { fetchTickerChartData, syncLiveEquitiesPrices } from '../utils/liveMarketFetcher';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
+import { isWeeklyCadence } from '../utils/capitalAndTaxLedger';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
 import { getSchwabImportedEquities, getSchwabImportedEquitiesWithPrices } from '../utils/schwabPositionsParser';
 import { SECURITY_INTELLIGENCE_REGISTRY } from '../utils/securityIntelligence';
@@ -276,7 +277,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
             const signalStrength = opinionResult.signal_strength;
             const signalDirection = opinionResult.signal_direction;
 
-            const hasWeekly = ['SPY', 'QQQ', 'IWM', 'TSLA', 'AAPL', 'NVDA', 'MSFT', 'AMZN', 'GOOGL', 'META', 'PLTR', 'AMD', 'PANW', 'NET', 'IONQ', 'RTX'].includes(sym);
+            const hasWeekly = isWeeklyCadence(sym);
             const cadence = hasWeekly ? 'Weekly' : 'Monthly Only';
 
             let recommendedStrat = 'BULL_PUT_SPREAD';

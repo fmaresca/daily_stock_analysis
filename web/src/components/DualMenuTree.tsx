@@ -52,6 +52,37 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
   earningsAlertCount,
   freeCashAmount,
 }) => {
+  // Dynamically track configured target delta for Step 3 label
+  const [targetDeltaPct, setTargetDeltaPct] = React.useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('deltaharvest_harvest_target_delta');
+      if (saved) {
+        const val = parseFloat(saved);
+        if (!isNaN(val) && val > 0 && val < 1) return Math.round(val * 100);
+      }
+    } catch {}
+    return 20;
+  });
+
+  React.useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const saved = localStorage.getItem('deltaharvest_harvest_target_delta');
+        if (saved) {
+          const val = parseFloat(saved);
+          if (!isNaN(val) && val > 0 && val < 1) {
+            setTargetDeltaPct(Math.round(val * 100));
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('deltaharvest_portfolio_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('deltaharvest_portfolio_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
   return (
     <div className="space-y-3">
       {/* Primary Top-Level Mode Selector */}
@@ -230,7 +261,7 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             >
               <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">3</span>
               <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
-              <span>3. Holdings &amp; 20&Delta; Calls</span>
+              <span>3. Holdings &amp; {targetDeltaPct}&Delta; Calls</span>
             </button>
 
             <span className="text-slate-600 text-xs">➔</span>
