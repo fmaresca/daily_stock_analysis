@@ -160,9 +160,8 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
               <ul className="text-slate-300 space-y-1 list-disc list-inside">
                 <li><strong>Precalculated Cash Formula:</strong> Evaluates <code className="text-emerald-300 font-mono">Precalculated Liquid Cash = Cash Sweep + Money Market Funds - &Sigma;(Strike &times; 100 &times; Contracts for open CSPs)</code>.</li>
                 <li><strong>Living Expense Encumbrance:</strong> Automatically subtracts $5,000 upfront weekly living disbursements before options sizing.</li>
-                <li><strong>Calendar YTD Premiums Tracking:</strong> Automatically tracks cumulative option premiums earned across the calendar year (2026 baseline defaults to $603,305.40) and adds settled current week premiums.</li>
-                <li><strong>YTD Capital Gains &amp; Loss Netting:</strong> Computes net taxable income by adding YTD premiums and realized capital gains, subtracting realized losses and applying prior-year capital loss carryforwards (e.g. IRS $3,000 annual allowance).</li>
-                <li><strong>Position Limits:</strong> Strictly enforces $200,000 single equity security position limit and dynamically sizes concurrent trades: <code className="text-emerald-400 font-mono">min(5, floor(Free Cash / Target Allocation))</code>.</li>
+                <li><strong>End-of-Week Tax &amp; YTD Verification:</strong> Prompts weekly review of YTD Option Premiums Written and YTD Net Realized Capital Gains, while strictly retaining Capital Loss Carry Forwards across weekly resets. Alerts upon crossing the January 1 calendar year boundary.</li>
+                <li><strong>Position Limits &amp; Budget Guardrails:</strong> Strictly enforces $200,000 single equity security position limit and dynamically sizes concurrent trades: <code className="text-emerald-400 font-mono">min(5, floor(Free Cash / Target Allocation))</code>, auto-gating Step 5 screener candidates.</li>
               </ul>
             </div>
 
@@ -170,9 +169,8 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
               <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
               <ol className="text-slate-300 space-y-1 list-decimal list-inside">
                 <li><strong>Verify Precalculated Cash:</strong> Review the formula breakdown box. If cash or MMF balances changed, edit inline or use quick chips.</li>
-                <li><strong>Set Living Expenses:</strong> Verify the weekly disbursement ($5,000 default). Adjust if extraordinary tax or capital distributions are planned.</li>
-                <li><strong>Update Starting YTD Premiums ($603,305.40):</strong> Directly edit or quick-fill the starting YTD baseline in Panel A or verify/adjust the starting balance directly within the <em>Log Current Week Premium</em> modal before logging weekly options.</li>
-                <li><strong>Maintain YTD Capital Gains &amp; Loss Carryforwards:</strong> Click <em>Edit Gains &amp; Carryover</em> in Panel B to update closed equity/ETF realized gains, realized losses, and IRS prior-year loss carryforwards with real-time taxable income preview.</li>
+                <li><strong>Confirm Weekly YTD Tax Figures:</strong> Click <em>Edit YTD Gains &amp; Carryover</em> to adjust closed capital gains or premiums, verify the retained loss carryforward, and click <em>Confirm &amp; Mark Reconciled for Week</em>.</li>
+                <li><strong>New Calendar Year Reset (Jan 1):</strong> When the calendar year transitions, reset YTD Premiums and Net Gains to $0.00 and roll unused losses into your Prior-Year Capital Loss Carry Forward.</li>
                 <li><strong>Position Allocation Target:</strong> Select your target allocation (Auto, $50k, $100k, or $200k max cap) to calibrate position sizing.</li>
               </ol>
             </div>
@@ -186,7 +184,7 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
               <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 font-mono font-bold flex items-center justify-center text-xs">
                 3
               </span>
-              <span className="font-bold text-indigo-300 text-sm">Step 3: Holdings &amp; Covered Calls (HoldingsCoveredCallView)</span>
+              <span className="font-bold text-indigo-300 text-sm">Step 3: Holdings &amp; 20&Delta; Calls (HoldingsCoveredCallView)</span>
             </div>
             <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
               Route: WORKFLOW &rarr; HOLDINGS_COVERED_CALLS
@@ -197,18 +195,18 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
             <div className="space-y-1.5">
               <strong className="text-white block font-semibold">⚙️ Automated System Calculations:</strong>
               <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                <li><strong>Multi-Leg Pairing:</strong> Pairs 7 equity holdings (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA) with active covered calls and real-time Mkt Prices.</li>
-                <li><strong>Dynamic Expiration Engine:</strong> Evaluates option expiration dates deterministically; expired options display a clean &quot;Expired (Date)&quot; status badge.</li>
-                <li><strong>80% Profit Triggers:</strong> Flags profitable active covered calls that have captured &ge;80% of max premium (excluding expired contracts) to eliminate gamma tail risk.</li>
-                <li><strong>Uncovered Block Detection:</strong> Identifies unhedged 100-share blocks and calculates 20&Delta; strike suggestions anchored above resistance.</li>
+                <li><strong>Automated 20&Delta; Weekly Harvest Radar:</strong> Scans all equity holdings for unhedged blocks (&ge;100 shares), automatically resolving the upcoming Friday weekly expiration (5-7 DTE) and calculating optimal 20&Delta; strikes above resistance.</li>
+                <li><strong>Cost-Basis &amp; Earnings Safety Guardrails:</strong> Flags whether strikes clear cost basis (warning if underwater) and checks quarterly earnings dates to pause automatic staging during earnings blackout weeks.</li>
+                <li><strong>Dual 80% Profit Triggers:</strong> Flags calls and CSPs that hit &ge;80% profit capture, offering both 1-click <em>Close (BTC)</em> to unlock shares/collateral and <em>Roll to Next Week</em> for net credit.</li>
+                <li><strong>1-Click Batch Staging:</strong> <em>Stage All Safe Weekly Calls</em> pushes all earnings-cleared covered call orders into Step 7 in a single transaction.</li>
               </ul>
             </div>
 
             <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
               <strong className="text-amber-300 block font-semibold">👤 Manual Intervention Required by User:</strong>
               <ol className="text-slate-300 space-y-1 list-decimal list-inside">
-                <li><strong>Check Profit Triggers:</strong> Review active positions highlighted in emerald (&ge;80% profit). Click <strong>&quot;Stage BTC Order&quot;</strong> to buy-to-close or roll out and up.</li>
-                <li><strong>Write Covered Calls:</strong> On any unhedged shares, review the recommended 20&Delta; strikes and click <strong>&quot;1-Click Stage CC&quot;</strong> to send to the broker workbench.</li>
+                <li><strong>Harvest Uncovered Shares:</strong> Review the Harvest Radar at the top of Step 3 and click <strong>&quot;Stage All Safe Weekly Calls&quot;</strong> to harvest weekly premium across all uncovered share blocks.</li>
+                <li><strong>Manage 80% Profit Triggers:</strong> For contracts hitting 80% profit, select <strong>Close (BTC)</strong> to free underlying shares or <strong>Roll &rarr;</strong> to capture net credit into next Friday.</li>
               </ol>
             </div>
           </div>

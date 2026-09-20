@@ -1200,7 +1200,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
         </div>
 
         {/* Live Cash & Collateral Context Strip */}
-        <div className="flex items-center space-x-2 bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-mono">
+        <div className="flex flex-wrap items-center gap-2 bg-slate-900/90 border border-emerald-500/30 rounded-xl px-3.5 py-2 text-xs font-mono shadow-md">
           <div className="text-slate-400">
             Total Cash:{' '}
             <strong className="text-white">${capitalState.totalCash.toLocaleString()}</strong>
@@ -1212,13 +1212,18 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
           </div>
           <span className="text-slate-600">|</span>
           <div className="text-slate-400">
-            Collateral:{' '}
+            CSP Collateral:{' '}
             <strong className="text-rose-400">-${capitalState.committedCollateral.toLocaleString()}</strong>
           </div>
           <span className="text-slate-600">➔</span>
           <div className="text-emerald-400 font-bold flex items-center gap-1">
             <DollarSign className="w-3.5 h-3.5" />
-            <span>Free Cash: ${capitalState.freeCash.toLocaleString()}</span>
+            <span>Net Free Cash: ${capitalState.freeCash.toLocaleString()}</span>
+          </div>
+          <span className="text-slate-600">|</span>
+          <div className="text-cyan-300 font-semibold flex items-center gap-1">
+            <span>Budget/Pos: ${(capitalState.maxPerPositionAllocation || 30000).toLocaleString()}</span>
+            <span>({capitalState.maxAllowedPositions || (capitalState.freeCash > 0 ? 1 : 0)} Max New CSPs)</span>
           </div>
         </div>
       </div>

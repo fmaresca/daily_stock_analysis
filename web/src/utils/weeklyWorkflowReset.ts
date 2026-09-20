@@ -46,6 +46,7 @@ const STORAGE_KEYS_TO_CLEAR = [
   'deltaharvest_submitted_orders',
   'deltaharvest_live_payload',
   'deltaharvest_last_live_fetch',
+  'deltaharvest_ytd_reconciliation_confirmed',
 ];
 
 /**

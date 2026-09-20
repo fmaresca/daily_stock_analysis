@@ -203,7 +203,7 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 2: Cash Balance */}
+            {/* Step 2: Cash & YTD Tax */}
             <button
               onClick={() => onSelectOptionsTab('WEEKLY_CASH_LEDGER')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
@@ -214,12 +214,12 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             >
               <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">2</span>
               <DollarSign className="w-3.5 h-3.5 text-emerald-300" />
-              <span>2. Cash Balance</span>
+              <span>2. Cash &amp; YTD Tax</span>
             </button>
 
             <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 3: Holdings & Covered Calls */}
+            {/* Step 3: Holdings & 20Δ Calls */}
             <button
               onClick={() => onSelectOptionsTab('HOLDINGS_COVERED_CALLS')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
@@ -230,7 +230,7 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
             >
               <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">3</span>
               <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
-              <span>3. Holdings &amp; Covered Calls</span>
+              <span>3. Holdings &amp; 20&Delta; Calls</span>
             </button>
 
             <span className="text-slate-600 text-xs">➔</span>

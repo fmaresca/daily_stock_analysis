@@ -6,6 +6,8 @@ import {
 } from '../utils/portfolioStressTest';
 import {
   calculateSuggestedCoveredCall20Delta,
+  CoveredCall20DeltaResult,
+  getNextWeeklyFriday,
   getStoredCapitalState,
   saveCapitalState,
 } from '../utils/capitalAndTaxLedger';
@@ -238,16 +240,305 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
     setIsAddPositionModalOpen(false);
   };
 
-  // Compute 20-Delta Covered Call recommendation for the selected holding
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  // Compute 20-Delta Covered Call recommendation for the selected modal holding
   const ccRecommendation = useMemo(() => {
     if (!selectedHoldingForCC) return null;
     return calculateSuggestedCoveredCall20Delta(
       selectedHoldingForCC.spotPrice,
       selectedHoldingForCC.ivr30,
       selectedHoldingForCC.ivrRank,
-      selectedHoldingForCC.resistance
+      selectedHoldingForCC.resistance,
+      selectedHoldingForCC.costBasis,
+      selectedHoldingForCC.symbol,
+      selectedHoldingForCC.shares
     );
   }, [selectedHoldingForCC]);
+
+  // Automated Weekly Covered Call Harvest Radar (Uncovered Equity Lots)
+  const uncoveredHarvestCandidates = useMemo(() => {
+    return stockPairs
+      .filter((stk) => stk.uncoveredShares >= 100)
+      .map((stk) => {
+        const contracts = Math.floor(stk.uncoveredShares / 100);
+        const recommendation = calculateSuggestedCoveredCall20Delta(
+          stk.currentSpot,
+          stk.marketChameleonIvr30 || 35,
+          stk.marketChameleonIvrRank || 50,
+          stk.resistanceLevel || stk.currentSpot * 1.05,
+          stk.costBasis,
+          stk.symbol,
+          stk.uncoveredShares
+        );
+        return {
+          symbol: stk.symbol,
+          companyName: stk.companyName,
+          shares: stk.shares,
+          uncoveredShares: stk.uncoveredShares,
+          contracts,
+          spotPrice: stk.currentSpot,
+          costBasis: stk.costBasis,
+          marketValue: stk.marketValue,
+          recommendation,
+        };
+      });
+  }, [stockPairs]);
+
+  const totalHarvestContracts = useMemo(() => {
+    return uncoveredHarvestCandidates.reduce((acc, c) => acc + c.contracts, 0);
+  }, [uncoveredHarvestCandidates]);
+
+  const totalHarvestDollarIncome = useMemo(() => {
+    return uncoveredHarvestCandidates.reduce((acc, c) => acc + c.recommendation.totalDollarIncome, 0);
+  }, [uncoveredHarvestCandidates]);
+
+  const safeHarvestCandidates = useMemo(() => {
+    return uncoveredHarvestCandidates.filter((c) => !c.recommendation.hasEarningsBlackout);
+  }, [uncoveredHarvestCandidates]);
+
+  const safeHarvestDollarIncome = useMemo(() => {
+    return safeHarvestCandidates.reduce((acc, c) => acc + c.recommendation.totalDollarIncome, 0);
+  }, [safeHarvestCandidates]);
+
+  // 1-Click Action: Batch Stage All Safe Weekly Calls
+  const handleBatchStageAllWeeklyCalls = (includeBlackouts: boolean = false) => {
+    const targets = includeBlackouts ? uncoveredHarvestCandidates : safeHarvestCandidates;
+    if (targets.length === 0) return;
+
+    const newPositions: PortfolioPosition[] = [];
+
+    targets.forEach((c) => {
+      const newPos: PortfolioPosition = {
+        id: `cc-harvest-${c.symbol}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        symbol: c.symbol,
+        type: 'COVERED_CALL',
+        quantity: c.contracts,
+        spotPrice: c.spotPrice,
+        strike: c.recommendation.strike,
+        expiration: c.recommendation.expiration,
+        dte: c.recommendation.dte,
+        entryPrice: c.recommendation.estPremium,
+        currentOptionPrice: c.recommendation.estPremium,
+        iv: c.recommendation.ivr30 / 100,
+        delta: c.recommendation.delta,
+        theta: 0.08,
+        vega: 0.05,
+        beta: 1.0,
+        gainDollar: 0,
+        gainPct: 0,
+      };
+      newPositions.push(newPos);
+
+      if (onStageOrder) {
+        onStageOrder({
+          id: `HARVEST_${c.symbol}_${c.recommendation.strike}C`,
+          symbol: c.symbol,
+          name: c.symbol,
+          strategy: 'COVERED_CALL',
+          strategy_name: 'Weekly Covered Call Harvest (20Δ)',
+          action: 'SELL_TO_OPEN',
+          quantity: c.contracts,
+          strike: c.recommendation.strike,
+          optionType: 'CALL',
+          expiration: c.recommendation.expiration,
+          dte: c.recommendation.dte,
+          limitPrice: c.recommendation.estPremium,
+          premium_total: c.recommendation.totalDollarIncome,
+          bid: c.recommendation.estPremium,
+          ask: c.recommendation.estPremium,
+          mid: c.recommendation.estPremium,
+          current_price: c.spotPrice,
+          collateral_required: 0,
+          tags: ['WEEKLY_CC_HARVEST', '20_DELTA'],
+        });
+      }
+    });
+
+    setPositions((prev) => [...prev, ...newPositions]);
+    setToastMessage(`✓ Successfully staged ${targets.length} weekly covered call tranches (${targets.reduce((a, b) => a + b.contracts, 0)} contracts, +$${(includeBlackouts ? totalHarvestDollarIncome : safeHarvestDollarIncome).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} income)!`);
+  };
+
+  // Stage single weekly call from Harvest Radar
+  const handleStageSingleWeeklyCall = (c: typeof uncoveredHarvestCandidates[0]) => {
+    const newPos: PortfolioPosition = {
+      id: `cc-harvest-${c.symbol}-${Date.now()}`,
+      symbol: c.symbol,
+      type: 'COVERED_CALL',
+      quantity: c.contracts,
+      spotPrice: c.spotPrice,
+      strike: c.recommendation.strike,
+      expiration: c.recommendation.expiration,
+      dte: c.recommendation.dte,
+      entryPrice: c.recommendation.estPremium,
+      currentOptionPrice: c.recommendation.estPremium,
+      iv: c.recommendation.ivr30 / 100,
+      delta: c.recommendation.delta,
+      theta: 0.08,
+      vega: 0.05,
+      beta: 1.0,
+      gainDollar: 0,
+      gainPct: 0,
+    };
+    setPositions((prev) => [...prev, newPos]);
+
+    if (onStageOrder) {
+      onStageOrder({
+        id: `HARVEST_${c.symbol}_${c.recommendation.strike}C`,
+        symbol: c.symbol,
+        name: c.symbol,
+        strategy: 'COVERED_CALL',
+        strategy_name: 'Weekly Covered Call Harvest (20Δ)',
+        action: 'SELL_TO_OPEN',
+        quantity: c.contracts,
+        strike: c.recommendation.strike,
+        optionType: 'CALL',
+        expiration: c.recommendation.expiration,
+        dte: c.recommendation.dte,
+        limitPrice: c.recommendation.estPremium,
+        premium_total: c.recommendation.totalDollarIncome,
+        bid: c.recommendation.estPremium,
+        ask: c.recommendation.estPremium,
+        mid: c.recommendation.estPremium,
+        current_price: c.spotPrice,
+        collateral_required: 0,
+        tags: ['WEEKLY_CC_HARVEST', '20_DELTA'],
+      });
+    }
+    setToastMessage(`✓ Staged ${c.contracts}x ${c.symbol} $${c.recommendation.strike} Call (+${c.recommendation.totalDollarIncome.toLocaleString('en-US', { style: 'currency', currency: 'USD' })})`);
+  };
+
+  // 80% Profit Handlers: Close (BTC) and Roll to Next Week
+  const handleCloseShortCall = (ccId: string | undefined, symbol: string, strike: number, quantity: number, currentPrice: number) => {
+    if (onStageOrder) {
+      onStageOrder({
+        id: `BTC_${symbol}_${strike}C_${Date.now()}`,
+        symbol,
+        name: symbol,
+        strategy: 'COVERED_CALL',
+        strategy_name: 'Buy To Close Short Call (80% Profit)',
+        action: 'BUY_TO_CLOSE',
+        quantity,
+        strike,
+        optionType: 'CALL',
+        limitPrice: currentPrice,
+        tags: ['TAKE_PROFIT_80', 'BTC'],
+      });
+    }
+    setPositions((prev) => prev.filter((p) => p.id !== ccId));
+    setToastMessage(`✓ Staged BTC order for ${quantity}x ${symbol} $${strike}C @ $${currentPrice.toFixed(2)}. ${quantity * 100} shares now unlocked!`);
+  };
+
+  const handleRollShortCall = (ccId: string | undefined, symbol: string, currentStrike: number, quantity: number, currentPrice: number, spotPrice: number, costBasis?: number) => {
+    const rec = calculateSuggestedCoveredCall20Delta(spotPrice, 35, 50, spotPrice * 1.05, costBasis, symbol, quantity * 100);
+    const netCredit = Math.max(0.01, rec.estPremium - currentPrice);
+
+    if (onStageOrder) {
+      onStageOrder({
+        id: `ROLL_${symbol}_${currentStrike}to${rec.strike}_${Date.now()}`,
+        symbol,
+        name: symbol,
+        strategy: 'COVERED_CALL',
+        strategy_name: 'Weekly Diagonal/Calendar Roll (80% Capture)',
+        action: 'ROLL',
+        quantity,
+        strike: rec.strike,
+        oldStrike: currentStrike,
+        optionType: 'CALL',
+        limitPrice: netCredit,
+        expiration: rec.expiration,
+        dte: rec.dte,
+        notes: `Roll: BTC $${currentStrike} Call @ $${currentPrice.toFixed(2)}, STO next Friday $${rec.strike} Call @ $${rec.estPremium.toFixed(2)} (Net Credit: +$${netCredit.toFixed(2)}/sh)`,
+        tags: ['ROLL', 'WEEKLY_HARVEST'],
+      });
+    }
+
+    setPositions((prev) => {
+      const filtered = prev.filter((p) => p.id !== ccId);
+      const rolledPos: PortfolioPosition = {
+        id: `cc-rolled-${symbol}-${Date.now()}`,
+        symbol,
+        type: 'COVERED_CALL',
+        quantity,
+        spotPrice,
+        strike: rec.strike,
+        expiration: rec.expiration,
+        dte: rec.dte,
+        entryPrice: rec.estPremium,
+        currentOptionPrice: rec.estPremium,
+        iv: 0.35,
+        delta: rec.delta,
+        theta: 0.08,
+        vega: 0.05,
+        beta: 1.0,
+        gainDollar: 0,
+        gainPct: 0,
+      };
+      return [...filtered, rolledPos];
+    });
+
+    setToastMessage(`✓ Rolled ${quantity}x ${symbol} $${currentStrike}C into next Friday $${rec.strike}C (+$${(netCredit * quantity * 100).toFixed(0)} Net Credit)!`);
+  };
+
+  const handleRollCSP = (cspId: string | undefined, symbol: string, currentStrike: number, quantity: number, currentPrice: number, spotPrice: number) => {
+    const nextFriday = getNextWeeklyFriday();
+    const newStrike = Math.round(spotPrice * 0.95 * 2) / 2;
+    const newEstPrem = Math.round(spotPrice * 0.30 * Math.sqrt(nextFriday.dte / 365) * 0.20 * 100) / 100 || 0.50;
+    const netCredit = Math.max(0.01, newEstPrem - currentPrice);
+
+    if (onStageOrder) {
+      onStageOrder({
+        id: `ROLL_CSP_${symbol}_${currentStrike}to${newStrike}_${Date.now()}`,
+        symbol,
+        name: symbol,
+        strategy: 'CSP',
+        strategy_name: 'Weekly CSP Roll (80% Capture)',
+        action: 'ROLL',
+        quantity,
+        strike: newStrike,
+        oldStrike: currentStrike,
+        optionType: 'PUT',
+        limitPrice: netCredit,
+        expiration: nextFriday.dateStr,
+        dte: nextFriday.dte,
+        notes: `Roll CSP: BTC $${currentStrike}P @ $${currentPrice.toFixed(2)}, STO next Friday $${newStrike}P @ $${newEstPrem.toFixed(2)}`,
+        tags: ['ROLL', 'CSP'],
+      });
+    }
+
+    setPositions((prev) => {
+      const filtered = prev.filter((p) => p.id !== cspId);
+      const rolledPos: PortfolioPosition = {
+        id: `csp-rolled-${symbol}-${Date.now()}`,
+        symbol,
+        type: 'CSP',
+        quantity,
+        spotPrice,
+        strike: newStrike,
+        expiration: nextFriday.dateStr,
+        dte: nextFriday.dte,
+        entryPrice: newEstPrem,
+        currentOptionPrice: newEstPrem,
+        iv: 0.30,
+        delta: -0.20,
+        theta: 0.06,
+        vega: 0.05,
+        beta: 1.0,
+        gainDollar: 0,
+        gainPct: 0,
+      };
+      return [...filtered, rolledPos];
+    });
+
+    setToastMessage(`✓ Rolled ${quantity}x ${symbol} $${currentStrike}P into next Friday $${newStrike}P (+$${(netCredit * quantity * 100).toFixed(0)} Net Credit)!`);
+  };
 
   return (
     <div className="space-y-6">
@@ -373,6 +664,166 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
         </div>
       </div>
 
+      {/* WEEKLY COVERED CALL HARVEST RADAR (Uncovered Equity Lots) */}
+      {uncoveredHarvestCandidates.length > 0 && (
+        <div className="glass-panel p-5 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/20 shadow-2xl space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <div className="flex items-center space-x-2.5">
+                <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                  <Zap className="w-5 h-5" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-white tracking-tight">
+                      Weekly Covered Call Harvest Radar (20&Delta;)
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
+                      {uncoveredHarvestCandidates.length} Positions Available
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Targeting upcoming Friday weekly expiration ({getNextWeeklyFriday().dateStr}, {getNextWeeklyFriday().dte} DTE). Generates systematic income on uncovered share blocks while defending cost-basis and avoiding earnings blackouts.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-right pr-2">
+                <span className="text-[10px] text-slate-400 font-mono block uppercase">Total Weekly Income</span>
+                <span className="text-xl font-bold font-mono text-emerald-400">
+                  +${safeHarvestDollarIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleBatchStageAllWeeklyCalls(false)}
+                disabled={safeHarvestCandidates.length === 0}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg flex items-center space-x-2 cursor-pointer ${
+                  safeHarvestCandidates.length > 0
+                    ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-emerald-600/30'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                }`}
+                title="Stage all recommended 20 Delta weekly covered calls that are cleared of earnings collisions into Step 7 Workbench"
+              >
+                <Zap className="w-4 h-4" />
+                <span>
+                  Stage All {safeHarvestCandidates.reduce((a, b) => a + b.contracts, 0)} Safe Weekly Calls (+${safeHarvestDollarIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Harvest Opportunities Table */}
+          <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/60">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 font-semibold bg-slate-900/80">
+                  <th className="py-2.5 px-3">Underlying</th>
+                  <th className="py-2.5 px-3">Uncovered Lot</th>
+                  <th className="py-2.5 px-3">Target Contract</th>
+                  <th className="py-2.5 px-3">Est. Bid/Mid</th>
+                  <th className="py-2.5 px-3">Weekly Intake</th>
+                  <th className="py-2.5 px-3">Annualized APR</th>
+                  <th className="py-2.5 px-3">Audit &amp; Risk Guardrails</th>
+                  <th className="py-2.5 px-3 text-right">Harvest Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {uncoveredHarvestCandidates.map((c) => {
+                  const rec = c.recommendation;
+                  const isBlockedByEarnings = rec.hasEarningsBlackout;
+
+                  return (
+                    <tr key={c.symbol} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="font-bold text-white text-sm">{c.symbol}</div>
+                        <div className="text-[11px] text-slate-400 font-sans">{c.companyName || c.symbol}</div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-bold text-amber-300">{c.uncoveredShares.toLocaleString()} shs</div>
+                        <div className="text-[10px] text-slate-400 font-sans">{c.contracts} contract{c.contracts > 1 ? 's' : ''}</div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-bold text-emerald-300 text-sm">
+                          ${rec.strike.toFixed(2)} Call
+                        </div>
+                        <div className="text-[10px] text-slate-400 flex items-center gap-1.5 font-sans">
+                          <span>{rec.expiration} ({rec.dte}d)</span>
+                          <span>•</span>
+                          <span className="text-cyan-300 font-mono">{rec.delta}&Delta;</span>
+                          <span>•</span>
+                          <span className="text-slate-300">+{(((rec.strike - c.spotPrice) / c.spotPrice) * 100).toFixed(1)}% OTM</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-slate-200">${rec.estPremium.toFixed(2)}</span>
+                        <span className="text-[10px] text-slate-500 block font-sans">per share</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-emerald-400 text-sm">
+                          +${rec.totalDollarIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block font-sans">
+                          {rec.weeklyYield.toFixed(2)}% weekly yield
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-emerald-300">{rec.annualizedYield.toFixed(1)}%</span>
+                        <span className="text-[10px] text-slate-400 block font-sans">
+                          {rec.downsideCushion.toFixed(1)}% cushion
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="space-y-1 text-[11px] font-sans">
+                          {rec.isBelowCostBasis ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold" title={`Strike $${rec.strike} is lower than position cost basis $${c.costBasis.toFixed(2)}`}>
+                              ⚠️ Strike &lt; Cost Basis (${c.costBasis.toFixed(2)})
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              🛡️ Clears Cost Basis (${c.costBasis.toFixed(2)})
+                            </span>
+                          )}
+
+                          {isBlockedByEarnings ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold block" title={rec.earningsTimingDescription}>
+                              ⚠️ Earnings on {rec.earningsDate} (Gap Risk)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-800 text-slate-400 block">
+                              📅 Earnings Cleared
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStageSingleWeeklyCall(c)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow cursor-pointer flex items-center gap-1 ${
+                              isBlockedByEarnings
+                                ? 'bg-amber-600/80 hover:bg-amber-500 text-white'
+                                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
+                            }`}
+                            title={isBlockedByEarnings ? 'Override earnings blackout and stage order' : 'Stage weekly covered call order'}
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                            <span>{isBlockedByEarnings ? 'Stage (Override)' : 'Stage Call'}</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* SECTION 1: Long Stocks & Linked Covered Calls */}
       <div className="glass-panel p-5 rounded-2xl border border-slate-800 bg-slate-900/80 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
@@ -460,9 +911,27 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                                       <span className="text-slate-500 font-normal">({cc.dte}d)</span>
                                     </div>
                                     {is80PctProfit && (
-                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
-                                        🎯 80% Capture! Close
-                                      </span>
+                                      <div className="flex items-center gap-1">
+                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
+                                          🎯 80%
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCloseShortCall(cc.id, stk.symbol, cc.strike, cc.quantity || 1, cc.currentPrice)}
+                                          className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 transition-colors cursor-pointer"
+                                          title="Buy to close short call to lock in 80%+ profit and unlock shares"
+                                        >
+                                          Close (BTC)
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRollShortCall(cc.id, stk.symbol, cc.strike, cc.quantity || 1, cc.currentPrice, stk.currentSpot, stk.costBasis)}
+                                          className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-600 hover:bg-cyan-500 text-white border border-cyan-400 transition-colors cursor-pointer"
+                                          title="Roll into next week's 20Δ call for net credit"
+                                        >
+                                          Roll &rarr;
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
                                   <div className="text-slate-400 flex items-center justify-between text-[10px]">
@@ -699,23 +1168,37 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {is80PctProfit && (
-                            <button
-                              onClick={() => {
-                                if (onStageOrder) {
-                                  onStageOrder({
-                                    symbol: pos.symbol,
-                                    action: 'BUY_TO_CLOSE',
-                                    quantity: pos.quantity,
-                                    strike: pos.strike,
-                                    optionType: 'PUT',
-                                    limitPrice: pos.currentOptionPrice,
-                                  });
-                                }
-                              }}
-                              className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow transition-all cursor-pointer"
-                            >
-                              BTC
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (onStageOrder) {
+                                    onStageOrder({
+                                      symbol: pos.symbol,
+                                      action: 'BUY_TO_CLOSE',
+                                      quantity: pos.quantity,
+                                      strike: pos.strike,
+                                      optionType: 'PUT',
+                                      limitPrice: pos.currentOptionPrice,
+                                    });
+                                  }
+                                  setPositions((prev) => prev.filter((p) => p.id !== pos.id));
+                                  setToastMessage(`✓ Staged BTC order for ${pos.quantity}x ${pos.symbol} $${pos.strike} Put @ $${pos.currentOptionPrice.toFixed(2)}. Cash collateral released!`);
+                                }}
+                                className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shadow transition-all cursor-pointer"
+                                title="Buy to close put and release collateral"
+                              >
+                                Close (BTC)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRollCSP(pos.id, pos.symbol, pos.strike, pos.quantity, pos.currentOptionPrice, pos.spotPrice)}
+                                className="px-2 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold shadow transition-all cursor-pointer"
+                                title="Roll into next week's CSP"
+                              >
+                                Roll &rarr;
+                              </button>
+                            </div>
                           )}
                           <button
                             onClick={() => handleRemovePosition(pos.id)}
@@ -995,6 +1478,13 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Floating Action Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900/95 border border-emerald-500/50 text-emerald-300 px-4 py-3 rounded-xl shadow-2xl backdrop-blur flex items-center space-x-2.5 animate-bounce">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span className="text-xs font-bold">{toastMessage}</span>
         </div>
       )}
     </div>

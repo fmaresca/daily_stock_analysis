@@ -34,7 +34,7 @@ import {
   EditPriorYtdModal,
   EditTaxGainsModal,
 } from './cash/EditCarryforwardModal';
-import { Sliders } from './icons';
+import { Sliders, CheckCircle2, AlertTriangle } from './icons';
 
 export interface WeeklyCashLedgerViewProps {
   positions?: PortfolioPosition[];
@@ -97,6 +97,32 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
   // Quick inline cash editing
   const [isEditingInlineCash, setIsEditingInlineCash] = useState(false);
   const [inlineCashValue, setInlineCashValue] = useState<number>(capitalState.totalCash);
+
+  // End-of-Week YTD Reconciliation confirmation state
+  const [isYtdReconciled, setIsYtdReconciled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('deltaharvest_ytd_reconciliation_confirmed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleConfirmYtdReconciliation = () => {
+    const next = !isYtdReconciled;
+    setIsYtdReconciled(next);
+    try {
+      if (next) {
+        localStorage.setItem('deltaharvest_ytd_reconciliation_confirmed', 'true');
+      } else {
+        localStorage.removeItem('deltaharvest_ytd_reconciliation_confirmed');
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const currentCalendarYear = new Date().getFullYear();
+  const isNewCalendarYearAlert = currentCalendarYear > (taxState.currentTaxYear || 2026) || (new Date().getMonth() === 0 && new Date().getDate() <= 31);
 
   // CSV import success notification
   const [importSuccessMsg, setImportSuccessMsg] = useState('');
@@ -472,6 +498,119 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
               <span>Next: Step 3 Holdings &rarr;</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* 1b. End-of-Week Tax & YTD Reconciliation Checklist Card */}
+      <div className={`glass-panel p-5 rounded-2xl border transition-all shadow-xl ${
+        isYtdReconciled
+          ? 'border-emerald-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/20'
+          : 'border-amber-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20'
+      }`}>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-3 border-b border-slate-800">
+          <div className="flex items-center space-x-3">
+            <span className={`p-2 rounded-xl border ${
+              isYtdReconciled
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : 'bg-amber-500/20 text-amber-400 border-amber-500/40 animate-pulse'
+            }`}>
+              <CheckCircle2 className="w-5 h-5" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-white tracking-tight">
+                  End-of-Week Tax &amp; YTD Reconciliation Verification
+                </h3>
+                {isYtdReconciled ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    ✓ Verified for Week
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    Action Required
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Weekly ritual requirement: Review and confirm your YTD Option Premiums Written and YTD Net Realized Capital Gains before proceeding to Step 3. Capital Loss Carry Forwards are strictly retained across weekly resets.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsEditTaxGainsOpen(true)}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Edit YTD Gains &amp; Carryover</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmYtdReconciliation}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow flex items-center gap-1.5 cursor-pointer ${
+                isYtdReconciled
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{isYtdReconciled ? 'Re-open Verification' : 'Confirm & Mark Reconciled for Week'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* New Calendar Year (January 1) Boundary Warning Banner */}
+        {isNewCalendarYearAlert && (
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5 mt-3">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">New Calendar Year Boundary ({currentCalendarYear}): </span>
+              IRS annual reset required. Please reset YTD Option Premiums Written and YTD Net Capital Gains to $0.00, and carry forward any unused net capital losses into your Prior-Year Capital Loss Carry Forward.
+            </div>
+          </div>
+        )}
+
+        {/* 3 Verification Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3">
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">1. YTD Option Premiums Written</span>
+            <span className="text-lg font-bold font-mono text-emerald-400 block mt-0.5">
+              ${capitalState.ytdPremiumsEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-[10px] text-slate-500 block mt-0.5">
+              Cumulative premiums collected in tax year {taxState.currentTaxYear}
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">2. YTD Net Realized Capital Gains</span>
+            <span className={`text-lg font-bold font-mono block mt-0.5 ${
+              (taxState.ytdRealizedCapitalGains - taxState.ytdRealizedCapitalLosses) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+            }`}>
+              {(taxState.ytdRealizedCapitalGains - taxState.ytdRealizedCapitalLosses) >= 0 ? '+' : ''}
+              ${(taxState.ytdRealizedCapitalGains - taxState.ytdRealizedCapitalLosses).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-[10px] text-slate-500 block mt-0.5">
+              Gains: ${taxState.ytdRealizedCapitalGains.toLocaleString()} | Losses: ${taxState.ytdRealizedCapitalLosses.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">3. Capital Loss Carry Forward</span>
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                🔒 Retained
+              </span>
+            </div>
+            <span className="text-lg font-bold font-mono text-amber-300 block mt-0.5">
+              -${taxState.priorYearLossCarryforward.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-[10px] text-slate-500 block mt-0.5">
+              IRS Sec. 1211 offset allowance (persisted across resets)
+            </span>
+          </div>
         </div>
       </div>
 
