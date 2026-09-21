@@ -634,5 +634,3 @@ export const UserX: React.FC<IconProps> = ({ className = "w-4 h-4", ...props }) 
   </svg>
 );
 
-
-

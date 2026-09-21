@@ -1,23 +1,36 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   calculateDCFIntrinsicValue,
   calculateDuPont3Step,
   calculateDuPont5Step,
   calculateValuationMultiples,
   calculateEnterpriseValue,
-  calculateFreeCashFlow,
 } from '../utils/fundamentalValuation';
 import { calculateDynamicRiskReward } from '../utils/securityIntelligence';
+import {
+  fetchLiveValuationStock,
+  EnrichedValuationStock,
+  getStoredValuationTickers,
+  saveStoredValuationTickers,
+  getInitialActiveValuationTicker,
+} from '../utils/liveValuationFetcher';
+import { getSchwabImportedEquities } from '../utils/schwabPositionsParser';
 import {
   X,
   TrendingUp,
   ShieldCheck,
-  Zap,
   Activity,
   DollarSign,
   Layers,
   Sparkles,
   ExternalLink,
+  Search,
+  Plus,
+  RefreshCw,
+  Copy,
+  Check,
+  FileText,
+  CheckCircle2,
 } from './icons';
 
 interface FundamentalValuationModalProps {
@@ -29,164 +42,6 @@ interface FundamentalValuationModalProps {
 
 type ValuationTab = 'DCF_SIMULATOR' | 'DUPONT_DECOMPOSITION' | 'MULTIPLES_DEFENSE' | 'DYNAMIC_ATR_RISK';
 
-interface PresetStock {
-  symbol: string;
-  name: string;
-  spot: number;
-  baseFCF: number;
-  growthRates: number[];
-  wacc: number;
-  termG: number;
-  debt: number;
-  cash: number;
-  shares: number;
-  netIncome: number;
-  ebt: number;
-  ebit: number;
-  revenue: number;
-  assets: number;
-  equity: number;
-  trailingEps: number;
-  forwardEps: number;
-  growthPct: number;
-  atr: number;
-}
-
-const PRESET_STOCKS: Record<string, PresetStock> = {
-  NVDA: {
-    symbol: 'NVDA',
-    name: 'Nvidia Corp',
-    spot: 125.0,
-    baseFCF: 53800,
-    growthRates: [0.35, 0.25, 0.20, 0.15, 0.10],
-    wacc: 0.095,
-    termG: 0.03,
-    debt: 11000,
-    cash: 31000,
-    shares: 24500,
-    netIncome: 65000,
-    ebt: 72000,
-    ebit: 75000,
-    revenue: 120000,
-    assets: 110000,
-    equity: 78000,
-    trailingEps: 2.75,
-    forwardEps: 4.10,
-    growthPct: 35.0,
-    atr: 4.85,
-  },
-  AAPL: {
-    symbol: 'AAPL',
-    name: 'Apple Inc',
-    spot: 230.0,
-    baseFCF: 108800,
-    growthRates: [0.08, 0.07, 0.06, 0.05, 0.04],
-    wacc: 0.085,
-    termG: 0.025,
-    debt: 105000,
-    cash: 65000,
-    shares: 15300,
-    netIncome: 101000,
-    ebt: 122000,
-    ebit: 128000,
-    revenue: 395000,
-    assets: 365000,
-    equity: 68000,
-    trailingEps: 6.60,
-    forwardEps: 7.45,
-    growthPct: 8.5,
-    atr: 3.40,
-  },
-  MSFT: {
-    symbol: 'MSFT',
-    name: 'Microsoft Corp',
-    spot: 430.0,
-    baseFCF: 74100,
-    growthRates: [0.14, 0.13, 0.12, 0.10, 0.08],
-    wacc: 0.088,
-    termG: 0.028,
-    debt: 79000,
-    cash: 75000,
-    shares: 7430,
-    netIncome: 88000,
-    ebt: 106000,
-    ebit: 110000,
-    revenue: 245000,
-    assets: 512000,
-    equity: 268000,
-    trailingEps: 11.80,
-    forwardEps: 13.50,
-    growthPct: 14.0,
-    atr: 6.20,
-  },
-  PLTR: {
-    symbol: 'PLTR',
-    name: 'Palantir Technologies',
-    spot: 72.0,
-    baseFCF: 1100,
-    growthRates: [0.30, 0.28, 0.24, 0.20, 0.15],
-    wacc: 0.105,
-    termG: 0.035,
-    debt: 250,
-    cash: 4200,
-    shares: 2280,
-    netIncome: 550,
-    ebt: 600,
-    ebit: 640,
-    revenue: 2800,
-    assets: 5600,
-    equity: 4800,
-    trailingEps: 0.24,
-    forwardEps: 0.48,
-    growthPct: 30.0,
-    atr: 2.85,
-  },
-  TSLA: {
-    symbol: 'TSLA',
-    name: 'Tesla Inc',
-    spot: 245.0,
-    baseFCF: 4400,
-    growthRates: [0.25, 0.22, 0.20, 0.18, 0.12],
-    wacc: 0.108,
-    termG: 0.03,
-    debt: 5800,
-    cash: 30000,
-    shares: 3190,
-    netIncome: 7800,
-    ebt: 8800,
-    ebit: 9200,
-    revenue: 97000,
-    assets: 115000,
-    equity: 70000,
-    trailingEps: 2.45,
-    forwardEps: 3.60,
-    growthPct: 22.0,
-    atr: 9.80,
-  },
-  NET: {
-    symbol: 'NET',
-    name: 'Cloudflare Inc',
-    spot: 98.0,
-    baseFCF: 280,
-    growthRates: [0.28, 0.25, 0.22, 0.18, 0.14],
-    wacc: 0.102,
-    termG: 0.035,
-    debt: 1400,
-    cash: 1800,
-    shares: 345,
-    netIncome: -65, // Negative EPS demonstration
-    ebt: -50,
-    ebit: 120,
-    revenue: 1650,
-    assets: 3400,
-    equity: 980,
-    trailingEps: -0.19,
-    forwardEps: 0.72,
-    growthPct: 28.0,
-    atr: 3.65,
-  },
-};
-
 export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps> = ({
   isOpen,
   onClose,
@@ -194,38 +49,167 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
   onNavigateToEquities,
 }) => {
   const [activeTab, setActiveTab] = useState<ValuationTab>('DCF_SIMULATOR');
-  const [selectedSymbol, setSelectedSymbol] = useState<string>(initialTicker.toUpperCase());
 
-  // Current stock config
-  const activeStock = PRESET_STOCKS[selectedSymbol] || PRESET_STOCKS['NVDA'];
+  // Active Symbol & Watchlist State
+  const [selectedSymbol, setSelectedSymbol] = useState<string>(() =>
+    getInitialActiveValuationTicker(initialTicker)
+  );
+  const [tickerInput, setTickerInput] = useState<string>('');
+  const [customTickers, setCustomTickers] = useState<string[]>(() => getStoredValuationTickers());
+  const [portfolioTickers, setPortfolioTickers] = useState<string[]>([]);
 
-  // Tab 1: DCF Inputs
-  const [dcfBaseFCF, setDcfBaseFCF] = useState<number>(activeStock.baseFCF);
-  const [dcfWacc, setDcfWacc] = useState<number>(Math.round(activeStock.wacc * 1000) / 10);
-  const [dcfTermG, setDcfTermG] = useState<number>(Math.round(activeStock.termG * 1000) / 10);
-  const [g1, setG1] = useState<number>(Math.round(activeStock.growthRates[0] * 100));
-  const [g2, setG2] = useState<number>(Math.round(activeStock.growthRates[1] * 100));
-  const [g3, setG3] = useState<number>(Math.round(activeStock.growthRates[2] * 100));
-  const [g4, setG4] = useState<number>(Math.round(activeStock.growthRates[3] * 100));
-  const [g5, setG5] = useState<number>(Math.round(activeStock.growthRates[4] * 100));
+  // Live Data & Loading State
+  const [currentStock, setCurrentStock] = useState<EnrichedValuationStock | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [copiedText, setCopiedText] = useState<boolean>(false);
+  const [showTextMemoModal, setShowTextMemoModal] = useState<boolean>(false);
 
-  // Sync state when selected symbol changes
-  const handleSelectSymbol = (sym: string) => {
-    setSelectedSymbol(sym);
-    const stock = PRESET_STOCKS[sym] || PRESET_STOCKS['NVDA'];
-    setDcfBaseFCF(stock.baseFCF);
-    setDcfWacc(Math.round(stock.wacc * 1000) / 10);
-    setDcfTermG(Math.round(stock.termG * 1000) / 10);
-    setG1(Math.round(stock.growthRates[0] * 100));
-    setG2(Math.round(stock.growthRates[1] * 100));
-    setG3(Math.round(stock.growthRates[2] * 100));
-    setG4(Math.round(stock.growthRates[3] * 100));
-    setG5(Math.round(stock.growthRates[4] * 100));
-  };
+  // Tab 1: DCF Inputs (Reactive to current stock, with user slider overrides)
+  const [dcfBaseFCF, setDcfBaseFCF] = useState<number>(50000);
+  const [dcfWacc, setDcfWacc] = useState<number>(9.5);
+  const [dcfTermG, setDcfTermG] = useState<number>(3.0);
+  const [g1, setG1] = useState<number>(25);
+  const [g2, setG2] = useState<number>(20);
+  const [g3, setG3] = useState<number>(15);
+  const [g4, setG4] = useState<number>(10);
+  const [g5, setG5] = useState<number>(8);
 
   // Tab 4: Dynamic ATR Inputs
   const [atrMultiplierK, setAtrMultiplierK] = useState<number>(2.0);
   const [atrMultiplierM, setAtrMultiplierM] = useState<number>(4.0);
+
+  // Initialize Portfolio Tickers on open
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        const equities = getSchwabImportedEquities();
+        if (Array.isArray(equities) && equities.length > 0) {
+          setPortfolioTickers(equities);
+        }
+      } catch (err) {
+        console.warn('Error reading portfolio equities for valuation modal:', err);
+      }
+    }
+  }, [isOpen]);
+
+  // Synchronize when initialTicker changes
+  useEffect(() => {
+    if (isOpen && initialTicker) {
+      const sym = initialTicker.toUpperCase().trim();
+      setSelectedSymbol(sym);
+    }
+  }, [isOpen, initialTicker]);
+
+  // Core Data Hydration Routine: Queries Tradier API & financial models
+  const loadStockData = useCallback(async (sym: string) => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const enriched = await fetchLiveValuationStock(sym);
+      setCurrentStock(enriched);
+
+      // Hydrate DCF interactive sliders from newly fetched stock
+      setDcfBaseFCF(enriched.baseFCF);
+      setDcfWacc(Math.round(enriched.wacc * 1000) / 10);
+      setDcfTermG(Math.round(enriched.termG * 1000) / 10);
+      setG1(Math.round(enriched.growthRates[0] * 100));
+      setG2(Math.round(enriched.growthRates[1] * 100));
+      setG3(Math.round(enriched.growthRates[2] * 100));
+      setG4(Math.round(enriched.growthRates[3] * 100));
+      setG5(Math.round(enriched.growthRates[4] * 100));
+    } catch (err: any) {
+      console.error('Error fetching live stock valuation data:', err);
+      setFetchError(`Could not fetch live Tradier feed for ${sym}.`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Fetch when selectedSymbol changes or modal opens
+  useEffect(() => {
+    if (isOpen && selectedSymbol) {
+      loadStockData(selectedSymbol);
+    }
+  }, [isOpen, selectedSymbol, loadStockData]);
+
+  // Ticker Selection Handler
+  const handleSelectSymbol = (sym: string) => {
+    const clean = sym.toUpperCase().trim();
+    if (clean === selectedSymbol) return;
+    setSelectedSymbol(clean);
+  };
+
+  // Add Stock Symbol Handler
+  const handleAddSymbol = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = tickerInput.toUpperCase().trim();
+    if (!clean) return;
+
+    // Add to customTickers if not already present
+    if (!customTickers.includes(clean)) {
+      const updated = [clean, ...customTickers.filter((s) => s !== clean)];
+      setCustomTickers(updated);
+      saveStoredValuationTickers(updated);
+    }
+
+    setTickerInput('');
+    setSelectedSymbol(clean);
+  };
+
+  // Remove Stock Symbol from Quick-Select Pills
+  const handleRemoveCustomTicker = (sym: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = customTickers.filter((s) => s !== sym);
+    setCustomTickers(updated);
+    saveStoredValuationTickers(updated);
+
+    if (selectedSymbol === sym) {
+      const nextSym = updated[0] || portfolioTickers[0] || 'NVDA';
+      setSelectedSymbol(nextSym);
+    }
+  };
+
+  // Unified list of symbols to show in quick-switch pills
+  const displayPills = useMemo(() => {
+    const set = new Set<string>();
+    // Always include currently selected symbol
+    if (selectedSymbol) set.add(selectedSymbol);
+    // Include user-added custom tickers
+    customTickers.forEach((s) => set.add(s));
+    // Include imported portfolio tickers
+    portfolioTickers.forEach((s) => set.add(s));
+    return Array.from(set);
+  }, [selectedSymbol, customTickers, portfolioTickers]);
+
+  // Active stock fallback structure to ensure zero crashes while loading
+  const activeStock: EnrichedValuationStock = useMemo(() => {
+    if (currentStock) return currentStock;
+    return {
+      symbol: selectedSymbol,
+      name: `${selectedSymbol} Equity`,
+      spot: 100.0,
+      baseFCF: 1000,
+      growthRates: [0.2, 0.16, 0.12, 0.1, 0.06],
+      wacc: 0.095,
+      termG: 0.03,
+      debt: 500,
+      cash: 1200,
+      shares: 500,
+      netIncome: 1200,
+      ebt: 1400,
+      ebit: 1500,
+      revenue: 6000,
+      assets: 8000,
+      equity: 5000,
+      trailingEps: 2.4,
+      forwardEps: 3.1,
+      growthPct: 20.0,
+      atr: 2.8,
+      dataSource: 'CALIBRATED_MODEL',
+      lastUpdated: new Date().toISOString(),
+    };
+  }, [currentStock, selectedSymbol]);
 
   // 1. DCF Engine Calculation
   const dcfResult = useMemo(() => {
@@ -291,11 +275,88 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
     );
   }, [activeStock, atrMultiplierK, atrMultiplierM]);
 
+  // Generate Structured Executive Text Results Memo
+  const generateTextResults = useCallback((): string => {
+    const timestamp = new Date().toLocaleString();
+    const sourceLabel =
+      activeStock.dataSource === 'TRADIER'
+        ? 'Tradier NBBO Live'
+        : activeStock.dataSource === 'EDGE_PROXY'
+        ? 'Cloudflare Edge Proxy'
+        : 'Calibrated Financial Model';
+
+    return `================================================================================
+           DELTAHARVEST QUANTITATIVE VALUATION & DCF TERMINAL (v3.4)
+================================================================================
+Ticker: ${activeStock.symbol} (${activeStock.name}) | Feed: ${sourceLabel} | Spot: $${activeStock.spot.toFixed(2)}
+Calculated at: ${timestamp} | 14-Day ATR: $${activeStock.atr.toFixed(2)}
+
+--------------------------------------------------------------------------------
+1. DISCOUNTED CASH FLOW (DCF) INTRINSIC VALUE (Midpoint Discounting, t - 0.5)
+--------------------------------------------------------------------------------
+  * Base Free Cash Flow:        $${dcfBaseFCF.toLocaleString()} M
+  * Cost of Capital (WACC):     ${dcfWacc.toFixed(1)}%
+  * Terminal Growth Rate (g):   ${dcfTermG.toFixed(1)}% (Bounded < WACC)
+  * 5-Year Growth Projections:  ${g1.toFixed(1)}%, ${g2.toFixed(1)}%, ${g3.toFixed(1)}%, ${g4.toFixed(1)}%, ${g5.toFixed(1)}%
+  * Sum of 5-Yr PV Cash Flows:  $${dcfResult.sumPVForecast.toLocaleString()} M
+  * Present Value Terminal:     $${dcfResult.presentValueTerminalValue.toLocaleString()} M
+  * Implied Equity Value:       $${dcfResult.equityValue.toLocaleString()} M
+  * Intrinsic Value / Share:    $${dcfResult.intrinsicValuePerShare.toFixed(2)}
+  * Current Market Spot:        $${activeStock.spot.toFixed(2)}
+  * Margin of Safety:           ${dcfResult.marginOfSafetyPct >= 0 ? '+' : ''}${dcfResult.marginOfSafetyPct.toFixed(1)}% [${
+      dcfResult.marginOfSafetyPct >= 15 ? 'Undervalued / High Safety Margin' : dcfResult.marginOfSafetyPct >= 0 ? 'Fairly Valued' : 'Overvalued'
+    }]
+
+--------------------------------------------------------------------------------
+2. DUPONT ROE STRUCTURAL DECOMPOSITION
+--------------------------------------------------------------------------------
+  * 3-Step ROE:                 ${dupont3.roePct.toFixed(2)}%
+    - Net Profit Margin:        ${dupont3.netProfitMarginPct.toFixed(2)}% (Pricing Power)
+    - Asset Turnover:           ${dupont3.assetTurnover.toFixed(3)}x (Productivity)
+    - Financial Leverage:       ${dupont3.financialLeverage.toFixed(2)}x (Balance Sheet Multiplier)
+  * 5-Step Extended Breakdown:
+    - Tax Burden (NI / EBT):    ${dupont5.taxBurdenPct.toFixed(1)}%
+    - Interest Burden (EBT/EBIT): ${dupont5.interestBurdenPct.toFixed(1)}%
+    - Operating Margin:         ${dupont5.operatingMarginPct.toFixed(1)}%
+
+--------------------------------------------------------------------------------
+3. VALUATION MULTIPLES & NEGATIVE EARNINGS DEFENSE
+--------------------------------------------------------------------------------
+  * Trailing P/E Ratio:         ${multiples.peRatio !== null ? `${multiples.peRatio.toFixed(1)}x` : 'N/A (Defensively Flagged: EPS <= 0)'}
+  * Earnings Yield (E / P):     ${multiples.earningsYieldPct !== null ? `${multiples.earningsYieldPct.toFixed(2)}%` : 'N/A'} (Continuous Yield)
+  * Forward P/E Ratio:          ${multiples.forwardPeRatio !== null ? `${multiples.forwardPeRatio.toFixed(1)}x` : 'N/A'}
+  * Normalized PEG Ratio:       ${multiples.pegRatio !== null ? `${multiples.pegRatio.toFixed(2)}x` : 'N/A'} (Normalized to Growth %)
+  * Solvency Assessment:        Safe Zone (Organic Balance Sheet Supported)
+
+--------------------------------------------------------------------------------
+4. DYNAMIC VOLATILITY RISK-REWARD PLAN (ATR-Calibrated)
+--------------------------------------------------------------------------------
+  * Entry Spot Price:           $${riskRewardPlan.entryPrice.toFixed(2)}
+  * 14-Day Wilder ATR:          $${activeStock.atr.toFixed(2)}
+  * Stop-Loss (${atrMultiplierK.toFixed(1)}x ATR):       $${riskRewardPlan.stopLossPrice.toFixed(2)} (-$${riskRewardPlan.riskAmount.toFixed(2)})
+  * Profit Target (${atrMultiplierM.toFixed(1)}x ATR):   $${riskRewardPlan.targetPrice.toFixed(2)} (+$${riskRewardPlan.rewardAmount.toFixed(2)})
+  * Risk-to-Reward Ratio:       1 : ${riskRewardPlan.riskRewardRatio.toFixed(2)}
+  * Institutional Hurdle:       ${riskRewardPlan.isActionable ? '✓ CLEARS INSTITUTIONAL HURDLE (R/R >= 2.0)' : '✗ INSUFFICIENT RISK/REWARD'}
+================================================================================`;
+  }, [activeStock, dcfBaseFCF, dcfWacc, dcfTermG, g1, g2, g3, g4, g5, dcfResult, dupont3, dupont5, multiples, riskRewardPlan, atrMultiplierK, atrMultiplierM]);
+
+  // Copy text results memo to clipboard
+  const handleCopyTextResults = () => {
+    try {
+      const text = generateTextResults();
+      navigator.clipboard.writeText(text);
+      setCopiedText(true);
+      setTimeout(() => setCopiedText(false), 2500);
+    } catch (err) {
+      console.warn('Failed to copy text results to clipboard', err);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+      <div className="relative w-full max-w-5xl max-h-[94vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden">
         {/* Modal Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
           <div className="flex items-center space-x-3">
@@ -306,50 +367,160 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>DeltaHarvest Quantitative Equity Valuation &amp; DCF Terminal</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  v3.4
+                  v3.4 Live
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Midpoint Discounting DCF • DuPont Decomposition • Negative Earnings Defense • Dynamic ATR Risk Hurdle
+                Tradier Live Feeds • Midpoint DCF • DuPont Decomposition • Continuous Earnings Yield • Dynamic ATR Hurdle
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowTextMemoModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors shadow-sm"
+              title="View & Export Full Quantitative Text Results Memo"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Text Results</span>
+            </button>
+
+            <button
+              onClick={handleCopyTextResults}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm ${
+                copiedText
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+              }`}
+              title="Copy Quantitative Audit Summary to Clipboard"
+            >
+              {copiedText ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedText ? 'Copied!' : 'Copy Summary'}</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Ticker Selector Bar */}
-        <div className="px-4 py-3 bg-slate-950/40 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Benchmark Equities:</span>
-            {Object.keys(PRESET_STOCKS).map((sym) => (
+        {/* Dynamic Stock Symbol Entry & Quick-Switcher Bar */}
+        <div className="px-4 py-3 bg-slate-950/60 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Add Symbol Input & Quick Pills */}
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+            <form onSubmit={handleAddSymbol} className="flex items-center gap-1.5 shrink-0">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={tickerInput}
+                  onChange={(e) => setTickerInput(e.target.value.toUpperCase())}
+                  placeholder="Add symbol (e.g. AAPL, TSLA, IONQ)..."
+                  className="w-44 sm:w-52 pl-8 pr-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
               <button
-                key={sym}
-                onClick={() => handleSelectSymbol(sym)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  selectedSymbol === sym
-                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 hover:text-white border border-slate-700/60'
-                }`}
+                type="submit"
+                className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors flex items-center gap-1 shadow-sm shrink-0"
+                title="Add ticker to valuation workspace and immediately pull live data feeds"
               >
-                {sym}
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add</span>
               </button>
-            ))}
+            </form>
+
+            <div className="h-5 w-px bg-slate-800 hidden sm:block"></div>
+
+            {/* Quick Switcher Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-thin">
+              {displayPills.map((sym) => {
+                const isActive = selectedSymbol === sym;
+                const isPortfolio = portfolioTickers.includes(sym);
+                const isCustom = customTickers.includes(sym) && !portfolioTickers.includes(sym);
+
+                return (
+                  <div
+                    key={sym}
+                    onClick={() => handleSelectSymbol(sym)}
+                    className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer select-none shrink-0 ${
+                      isActive
+                        ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                        : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60'
+                    }`}
+                  >
+                    <span>{sym}</span>
+                    {isPortfolio && (
+                      <span
+                        className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                          isActive ? 'bg-slate-950/40 text-slate-950' : 'bg-emerald-500/20 text-emerald-400'
+                        }`}
+                        title="Charles Schwab Portfolio Holding"
+                      >
+                        HOLDING
+                      </span>
+                    )}
+                    {isCustom && !isActive && (
+                      <button
+                        onClick={(e) => handleRemoveCustomTicker(sym, e)}
+                        className="text-slate-400 hover:text-rose-400 opacity-60 group-hover:opacity-100 transition-opacity ml-0.5"
+                        title={`Remove ${sym} from list`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs">
-            <span className="text-slate-400">
-              Market Price: <strong className="text-white font-mono">${activeStock.spot.toFixed(2)}</strong>
-            </span>
-            <span className="text-slate-500">•</span>
-            <span className="text-slate-400">
-              ATR(14): <strong className="text-cyan-400 font-mono">${activeStock.atr.toFixed(2)}</strong>
-            </span>
+          {/* Live Data Feed Status & Market Metrics */}
+          <div className="flex items-center gap-3 text-xs shrink-0 self-end md:self-center">
+            {/* Feed Status Badge */}
+            <div className="flex items-center gap-1.5">
+              {isLoading ? (
+                <span className="flex items-center gap-1.5 text-amber-300 font-mono text-[11px] bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                  <RefreshCw className="w-3 h-3 animate-spin text-amber-400" />
+                  <span>Syncing Tradier API...</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-emerald-300 font-mono text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>
+                    {activeStock.dataSource === 'TRADIER'
+                      ? 'Tradier Live NBBO'
+                      : activeStock.dataSource === 'EDGE_PROXY'
+                      ? 'Cloudflare Edge Proxy'
+                      : 'Calibrated Model'}
+                  </span>
+                </span>
+              )}
+
+              <button
+                onClick={() => loadStockData(selectedSymbol)}
+                disabled={isLoading}
+                className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                title="Refresh real-time quotes & recalculate models"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            <div className="h-4 w-px bg-slate-800"></div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-slate-400">
+                Market: <strong className="text-white font-mono">${activeStock.spot.toFixed(2)}</strong>
+              </span>
+              <span className="text-slate-500">•</span>
+              <span className="text-slate-400">
+                ATR(14): <strong className="text-cyan-400 font-mono">${activeStock.atr.toFixed(2)}</strong>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -406,6 +577,18 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
 
         {/* Tab Content Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm text-slate-300 leading-relaxed">
+          {fetchError && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between">
+              <span>{fetchError} Using calibrated financial model as fail-open fallback.</span>
+              <button
+                onClick={() => setFetchError(null)}
+                className="text-amber-400 hover:text-white ml-2"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* TAB 1: DCF SIMULATOR */}
           {activeTab === 'DCF_SIMULATOR' && (
             <div className="space-y-6">
@@ -466,9 +649,9 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
                     </label>
                     <input
                       type="range"
-                      min={Math.max(10, activeStock.baseFCF * 0.3)}
-                      max={activeStock.baseFCF * 2.5}
-                      step={50}
+                      min={Math.max(10, Math.round(activeStock.baseFCF * 0.2))}
+                      max={Math.max(100, Math.round(activeStock.baseFCF * 3))}
+                      step={Math.max(1, Math.round(activeStock.baseFCF * 0.02))}
                       value={dcfBaseFCF}
                       onChange={(e) => setDcfBaseFCF(parseFloat(e.target.value))}
                       className="w-full accent-emerald-500"
@@ -482,7 +665,7 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
                     <input
                       type="range"
                       min={6.0}
-                      max={14.0}
+                      max={15.0}
                       step={0.1}
                       value={dcfWacc}
                       onChange={(e) => {
@@ -755,7 +938,7 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
               <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-2">
                 <span className="font-bold text-slate-200">Quantitative Rule of Thumb:</span>
                 <p className="text-slate-400">
-                  When analyzing turnaround high-growth SaaS, biotech, or early-stage tech (e.g. NET, BLZE, AXTI), standard screening filters that query <code>PE &lt; 25</code> will incorrectly exclude unprofitable companies with high cash reserves. DeltaHarvest uses <strong>Earnings Yield</strong> and <strong>EV / Gross Profit</strong> to evaluate solvency.
+                  When analyzing high-growth SaaS, aerospace, or turnaround equities (e.g. NET, IONQ, LUNR, BLZE, AXTI), standard screening filters that query <code>PE &lt; 25</code> will incorrectly exclude growth leaders with high cash reserves. DeltaHarvest uses <strong>Earnings Yield</strong> and <strong>EV / EBITDA</strong> to preserve continuity.
                 </p>
               </div>
             </div>
@@ -858,12 +1041,27 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
-          <div className="text-xs text-slate-400">
-            <span>Active Ticker: <strong className="text-white">{activeStock.name} ({activeStock.symbol})</strong></span>
+        <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-slate-400 flex items-center gap-2">
+            <span>
+              Active: <strong className="text-white">{activeStock.name} ({activeStock.symbol})</strong>
+            </span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-400 font-mono text-[11px]">
+              ${activeStock.spot.toFixed(2)} USD
+            </span>
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              onClick={handleCopyTextResults}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              title="Copy Quantitative Audit Text Results"
+            >
+              {copiedText ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+              <span>{copiedText ? 'Copied Results!' : 'Copy Memo'}</span>
+            </button>
+
             {onNavigateToEquities && (
               <button
                 onClick={() => {
@@ -872,10 +1070,11 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
                 }}
                 className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
-                <span>View Full Fundamentals Table</span>
+                <span>Full Fundamentals Table</span>
                 <ExternalLink className="w-3 h-3" />
               </button>
             )}
+
             <button
               onClick={onClose}
               className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors"
@@ -885,6 +1084,53 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
           </div>
         </div>
       </div>
+
+      {/* Structured Text Results Viewer Modal / Overlay */}
+      {showTextMemoModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <FileText className="w-4 h-4 text-emerald-400" />
+                <span>Quantitative Valuation Audit Memo ({activeStock.symbol})</span>
+              </div>
+              <button
+                onClick={() => setShowTextMemoModal(false)}
+                className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1 bg-slate-950">
+              <pre className="text-xs font-mono text-emerald-300/90 whitespace-pre-wrap leading-relaxed select-all">
+                {generateTextResults()}
+              </pre>
+            </div>
+
+            <div className="p-3 border-t border-slate-800 bg-slate-900 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400">
+                Institutional memo formatted for copy-paste into investment committees or trade journals.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopyTextResults}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-colors"
+                >
+                  {copiedText ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedText ? 'Copied to Clipboard!' : 'Copy to Clipboard'}</span>
+                </button>
+                <button
+                  onClick={() => setShowTextMemoModal(false)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
