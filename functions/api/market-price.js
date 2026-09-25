@@ -7,8 +7,6 @@
  * 2. Yahoo Finance (Direct Edge Fetch without Browser CORS Restrictions)
  */
 
-const DEFAULT_TRADIER_API_TOKEN = 'zcSi1vOc3GxGzbuyflN0DrTyAD0Y';
-
 export async function onRequest(context) {
   const { request, env } = context;
 
@@ -41,7 +39,7 @@ export async function onRequest(context) {
     });
   }
 
-  const tradierToken = (env.TRADIER_API_TOKEN || env.VITE_TRADIER_API_KEY || DEFAULT_TRADIER_API_TOKEN || '').trim();
+  const tradierToken = (env.TRADIER_API_TOKEN || env.VITE_TRADIER_API_KEY || '').trim();
 
   // Tier 1: Tradier API (Direct Edge Fetch)
   if (tradierToken) {
