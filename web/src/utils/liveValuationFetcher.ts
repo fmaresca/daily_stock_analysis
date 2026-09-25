@@ -13,7 +13,7 @@
  * 5. Ticker list persistence and portfolio book auto-detection.
  */
 
-import { DEFAULT_TRADIER_API_TOKEN, fetchTickerChartData } from './liveMarketFetcher';
+import { fetchTickerChartData } from './liveMarketFetcher';
 import { SECURITY_INTELLIGENCE_REGISTRY } from '../data/securityIntelligenceRegistry';
 
 export interface EnrichedValuationStock {
@@ -308,7 +308,7 @@ async function fetchTradierLiveQuoteAndBars(symbol: string): Promise<{
 
   try {
     const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
-    const key = localStorage.getItem('tradier_api_key') || viteKey || DEFAULT_TRADIER_API_TOKEN;
+    const key = localStorage.getItem('tradier_api_key') || viteKey;
     const isEnabled = localStorage.getItem('tradier_enabled') !== 'false';
     const useSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
 

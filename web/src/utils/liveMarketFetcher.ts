@@ -8,8 +8,6 @@ import { PortfolioPosition } from './portfolioStressTest';
 import { calculateBarchartOpinion } from './barchartEngine';
 import { SECURITY_INTELLIGENCE_REGISTRY } from './securityIntelligence';
 
-export const DEFAULT_TRADIER_API_TOKEN = 'zcSi1vOc3GxGzbuyflN0DrTyAD0Y';
-
 export interface TickerChartData {
   spotPrice: number;
   closes: number[];
@@ -111,9 +109,28 @@ export async function fetchTradierTickerData(symbol: string): Promise<TickerChar
   const sym = symbol.toUpperCase().trim();
   if (!sym) return null;
 
+  // 1. Try secure Cloudflare Edge pricing proxy first (zero CORS, server-side secrets)
+  try {
+    const edgeResp = await fetch(`/api/market-price?symbol=${encodeURIComponent(sym)}`);
+    if (edgeResp.ok) {
+      const edgeData = await edgeResp.json();
+      if (edgeData && typeof edgeData.spotPrice === 'number' && edgeData.spotPrice > 0) {
+        return {
+          spotPrice: edgeData.spotPrice,
+          closes: edgeData.closes || [],
+          volumes: edgeData.volumes || [],
+          avgVolume: edgeData.avgVolume || 20000000,
+          provider: edgeData.provider === 'TRADIER' ? 'TRADIER' : 'YAHOO',
+        };
+      }
+    }
+  } catch {
+    // Proceed to direct user-configured Tradier key if proxy is unreachable
+  }
+
   try {
     const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
-    const key = localStorage.getItem('tradier_api_key') || viteKey || DEFAULT_TRADIER_API_TOKEN;
+    const key = localStorage.getItem('tradier_api_key') || viteKey;
     const isEnabled = localStorage.getItem('tradier_enabled') !== 'false';
     const useSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
     if (!key || !isEnabled) return null;
@@ -372,7 +389,7 @@ export async function fetchTradierQuotesBatch(
   const result = new Map<string, { last: number; bid: number; ask: number; volume: number }>();
   try {
     const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
-    const key = localStorage.getItem('tradier_api_key') || viteKey || DEFAULT_TRADIER_API_TOKEN;
+    const key = localStorage.getItem('tradier_api_key') || viteKey;
     const isEnabled = localStorage.getItem('tradier_enabled') !== 'false';
     const useSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
     if (!key || !isEnabled) return result;

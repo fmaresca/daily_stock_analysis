@@ -4,7 +4,26 @@ import { AuthUser, LoginCredentials } from '../types/auth';
 const STORAGE_AUTH_USER_KEY = 'deltaharvest_auth_user';
 const STORAGE_LOCAL_USERS_KEY = 'deltaharvest_local_users';
 export const PRIMARY_ADMIN_EMAIL = 'fjmaresca@gmail.com';
-export const DEFAULT_ADMIN_PASSWORDS = ['DeltaHarvest2026!', 'ChangeMeNow!2026', 'Admin123!', 'Frank2026!'];
+
+// Authorized admin recovery hashes (SHA-256) - prevents plaintext credential exposure in client bundle
+const AUTHORIZED_ADMIN_RECOVERY_HASHES = new Set([
+  '2724a3c87e095f843379f98ea533ace0da184327983a8f3b7ea67c960ad14075', // DeltaHarvest2026!
+  'fd70ea151146289d5bacc3cad0f029928bed07b45ef3affed0151228c9b303ff', // ChangeMeNow!2026
+  '3eb3fe66b31e3b4d10fa70b5cad49c7112294af6ae4e476a1c405155d45aa121', // Admin123!
+  '4fc3256dbfe35a25a9b8a4cd87fbbcba9a8bcdfa36da91d03eea02e4177dfd27', // Frank2026!
+]);
+
+async function hashInputSha256(input: string): Promise<string> {
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  return '';
+}
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -110,7 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Local Verification Fallback (for offline / local dev / initial seed)
     if (cleanEmail === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
-      if (DEFAULT_ADMIN_PASSWORDS.includes(cleanPassword)) {
+      const inputHash = await hashInputSha256(cleanPassword);
+      if (AUTHORIZED_ADMIN_RECOVERY_HASHES.has(inputHash)) {
         const adminUser: AuthUser = {
           id: 'admin-root-0000-0000-000000000001',
           email: PRIMARY_ADMIN_EMAIL,
@@ -128,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return { success: true, user: adminUser };
       }
-      return { success: false, error: 'Invalid admin password. Default is DeltaHarvest2026!' };
+      return { success: false, error: 'Invalid administrator credentials. Please verify your password.' };
     }
 
     // Check provisioned users in localStorage
