@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA Redirect Rules
+# Keep API functions routed to edge handlers, and route SPA navigation to index.html with 200 OK
+/api/* /api/:splat 200
+/* /index.html 200
