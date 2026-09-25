@@ -1,0 +1,22 @@
+# robots.txt for DeltaHarvest Institutional
+# Allow indexation of public landing, login, and informational pages
+# Disallow indexing of private tenant data, administration, and internal APIs
+
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /methodology
+Allow: /faq
+Allow: /disclaimer
+
+# Private / Protected Boundaries
+Disallow: /admin
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /portfolio
+Disallow: /portfolio/
+Disallow: /workflow
+Disallow: /workflow/
+Disallow: /api/
+Disallow: /settings/
