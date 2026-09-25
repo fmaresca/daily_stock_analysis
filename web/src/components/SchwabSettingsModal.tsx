@@ -11,6 +11,7 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
   const [appSecret, setAppSecret] = useState<string>('');
   const [callbackUrl, setCallbackUrl] = useState<string>('https://127.0.0.1');
   const [authCode, setAuthCode] = useState<string>('');
+  const [decodedCode, setDecodedCode] = useState<string>('');
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [showKey, setShowKey] = useState<boolean>(false);
@@ -36,6 +37,17 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
       console.warn('Failed to load Schwab settings from storage', e);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -74,7 +86,7 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
               app_key: appKey.trim(),
               app_secret: appSecret.trim(),
               callback_url: callbackUrl.trim(),
-              code: authCode.trim(),
+              code: extractCode(authCode),
             }),
           });
 
@@ -143,10 +155,32 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
     setCallbackUrl('https://127.0.0.1');
     setIsEnabled(false);
     setAuthCode('');
+    setDecodedCode('');
     setTestStatus('IDLE');
     setTestMessage('');
     setSampleQuote(null);
     setShowClearConfirm(false);
+  };
+
+  /** Extracts the raw authorization code from a full redirect URL or bare code. */
+  const extractCode = (raw: string): string => {
+    const trimmed = raw.trim();
+    try {
+      if (trimmed.includes('code=')) {
+        const url = trimmed.startsWith('http') ? trimmed : `https://placeholder.invalid?${trimmed.split('?')[1] || trimmed}`;
+        const params = new URL(url).searchParams;
+        const extracted = params.get('code');
+        return extracted ? decodeURIComponent(extracted) : trimmed;
+      }
+    } catch {
+      // fall through
+    }
+    return trimmed;
+  };
+
+  const handleAuthCodeChange = (val: string) => {
+    setAuthCode(val);
+    setDecodedCode(val.trim() ? extractCode(val) : '');
   };
 
   const schwabAuthUrl = appKey.trim()
@@ -159,7 +193,7 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
     val.length > 8 ? val.slice(0, 4) + '•'.repeat(val.length - 8) + val.slice(-4) : '•'.repeat(val.length);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="schwab-settings-title">
       <div
         className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
@@ -171,7 +205,7 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
               <Key className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <h2 id="schwab-settings-title" className="text-base font-bold text-white flex items-center gap-2">
                 <span>Charles Schwab Retail Trader API Provisioning</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
                   Live Real-Time Engine
@@ -185,7 +219,8 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            aria-label="Close Schwab settings dialog"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -331,12 +366,27 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>OAuth Authorization Workflow</span>
             </div>
+
+            {/* Critical setup warning */}
+            <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-500/50 text-[11px] text-amber-200 leading-relaxed space-y-1">
+              <div className="font-bold text-amber-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Required: Set your Schwab App Callback URL to <code className="text-amber-100 font-mono">https://127.0.0.1</code></span>
+              </div>
+              <p>
+                In the <a href="https://developer.schwab.com/" target="_blank" rel="noreferrer" className="underline text-amber-300 hover:text-amber-100">Schwab Developer Portal</a>,
+                open your app → <strong>Edit App</strong> → set <strong>Callback URL</strong> to exactly{' '}
+                <code className="text-amber-100 font-mono bg-amber-950/60 px-1 rounded">https://127.0.0.1</code> (no trailing slash).
+                If it's currently set to <code className="text-amber-100 font-mono">https://developer.schwab.com/oauth2-redirect.html</code> (the Swagger default),
+                that's why you're being sent to the wrong page — change it and save.
+              </p>
+            </div>
+
             <p className="text-slate-400 text-[11px] leading-relaxed">
-              1. Click the link below to authenticate with your Charles Schwab retail account.
-              <br />
-              2. Schwab will redirect your browser to your callback URL (e.g. <code className="text-cyan-400">https://127.0.0.1/?code=...</code>).
-              <br />
-              3. Copy the full redirect URL or the <code className="text-cyan-400">code=</code> parameter and paste it below.
+              <span className="text-slate-300 font-semibold">Step 1.</span> Click the link below to authenticate with your Charles Schwab retail account.<br />
+              <span className="text-slate-300 font-semibold">Step 2.</span> Your browser will be redirected to{' '}
+              <code className="text-cyan-400">https://127.0.0.1/?code=C0%2F...&session=...</code> — copy the <em>full redirect URL</em> from the address bar (it will show a connection error, that's normal).<br />
+              <span className="text-slate-300 font-semibold">Step 3.</span> Paste the full URL or just the <code className="text-cyan-400">code=</code> value below, then click <strong>Test Connection</strong> within 30 seconds.
             </p>
 
             {schwabAuthUrl ? (
@@ -356,13 +406,13 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
             )}
 
             <div>
-              <label className="font-semibold text-slate-300 block mb-1">Paste Returned Authorization Code / URL:</label>
+              <label className="font-semibold text-slate-300 block mb-1">Paste Returned Authorization Code / Full Redirect URL:</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={authCode}
-                  onChange={(e) => setAuthCode(e.target.value)}
-                  placeholder="Paste code or full redirect URL here..."
+                  onChange={(e) => handleAuthCodeChange(e.target.value)}
+                  placeholder="Paste full redirect URL or bare code= value here..."
                   className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
                 />
                 <button
@@ -379,6 +429,12 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
                   <span>{testStatus === 'TESTING' ? 'Testing...' : 'Test Connection'}</span>
                 </button>
               </div>
+              {/* Live decoded code preview */}
+              {decodedCode && (
+                <div className="mt-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-emerald-500/30 text-[10px] font-mono text-emerald-300 break-all">
+                  <span className="text-slate-500 mr-1">Extracted code:</span>{decodedCode.slice(0, 60)}{decodedCode.length > 60 ? '…' : ''}
+                </div>
+              )}
             </div>
 
             {/* Test Status Feedback Card */}

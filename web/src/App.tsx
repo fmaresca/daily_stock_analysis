@@ -739,8 +739,12 @@ export const App: React.FC = () => {
             />
           )}
 
-          {/* Primary Content View Switcher */}
-          <Suspense fallback={<LoadingSkeleton rows={8} className="p-4" />}>
+          {/* Primary Content View Switcher with Module-Level Error Isolation */}
+          <ErrorBoundary
+            fallbackTitle="Terminal View Error"
+            fallbackMessage="An unexpected issue occurred while rendering this module. You can switch to another tab or reload this view without losing terminal state."
+          >
+            <Suspense fallback={<LoadingSkeleton rows={8} className="p-4" />}>
             {activeTree === 'DASHBOARD' ? (
               <UserDashboardView
                 onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
@@ -1164,6 +1168,7 @@ export const App: React.FC = () => {
             </div>
           )}
         </Suspense>
+      </ErrorBoundary>
       </main>
 
       {/* 1. Global Command Palette (Ctrl+K) */}

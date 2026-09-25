@@ -45,6 +45,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     }
   }, []);
 
+  useEffect(() => {
+    if (!isRequestAccessOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsRequestAccessOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isRequestAccessOpen]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -180,8 +191,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-slate-100">
-      <div className="mx-auto w-full max-w-md text-center">
+    <main role="main" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-slate-100">
+      <header className="mx-auto w-full max-w-md text-center">
+        <h1 className="sr-only">DeltaHarvest Institutional - Quantitative Options, Valuation &amp; Volatility Terminal</h1>
         <div className="flex flex-col items-center justify-center mb-4">
           <DeltaHarvestLogo variant="header" layout="vertical" size={52} theme="dark" />
           <div className="mt-3 flex items-center justify-center gap-2">
@@ -189,11 +201,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               Multi-Tenant Secure
             </span>
           </div>
-          <p className="mt-1.5 text-sm text-slate-400">
-            Options & Equity Analytics Platform
+          <p className="mt-1.5 text-sm text-slate-300">
+            Options &amp; Equity Analytics Platform
           </p>
         </div>
-      </div>
+      </header>
 
       <div className="mt-6 mx-auto w-full max-w-md px-4 sm:px-0">
         <div className="bg-slate-900/90 py-8 px-6 shadow-2xl rounded-2xl border border-slate-800 backdrop-blur-md sm:px-10 relative overflow-hidden">
@@ -385,9 +397,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
 
       {/* Access Request / Admin Alert Modal */}
       {isRequestAccessOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="access-request-modal-title">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-slate-100">
-            <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
+            <h3 id="access-request-modal-title" className="text-base font-bold text-white mb-1 flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
               <span>
                 {requestType === 'PASSWORD_RESET'
@@ -508,8 +520,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1 font-semibold">Your Full Name</label>
+                  <label htmlFor="applicant-name" className="block text-xs text-slate-300 mb-1 font-semibold">Your Full Name</label>
                   <input
+                    id="applicant-name"
+                    name="applicant-name"
                     type="text"
                     required
                     value={applicantName}
@@ -519,10 +533,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1 font-semibold">
+                  <label htmlFor="applicant-email" className="block text-xs text-slate-300 mb-1 font-semibold">
                     {requestType === 'PASSWORD_RESET' ? 'Registered Email Address' : 'Your Email Address'}
                   </label>
                   <input
+                    id="applicant-email"
+                    name="applicant-email"
                     type="email"
                     required
                     value={applicantEmail}
@@ -532,7 +548,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1 font-semibold">
+                  <label htmlFor="applicant-note" className="block text-xs text-slate-300 mb-1 font-semibold">
                     {requestType === 'PASSWORD_RESET'
                       ? 'Reset Note / Context (Optional)'
                       : requestType === 'MAINTENANCE'
@@ -540,6 +556,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                       : 'Trading Focus / Message (Optional)'}
                   </label>
                   <textarea
+                    id="applicant-note"
+                    name="applicant-note"
                     rows={2}
                     value={applicantNote}
                     onChange={(e) => setApplicantNote(e.target.value)}
@@ -584,6 +602,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 };

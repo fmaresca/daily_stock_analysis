@@ -84,7 +84,7 @@ export const ChapterBrokerExecution: React.FC<ChapterBrokerExecutionProps> = ({
           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
             <div className="font-bold text-blue-400">Charles Schwab Retail Trader API</div>
             <p className="text-slate-400 text-[11px] leading-relaxed">
-              Conforms to Schwab's REST order schema. Staged as a <code className="text-slate-300">TRIGGER</code> complex order: primary limit fill immediately schedules the 80% profit-taking child order. Supports direct 1-click transmission.
+              Conforms to Schwab's REST order schema. Staged as a <code className="text-slate-300">TRIGGER</code> complex order: primary limit fill immediately schedules the 80% profit-taking child order. Supports direct 1-click transmission and accepts either full redirect callback URLs (<code className="text-slate-300">https://127.0.0.1/?code=...</code>) or bare authorization codes.
             </p>
           </div>
 
