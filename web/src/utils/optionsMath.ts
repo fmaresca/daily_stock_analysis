@@ -1,4 +1,4 @@
-import { DividendSchedule, EarlyAssignmentAnalysis } from '../types/coveredCall';
+import type { DividendSchedule, EarlyAssignmentAnalysis } from '../types/coveredCall.ts';
 
 /**
  * Calculates covered call payoff at a target terminal stock price at expiration.
