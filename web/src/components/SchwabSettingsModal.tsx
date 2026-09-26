@@ -24,10 +24,22 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
 
   useEffect(() => {
     try {
-      const savedKey = localStorage.getItem('schwab_app_key') || '';
-      const savedSecret = localStorage.getItem('schwab_app_secret') || '';
-      const savedCallback = localStorage.getItem('schwab_callback_url') || 'https://127.0.0.1';
-      const savedEnabled = localStorage.getItem('schwab_enabled') === 'true';
+      // Migrate from localStorage to sessionStorage if present
+      const legacyKey = localStorage.getItem('schwab_app_key');
+      const legacySecret = localStorage.getItem('schwab_app_secret');
+      if (legacyKey) {
+        sessionStorage.setItem('schwab_app_key', legacyKey);
+        localStorage.removeItem('schwab_app_key');
+      }
+      if (legacySecret) {
+        sessionStorage.setItem('schwab_app_secret', legacySecret);
+        localStorage.removeItem('schwab_app_secret');
+      }
+
+      const savedKey = sessionStorage.getItem('schwab_app_key') || '';
+      const savedSecret = sessionStorage.getItem('schwab_app_secret') || '';
+      const savedCallback = sessionStorage.getItem('schwab_callback_url') || localStorage.getItem('schwab_callback_url') || 'https://127.0.0.1';
+      const savedEnabled = (sessionStorage.getItem('schwab_enabled') || localStorage.getItem('schwab_enabled')) === 'true';
 
       setAppKey(savedKey);
       setAppSecret(savedSecret);
@@ -53,10 +65,12 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
 
   const handleSave = () => {
     try {
-      localStorage.setItem('schwab_app_key', appKey.trim());
-      localStorage.setItem('schwab_app_secret', appSecret.trim());
-      localStorage.setItem('schwab_callback_url', callbackUrl.trim());
-      localStorage.setItem('schwab_enabled', isEnabled ? 'true' : 'false');
+      sessionStorage.setItem('schwab_app_key', appKey.trim());
+      sessionStorage.setItem('schwab_app_secret', appSecret.trim());
+      sessionStorage.setItem('schwab_callback_url', callbackUrl.trim());
+      sessionStorage.setItem('schwab_enabled', isEnabled ? 'true' : 'false');
+      localStorage.removeItem('schwab_app_key');
+      localStorage.removeItem('schwab_app_secret');
 
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
@@ -146,6 +160,10 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
   };
 
   const handleClearCredentials = () => {
+    sessionStorage.removeItem('schwab_app_key');
+    sessionStorage.removeItem('schwab_app_secret');
+    sessionStorage.removeItem('schwab_callback_url');
+    sessionStorage.removeItem('schwab_enabled');
     localStorage.removeItem('schwab_app_key');
     localStorage.removeItem('schwab_app_secret');
     localStorage.removeItem('schwab_callback_url');
@@ -230,18 +248,15 @@ export const SchwabSettingsModal: React.FC<SchwabSettingsModalProps> = ({ isOpen
         <div className="p-6 overflow-y-auto space-y-5 text-xs">
 
           {/* Security Isolation Notice */}
-          <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-start gap-3">
-            <Lock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div className="text-[11px] text-emerald-200 leading-relaxed space-y-1">
-              <div className="font-bold text-emerald-300 text-xs">Credentials stored locally only — never sent to GitHub</div>
+          <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-start gap-3">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-amber-200 leading-relaxed space-y-1">
+              <div className="font-bold text-amber-300 text-xs">Browser Session Storage Notice</div>
               <p>
-                Your App Key and App Secret are saved exclusively in your <strong>browser's localStorage</strong>, 
-                which is private to this machine and browser profile. They are <strong>never written to any file</strong> 
-                in the project directory and cannot be committed or pushed to the public repository.
+                Schwab developer credentials are held temporarily in browser <code className="text-amber-300 bg-amber-950/60 px-1 rounded">sessionStorage</code> for this session only and are wiped upon logout or closing the tab. Browser storage is never encrypted. Never enter production credentials on untrusted devices.
               </p>
-              <p className="text-emerald-300/70">
-                To keep credentials off disk entirely, you can also set them in a local <code className="text-emerald-300 bg-emerald-950/60 px-1 rounded">.env</code> file 
-                (already in <code className="text-emerald-300 bg-emerald-950/60 px-1 rounded">.gitignore</code>) for the backend Python fetcher.
+              <p className="text-amber-300/70">
+                To keep credentials off the client entirely, you can configure them server-side via environment variables for the backend fetcher.
               </p>
             </div>
           </div>

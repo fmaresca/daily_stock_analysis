@@ -308,9 +308,12 @@ async function fetchTradierLiveQuoteAndBars(symbol: string): Promise<{
 
   try {
     const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
-    const key = localStorage.getItem('tradier_api_key') || viteKey;
-    const isEnabled = localStorage.getItem('tradier_enabled') !== 'false';
-    const useSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
+    const key = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_api_key') : null) || viteKey;
+    const isEnabled = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_enabled') : null) !== 'false' &&
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_enabled') : null) !== 'false';
+    const useSandbox = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true' ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_use_sandbox') : null) === 'true';
 
     if (!key || !isEnabled) return null;
 
