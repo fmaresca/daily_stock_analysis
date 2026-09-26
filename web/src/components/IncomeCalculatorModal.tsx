@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, DollarSign, Calculator, ShieldCheck, ArrowRight } from './icons';
 import { OptionOpportunity } from '../types/options';
 
@@ -12,6 +12,17 @@ export const IncomeCalculatorModal: React.FC<IncomeCalculatorModalProps> = ({
   onClose,
 }) => {
   const [allocatedCapital, setAllocatedCapital] = useState<number>(25000);
+
+  useEffect(() => {
+    if (!opportunity) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [opportunity, onClose]);
 
   if (!opportunity) return null;
 

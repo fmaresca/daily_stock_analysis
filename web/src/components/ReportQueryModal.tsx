@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   FileSpreadsheet,
@@ -78,6 +78,17 @@ export const ReportQueryModal: React.FC<ReportQueryModalProps> = ({
     const sum = filteredOpps.reduce((acc, o) => acc + (o.annualized_roc || 0), 0);
     return Math.round((sum / filteredOpps.length) * 10) / 10;
   }, [filteredOpps]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

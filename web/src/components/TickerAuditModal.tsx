@@ -166,6 +166,16 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
     }
   }, [ticker, opportunities]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const intel = useMemo(
     () => getSecurityIntelligence(activeTicker?.symbol || 'ASSET', activeTicker || undefined),
     [activeTicker]
