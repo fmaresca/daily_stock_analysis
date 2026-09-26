@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   X,
   ShieldCheck,
@@ -34,6 +34,17 @@ export const OptionDetailModal: React.FC<OptionDetailModalProps> = ({
     () => getSecurityIntelligence(opportunity?.symbol || 'ASSET'),
     [opportunity?.symbol]
   );
+
+  useEffect(() => {
+    if (!opportunity) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [opportunity, onClose]);
 
   if (!opportunity) return null;
 

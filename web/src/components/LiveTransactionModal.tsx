@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   LiveTransactionEntry,
   recordLiveTransaction,
@@ -86,6 +86,17 @@ export const LiveTransactionModal: React.FC<LiveTransactionModalProps> = ({
     if (!isStockSell) return 0;
     return ((Number(price) || 0) - (Number(costBasisPerShare) || 0)) * (Number(quantity) || 0);
   }, [isStockSell, price, costBasisPerShare, quantity]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

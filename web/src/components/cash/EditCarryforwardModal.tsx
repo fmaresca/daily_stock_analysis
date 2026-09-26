@@ -72,6 +72,15 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
     }
   }, [isOpen, capitalState, taxState]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -423,7 +432,7 @@ export const AddWeeklyPremiumModal: React.FC<AddWeeklyPremiumModalProps> = ({
               </label>
               <button
                 type="button"
-                onClick={() => setModalStartingYtdInput(603305.40)}
+                onClick={() => setModalStartingYtdInput(0.00)}
                 className="text-[10px] text-emerald-400 hover:text-emerald-300 underline font-mono cursor-pointer"
               >
                 Reset to $603,305.40
@@ -579,7 +588,7 @@ export const EditPriorYtdModal: React.FC<EditPriorYtdModalProps> = ({
               </label>
               <button
                 type="button"
-                onClick={() => setInputVal(603305.40)}
+                onClick={() => setInputVal(0.00)}
                 className="text-[11px] text-emerald-400 hover:text-emerald-300 underline font-mono cursor-pointer"
               >
                 Quick Fill: $603,305.40

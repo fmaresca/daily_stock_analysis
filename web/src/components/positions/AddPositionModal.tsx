@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PortfolioPosition, PositionType } from '../../utils/portfolioStressTest';
 import { getStoredCapitalState } from '../../utils/capitalAndTaxLedger';
 import { Plus } from '../icons';
@@ -22,6 +22,15 @@ export const AddPositionModal: React.FC<AddPositionModalProps> = ({
   const [newDte, setNewDte] = useState(28);
   const [newEntryPrice, setNewEntryPrice] = useState(3.50);
   const [newDelta, setNewDelta] = useState(0.18);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

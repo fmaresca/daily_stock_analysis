@@ -72,6 +72,16 @@ export const MarketChameleonPrescreenModal: React.FC<MarketChameleonPrescreenMod
     }
   }, [isOpen, incomingFilters, incomingCboe]);
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Persist presets
   const savePresetsToStorage = (updated: MarketChameleonPreset[]) => {
     setPresets(updated);

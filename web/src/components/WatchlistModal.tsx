@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Star, Plus, Trash2, RotateCcw, CheckCircle2, ShieldCheck, HelpCircle } from './icons';
 import { TickerMeta } from '../types/options';
 
@@ -27,6 +27,15 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
 }) => {
   const [newSymbolInput, setNewSymbolInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

@@ -292,7 +292,7 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
                       activeOptionsTab === 'WEEKLY_POSITION_AUDIT' ||
                       activeOptionsTab === 'WEEKLY_CASH_LEDGER')
                 )} w-full`}
-                title="Portfolio Breakdown & Executive Capital Digest (Living Trust)"
+                title="Portfolio Breakdown & Executive Capital Digest"
               >
                 <Briefcase className="w-4 h-4 text-teal-400 shrink-0" />
                 {!isCollapsed && (
@@ -621,7 +621,13 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
         {/* Settings Dropdown / Panel Toggle */}
         <div className="relative">
           <button
-            onClick={() => setIsSettingsMenuOpen(!isSettingsMenuOpen)}
+            onClick={() => {
+              if (onOpenTradier) {
+                onOpenTradier();
+              } else {
+                setIsSettingsMenuOpen(!isSettingsMenuOpen);
+              }
+            }}
             className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-900 light:hover:bg-slate-200 transition-all cursor-pointer"
             title="Configure APIs, Webhooks, Notifications, and System Settings"
           >
