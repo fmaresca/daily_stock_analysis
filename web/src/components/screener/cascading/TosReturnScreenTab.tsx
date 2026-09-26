@@ -177,7 +177,7 @@ export const TosReturnScreenTab: React.FC<TosReturnScreenTabProps> = React.memo(
               onRunBarchartAnalysis(syms.split(', '));
             }}
             className="px-2.5 py-1 rounded-lg bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 font-bold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5"
-            title="Populate with equities from Schwab CSV import / Living Trust account"
+            title="Populate with equities from Schwab CSV import"
           >
             <span>Schwab Import Equities</span>
             <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-200 text-[10px] font-mono">

@@ -170,14 +170,14 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
           <div className="text-xs font-bold text-white">How is the &quot;Equities Tracked&quot; count in the header calculated?</div>
           <p className="text-xs text-slate-400">
-            The top header badge dynamically displays the exact number of equities in your options-writing account (Living Trust-Options ...609), plus any equities in Watchlists separately created. All originally hardcoded symbols have been eliminated. As you import Schwab positions, execute stock transactions, or add/remove tickers across custom watchlists, the tracked equities count dynamically updates in real time.
+            The top header badge dynamically displays the exact number of equities in your options-writing portfolio, plus any equities in Watchlists separately created. All symbols are dynamic: as you import broker positions, execute stock transactions, or add/remove tickers across custom watchlists, the tracked equities count dynamically updates in real time.
           </p>
         </div>
 
         <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
           <div className="text-xs font-bold text-white">How do Named Watchlists work (Create, Rename, Delete)?</div>
           <p className="text-xs text-slate-400">
-            You can create multiple custom-named watchlists by opening the Watchlist Manager (<code>W</code>) and clicking <strong>+ New List</strong>. To rename any watchlist (including your primary default <strong>Living Trust Equities</strong>), click the <strong>Rename</strong> button next to the active list name, type the new name, and hit Save. To delete an unwanted watchlist, click <strong>Delete Watchlist</strong> and confirm the prompt (you must maintain at least one watchlist). You can also quickly switch between active watchlists using the dropdown selector in the screener Filter Bar.
+            You can create multiple custom-named watchlists by opening the Watchlist Manager (<code>W</code>) and clicking <strong>+ New List</strong>. To rename any watchlist (including your primary default <strong>Institutional Equities</strong>), click the <strong>Rename</strong> button next to the active list name, type the new name, and hit Save. To delete an unwanted watchlist, click <strong>Delete Watchlist</strong> and confirm the prompt (you must maintain at least one watchlist). You can also quickly switch between active watchlists using the dropdown selector in the screener Filter Bar.
           </p>
         </div>
 
@@ -295,19 +295,19 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
           <div className="text-xs font-bold text-white flex items-center gap-1.5">
             <span className="text-emerald-400">💼</span>
-            <span>What asset classes are tracked in the Active Position Ledger (Living Trust-Options ...609)?</span>
+            <span>What asset classes are tracked in the Active Position Ledger?</span>
           </div>
           <p className="text-xs text-slate-400">
-            The <strong>Active Position Ledger</strong> reflects the complete institutional inventory across all <strong>4 core asset classes</strong> in the target Charles Schwab trading account:
+            The <strong>Active Position Ledger</strong> reflects the complete institutional inventory across all <strong>4 core asset classes</strong> in the target broker trading account:
           </p>
           <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
-            <li><strong>Long Equities (7 lots):</strong> AXTI (1,500 shs), BLZE (11,000 shs), IONQ (1,500 shs), LUNR (5,000 shs), NET (1,300 shs), RTX (1,700 shs), TSLA (2,000 shs) totaling $1,785,894.00 equity.</li>
-            <li><strong>Related Options (10 contracts/legs):</strong> 2 Cash-Secured Puts (PANW 327.50P x3, PLTR 165.00P x10 locking $263,250.00 collateral) and 8 Covered Calls across your equity lots (AXTI 70C, BLZE 17.5C, IONQ 43.5C, LUNR 16.5C, NET 300C, RTX 207.5C, TSLA 370C, TSLA 375C). In the 2026-09-12 reconciliation, following PANW expiration, PLTR 160.00P (-10 contracts, $160,000 collateral) forms the sole active CSP liability.</li>
-            <li><strong>Bank Cash &amp; Sweep:</strong> $293,703.52 Core Bank Deposit Sweep ($299,590.53 in the 2026-09-12 reconciliation) providing 100% instant liquid purchasing power.</li>
-            <li><strong>Money Market Funds (MMF):</strong> BNY Mellon NY AMT-Free MMF (SNYXX, $202,775.94) and Schwab Premier Advantage MMF (SNAXX, $77,341.30), bringing total cash/MMF reserve coverage to $573,820.76 ($579,707.77 in 2026-09-12 reconciliation), delivering $419,707.77 Precalculated Available Cash and $414,707.77 deployable free cash after $5,000 weekly living expenses.</li>
+            <li><strong>Long Equities:</strong> Equity shares held long that provide portfolio delta, underlying asset appreciation, and collateral backing for covered calls.</li>
+            <li><strong>Related Options:</strong> Cash-Secured Puts (encumbering cash collateral) and Covered Calls (generating systematic options yield against held equities).</li>
+            <li><strong>Bank Cash &amp; Sweep:</strong> Liquid cash balance and bank deposit sweep providing instant deployable purchasing power.</li>
+            <li><strong>Money Market Funds (MMF):</strong> Municipal and government money market funds preserving capital while delivering daily yield.</li>
           </ul>
           <p className="text-xs text-slate-400 mt-1">
-            Use the <strong>Asset Class Filter Tabs</strong> (<em>All, Equities, CSPs, Covered Calls, Cash &amp; MMF</em>) to isolate holdings, or click <strong>&quot;Sync Schwab Baseline&quot;</strong> to re-synchronize live account holdings at any time.
+            Use the <strong>Asset Class Filter Tabs</strong> (<em>All, Equities, CSPs, Covered Calls, Cash &amp; MMF</em>) to isolate holdings, or upload a fresh broker CSV export at any time.
           </p>
         </div>
 

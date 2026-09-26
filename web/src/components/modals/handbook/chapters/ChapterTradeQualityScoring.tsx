@@ -160,7 +160,7 @@ export const ChapterTradeQualityScoring: React.FC<ChapterTradeQualityScoringProp
           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
             <span className="font-bold text-amber-300 block">1. Dynamic Calendar Capture</span>
             <p className="text-slate-400">
-              Cross-references authoritative earnings schedules for Schwab living trust equities and top universe tickers against your selected expiration date, tagging warnings automatically and highlighting DTE to the report.
+              Cross-references authoritative earnings schedules for Schwab Portfolio Sample equities and top universe tickers against your selected expiration date, tagging warnings automatically and highlighting DTE to the report.
             </p>
           </div>
           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">

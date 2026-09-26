@@ -564,7 +564,7 @@ export const App: React.FC = () => {
   // ------------------------------------------------------------------------
   // FAIL-SAFE PRIVACY & TENANT ISOLATION GATE
   // When an unauthenticated visitor accesses the application URL, they must
-  // NEVER see the internal Living Trust portfolio, cash ledger, or private records.
+  // NEVER see the internal Portfolio portfolio, cash ledger, or private records.
   // Instead, immediately hold them at the LoginView and display access request info.
   // ------------------------------------------------------------------------
   if (isAuthLoading) {
@@ -582,9 +582,7 @@ export const App: React.FC = () => {
         onSuccess={(loggedInUser) => {
           const isTargetAdmin =
             loggedInUser?.role === 'ADMIN' ||
-            loggedInUser?.email?.toLowerCase() === 'fjmaresca@gmail.com' ||
             user?.role === 'ADMIN' ||
-            user?.email?.toLowerCase() === 'fjmaresca@gmail.com' ||
             isAdmin;
 
           if (isTargetAdmin) {
@@ -762,14 +760,14 @@ export const App: React.FC = () => {
                   </div>
                   <h2 className="text-lg font-bold text-white">Administrator Access Required</h2>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    The <strong>Multi-Tenant Administration Console</strong> allows the Super-Administrator (<strong>fjmaresca@gmail.com</strong>) to provision new client logins, issue temporary passwords, and control tenant access.
+                    The <strong>Multi-Tenant Administration Console</strong> allows the Administrator to provision new client logins, issue temporary passwords, and control tenant access.
                   </p>
                   <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
                     <button
                       onClick={() => navigateTo('LOGIN')}
                       className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold shadow cursor-pointer transition-all"
                     >
-                      Sign In as Admin (fjmaresca@gmail.com)
+                      Sign In as Admin
                     </button>
                     <button
                       onClick={() => navigateTo('WORKFLOW')}
@@ -783,7 +781,7 @@ export const App: React.FC = () => {
                 <div className="p-8 max-w-lg mx-auto text-center bg-slate-900 border border-rose-500/40 rounded-2xl shadow-2xl space-y-4 my-12">
                   <h2 className="text-lg font-bold text-rose-400">Admin Permission Required</h2>
                   <p className="text-xs text-slate-300">
-                    Your account ({user?.email}) has <strong>CLIENT</strong> privileges. Only the Super-Administrator (<strong>fjmaresca@gmail.com</strong>) can access user provisioning.
+                    Your account ({user?.email}) has <strong>CLIENT</strong> privileges. Only an Administrator can access user provisioning.
                   </p>
                   <button
                     onClick={() => navigateTo('DASHBOARD')}

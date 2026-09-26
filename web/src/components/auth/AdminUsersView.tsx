@@ -42,20 +42,6 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
   const [isResetting, setIsResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
-  const STORAGE_LOCAL_USERS_KEY = 'deltaharvest_local_users';
-
-  const getInitialAdminUser = (): AdminUserListItem => ({
-    id: 'admin-root-0000-0000-000000000001',
-    email: 'fjmaresca@gmail.com',
-    role: 'ADMIN',
-    status: 'ACTIVE',
-    displayName: 'Frank Maresca (Principal Admin)',
-    createdAt: '2026-09-13T00:00:00Z',
-    lastLoginAt: new Date().toISOString(),
-    tradeCount: 7,
-    watchlistCount: 3,
-  });
-
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -68,29 +54,12 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
         const data = await res.json();
         if (data.users && Array.isArray(data.users)) {
           setUsers(data.users);
-          try {
-            localStorage.setItem(STORAGE_LOCAL_USERS_KEY, JSON.stringify(data.users));
-          } catch {
-            // Ignore
-          }
           return;
         }
       }
+      setError('Unable to load user directory from server. Please verify administrator session.');
     } catch {
-      // Proceed to local fallback
-    }
-
-    // Local fallback for offline/local dev
-    try {
-      const saved = localStorage.getItem(STORAGE_LOCAL_USERS_KEY);
-      let list: AdminUserListItem[] = saved ? JSON.parse(saved) : [];
-      if (!list.some((u) => u.email.toLowerCase() === 'fjmaresca@gmail.com')) {
-        list.unshift(getInitialAdminUser());
-      }
-      setUsers(list);
-      localStorage.setItem(STORAGE_LOCAL_USERS_KEY, JSON.stringify(list));
-    } catch {
-      setUsers([getInitialAdminUser()]);
+      setError('Network error connecting to user administration service.');
     } finally {
       setIsLoading(false);
     }
@@ -121,53 +90,18 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setIsCreateModalOpen(false);
-          setNewEmail('');
-          setNewPassword('');
-          setNewDisplayName('');
-          await fetchUsers();
-          return;
-        }
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsCreateModalOpen(false);
+        setNewEmail('');
+        setNewPassword('');
+        setNewDisplayName('');
+        await fetchUsers();
+      } else {
+        setCreateError(data.error || 'Failed to create user on server.');
       }
     } catch {
-      // Local fallback
-    }
-
-    // Save to local storage
-    try {
-      const saved = localStorage.getItem(STORAGE_LOCAL_USERS_KEY);
-      let list: any[] = saved ? JSON.parse(saved) : [getInitialAdminUser()];
-      if (list.some((u) => u.email.toLowerCase() === emailVal)) {
-        setCreateError(`User with email ${emailVal} already exists.`);
-        setIsCreating(false);
-        return;
-      }
-      const newUser: AdminUserListItem = {
-        id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        email: emailVal,
-        displayName: displayNameVal,
-        role: newRole,
-        status: 'ACTIVE',
-        createdAt: new Date().toISOString(),
-        lastLoginAt: null,
-        tradeCount: 0,
-        watchlistCount: 0,
-      };
-      // Store password in item for local dev verification
-      (newUser as any).password = newPassword;
-      list.push(newUser);
-      localStorage.setItem(STORAGE_LOCAL_USERS_KEY, JSON.stringify(list));
-      setUsers(list);
-      setIsCreateModalOpen(false);
-      setNewEmail('');
-      setNewPassword('');
-      setNewDisplayName('');
-      alert(`User account successfully provisioned for ${emailVal} (Role: ${newRole}) with password.`);
-    } catch {
-      setCreateError('Failed to save user account.');
+      setCreateError('Network error creating user account.');
     } finally {
       setIsCreating(false);
     }
@@ -190,34 +124,17 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setIsResetModalOpen(false);
-          setResetPasswordVal('');
-          setTargetResetUser(null);
-          alert(`Password successfully updated for ${targetResetUser.email}.`);
-          return;
-        }
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsResetModalOpen(false);
+        setResetPasswordVal('');
+        setTargetResetUser(null);
+        await fetchUsers();
+      } else {
+        setResetError(data.error || 'Failed to reset password on server.');
       }
     } catch {
-      // Local fallback
-    }
-
-    // Update local storage
-    try {
-      const saved = localStorage.getItem(STORAGE_LOCAL_USERS_KEY);
-      if (saved) {
-        let list: any[] = JSON.parse(saved);
-        list = list.map((u) => (u.id === targetResetUser.id ? { ...u, password: resetPasswordVal } : u));
-        localStorage.setItem(STORAGE_LOCAL_USERS_KEY, JSON.stringify(list));
-      }
-      setIsResetModalOpen(false);
-      setResetPasswordVal('');
-      setTargetResetUser(null);
-      alert(`Password successfully updated for ${targetResetUser.email}.`);
-    } catch {
-      setResetError('Failed to reset user password.');
+      setResetError('Network error resetting user password.');
     } finally {
       setIsResetting(false);
     }
@@ -229,7 +146,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
     if (!confirm(confirmMsg)) return;
 
     try {
-      await fetch('/api/admin/users/toggle-status', {
+      const res = await fetch('/api/admin/users/toggle-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -238,20 +155,15 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
           status: nextStatus,
         }),
       });
-    } catch {
-      // Fallback
-    }
-
-    // Update state and local storage
-    setUsers((prev) => {
-      const updated = prev.map((u) => (u.id === targetUser.id ? { ...u, status: nextStatus } : u));
-      try {
-        localStorage.setItem(STORAGE_LOCAL_USERS_KEY, JSON.stringify(updated));
-      } catch {
-        // Ignore
+      if (res.ok) {
+        await fetchUsers();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to toggle account status.');
       }
-      return updated;
-    });
+    } catch {
+      alert('Network error updating account status.');
+    }
   };
 
   const activeCount = users.filter((u) => u.status === 'ACTIVE').length;
@@ -341,8 +253,8 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
             <span>Security Engine</span>
             <ShieldCheck className="w-4 h-4 text-cyan-400" />
           </div>
-          <p className="mt-2 text-base font-bold font-mono text-cyan-300">PBKDF2-100K</p>
-          <p className="text-[11px] text-slate-400 mt-1">HMAC-SHA256 JWT Edge</p>
+          <p className="mt-2 text-base font-bold font-mono text-cyan-300">Server PBKDF2</p>
+          <p className="text-[11px] text-slate-400 mt-1">SameSite Session Auth</p>
         </div>
       </div>
 
@@ -389,7 +301,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {users.map((u) => {
-                  const isPrimaryAdmin = u.email === 'fjmaresca@gmail.com';
+                  const isPrimaryAdmin = u.role === 'ADMIN' && users.filter((x) => x.role === 'ADMIN').length === 1;
                   return (
                     <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-3 px-4">
