@@ -20,6 +20,7 @@
 
 import { AccountCapitalState } from '../types/options';
 import {
+  DEFAULT_ACCOUNT_NAME,
   DEFAULT_WEEKLY_DISBURSEMENT,
   DEFAULT_PRIOR_YTD_PREMIUM_BALANCE,
   DEFAULT_YTD_PREMIUMS_EARNED,
@@ -116,7 +117,7 @@ export function executeWeeklyWorkflowCleanReset(): WorkflowResetSummary {
       maxPerPositionAllocation: DEFAULT_PER_POSITION_BUDGET,
       singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
       maxAllowedPositions: 0,
-      accountName: 'Living Trust-Options ...609',
+      accountName: DEFAULT_ACCOUNT_NAME,
       totalAccountValue: 0,
       cashBreakdown: {
         snyxx: 0,

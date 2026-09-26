@@ -80,9 +80,9 @@ export function parseSchwabPositionsCsv(
 ): ParsedSchwabPositionsResult {
   const lines = csvText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
-  let accountName = 'Living Trust-Options ...609';
+  let accountName = 'DEMO-Portfolio';
   let asOfTimestamp = '';
-  let totalAccountValue = 2343519.76;
+  let totalAccountValue = 100000.00;
 
   let snyxx = 0;
   let snaxx = 0;
@@ -98,7 +98,7 @@ export function parseSchwabPositionsCsv(
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i];
 
-    // Check account header line: "Positions for account Living Trust-Options ...609 as of 09:04 PM ET, 2026/09/05"
+    // Check account header line: "Positions for account DEMO-Portfolio as of 09:04 PM ET, 2026/09/05"
     if (rawLine.includes('Positions for account')) {
       const match = rawLine.match(/Positions for account\s+([^"]+?)\s+as of\s+([^"]+)/i);
       if (match) {
@@ -257,9 +257,9 @@ export function parseSchwabPositionsCsv(
 
   // Fallbacks if zero from completely empty fields (e.g. mock test without any cash rows)
   if (!hasParsedCashLines && snyxx === 0 && snaxx === 0 && coreCash === 0 && otherMmf === 0) {
-    snyxx = 202775.94;
-    snaxx = 77341.30;
-    coreCash = 299590.53;
+    snyxx = 0.00;
+    snaxx = 0.00;
+    coreCash = 0.00;
   }
 
   // Dynamically calculate total cash based upon cash and money market funds (before any deductions)
@@ -579,7 +579,7 @@ export function parseSchwabPositionsCsv(
 /**
  * Helper to sync parsed equities into the user's Watchlist in localStorage
  */
-export function syncImportedEquitiesToWatchlist(symbols: string[], accountName: string = 'Living Trust Equities'): void {
+export function syncImportedEquitiesToWatchlist(symbols: string[], accountName: string = 'Imported Equities'): void {
   if (!symbols || symbols.length === 0) return;
 
   try {
@@ -589,8 +589,8 @@ export function syncImportedEquitiesToWatchlist(symbols: string[], accountName: 
       groups = JSON.parse(raw);
     }
 
-    const groupId = 'living-trust-equities';
-    const groupName = 'Living Trust Equities';
+    const groupId = 'imported-equities';
+    const groupName = 'Imported Equities';
     const description = `Imported equities from ${accountName} (${symbols.join(', ')})`;
 
     const existingIdx = groups.findIndex((g) => g.id === groupId || g.name === groupName);
@@ -631,8 +631,8 @@ export const DEFAULT_SCHWAB_LIVING_TRUST_EQUITIES: string[] = [
 
 /**
  * Retrieves the current equity symbols from the Schwab CSV import.
- * Checks localStorage watchlist groups ('living-trust-equities') and portfolio book,
- * falling back to the 7 authentic Schwab Living Trust equities.
+ * Checks localStorage watchlist groups ('imported-equities') and portfolio book,
+ * falling back to the 7 authentic Schwab Imported equities.
  */
 export function getSchwabImportedEquities(): string[] {
   if (typeof window === 'undefined') {
@@ -645,7 +645,7 @@ export function getSchwabImportedEquities(): string[] {
       const groups = JSON.parse(groupsRaw);
       if (Array.isArray(groups)) {
         const livingTrustGroup = groups.find(
-          (g: any) => g.id === 'living-trust-equities' || g.name === 'Living Trust Equities'
+          (g: any) => g.id === 'imported-equities' || g.name === 'Imported Equities'
         );
         if (
           livingTrustGroup &&

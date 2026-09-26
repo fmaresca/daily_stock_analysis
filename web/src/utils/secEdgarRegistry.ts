@@ -7,7 +7,7 @@
  */
 
 export const TICKER_TO_SEC_CIK: Record<string, string> = {
-  // ─── Schwab Living Trust Equities ─────────────────────────────────────────
+  // ─── Tracked Technology & Defense Equities ─────────────────────────────────
   RTX: '0000101829', // RTX Corp (Raytheon Technologies)
   TSLA: '0001318605', // Tesla, Inc.
   PLTR: '0001321655', // Palantir Technologies Inc.

@@ -23,11 +23,11 @@ export interface EarningsCalendarEntry {
 
 /**
  * Authoritative Earnings Reporting Registry for Q3/Q4 2026 and Core Monitored Equities.
- * Includes Schwab Living Trust equities (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA),
+ * Includes Portfolio Sample equities (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA),
  * mega-caps, and active high-volume options underlying assets.
  */
 export const MONITORED_EARNINGS_REGISTRY: Record<string, EarningsCalendarEntry> = {
-  // Schwab Living Trust Equities
+  // Portfolio Sample Equities
   TSLA: {
     symbol: 'TSLA',
     nextEarningsDate: '2026-10-21',
