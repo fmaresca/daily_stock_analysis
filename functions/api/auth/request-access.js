@@ -1,9 +1,8 @@
-import { PRIMARY_ADMIN_EMAIL } from "../_auth_utils.js";
+import { DEFAULT_ADMIN_EMAIL } from "../_auth_utils.js";
 
 /**
  * Cloudflare Pages Function: POST /api/auth/request-access
- * Dispatches automated email notification to Super-Admin (fjmaresca@gmail.com)
- * when a prospective user requests account login credentials.
+ * Dispatches automated notification to administrator when a user requests access.
  */
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -28,7 +27,7 @@ export async function onRequestPost(context) {
       ? "MAINTENANCE"
       : "NEW_ACCOUNT";
 
-    const adminEmail = env.ADMIN_EMAIL || PRIMARY_ADMIN_EMAIL;
+    const adminEmail = env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL;
     const clientIp = request.headers.get("CF-Connecting-IP") || request.headers.get("X-Forwarded-For") || "Unknown IP";
     const userAgent = request.headers.get("User-Agent") || "Unknown Browser";
     const timestampIso = new Date().toISOString();
@@ -171,7 +170,7 @@ This is an automated notification for administrator ${adminEmail}.`;
           body: JSON.stringify({
             personalizations: [
               {
-                to: [{ email: adminEmail, name: "Frank Maresca" }],
+                to: [{ email: adminEmail, name: "Administrator" }],
               },
             ],
             from: {
@@ -341,8 +340,8 @@ This is an automated notification for administrator ${adminEmail}.`;
     }
 
     const responseMsg = emailDelivered
-      ? `Your request has been registered and an automated notification was transmitted directly to Frank Maresca (${adminEmail}).`
-      : `Your request has been logged. Please click 'Open in Gmail / Email Client' to ensure your message is sent directly to Frank Maresca (${adminEmail}).`;
+      ? "Your request has been registered and an automated notification was transmitted to the platform administrator."
+      : "Your request has been logged and queued for administrative review.";
 
     return new Response(
       JSON.stringify({
@@ -354,12 +353,8 @@ This is an automated notification for administrator ${adminEmail}.`;
           requestType: type,
         },
         delivery: {
-          adminEmail,
           delivered: emailDelivered,
-          openMailto: !emailDelivered,
           protocols: deliveryMethods,
-          subject,
-          body: textContent,
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }

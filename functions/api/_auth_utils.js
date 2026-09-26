@@ -7,7 +7,7 @@
 export const SESSION_COOKIE_NAME = "deltaharvest_session";
 export const DEFAULT_SESSION_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days
 export const DEFAULT_SECRET = "deltaharvest-edge-auth-secret-key-prod-2026";
-export const PRIMARY_ADMIN_EMAIL = "fjmaresca@gmail.com";
+export const DEFAULT_ADMIN_EMAIL = "admin@deltaharvest.local";
 
 // ==========================================
 // 1. Web Crypto API PBKDF2 Password Hashing
@@ -190,8 +190,8 @@ const localMemoryDb = {
   users: [
     {
       id: "admin-root-0000-0000-000000000001",
-      email: PRIMARY_ADMIN_EMAIL,
-      password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a", // "DeltaHarvest2026!"
+      email: DEFAULT_ADMIN_EMAIL,
+      password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
       password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
       role: "admin",
       is_active: 1,
@@ -202,8 +202,8 @@ const localMemoryDb = {
   ],
   profiles: {
     "admin-root-0000-0000-000000000001": {
-      display_name: "Frank Maresca (Principal Admin)",
-      account_notes: "Primary Administrator and System Architect",
+      display_name: "Administrator",
+      account_notes: "Primary System Administrator",
     },
   },
   trades: [],
@@ -452,7 +452,7 @@ export async function authenticateRequest(context, allowedRoles = null) {
     return {
       authenticated: false,
       response: new Response(
-        JSON.stringify({ error: "Unauthorized: Account is inactive or suspended. Please contact administrator (fjmaresca@gmail.com)." }),
+        JSON.stringify({ error: "Unauthorized: Account is inactive or suspended. Please contact your administrator." }),
         {
           status: 403,
           headers: {

@@ -26,18 +26,19 @@ export async function onRequestPost(context) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const isPrimaryAdmin = cleanEmail === "fjmaresca@gmail.com";
+    const configuredAdminEmail = (env.ADMIN_EMAIL || "").trim().toLowerCase();
+    const isConfiguredAdmin = !!configuredAdminEmail && cleanEmail === configuredAdminEmail;
     let user = await getUserByEmail(env, cleanEmail);
 
-    // Failsafe for Primary Administrator: ensure admin record is always available
-    if (!user && isPrimaryAdmin) {
+    // Initial administrator bootstrap check if DB uninitialized
+    if (!user && isConfiguredAdmin) {
       user = {
         id: "admin-root-0000-0000-000000000001",
-        email: "fjmaresca@gmail.com",
+        email: cleanEmail,
         role: "admin",
         is_active: 1,
         must_change_password: 0,
-        display_name: "Frank Maresca (Principal Admin)",
+        display_name: "Administrator",
         password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
         password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
       };
@@ -46,19 +47,16 @@ export async function onRequestPost(context) {
     if (!user) {
       return new Response(
         JSON.stringify({
-          error: "Invalid email or password. If you are a new user, please contact the administrator (fjmaresca@gmail.com) to provision your account.",
+          error: "Invalid email or password. If you are a new user, please contact your administrator to provision your account.",
         }),
         { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    if (isPrimaryAdmin) {
-      user.is_active = 1;
-      user.role = "admin";
-    } else if (user.is_active !== 1) {
+    if (user.is_active !== 1) {
       return new Response(
         JSON.stringify({
-          error: "Your account has been suspended or deactivated. Please contact the administrator (fjmaresca@gmail.com).",
+          error: "Your account has been suspended or deactivated. Please contact your administrator.",
         }),
         { status: 403, headers: { "Content-Type": "application/json" } }
       );
@@ -67,17 +65,6 @@ export async function onRequestPost(context) {
     let isValid = false;
     if (user.password_salt && user.password_hash) {
       isValid = await verifyPassword(password, user.password_salt, user.password_hash);
-    }
-
-    // Explicit accepted passwords for Super Admin reset & emergency recovery
-    const VALID_ADMIN_PASSWORDS = [
-      "DeltaHarvest2026!",
-      "ChangeMeNow!2026",
-      "Admin123!",
-      "Frank2026!",
-    ];
-    if (isPrimaryAdmin && VALID_ADMIN_PASSWORDS.includes(password)) {
-      isValid = true;
     }
 
     if (!isValid) {
@@ -90,7 +77,7 @@ export async function onRequestPost(context) {
     }
 
     // Auto-sync / repair Super Admin in D1 if physically bound
-    if (isValid && isPrimaryAdmin && env && env.DB) {
+    if (isValid && (user.role === "admin" || isConfiguredAdmin) && env && env.DB) {
       try {
         const saltHex = "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c";
         const hashHex = "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a";
@@ -112,7 +99,7 @@ export async function onRequestPost(context) {
       {
         sub: user.id,
         email: user.email,
-        role: isPrimaryAdmin ? "admin" : user.role,
+        role: user.role,
         name: user.display_name || user.email.split("@")[0],
       },
       secret
