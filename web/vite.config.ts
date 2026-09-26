@@ -1,11 +1,26 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { execSync } from 'child_process';
 import path from 'path';
+
+let commitHash = 'unknown';
+try {
+  commitHash = execSync('git rev-parse --short HEAD').toString().trim();
+} catch {
+  commitHash = process.env.CF_PAGES_COMMIT_SHA?.substring(0, 7) || 'prod';
+}
+const buildTimestamp = new Date().toISOString();
+const buildId = `dh-${commitHash}-${buildTimestamp.replace(/[-:T.]/g, '').substring(0, 14)}`;
 
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/',
+  define: {
+    __APP_BUILD_ID__: JSON.stringify(buildId),
+    __APP_BUILD_TIME__: JSON.stringify(buildTimestamp),
+    __APP_COMMIT_HASH__: JSON.stringify(commitHash),
+  },
   plugins: [
     react(),
     tailwindcss(),
