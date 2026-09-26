@@ -110,9 +110,9 @@ export const LiquidCapitalWaterfall: React.FC<LiquidCapitalWaterfallProps> = Rea
             <button
               onClick={onResetToLivingTrustBaseline}
               className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 flex items-center space-x-1.5 transition-colors cursor-pointer"
-              title="Reset capital state and MMF breakdown to Living Trust-Options ...609 baseline"
+              title="Reset capital state and breakdown to default baseline"
             >
-              <span>Reset to Living Trust Baseline</span>
+              <span>Reset to Default Baseline</span>
             </button>
           </div>
         </div>
@@ -136,7 +136,7 @@ export const LiquidCapitalWaterfall: React.FC<LiquidCapitalWaterfallProps> = Rea
           <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
             <span className="text-[10px] text-slate-400 block font-semibold">SNYXX (Schwab NY Muni Money)</span>
             <span className="text-sm font-bold font-mono text-cyan-300 block">
-              ${(capitalState.cashBreakdown?.snyxx ?? 202775.94).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ${(capitalState.cashBreakdown?.snyxx ?? 0.00).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
             <span className="text-[9px] text-slate-500">Deemed cash to cover CSP</span>
           </div>
@@ -144,7 +144,7 @@ export const LiquidCapitalWaterfall: React.FC<LiquidCapitalWaterfallProps> = Rea
           <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
             <span className="text-[10px] text-slate-400 block font-semibold">SNAXX (Schwab Prime Adv Money)</span>
             <span className="text-sm font-bold font-mono text-cyan-300 block">
-              ${(capitalState.cashBreakdown?.snaxx ?? 77341.30).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ${(capitalState.cashBreakdown?.snaxx ?? 0.00).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
             <span className="text-[9px] text-slate-500">Deemed cash to cover CSP</span>
           </div>
@@ -152,7 +152,7 @@ export const LiquidCapitalWaterfall: React.FC<LiquidCapitalWaterfallProps> = Rea
           <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
             <span className="text-[10px] text-slate-400 block font-semibold">Core Cash &amp; Sweep</span>
             <span className="text-sm font-bold font-mono text-cyan-300 block">
-              ${(capitalState.cashBreakdown?.coreCash ?? 299590.53).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ${(capitalState.cashBreakdown?.coreCash ?? 0.00).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
             <span className="text-[9px] text-slate-500">Cash investments sweep</span>
           </div>

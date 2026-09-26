@@ -25,17 +25,17 @@ const TAX_STORAGE_KEY = 'deltaharvest_tax_ledger';
 
 export const MAX_SINGLE_EQUITY_POSITION_LIMIT = 200000; // $200,000 maximum collateral on any one equity security CSP
 
-// Real Account Profile: Living Trust-Options ...609
-export const DEFAULT_ACCOUNT_NAME = 'Living Trust-Options ...609';
-export const DEFAULT_ACCOUNT_NET_VALUE = 2388228.85; // Total account liquidation value
-export const DEFAULT_SNYXX_CASH = 202775.94; // Schwab New York Municipal Money Ultra
-export const DEFAULT_SNAXX_CASH = 77341.30; // Schwab Prime Advantage Money Ultra
-export const DEFAULT_CORE_CASH = 299590.53; // Cash & Cash Investments sweep
-export const DEFAULT_TOTAL_AVAILABLE_CASH = 579707.77; // Total liquid cash to cover CSP before offsets (SNYXX + SNAXX + Core Cash)
-export const DEFAULT_WEEKLY_DISBURSEMENT = 5000; // $5,000 weekly living expenses rule
-export const DEFAULT_PER_POSITION_BUDGET = 100000; // Default target allocation per position (strictly capped at $200,000)
-export const DEFAULT_PRIOR_YTD_PREMIUM_BALANCE = 603305.40; // 2026 Calendar YTD Options Premiums Harvested
-export const DEFAULT_YTD_PREMIUMS_EARNED = 603305.40;
+// Demo Account Profile Baseline (Synthetic)
+export const DEFAULT_ACCOUNT_NAME = 'DEMO-Portfolio';
+export const DEFAULT_ACCOUNT_NET_VALUE = 100000.00;
+export const DEFAULT_SNYXX_CASH = 0.00;
+export const DEFAULT_SNAXX_CASH = 0.00;
+export const DEFAULT_CORE_CASH = 100000.00;
+export const DEFAULT_TOTAL_AVAILABLE_CASH = 100000.00;
+export const DEFAULT_WEEKLY_DISBURSEMENT = 0.00;
+export const DEFAULT_PER_POSITION_BUDGET = 25000;
+export const DEFAULT_PRIOR_YTD_PREMIUM_BALANCE = 0.00;
+export const DEFAULT_YTD_PREMIUMS_EARNED = 0.00;
 
 /**
  * Dynamically calculates target allocation per position and maximum concurrent positions permitted:
@@ -86,15 +86,7 @@ export function calculateDynamicPositionSizing(
 }
 
 export function getDefaultCapitalState(positions: PortfolioPosition[] = []): AccountCapitalState {
-  const defaultDisbursements: DisbursementItem[] = [
-    {
-      id: 'DISB_DEFAULT_001',
-      description: 'Weekly Living Expenses',
-      amount: DEFAULT_WEEKLY_DISBURSEMENT,
-      isRecurring: true,
-      frequency: 'WEEKLY',
-    },
-  ];
+  const defaultDisbursements: DisbursementItem[] = [];
 
   const totalCash = DEFAULT_TOTAL_AVAILABLE_CASH;
   const activePositions = positions && positions.length > 0 ? positions : LIVING_TRUST_OPTIONS_POSITIONS;
@@ -126,102 +118,7 @@ export function getDefaultCapitalState(positions: PortfolioPosition[] = []): Acc
   };
 }
 
-/**
- * Authentic Options Transactions from Charles Schwab Live Account (Living Trust-Options ...609)
- * Replaces dummy test entries (SPY / AAPL CSPs).
- */
-export const SCHWAB_REAL_OPTIONS_RECORDS: TaxLedgerRecord[] = [
-  {
-    id: 'REC_SCHWAB_PANW_327_5P',
-    date: '2026-09-04',
-    symbol: 'PANW',
-    type: 'PREMIUM_EARNED',
-    amount: 1998.96, // 3 contracts @ $6.663
-    strategy: 'CSP',
-    note: 'Sold 3x 327.50P exp 09/11/26 (Cash Collateral: $98,250.00)',
-  },
-  {
-    id: 'REC_SCHWAB_PLTR_165P',
-    date: '2026-09-04',
-    symbol: 'PLTR',
-    type: 'PREMIUM_EARNED',
-    amount: 883.33, // 10 contracts @ $0.883
-    strategy: 'CSP',
-    note: 'Sold 10x 165.00P exp 09/11/26 (Cash Collateral: $165,000.00)',
-  },
-  {
-    id: 'REC_SCHWAB_TSLA_375C',
-    date: '2026-08-28',
-    symbol: 'TSLA',
-    type: 'PREMIUM_EARNED',
-    amount: 19886.25, // 20 contracts @ $9.943
-    strategy: 'COVERED_CALL',
-    note: 'Sold 20x 375.00C exp 09/11/26 (+85.27% profit target hit)',
-  },
-  {
-    id: 'REC_SCHWAB_AXTI_70C',
-    date: '2026-08-21',
-    symbol: 'AXTI',
-    type: 'PREMIUM_EARNED',
-    amount: 11464.76, // 15 contracts @ $7.643
-    strategy: 'COVERED_CALL',
-    note: 'Sold 15x 70.00C exp 09/18/26 (+70.56% profit captured)',
-  },
-  {
-    id: 'REC_SCHWAB_BLZE_17_5C',
-    date: '2026-08-21',
-    symbol: 'BLZE',
-    type: 'PREMIUM_EARNED',
-    amount: 10926.45, // 110 contracts @ $0.993
-    strategy: 'COVERED_CALL',
-    note: 'Sold 110x 17.50C exp 09/18/26 (+84.90% profit target hit)',
-  },
-  {
-    id: 'REC_SCHWAB_TSLA_370C',
-    date: '2026-09-02',
-    symbol: 'TSLA',
-    type: 'PREMIUM_EARNED',
-    amount: 2766.63, // 20 contracts @ $1.383
-    strategy: 'COVERED_CALL',
-    note: 'Sold 20x 370.00C exp 09/09/26 (+21.20% gain)',
-  },
-  {
-    id: 'REC_SCHWAB_NET_300C',
-    date: '2026-09-04',
-    symbol: 'NET',
-    type: 'PREMIUM_EARNED',
-    amount: 2071.31, // 13 contracts @ $1.593
-    strategy: 'COVERED_CALL',
-    note: 'Sold 13x 300.00C exp 09/11/26 (+14.02% gain)',
-  },
-  {
-    id: 'REC_SCHWAB_IONQ_43_5C',
-    date: '2026-09-04',
-    symbol: 'IONQ',
-    type: 'PREMIUM_EARNED',
-    amount: 635.01, // 15 contracts @ $0.423
-    strategy: 'COVERED_CALL',
-    note: 'Sold 15x 43.50C exp 09/11/26 (+13.78% gain)',
-  },
-  {
-    id: 'REC_SCHWAB_RTX_207_5C',
-    date: '2026-09-04',
-    symbol: 'RTX',
-    type: 'PREMIUM_EARNED',
-    amount: 464.68, // 17 contracts @ $0.273
-    strategy: 'COVERED_CALL',
-    note: 'Sold 17x 207.50C exp 09/11/26 (+1.22% gain)',
-  },
-  {
-    id: 'REC_SCHWAB_LUNR_16_5C',
-    date: '2026-09-04',
-    symbol: 'LUNR',
-    type: 'PREMIUM_EARNED',
-    amount: 416.73, // 50 contracts @ $0.083
-    strategy: 'COVERED_CALL',
-    note: 'Sold 50x 16.50C exp 09/11/26',
-  },
-];
+export const SCHWAB_REAL_OPTIONS_RECORDS: TaxLedgerRecord[] = [];
 
 export function getDefaultTaxLedgerState(): TaxLedgerState {
   const currentYear = new Date().getFullYear();
@@ -272,7 +169,7 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
       state.plannedDisbursements = getDefaultCapitalState(activePositions).plannedDisbursements;
     }
 
-    // Auto-migrate to real Living Trust-Options account values if default/legacy $550,000 is present
+    // Auto-migrate to clean account baseline values if default/legacy $550,000 is present
     if (!state.cashBreakdown || state.totalCash === 550000) {
       state.accountName = DEFAULT_ACCOUNT_NAME;
       state.totalAccountValue = DEFAULT_ACCOUNT_NET_VALUE;

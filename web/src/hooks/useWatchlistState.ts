@@ -7,9 +7,9 @@ export const DEFAULT_UNIVERSE_SYMBOLS = [
 
 export const INITIAL_WATCHLIST_GROUPS: WatchlistGroup[] = [
   {
-    id: 'living-trust-equities',
-    name: 'Living Trust Equities',
-    description: 'Equities in Living Trust-Options ...609 account (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA)',
+    id: 'core-institutional-equities',
+    name: 'Institutional Equities',
+    description: 'Core equity universe for options risk analysis and systematic yield',
     tickers: DEFAULT_UNIVERSE_SYMBOLS,
     isDefault: true,
     createdAt: new Date().toISOString(),
@@ -35,7 +35,7 @@ export function useWatchlistState() {
           });
 
           const hasLivingTrust = filtered.some(
-            (g: WatchlistGroup) => g.id === 'living-trust-equities' || g.name === 'Living Trust Equities'
+            (g: WatchlistGroup) => g.id === 'imported-equities' || g.name === 'Imported Equities'
           );
 
           let updatedGroups = [...filtered];
@@ -43,7 +43,7 @@ export function useWatchlistState() {
             updatedGroups.unshift(INITIAL_WATCHLIST_GROUPS[0]);
           } else {
             updatedGroups = updatedGroups.map((g) =>
-              g.id === 'living-trust-equities' ? { ...g, isDefault: true } : g
+              g.id === 'imported-equities' ? { ...g, isDefault: true } : g
             );
           }
 
@@ -67,7 +67,7 @@ export function useWatchlistState() {
       saved === 'tier-1-liquid' ||
       saved === 'high-yield-etfs'
     ) {
-      return 'living-trust-equities';
+      return 'imported-equities';
     }
     return saved;
   });
@@ -134,7 +134,7 @@ export function useWatchlistState() {
         if (prev.length <= 1) return prev;
         const remaining = prev.filter((g) => g.id !== groupId);
         if (activeGroupId === groupId) {
-          setActiveGroupId(remaining[0]?.id || 'living-trust-equities');
+          setActiveGroupId(remaining[0]?.id || 'imported-equities');
         }
         return remaining;
       });

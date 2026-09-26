@@ -134,32 +134,18 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
     // Execute clean reset routine prior to baseline simulation
     executeWeeklyWorkflowCleanReset();
     setResetNotice(
-      'Weekend Workflow Ritual Active: Wiped prior week positions, purged screened stocks & staged orders, and cleanly reset cash encumbrance to default $5,000 living expenses.'
+      'Weekend Workflow Ritual Active: Wiped prior week positions, purged screened stocks & staged orders, and cleanly reset cash encumbrance.'
     );
 
-    // Create mock Schwab text format for Living Trust-Options ...609 from latest real export
-    const mockCsv = `"Positions for account Living Trust-Options ...609 as of 11:35 AM ET, 2026/09/12",,,,,,,,,,,,,,,,
+    // Create synthetic demo positions format
+    const mockCsv = `"Positions for account DEMO-Portfolio (Synthetic Test) as of 04:00 PM ET, 2026/01/01",,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,
 Symbol,Description,Qty (Quantity),Price,Price Chng % (Price Change %),Price Chng $ (Price Change $),Mkt Val (Market Value),Cost Basis,Day Chng $ (Day Change $),Day Chng % (Day Change %),Gain $ (Gain/Loss $),Gain % (Gain/Loss %),Ratings,Reinvest?,Reinvest Capital Gains?,% of Acct (% of Account),Asset Type
-AXTI,AXT INC,"1,500",64.77,0.11%,0.07,"$97,155.00 ","$180,160.13 ",$105.00 ,0.11%,"($83,005.13)",-46.07%,D,No,N/A,4.04%,Equity
-BLZE,BACKBLAZE INC CLASS A,"11,000",12.4,0.73%,0.09,"$136,400.00 ","$188,173.41 ",$990.00 ,0.73%,"($51,773.41)",-27.51%,C,No,N/A,5.67%,Equity
-IONQ,IONQ INC,"1,500",36.75,-0.24%,-0.09,"$55,125.00 ","$88,315.08 ",($135.00),-0.24%,"($33,190.08)",-37.58%,F,No,N/A,2.29%,Equity
-LUNR,INTUITIVE MACHS INC CLASS A,"5,000",14.35,-1.85%,-0.27,"$71,750.00 ","$143,934.00 ","($1,350.00)",-1.85%,"($72,184.00)",-50.15%,F,No,N/A,2.98%,Equity
-NET,CLOUDFLARE INC CLASS A,"1,300",306.53,-1.49%,-4.64,"$398,489.00 ","$380,583.72 ","($6,032.00)",-1.49%,"$17,905.28 ",4.70%,C,No,N/A,16.57%,Equity
-RTX,RTX CORP,"1,700",197.68,-0.22%,-0.44,"$336,056.00 ","$372,209.38 ",($748.00),-0.22%,"($36,153.38)",-9.71%,A,No,N/A,13.97%,Equity
-TSLA,TESLA INC,"2,000",365.44,0.52%,1.88,"$730,880.00 ","$786,234.08 ","$3,760.00 ",0.52%,"($55,354.08)",-7.04%,F,Yes,N/A,30.38%,Equity
-AXTI 09/18/2026 70.00 C,CALL AXT INC $70 EXP 09/18/26,-15,1.6211,-23.71%,-0.5037,"($2,431.65)","($11,464.76)",$755.55 ,23.71%,"$9,033.11 ",78.79%,-,N/A,N/A,-,Option
-BLZE 09/18/2026 17.50 C,CALL BACKBLAZE INC $17.5 EXP 09/18/26,-110,0.0325,-29.96%,-0.0139,($357.50),"($10,926.45)",$152.90 ,29.96%,"$10,568.95 ",96.73%,-,N/A,N/A,-,Option
-IONQ 09/18/2026 41.00 C,CALL IONQ INC $41 EXP 09/18/26,-15,0.2808,-32.19%,-0.1333,($421.20),($620.01),$199.95 ,32.19%,$198.81 ,32.07%,-,N/A,N/A,-,Option
-NET 09/18/2026 305.00 C,CALL CLOUDFLARE INC $305 EXP 09/18/26,-13,8.8689,-36.98%,-5.2037,"($11,529.57)","($13,719.07)","$6,764.81 ",36.98%,"$2,189.50 ",15.96%,-,N/A,N/A,-,Option
-PLTR 09/18/2026 160.00 P,PUT PALANTIR TECHNOLOGIE$160 EXP 09/18/26,-10,1.395,-38.55%,-0.875,"($1,395.00)","($1,593.32)",$875.00 ,38.55%,$198.32 ,12.45%,-,N/A,N/A,-,Option
-RTX 09/18/2026 205.00 C,CALL RTX CORP $205 EXP 09/18/26,-17,0.37,-35.09%,-0.2,($629.00),($838.67),$340.00 ,35.09%,$209.67 ,25%,-,N/A,N/A,-,Option
-TSLA 09/14/2026 380.00 C,CALL TESLA INC $380 EXP 09/14/26,-20,0.285,-68.68%,-0.625,($570.00),"($1,286.66)","$1,250.00 ",68.68%,$716.66 ,55.70%,-,N/A,N/A,-,Option
-SNYXX,SCHWAB NEW YORK MUNICIPAL MONEY ULTRA,"202,775.94",1,0%,0,"$202,775.94 ","$202,775.94 ",$0.00 ,0%,$0.00 ,0%,-,Yes,Yes,8.43%,Cash and Money Market
-SNAXX,SCHWAB PRIME ADVANTAGE MONEY ULTRA,"77,341.30",1,0%,0,"$77,341.30 ","$77,341.30 ",$0.00 ,0%,$0.00 ,0%,-,Yes,Yes,3.22%,Cash and Money Market
-Cash & Cash Investments,--,--,--,--,--,"$299,590.53 ",--,$0.00 ,0%,--,--,--,--,--,12.45%,Cash and Money Market
-Positions Total,,--,--,--,--,"$2,388,228.85 ","$2,379,278.10 ","$6,928.21 ",0.29%,"($290,639.78)",-12.22%,--,--,--,--,--`;
-    processCsvText(mockCsv, 'Positions-LivingTrust-Options-609.csv');
+AAPL,APPLE INC,"100",150.00,0.00%,0.00,"$15,000.00 ","$15,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,A,No,N/A,15.00%,Equity
+MSFT,MICROSOFT CORP,"100",300.00,0.00%,0.00,"$30,000.00 ","$30,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,A,No,N/A,30.00%,Equity
+Cash & Cash Investments,--,--,--,--,--,"$55,000.00 ",--,$0.00 ,0%,--,--,--,--,--,55.00%,Cash and Money Market
+Positions Total,,--,--,--,--,"$100,000.00 ","$100,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,--,--,--,--,--`;
+    processCsvText(mockCsv, 'Positions-Demo-Baseline.csv');
   };
 
   return (
@@ -172,7 +158,7 @@ Positions Total,,--,--,--,--,"$2,388,228.85 ","$2,379,278.10 ","$6,928.21 ",0.29
             <span>Upload Charles Schwab Account Positions (Close of Trading)</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Step 1 of the Weekend Routine: Ingest your Charles Schwab positions CSV as of Friday's market close. Automatically cleans prior positions/screened stocks, sums dynamic Cash &amp; Money Market Funds, backs out open CSP collateral, and encumbers $5,000 living expenses.
+            Step 1 of the Weekend Routine: Ingest your Charles Schwab positions CSV as of Friday's market close. Automatically cleans prior positions/screened stocks, sums dynamic Cash &amp; Money Market Funds, and backs out open CSP collateral.
           </p>
         </div>
 
@@ -189,10 +175,10 @@ Positions Total,,--,--,--,--,"$2,388,228.85 ","$2,379,278.10 ","$6,928.21 ",0.29
           <button
             onClick={handleLoadBaseline}
             className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 flex items-center space-x-1.5 transition-colors cursor-pointer"
-            title="Load live Charles Schwab Living Trust baseline with all 4 asset classes"
+            title="Load synthetic institutional demo baseline"
           >
             <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Load Schwab Account (...609 Baseline)</span>
+            <span>Load Demo Baseline (Sample)</span>
           </button>
 
           <button
