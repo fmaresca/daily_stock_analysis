@@ -1,30 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { AuthUser, LoginCredentials } from '../types/auth';
 
-const STORAGE_AUTH_USER_KEY = 'deltaharvest_auth_user';
-const STORAGE_LOCAL_USERS_KEY = 'deltaharvest_local_users';
-export const PRIMARY_ADMIN_EMAIL = 'fjmaresca@gmail.com';
-
-// Authorized admin recovery hashes (SHA-256) - prevents plaintext credential exposure in client bundle
-const AUTHORIZED_ADMIN_RECOVERY_HASHES = new Set([
-  '2724a3c87e095f843379f98ea533ace0da184327983a8f3b7ea67c960ad14075', // DeltaHarvest2026!
-  'fd70ea151146289d5bacc3cad0f029928bed07b45ef3affed0151228c9b303ff', // ChangeMeNow!2026
-  '3eb3fe66b31e3b4d10fa70b5cad49c7112294af6ae4e476a1c405155d45aa121', // Admin123!
-  '4fc3256dbfe35a25a9b8a4cd87fbbcba9a8bcdfa36da91d03eea02e4177dfd27', // Frank2026!
-]);
-
-async function hashInputSha256(input: string): Promise<string> {
-  if (typeof crypto !== 'undefined' && crypto.subtle) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(input);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-  }
-  return '';
-}
-
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
@@ -39,22 +15,25 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_AUTH_USER_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {
-      // Ignore localStorage parse error
-    }
-    return null;
-  });
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Clear any legacy insecure credentials or session blobs from browser storage
+  useEffect(() => {
+    try {
+      localStorage.removeItem('deltaharvest_auth_user');
+      localStorage.removeItem('deltaharvest_local_users');
+      localStorage.removeItem('tradier_api_key');
+      localStorage.removeItem('schwab_app_key');
+      localStorage.removeItem('schwab_app_secret');
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
+  }, []);
 
   const refreshSession = useCallback(async () => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     try {
       const res = await fetch('/api/auth/session', {
@@ -69,16 +48,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = await res.json();
         if (data && data.authenticated && data.user) {
           setUser(data.user);
-          try {
-            localStorage.setItem(STORAGE_AUTH_USER_KEY, JSON.stringify(data.user));
-          } catch {
-            // Ignore storage write error
-          }
           return;
         }
       }
+      setUser(null);
     } catch {
-      // If network fails or timeouts, keep cached localStorage user if active
+      // Server unreachable or network error - fail closed
+      setUser(null);
     } finally {
       clearTimeout(timeoutId);
       setIsLoading(false);
@@ -90,9 +66,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshSession]);
 
   const login = async (credentials: LoginCredentials): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
-    const cleanEmail = credentials.email.trim().toLowerCase();
-    const cleanPassword = credentials.password;
-
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -101,94 +74,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify(credentials),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.user) {
-          setUser(data.user);
-          try {
-            localStorage.setItem(STORAGE_AUTH_USER_KEY, JSON.stringify(data.user));
-          } catch {
-            // Ignore storage error
-          }
-          return { success: true, user: data.user };
-        }
-        return { success: false, error: data.error || 'Authentication failed.' };
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success && data.user) {
+        setUser(data.user);
+        return { success: true, user: data.user };
       }
 
-      // If server returned 401/403 with an explicit error, inspect fallback
-      if (res.status === 401 || res.status === 403) {
-        const errData = await res.json().catch(() => ({}));
-        // If it's the primary admin trying default password and DB wasn't updated yet, allow fallback below
-        if (cleanEmail !== PRIMARY_ADMIN_EMAIL.toLowerCase()) {
-          return { success: false, error: errData.error || 'Invalid credentials or account suspended.' };
-        }
-      }
+      return {
+        success: false,
+        error: data.error || 'Authentication failed. Please verify your credentials or contact administrator.',
+      };
     } catch {
-      // Network error or offline mode: proceed to local verification
+      // Fail closed: Never fall back to client-side verification
+      return {
+        success: false,
+        error: 'Authentication server unreachable. Please check connection and try again.',
+      };
     }
-
-    // Local Verification Fallback (for offline / local dev / initial seed)
-    if (cleanEmail === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
-      const inputHash = await hashInputSha256(cleanPassword);
-      if (AUTHORIZED_ADMIN_RECOVERY_HASHES.has(inputHash)) {
-        const adminUser: AuthUser = {
-          id: 'admin-root-0000-0000-000000000001',
-          email: PRIMARY_ADMIN_EMAIL,
-          role: 'ADMIN',
-          displayName: 'Frank Maresca (Principal Admin)',
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString(),
-          lastLoginAt: new Date().toISOString(),
-        };
-        setUser(adminUser);
-        try {
-          localStorage.setItem(STORAGE_AUTH_USER_KEY, JSON.stringify(adminUser));
-        } catch {
-          // Ignore
-        }
-        return { success: true, user: adminUser };
-      }
-      return { success: false, error: 'Invalid administrator credentials. Please verify your password.' };
-    }
-
-    // Check provisioned users in localStorage
-    try {
-      const localUsersRaw = localStorage.getItem(STORAGE_LOCAL_USERS_KEY);
-      if (localUsersRaw) {
-        const localUsers = JSON.parse(localUsersRaw);
-        const match = localUsers.find(
-          (u: any) => u.email.toLowerCase() === cleanEmail && (u.password === cleanPassword || !u.password)
-        );
-        if (match) {
-          if (match.status === 'SUSPENDED') {
-            return { success: false, error: 'Account suspended. Please contact administrator (fjmaresca@gmail.com).' };
-          }
-          const clientUser: AuthUser = {
-            id: match.id,
-            email: match.email,
-            role: (match.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'CLIENT') as 'ADMIN' | 'CLIENT',
-            displayName: match.displayName || match.email.split('@')[0],
-            status: match.status || 'ACTIVE',
-            createdAt: match.createdAt || new Date().toISOString(),
-            lastLoginAt: new Date().toISOString(),
-          };
-          setUser(clientUser);
-          try {
-            localStorage.setItem(STORAGE_AUTH_USER_KEY, JSON.stringify(clientUser));
-          } catch {
-            // Ignore
-          }
-          return { success: true, user: clientUser };
-        }
-      }
-    } catch {
-      // Ignore
-    }
-
-    return {
-      success: false,
-      error: 'Invalid credentials. If you are a client, contact Admin (fjmaresca@gmail.com) to obtain your login.',
-    };
   };
 
   const logout = async () => {
@@ -202,7 +105,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setUser(null);
       try {
-        localStorage.removeItem(STORAGE_AUTH_USER_KEY);
+        sessionStorage.clear();
+        localStorage.removeItem('deltaharvest_auth_user');
+        localStorage.removeItem('deltaharvest_local_users');
+        localStorage.removeItem('tradier_api_key');
+        localStorage.removeItem('schwab_app_key');
+        localStorage.removeItem('schwab_app_secret');
       } catch {
         // Ignore
       }
@@ -220,20 +128,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         credentials: 'same-origin',
         body: JSON.stringify({ oldPassword, newPassword }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
         return { success: false, error: data.error || 'Password update failed' };
       }
       return { success: true };
     } catch {
-      // Local fallback
-      return { success: true };
+      return { success: false, error: 'Authentication service unreachable.' };
     }
   };
 
-  const isAdmin =
-    user?.role?.toUpperCase() === 'ADMIN' ||
-    user?.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
+  const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
   const isAuthenticated = !!user;
 
   return (
@@ -261,3 +166,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+

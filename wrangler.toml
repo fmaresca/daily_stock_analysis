@@ -4,7 +4,7 @@ pages_build_output_dir = "dist"
 
 [vars]
 ENVIRONMENT = "production"
-ADMIN_EMAIL = "fjmaresca@gmail.com"
+ADMIN_EMAIL = "admin@deltaharvest.local"
 
 # Optional D1 Database binding:
 # If you have created a Cloudflare D1 database via `npx wrangler d1 create deltaharvest_production_db`,

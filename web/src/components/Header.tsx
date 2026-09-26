@@ -378,10 +378,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer shadow-sm shadow-emerald-500/10"
-                title={`Tenant Account: ${user.email} (${user.role})`}
+                title={`User Session: ${user.role}`}
               >
                 <User className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="max-w-[85px] truncate text-slate-100">{user.displayName || user.email.split('@')[0]}</span>
+                <span className="max-w-[85px] truncate text-slate-100">{user.role === 'ADMIN' ? 'Admin' : (user.displayName || user.email.split('@')[0])}</span>
                 <span
                   className={`text-[9px] px-1 py-0.2 rounded font-mono font-bold ${
                     user.role === 'ADMIN'

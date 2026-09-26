@@ -87,7 +87,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
         if (onSuccess) {
           onSuccess(result.user);
         } else {
-          const isTargetAdmin = result.user?.role === 'ADMIN' || trimmedEmail.toLowerCase() === 'fjmaresca@gmail.com';
+          const isTargetAdmin = result.user?.role === 'ADMIN';
           window.location.href = isTargetAdmin ? '/workflow' : '/dashboard';
         }
       } else {
@@ -96,22 +96,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const generateMailtoUrl = () => {
-    const cleanEmail = applicantEmail.trim();
-    const typeLabel =
-      requestType === 'PASSWORD_RESET'
-        ? 'Password Reset'
-        : requestType === 'MAINTENANCE'
-        ? 'Account Maintenance & Support'
-        : 'New Client Account Request';
-
-    const subject = encodeURIComponent(`[DeltaHarvest] ${typeLabel}: ${applicantName || cleanEmail}`);
-    const body = encodeURIComponent(
-      `Hello Frank,\n\nI am requesting assistance with the DeltaHarvest Stock & Options Analytics Platform.\n\nRequest Type: ${typeLabel}\nName: ${applicantName}\nEmail: ${cleanEmail}\nDetails / Trading Focus:\n${applicantNote || 'Please provide access / assistance with my account.'}\n\nSent from DeltaHarvest Portal: https://daily-stock-analysis-89j.pages.dev/\n\nThank you!`
-    );
-    return `mailto:fjmaresca@gmail.com?subject=${subject}&body=${body}`;
   };
 
   const handleRequestAccessSubmit = async (e: React.FormEvent) => {
@@ -130,7 +114,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     };
 
     let apiSuccess = false;
-    let isDelivered = false;
     let responseMsg = '';
 
     // 1. Primary: Cloudflare Pages Edge Function (/api/auth/request-access)
@@ -143,7 +126,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       if (resp.ok) {
         const data = await resp.json();
         apiSuccess = true;
-        isDelivered = !!data.delivery?.delivered;
         responseMsg = data.message || 'Access request dispatched to administrator.';
       }
     } catch {
@@ -161,7 +143,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
         if (resp2.ok) {
           const data2 = await resp2.json();
           apiSuccess = true;
-          isDelivered = true;
           responseMsg = data2.message || 'Access request dispatched to administrator.';
         }
       } catch {
@@ -170,23 +151,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     }
 
     setIsSendingRequest(false);
-    setDeliveryDelivered(isDelivered);
 
-    if (apiSuccess && isDelivered) {
+    if (apiSuccess) {
       setRequestSuccessMessage(
-        responseMsg || 'An automated email notification has been successfully delivered to Frank Maresca (fjmaresca@gmail.com).'
+        responseMsg || 'Your request has been registered and forwarded to the platform administrator.'
       );
       setRequestAccessSent(true);
     } else {
-      // Trigger client-side email client dispatch to guarantee email reaches fjmaresca@gmail.com
-      const mailto = generateMailtoUrl();
-      try {
-        window.location.href = mailto;
-      } catch {}
-      setRequestSuccessMessage(
-        'Your request has been logged. An email compose draft to Frank Maresca (fjmaresca@gmail.com) has been launched in your email app.'
+      setRequestErrorMessage(
+        'Unable to submit request at this time. Please check your connection or contact your administrator.'
       );
-      setRequestAccessSent(true);
     }
   };
 
@@ -235,10 +209,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 <div>
                   <p className="font-semibold">{errorMessage}</p>
                   <p className="text-[11px] text-rose-300/80 mt-0.5">
-                    For password resets or account setups, contact Admin at{' '}
-                    <a href="mailto:fjmaresca@gmail.com" className="underline hover:text-white">
-                      fjmaresca@gmail.com
-                    </a>.
+                    For password resets or account setups, please contact your administrator.
                   </p>
                 </div>
               </div>
@@ -281,7 +252,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   }}
                   className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
                 >
-                  Forgot or need reset?
+                  Forgot password?
                 </button>
               </div>
               <div className="relative rounded-lg shadow-sm">
@@ -325,7 +296,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               </label>
 
               <span className="text-[11px] text-slate-500 font-mono">
-                256-bit PBKDF2
+                Server-Verified Session
               </span>
             </div>
 
@@ -354,7 +325,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
             <div className="pt-3 border-t border-slate-800/80 text-center space-y-2">
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-mono">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Restricted Access • Session Encrypted</span>
+                <span>Restricted Access • Authenticated Terminal</span>
               </div>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 DeltaHarvest is a private institutional analytics environment. Access is granted exclusively via administrator invitation.
@@ -362,33 +333,22 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
             </div>
           </form>
 
-          {/* Request Access / Maintenance Callout */}
+          {/* Request Access Callout */}
           <div className="mt-6 pt-5 border-t border-slate-800 text-center space-y-2">
             <p className="text-xs text-slate-400">
-              Need login credentials, account setup, or a password reset?
+              Need new account onboarding or credentials?
             </p>
-            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={() => {
                   setRequestType('NEW_ACCOUNT');
                   setIsRequestAccessOpen(true);
                 }}
-                className="flex-1 py-2 px-3 bg-slate-800/90 hover:bg-slate-800 border border-emerald-500/40 hover:border-emerald-500/80 rounded-lg text-xs font-semibold text-emerald-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                className="w-full py-2 px-3 bg-slate-800/90 hover:bg-slate-800 border border-emerald-500/40 hover:border-emerald-500/80 rounded-lg text-xs font-semibold text-emerald-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
               >
                 <Mail className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Request New Account</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setRequestType('PASSWORD_RESET');
-                  setIsRequestAccessOpen(true);
-                }}
-                className="flex-1 py-2 px-3 bg-slate-800/90 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg text-xs font-semibold text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
-              >
-                <Lock className="w-3.5 h-3.5 text-amber-400" />
-                <span>Password Reset</span>
               </button>
             </div>
           </div>
@@ -410,11 +370,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               </span>
             </h3>
             <p className="text-xs text-slate-300 mb-4 leading-relaxed">
-              DeltaHarvest user credentials and security authorizations are administered directly by{' '}
-              <strong className="text-emerald-300">Frank Maresca (Super-Admin)</strong> at{' '}
-              <a href="mailto:fjmaresca@gmail.com" className="text-emerald-400 hover:underline">
-                fjmaresca@gmail.com
-              </a>.
+              DeltaHarvest user credentials and security authorizations are administered directly by your platform administrator. Submit your request below for verification and onboarding.
             </p>
 
             {/* Request Type Selector Tabs */}
@@ -469,32 +425,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 </div>
 
                 <div className="p-3 bg-slate-900/90 rounded-lg border border-slate-800 text-left space-y-1 font-mono text-[11px] text-slate-300">
-                  <div><strong>Recipient:</strong> Frank Maresca (fjmaresca@gmail.com)</div>
                   <div><strong>Your Email:</strong> {applicantEmail}</div>
                   <div><strong>Category:</strong> {requestType}</div>
+                  <div><strong>Status:</strong> Forwarded to Administrator</div>
                 </div>
 
-                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
-                  <a
-                    href={generateMailtoUrl()}
-                    className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
-                    title="Open draft in Gmail or default mail app"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Open in Gmail / Email Client</span>
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const text = `To: fjmaresca@gmail.com\nSubject: [DeltaHarvest] ${requestType}: ${applicantName || applicantEmail}\nName: ${applicantName}\nEmail: ${applicantEmail}\nDetails: ${applicantNote || 'None'}`;
-                      navigator.clipboard.writeText(text);
-                      setEmailCopied(true);
-                      setTimeout(() => setEmailCopied(false), 3000);
-                    }}
-                    className="w-full sm:w-auto px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>{emailCopied ? '✓ Details Copied' : 'Copy Request Details'}</span>
-                  </button>
+                <div className="pt-2 flex items-center justify-center">
                   <button
                     type="button"
                     onClick={() => {
@@ -506,7 +442,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                       setRequestSuccessMessage(null);
                       setEmailCopied(false);
                     }}
-                    className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors cursor-pointer"
+                    className="w-full sm:w-auto px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors cursor-pointer"
                   >
                     Close
                   </button>
@@ -528,7 +464,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                     required
                     value={applicantName}
                     onChange={(e) => setApplicantName(e.target.value)}
-                    placeholder="e.g. Frank Maresca"
+                    placeholder="e.g. Jane Doe"
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
@@ -565,7 +501,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                       requestType === 'PASSWORD_RESET'
                         ? 'e.g. Lost access, need password reset for my account...'
                         : requestType === 'MAINTENANCE'
-                        ? 'e.g. Update watchlist symbols, Schwab API keys, or permissions...'
+                        ? 'e.g. Update watchlist symbols, API keys, or permissions...'
                         : 'e.g. Options conservative income, Cash-Secured Puts, Schwab integration...'
                     }
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
@@ -587,12 +523,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                     {isSendingRequest ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Transmitting Email...</span>
+                        <span>Submitting Request...</span>
                       </>
                     ) : (
                       <>
                         <Mail className="w-3.5 h-3.5" />
-                        <span>Send Request to fjmaresca@gmail.com</span>
+                        <span>Submit Request</span>
                       </>
                     )}
                   </button>
@@ -602,6 +538,50 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
           </div>
         </div>
       )}
+
+      {/* Public Footer with Legal Links & Build Identification */}
+      <footer className="mt-8 text-center text-xs text-slate-500 space-y-2">
+        <div className="flex flex-wrap items-center justify-center gap-4 text-slate-400">
+          <a
+            href="#terms"
+            onClick={(e) => {
+              e.preventDefault();
+              alert('Terms of Service: DeltaHarvest Institutional is a proprietary quantitative analytics terminal provided strictly for authorized professional and institutional research.');
+            }}
+            className="hover:text-slate-300 underline underline-offset-2"
+          >
+            Terms of Service
+          </a>
+          <span className="text-slate-700">•</span>
+          <a
+            href="#privacy"
+            onClick={(e) => {
+              e.preventDefault();
+              alert('Privacy Policy: DeltaHarvest operates on zero-third-party tracking and server-scoped authentication. No personal analytical data is sold or shared.');
+            }}
+            className="hover:text-slate-300 underline underline-offset-2"
+          >
+            Privacy Policy
+          </a>
+          <span className="text-slate-700">•</span>
+          <a
+            href="#disclaimer"
+            onClick={(e) => {
+              e.preventDefault();
+              alert('Risk Disclaimer: Derivative options trading involves substantial risk of loss and is not suitable for all investors. Mathematical models and Greek simulations are for informational analysis only.');
+            }}
+            className="hover:text-slate-300 underline underline-offset-2"
+          >
+            Risk Disclaimer
+          </a>
+        </div>
+        <p className="text-[11px] text-slate-600">
+          &copy; {new Date().getFullYear()} DeltaHarvest Institutional. All rights reserved. &bull;{' '}
+          <span className="font-mono">
+            {typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'v3.4-prod'}
+          </span>
+        </p>
+      </footer>
     </main>
   );
 };

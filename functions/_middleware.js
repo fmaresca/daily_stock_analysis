@@ -29,8 +29,11 @@ export async function onRequest(context) {
     return context.next();
   }
 
-  // 2. Allow public auth APIs
+  // 2. Allow public auth APIs & version endpoint
   if (
+    pathname === "/version" ||
+    pathname === "/version.json" ||
+    pathname === "/api/version" ||
     pathname === "/api/auth/login" ||
     pathname === "/api/auth/logout" ||
     pathname === "/api/auth/request-access" ||
@@ -64,7 +67,7 @@ export async function onRequest(context) {
     }
     if (userRole !== "admin") {
       return new Response(
-        JSON.stringify({ error: "Forbidden: Restricted to primary administrator (fjmaresca@gmail.com)." }),
+        JSON.stringify({ error: "Forbidden: Restricted to authorized administrator." }),
         { status: 403, headers: { "Content-Type": "application/json" } }
       );
     }
