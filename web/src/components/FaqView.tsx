@@ -117,10 +117,10 @@ export const FaqView: React.FC<FaqViewProps> = ({
       answer: (
         <div className="space-y-2 text-slate-300">
           <p>
-            Your Tradier API Key is kept <strong>strictly private</strong>. In the web interface, the key is masked by default with bullet points and stored exclusively in your local browser&apos;s encrypted <code className="text-slate-200">localStorage</code> or local gitignored <code className="text-slate-200">.env</code>.
+            Your Tradier API Key is kept <strong>strictly private</strong>. In the web interface, the key is masked by default with bullet points and held in browser <code className="text-slate-200">sessionStorage</code> for your active session only, or configured via local server environment variables.
           </p>
           <p>
-            It is never committed to GitHub, never sent to third-party telemetry, and never exposed in public Cloudflare Pages bundles.
+            It is never committed to source control, never sent to third-party telemetry, and wiped upon session logout.
           </p>
         </div>
       ),

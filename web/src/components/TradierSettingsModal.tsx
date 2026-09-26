@@ -33,9 +33,15 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
   useEffect(() => {
     try {
       const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
-      const savedKey = localStorage.getItem('tradier_api_key') || viteKey || '';
-      const savedSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
-      const savedEnabled = localStorage.getItem('tradier_enabled') !== 'false';
+      // Migrate from localStorage to sessionStorage if present
+      const legacyKey = localStorage.getItem('tradier_api_key');
+      if (legacyKey) {
+        sessionStorage.setItem('tradier_api_key', legacyKey);
+        localStorage.removeItem('tradier_api_key');
+      }
+      const savedKey = sessionStorage.getItem('tradier_api_key') || viteKey || '';
+      const savedSandbox = (sessionStorage.getItem('tradier_use_sandbox') || localStorage.getItem('tradier_use_sandbox')) === 'true';
+      const savedEnabled = (sessionStorage.getItem('tradier_enabled') || localStorage.getItem('tradier_enabled')) !== 'false';
 
       setApiKey(savedKey);
       setUseSandbox(savedSandbox);
@@ -61,9 +67,10 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
   const handleSave = () => {
     try {
       const trimmed = apiKey.trim();
-      localStorage.setItem('tradier_api_key', trimmed);
-      localStorage.setItem('tradier_use_sandbox', useSandbox ? 'true' : 'false');
-      localStorage.setItem('tradier_enabled', isEnabled ? 'true' : 'false');
+      sessionStorage.setItem('tradier_api_key', trimmed);
+      localStorage.removeItem('tradier_api_key'); // Ensure purged from persistent storage
+      sessionStorage.setItem('tradier_use_sandbox', useSandbox ? 'true' : 'false');
+      sessionStorage.setItem('tradier_enabled', isEnabled ? 'true' : 'false');
 
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
@@ -159,6 +166,9 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
   };
 
   const handleClearCredentials = () => {
+    sessionStorage.removeItem('tradier_api_key');
+    sessionStorage.removeItem('tradier_use_sandbox');
+    sessionStorage.removeItem('tradier_enabled');
     localStorage.removeItem('tradier_api_key');
     localStorage.removeItem('tradier_use_sandbox');
     localStorage.removeItem('tradier_enabled');
@@ -206,15 +216,12 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5 text-xs">
           {/* Security & Privacy Isolation Notice */}
-          <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-start gap-3">
-            <Lock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div className="text-[11px] text-emerald-200 leading-relaxed space-y-1">
-              <div className="font-bold text-emerald-300 text-xs">Private &amp; Secure Storage</div>
+          <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-start gap-3">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-amber-200 leading-relaxed space-y-1">
+              <div className="font-bold text-amber-300 text-xs">Browser Session Storage Notice</div>
               <p>
-                Your API Key is kept <strong>strictly private</strong> and stored exclusively in your browser's private{' '}
-                <code className="text-emerald-300 bg-emerald-950/60 px-1 rounded">localStorage</code> or local gitignored{' '}
-                <code className="text-emerald-300 bg-emerald-950/60 px-1 rounded">.env</code>. It is{' '}
-                <strong>never committed to GitHub</strong>.
+                Broker API keys are held temporarily in browser <code className="text-amber-300 bg-amber-950/60 px-1 rounded">sessionStorage</code> for this session only and are wiped upon logout or closing the tab. Browser storage is never encrypted. Never enter production credentials on untrusted devices.
               </p>
             </div>
           </div>
