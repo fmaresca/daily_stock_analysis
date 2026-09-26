@@ -222,7 +222,7 @@ export const ChapterQuantValuation: React.FC<ChapterQuantValuationProps> = ({
         </div>
       </div>
 
-      {/* SECTION 6: QUICK LAUNCHER FOR LIVING TRUST ASSETS */}
+      {/* SECTION 6: QUICK LAUNCHER FOR Portfolio Sample ASSETS */}
       <div className="bg-gradient-to-r from-teal-950/40 via-slate-900 to-teal-950/40 p-4 rounded-xl border border-teal-500/30 space-y-3">
         <div className="text-sm font-bold text-white flex items-center gap-2">
           <span>⚡</span>
@@ -233,7 +233,7 @@ export const ChapterQuantValuation: React.FC<ChapterQuantValuationProps> = ({
         </p>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-mono text-slate-400 font-bold">Schwab Living Trust Lots:</span>
+          <span className="text-[11px] font-mono text-slate-400 font-bold">Schwab Portfolio Lots:</span>
           {['AXTI', 'BLZE', 'IONQ', 'LUNR', 'NET', 'RTX', 'TSLA'].map((ticker) => (
             <button
               key={ticker}

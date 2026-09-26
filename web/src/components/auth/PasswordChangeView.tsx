@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, Eye, EyeOff, RefreshCw, X, ShieldCheck } from '../icons';
 
@@ -17,6 +17,16 @@ export const PasswordChangeView: React.FC<PasswordChangeViewProps> = ({ onClose,
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +88,7 @@ export const PasswordChangeView: React.FC<PasswordChangeViewProps> = ({ onClose,
         </div>
         <div>
           <h2 className="text-base font-bold text-white">Change Account Password</h2>
-          <p className="text-xs text-slate-400 font-mono">Web Crypto PBKDF2 100k-iteration</p>
+          <p className="text-xs text-slate-400">Server-verified credential update</p>
         </div>
       </div>
 

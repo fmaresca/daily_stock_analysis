@@ -141,7 +141,7 @@ export const ChapterWeeklyScreenersGuide: React.FC<ChapterWeeklyScreenersGuidePr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
             <span className="font-bold text-amber-300">Ingestion Modes:</span> Quick Single Symbol or Bulk Textarea (commas, spaces, newlines, or .txt/.csv file upload).<br />
-            <span className="font-bold text-amber-300">Curated Presets:</span> Schwab Import Equities (Living Trust) or custom pasted tickers.
+            <span className="font-bold text-amber-300">Curated Presets:</span> Schwab Import Equities (Portfolio) or custom pasted tickers.
           </div>
           <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
             <span className="font-bold text-amber-300">View 190898 Columns:</span> Symbol, Name, Last Price, Net Change, % Change, Barchart Opinion, Opinion Score %, Stability (Previous / Last Week / Last Month), Weekly Options, Options Cadence, Signal Strength, Signal Direction, Recommended Strategy.<br />

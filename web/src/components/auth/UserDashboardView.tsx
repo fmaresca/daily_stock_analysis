@@ -125,7 +125,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
   const [tradeNotes, setTradeNotes] = useState('');
   const [isSavingTrade, setIsSavingTrade] = useState(false);
 
-  const isAdminUser = user?.role === 'ADMIN' || user?.email?.toLowerCase() === 'fjmaresca@gmail.com';
+  const isAdminUser = user?.role === 'ADMIN';
   const capitalState = getStoredCapitalState();
   const taxState = getStoredTaxLedgerState();
 
@@ -263,7 +263,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
       premiumPerShare: 0.35,
       status: 'OPEN',
       entryDate: '2026-09-11',
-      notes: 'Living Trust Covered Call (500 shares collateral)',
+      notes: 'Demo Portfolio Covered Call (500 shares collateral)',
       createdAt: '2026-09-11',
     },
     {
@@ -276,7 +276,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
       premiumPerShare: 0.45,
       status: 'OPEN',
       entryDate: '2026-09-11',
-      notes: 'Living Trust Covered Call (400 shares collateral)',
+      notes: 'Demo Portfolio Covered Call (400 shares collateral)',
       createdAt: '2026-09-11',
     },
     {
@@ -289,7 +289,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
       premiumPerShare: 0.65,
       status: 'OPEN',
       entryDate: '2026-09-11',
-      notes: 'Living Trust Covered Call (1,000 shares collateral)',
+      notes: 'Demo Portfolio Covered Call (1,000 shares collateral)',
       createdAt: '2026-09-11',
     },
     {
@@ -302,7 +302,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
       premiumPerShare: 1.85,
       status: 'OPEN',
       entryDate: '2026-09-11',
-      notes: 'Living Trust Covered Call (500 shares collateral)',
+      notes: 'Demo Portfolio Covered Call (500 shares collateral)',
       createdAt: '2026-09-11',
     },
     {
@@ -315,7 +315,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
       premiumPerShare: 0.95,
       status: 'OPEN',
       entryDate: '2026-09-11',
-      notes: 'Living Trust Covered Call (500 shares collateral)',
+      notes: 'Demo Portfolio Covered Call (500 shares collateral)',
       createdAt: '2026-09-11',
     },
     {
@@ -328,7 +328,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
       premiumPerShare: 4.20,
       status: 'OPEN',
       entryDate: '2026-09-11',
-      notes: 'Living Trust Covered Call (200 shares collateral)',
+      notes: 'Demo Portfolio Covered Call (200 shares collateral)',
       createdAt: '2026-09-11',
     },
     {
@@ -341,7 +341,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
       premiumPerShare: 2.10,
       status: 'OPEN',
       entryDate: '2026-09-11',
-      notes: 'Living Trust Cash-Secured Put ($160k collateral locked)',
+      notes: 'Demo Portfolio Cash-Secured Put ($160k collateral locked)',
       createdAt: '2026-09-11',
     },
   ];
@@ -403,7 +403,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
   const effectiveWatchlists = (isAdminUser && watchlists.length === 0) ? dynamicAdminWatchlists : watchlists;
 
   const effectiveNetLiquidity = isAdminUser
-    ? (capitalState.totalAccountValue || 2388228.85)
+    ? (capitalState.totalAccountValue || 100000.00)
     : (portfolio?.netLiquidity ?? (portfolio as any)?.total_nav ?? 0);
 
   const effectiveCash = isAdminUser
@@ -437,7 +437,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
                 </span>
               </h1>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                {user?.email} • Account ID: {user?.id}
+                {user?.email}
               </p>
             </div>
           </div>
@@ -484,7 +484,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Master Living Trust Banner for Admin Frank Maresca */}
+      {/* Administrative Options Workflow Banner */}
       {isAdminUser && (
         <div className="p-4 rounded-xl bg-gradient-to-r from-purple-950/80 via-slate-900 to-indigo-950/80 border border-purple-500/50 text-purple-200 text-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
           <div className="flex items-center gap-3">
@@ -492,9 +492,9 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-bold text-white text-sm">Charles Schwab Living Trust Master Portfolio Active</p>
+              <p className="font-bold text-white text-sm">Administrative Quantitative Workflow Center</p>
               <p className="text-purple-300/90 text-xs mt-0.5">
-                Your account ({user?.email}) is linked to your 7-Step End-of-Week Ritual, $579,707.77 cash reserve ($414,707.77 net available), and $603,305.40 YTD premiums.
+                Access your systematic 7-step options ritual, position audits, and portfolio stress test engine.
               </p>
             </div>
           </div>
@@ -631,7 +631,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
             {openTradesCount} Active
           </p>
           <p className="text-[11px] text-slate-400 mt-1">
-            {isAdminUser ? 'Living Trust Active Contracts' : `Total recorded: ${effectiveTrades.length}`}
+            {isAdminUser ? 'Active Portfolio Contracts' : `Total recorded: ${effectiveTrades.length}`}
           </p>
         </div>
 
@@ -669,7 +669,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <span>{isAdminUser ? 'Living Trust Active Option Positions' : 'Personal Option & Equity Trades'}</span>
+                <span>{isAdminUser ? 'Active Option Positions' : 'Personal Option & Equity Trades'}</span>
                 <span className="text-xs text-slate-400 font-mono">({effectiveTrades.length})</span>
               </h2>
               <p className="text-xs text-slate-400">
@@ -764,7 +764,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Star className="w-4 h-4 text-yellow-400" />
-              <span>{isAdminUser ? 'Living Trust Watchlist' : 'Personal Watchlist'}</span>
+              <span>{isAdminUser ? 'Portfolio Watchlist' : 'Personal Watchlist'}</span>
             </h2>
             <p className="text-xs text-slate-400">
               {isAdminUser

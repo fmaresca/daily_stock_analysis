@@ -45,6 +45,17 @@ export const AlertSettingsModal: React.FC<AlertSettingsModalProps> = ({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleToggleBrowser = async (enabled: boolean) => {
@@ -235,6 +246,14 @@ export const AlertSettingsModal: React.FC<AlertSettingsModalProps> = ({
               >
                 {settings.enableBrowserNotifications && browserPermGranted ? 'Enabled ✓' : 'Enable Notifications'}
               </button>
+            </div>
+          </div>
+
+          {/* Webhook Data Exfiltration Warning */}
+          <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/40 flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-amber-200 leading-relaxed">
+              <span className="font-bold text-amber-300">Third-Party Egress Notice:</span> Discord and Telegram webhooks send portfolio ticker triggers and option pricing alerts across third-party networks. Webhooks are disabled by default. Configure only private, trusted destinations.
             </div>
           </div>
 

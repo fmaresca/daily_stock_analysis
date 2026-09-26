@@ -86,6 +86,17 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const updateTest = (id: string, updates: Partial<TestResult>) => {
@@ -98,8 +109,10 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
 
     try {
       const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
-      const savedKey = localStorage.getItem('tradier_api_key') || viteKey || '';
-      const useSandbox = localStorage.getItem('tradier_use_sandbox') === 'true';
+      const savedKey = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) ||
+        (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_api_key') : null) || viteKey || '';
+      const useSandbox = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true' ||
+        (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_use_sandbox') : null) === 'true';
 
       if (!savedKey) {
         updateTest('tradier_api', {
@@ -185,9 +198,12 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
     const t0 = performance.now();
 
     try {
-      const savedKey = localStorage.getItem('schwab_app_key') || '';
-      const savedSecret = localStorage.getItem('schwab_app_secret') || '';
-      const savedEnabled = localStorage.getItem('schwab_enabled') === 'true';
+      const savedKey = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('schwab_app_key') : null) ||
+        (typeof localStorage !== 'undefined' ? localStorage.getItem('schwab_app_key') : null) || '';
+      const savedSecret = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('schwab_app_secret') : null) ||
+        (typeof localStorage !== 'undefined' ? localStorage.getItem('schwab_app_secret') : null) || '';
+      const savedEnabled = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('schwab_enabled') : null) === 'true' ||
+        (typeof localStorage !== 'undefined' ? localStorage.getItem('schwab_enabled') : null) === 'true';
 
       // 1. Try Backend Status Endpoint
       let statusData: any = null;

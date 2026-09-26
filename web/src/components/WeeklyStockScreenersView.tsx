@@ -1000,7 +1000,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
                 type="button"
                 onClick={() => setWatchlistInputText(getSchwabImportedEquities().join(', '))}
                 className="px-2.5 py-1 rounded bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 text-[11px] font-bold cursor-pointer hover:text-white flex items-center space-x-1.5"
-                title="Populate with equities from Schwab CSV import / Living Trust account"
+                title="Populate with equities from Schwab CSV import"
               >
                 <span>Schwab Import Equities</span>
                 <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-200 text-[10px] font-mono">
