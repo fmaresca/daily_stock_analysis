@@ -9,8 +9,10 @@ import {
   UserCheck,
   UserX,
   Lock,
-  Mail,
   User,
+  CheckCircle2,
+  AlertTriangle,
+  Mail,
 } from '../icons';
 import { AdminUserListItem, UserRole, AccountStatus } from '../../types/auth';
 
@@ -42,6 +44,13 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
   const [isResetting, setIsResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
+  // Admin Settings State
+  const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS'>('USERS');
+  const [adminNotificationEmail, setAdminNotificationEmail] = useState('');
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [emailSaveSuccess, setEmailSaveSuccess] = useState(false);
+  const [emailSaveError, setEmailSaveError] = useState<string | null>(null);
+
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -65,9 +74,54 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
     }
   }, []);
 
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/settings', {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.adminNotificationEmail) {
+          setAdminNotificationEmail(data.adminNotificationEmail);
+        }
+      }
+    } catch {
+      // Ignore network errors
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchSettings();
+  }, [fetchUsers, fetchSettings]);
+
+  const handleSaveEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingEmail(true);
+    setEmailSaveError(null);
+    setEmailSaveSuccess(false);
+
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ adminNotificationEmail: adminNotificationEmail.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEmailSaveSuccess(true);
+        setTimeout(() => setEmailSaveSuccess(false), 3500);
+      } else {
+        setEmailSaveError(data.error || 'Failed to update admin notification email.');
+      }
+    } catch {
+      setEmailSaveError('Network error updating admin notification email.');
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,6 +272,110 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
           </button>
         </div>
       </div>
+
+      {/* Console Section Navigation Tabs */}
+      <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('USERS')}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === 'USERS'
+              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>User Directory &amp; Provisioning</span>
+          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-200">
+            {users.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('SETTINGS')}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === 'SETTINGS'
+              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+          }`}
+        >
+          <Mail className="w-4 h-4" />
+          <span>Notification &amp; Inquiry Settings</span>
+        </button>
+      </div>
+
+      {activeTab === 'SETTINGS' ? (
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6 animate-fade-in">
+          <div className="border-b border-slate-800 pb-4">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Mail className="w-5 h-5 text-purple-400" />
+              <span>Admin Inquiries &amp; Notification Destination</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Configure the destination mailbox where prospective client inquiries, password reset requests, and maintenance support tickets are delivered.
+            </p>
+          </div>
+
+          <form onSubmit={handleSaveEmail} className="max-w-xl space-y-4">
+            {emailSaveSuccess && (
+              <div className="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Notification email updated successfully. Subsequent inquiries will route to this address.</span>
+              </div>
+            )}
+            {emailSaveError && (
+              <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/50 text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{emailSaveError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Admin Notification Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={adminNotificationEmail}
+                  onChange={(e) => setAdminNotificationEmail(e.target.value)}
+                  placeholder="admin@domain.com"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 font-mono focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                Stored server-side in Cloudflare D1 system settings with fallback to <code className="text-slate-400 font-mono">ADMIN_NOTIFICATION_EMAIL</code>. This value is never rendered to public or unauthenticated visitors.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isSavingEmail}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                {isSavingEmail ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving Address...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Save Notification Settings</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <>
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -379,6 +537,8 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Provision New User Modal */}
       {isCreateModalOpen && (
