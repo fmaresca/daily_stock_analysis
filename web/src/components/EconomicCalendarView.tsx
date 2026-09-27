@@ -114,9 +114,10 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
         if (json && Array.isArray(json.indicators) && json.indicators.length > 0) {
           // If scope is 'upcoming', verify the events are actually upcoming (not last week's un-rolled feed)
           const todayIso = new Date().toISOString().substring(0, 10);
+          const targetMonday = upcomingWeek.isoMonday;
           const hasUpcomingEvents = json.indicators.some((item) => {
             const datePrefix = (item.isoDate || '').substring(0, 10);
-            return datePrefix >= todayIso;
+            return datePrefix >= targetMonday || datePrefix >= todayIso;
           });
 
           if (targetScope === 'upcoming' && !hasUpcomingEvents) {
@@ -137,8 +138,14 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
     // Tier 2: Static JSON resource (/data/economic_calendar.json) for upcoming week
     if (!success && targetScope === 'upcoming') {
       try {
-        const bRes = await fetch(`./data/economic_calendar.json?t=${Date.now()}`, { signal: AbortSignal.timeout(4000) });
-        if (bRes.ok) {
+        let bRes: Response | null = null;
+        try {
+          bRes = await fetch(`/data/economic_calendar.json?t=${Date.now()}`, { signal: AbortSignal.timeout(4000) });
+          if (!bRes.ok) throw new Error(`HTTP ${bRes.status}`);
+        } catch {
+          bRes = await fetch(`./data/economic_calendar.json?t=${Date.now()}`, { signal: AbortSignal.timeout(4000) });
+        }
+        if (bRes && bRes.ok) {
           const bJson: EconomicCalendarResponse = await bRes.json();
           if (bJson && Array.isArray(bJson.indicators) && bJson.indicators.length > 0) {
             setData({
