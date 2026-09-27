@@ -112,7 +112,6 @@ export async function onRequestPost(context) {
       JSON.stringify({
         success: true,
         user: {
-          id: user.id,
           email: user.email,
           role: user.role,
           must_change_password: user.must_change_password === 1,

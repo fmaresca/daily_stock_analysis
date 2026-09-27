@@ -2,11 +2,11 @@ export type UserRole = 'ADMIN' | 'CLIENT';
 export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'PENDING';
 
 export interface AuthUser {
-  id: string;
+  id?: string;
   email: string;
   role: UserRole;
   displayName: string;
-  status: AccountStatus;
+  status?: AccountStatus;
   createdAt?: string;
   lastLoginAt?: string;
 }
