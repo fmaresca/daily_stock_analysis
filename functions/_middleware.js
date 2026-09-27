@@ -37,6 +37,8 @@ export async function onRequest(context) {
     pathname === "/api/auth/login" ||
     pathname === "/api/auth/logout" ||
     pathname === "/api/auth/request-access" ||
+    pathname === "/api/admin/inquiries" ||
+    pathname.startsWith("/api/v1/options/") ||
     pathname === "/api/economic-calendar" ||
     pathname === "/api/analyze-options" ||
     pathname === "/api/market-price" ||
