@@ -115,35 +115,42 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
 
     let apiSuccess = false;
     let responseMsg = '';
+    let customErrorMsg = '';
 
-    // 1. Primary: Cloudflare Pages Edge Function (/api/auth/request-access)
+    // 1. Primary: Cloudflare Pages Edge Function (/api/admin/inquiries)
     try {
-      const resp = await fetch('/api/auth/request-access', {
+      const resp = await fetch('/api/admin/inquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      const data = await resp.json().catch(() => ({}));
       if (resp.ok) {
-        const data = await resp.json();
         apiSuccess = true;
-        responseMsg = data.message || 'Access request dispatched to administrator.';
+        responseMsg = data.message || 'Your inquiry has been submitted and forwarded to the administrator.';
+      } else if (resp.status === 429) {
+        customErrorMsg = data.error || 'Too many submissions. Please wait a minute before trying again.';
+      } else {
+        customErrorMsg = data.error || '';
       }
     } catch {
-      // Proceed to backend fallback
+      // Proceed to fallback
     }
 
-    // 2. Secondary: Python FastAPI backend (/api/v1/auth/request-access)
-    if (!apiSuccess) {
+    // 2. Secondary fallback: /api/auth/request-access
+    if (!apiSuccess && !customErrorMsg) {
       try {
-        const resp2 = await fetch('/api/v1/auth/request-access', {
+        const resp2 = await fetch('/api/auth/request-access', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+        const data2 = await resp2.json().catch(() => ({}));
         if (resp2.ok) {
-          const data2 = await resp2.json();
           apiSuccess = true;
-          responseMsg = data2.message || 'Access request dispatched to administrator.';
+          responseMsg = data2.message || 'Your inquiry has been submitted and forwarded to the administrator.';
+        } else if (resp2.status === 429) {
+          customErrorMsg = data2.error || 'Too many submissions. Please wait a minute before trying again.';
         }
       } catch {
         // Both APIs unreachable or offline
@@ -159,7 +166,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       setRequestAccessSent(true);
     } else {
       setRequestErrorMessage(
-        'Unable to submit request at this time. Please check your connection or contact your administrator.'
+        customErrorMsg || 'Unable to submit request at this time. Please check your connection or contact your administrator.'
       );
     }
   };

@@ -486,3 +486,65 @@ export async function authenticateRequest(context, allowedRoles = null) {
     },
   };
 }
+
+// ==========================================
+// 7. System Settings & Admin Notification Email
+// ==========================================
+
+export async function getAdminNotificationEmail(env) {
+  // 1. Check D1 system_settings table if available
+  if (env && env.DB) {
+    try {
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+        )
+      `).run();
+      const row = await env.DB.prepare(
+        "SELECT value FROM system_settings WHERE key = 'admin_notification_email'"
+      ).first();
+      if (row && row.value && row.value.includes("@")) {
+        return row.value.trim().toLowerCase();
+      }
+    } catch (e) {
+      console.warn("D1 getAdminNotificationEmail query failed:", e);
+    }
+  }
+
+  // 2. Check local memory db
+  if (localMemoryDb.settings && localMemoryDb.settings.admin_notification_email) {
+    return localMemoryDb.settings.admin_notification_email;
+  }
+
+  // 3. Fall back to environment variable or default
+  return (env?.ADMIN_NOTIFICATION_EMAIL || "fjmaresca@gmail.com").trim().toLowerCase();
+}
+
+export async function setAdminNotificationEmail(env, email) {
+  const cleanEmail = email.trim().toLowerCase();
+  if (env && env.DB) {
+    try {
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+        )
+      `).run();
+      await env.DB.prepare(`
+        INSERT INTO system_settings (key, value, updated_at)
+        VALUES ('admin_notification_email', ?, DATETIME('now'))
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = DATETIME('now')
+      `).bind(cleanEmail).run();
+    } catch (e) {
+      console.warn("D1 setAdminNotificationEmail error:", e);
+    }
+  }
+
+  if (!localMemoryDb.settings) localMemoryDb.settings = {};
+  localMemoryDb.settings.admin_notification_email = cleanEmail;
+  return cleanEmail;
+}
+
