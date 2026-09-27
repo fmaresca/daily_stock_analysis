@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, AlertTriangle, ExternalLink, RefreshCw, Lock, Zap } from './icons';
+import { X, CheckCircle2, AlertTriangle, ExternalLink, RefreshCw, Zap } from './icons';
 
 interface TradierSettingsModalProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
   const [apiKey, setApiKey] = useState<string>('');
   const [useSandbox, setUseSandbox] = useState<boolean>(false);
   const [isEnabled, setIsEnabled] = useState<boolean>(true);
+  const [isServerProvisioned, setIsServerProvisioned] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [showKey, setShowKey] = useState<boolean>(false);
   const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false);
@@ -31,21 +32,53 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
   } | null>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     try {
-      const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
-      // Migrate from localStorage to sessionStorage if present
+      // Purge any legacy localStorage keys to comply with security rules
       const legacyKey = localStorage.getItem('tradier_api_key');
       if (legacyKey) {
         sessionStorage.setItem('tradier_api_key', legacyKey);
         localStorage.removeItem('tradier_api_key');
       }
-      const savedKey = sessionStorage.getItem('tradier_api_key') || viteKey || '';
+
+      // Default to empty string: no client bundle fallback keys
+      const savedKey = sessionStorage.getItem('tradier_api_key') || '';
       const savedSandbox = (sessionStorage.getItem('tradier_use_sandbox') || localStorage.getItem('tradier_use_sandbox')) === 'true';
       const savedEnabled = (sessionStorage.getItem('tradier_enabled') || localStorage.getItem('tradier_enabled')) !== 'false';
 
       setApiKey(savedKey);
       setUseSandbox(savedSandbox);
       setIsEnabled(savedEnabled);
+
+      // Probe backend/edge to check if server-provisioned TRADIER_API_KEY is available
+      const probeHeaders: Record<string, string> = { Accept: 'application/json' };
+      if (savedKey) {
+        probeHeaders['Authorization'] = `Bearer ${savedKey}`;
+      }
+
+      fetch('/api/v1/options/tradier/status', { headers: probeHeaders })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.server_provisioned && data.status === 'CONNECTED') {
+            setIsServerProvisioned(true);
+            sessionStorage.setItem('tradier_server_provisioned', 'true');
+            if (!savedKey) {
+              setTestStatus('CONNECTED');
+              setLatencyMs(data.latency_ms || null);
+              setSampleQuote(data.sample_quote || null);
+              setTestMessage('Tradier API is active via server-provisioned environment variables (Zero-Knowledge Client).');
+            }
+          } else {
+            setIsServerProvisioned(false);
+            if (!savedKey) {
+              sessionStorage.removeItem('tradier_server_provisioned');
+            }
+          }
+        })
+        .catch(() => {
+          setIsServerProvisioned(false);
+        });
     } catch (e) {
       console.warn('Failed to load Tradier settings from storage', e);
     }
@@ -67,7 +100,11 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
   const handleSave = () => {
     try {
       const trimmed = apiKey.trim();
-      sessionStorage.setItem('tradier_api_key', trimmed);
+      if (trimmed) {
+        sessionStorage.setItem('tradier_api_key', trimmed);
+      } else {
+        sessionStorage.removeItem('tradier_api_key');
+      }
       localStorage.removeItem('tradier_api_key'); // Ensure purged from persistent storage
       sessionStorage.setItem('tradier_use_sandbox', useSandbox ? 'true' : 'false');
       sessionStorage.setItem('tradier_enabled', isEnabled ? 'true' : 'false');
@@ -81,9 +118,9 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
 
   const handleTestConnection = async () => {
     const token = apiKey.trim();
-    if (!token) {
+    if (!token && !isServerProvisioned) {
       setTestStatus('ERROR');
-      setTestMessage('Please enter your Tradier API Key.');
+      setTestMessage('Please enter your Tradier API Key or configure TRADIER_API_KEY in server environment.');
       return;
     }
 
@@ -91,84 +128,104 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
     setTestMessage('Testing live Tradier market feed & NBBO latency...');
     const t0 = performance.now();
 
-    // 1. Try Backend Status Endpoint if running
+    // 1. Try Backend / Edge Status Endpoint (Pass token via Authorization header, NEVER in URL query)
     try {
-      const backendResp = await fetch(`/api/v1/options/tradier/status?token=${encodeURIComponent(token)}`);
+      const headers: Record<string, string> = { Accept: 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const backendResp = await fetch('/api/v1/options/tradier/status', {
+        headers,
+      });
+
       if (backendResp.ok) {
         const data = await backendResp.json();
-        if (data.status === 'CONNECTED' && data.sample_quote) {
+        if (data.status === 'CONNECTED' && (data.sample_quote || data.connected)) {
           const elapsed = Math.round(performance.now() - t0);
           setTestStatus('CONNECTED');
           setLatencyMs(data.latency_ms || elapsed);
-          setSampleQuote(data.sample_quote);
-          setTestMessage('Connected via backend! Tradier is active as Primary market data provider.');
+          setSampleQuote(data.sample_quote || null);
+          setTestMessage(
+            data.server_provisioned
+              ? 'Connected via server-provisioned Tradier API! Live market quotes & options chains active.'
+              : 'Connected via backend! Tradier is active as Primary market data provider.'
+          );
           setIsEnabled(true);
-          handleSave();
+          if (token) {
+            handleSave();
+          } else if (data.server_provisioned) {
+            sessionStorage.setItem('tradier_server_provisioned', 'true');
+          }
           return;
         }
       }
     } catch {
-      // Backend not running; proceed with direct client-side test
+      // Backend not running; proceed with direct client-side test if client token entered
     }
 
     // 2. Direct client-side test (Tradier API supports CORS Access-Control-Allow-Origin: *)
-    try {
-      const baseUrl = useSandbox ? 'https://sandbox.tradier.com/v1' : 'https://api.tradier.com/v1';
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+    if (token) {
+      try {
+        const baseUrl = useSandbox ? 'https://sandbox.tradier.com/v1' : 'https://api.tradier.com/v1';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-      const resp = await fetch(`${baseUrl}/markets/quotes?symbols=SPY&greeks=true`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
+        const resp = await fetch(`${baseUrl}/markets/quotes?symbols=SPY&greeks=true`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
 
-      const elapsed = Math.round(performance.now() - t0);
+        const elapsed = Math.round(performance.now() - t0);
 
-      if (resp.status === 200) {
-        const data = await resp.json();
-        const quotesContainer = data?.quotes || {};
-        let quote = quotesContainer.quote;
-        if (Array.isArray(quote) && quote.length > 0) {
-          quote = quote[0];
-        }
+        if (resp.status === 200) {
+          const data = await resp.json();
+          const quotesContainer = data?.quotes || {};
+          let quote = quotesContainer.quote;
+          if (Array.isArray(quote) && quote.length > 0) {
+            quote = quote[0];
+          }
 
-        if (quote && quote.symbol) {
-          setTestStatus('CONNECTED');
-          setLatencyMs(elapsed);
-          setSampleQuote({
-            symbol: quote.symbol,
-            last: Number(quote.last) || 0,
-            bid: Number(quote.bid) || 0,
-            ask: Number(quote.ask) || 0,
-            volume: Number(quote.volume) || 0,
-            change: Number(quote.change) || 0,
-          });
-          setTestMessage('Connected! Tradier API verified. Primary real-time NBBO quotes and options chains active.');
-          setIsEnabled(true);
-          handleSave();
+          if (quote && quote.symbol) {
+            setTestStatus('CONNECTED');
+            setLatencyMs(elapsed);
+            setSampleQuote({
+              symbol: quote.symbol,
+              last: Number(quote.last) || Number(quote.close) || 0,
+              bid: Number(quote.bid) || 0,
+              ask: Number(quote.ask) || 0,
+              volume: Number(quote.volume) || 0,
+              change: Number(quote.change) || 0,
+            });
+            setTestMessage('Direct browser connection to Tradier API successful! Real-time NBBO quotes verified.');
+            setIsEnabled(true);
+            handleSave();
+            return;
+          }
+        } else if (resp.status === 401) {
+          setTestStatus('ERROR');
+          setTestMessage('Tradier API rejected the token (HTTP 401 Unauthorized). Please check your key.');
           return;
         }
-      } else if (resp.status === 401) {
-        throw new Error('Tradier rejected token (401 Unauthorized). Verify your API Key at developer.tradier.com.');
-      } else if (resp.status === 403) {
-        throw new Error('Tradier API access forbidden (403). Check account permissions or data subscriptions.');
-      } else {
-        throw new Error(`Tradier returned HTTP ${resp.status}: ${resp.statusText}`);
+      } catch (err: any) {
+        setTestStatus('ERROR');
+        setTestMessage(err.message || 'Connection test failed. Verify network or API key.');
+        return;
       }
-    } catch (err: any) {
-      setTestStatus('ERROR');
-      setTestMessage(err.message || 'Connection test failed. Check API Key and network connectivity.');
     }
+
+    setTestStatus('ERROR');
+    setTestMessage('Connection test failed. Check token validity or server environment.');
   };
 
   const handleClearCredentials = () => {
     sessionStorage.removeItem('tradier_api_key');
     sessionStorage.removeItem('tradier_use_sandbox');
     sessionStorage.removeItem('tradier_enabled');
+    sessionStorage.removeItem('tradier_server_provisioned');
     localStorage.removeItem('tradier_api_key');
     localStorage.removeItem('tradier_use_sandbox');
     localStorage.removeItem('tradier_enabled');
@@ -181,6 +238,8 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
     setLatencyMs(null);
     setShowClearConfirm(false);
   };
+
+  const isTradierConfigured = (apiKey.trim().length > 0 && isEnabled) || isServerProvisioned;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-labelledby="tradier-settings-title">
@@ -197,6 +256,11 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                   Primary Provider
                 </span>
+                {isServerProvisioned && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    Server-Provisioned
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-400">
                 Institutional-grade NBBO quotes &amp; live option chains with Greeks
@@ -215,31 +279,40 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5 text-xs">
-          {/* Security & Privacy Isolation Notice */}
+          {/* Security & Privacy Isolation Notice (Matching Schwab Pattern) */}
           <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-start gap-3">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div className="text-[11px] text-amber-200 leading-relaxed space-y-1">
               <div className="font-bold text-amber-300 text-xs">Browser Session Storage Notice</div>
               <p>
-                Broker API keys are held temporarily in browser <code className="text-amber-300 bg-amber-950/60 px-1 rounded">sessionStorage</code> for this session only and are wiped upon logout or closing the tab. Browser storage is never encrypted. Never enter production credentials on untrusted devices.
+                Broker API keys entered here are held temporarily in browser <code className="text-amber-300 bg-amber-950/60 px-1 rounded">sessionStorage</code> for this session only and are wiped upon logout or closing the tab. Browser storage is never encrypted. Never enter production credentials on untrusted devices.
+              </p>
+              <p className="text-amber-300/80">
+                To keep credentials off the client entirely, you can configure them server-side via environment variables (<code className="text-amber-300 bg-amber-950/60 px-1 rounded">TRADIER_API_KEY</code> and optional <code className="text-amber-300 bg-amber-950/60 px-1 rounded">TRADIER_USE_SANDBOX</code>) for the edge/backend proxy.
               </p>
             </div>
           </div>
 
-          {/* Hierarchy Indicator Card */}
+          {/* Status Banner */}
           <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  apiKey && isEnabled ? 'bg-emerald-400 shadow-emerald-400/50 shadow-sm animate-pulse' : 'bg-slate-500'
+                  isTradierConfigured ? 'bg-emerald-400 shadow-emerald-400/50 shadow-sm animate-pulse' : 'bg-slate-500'
                 }`}
               />
               <div>
                 <span className="font-bold text-white text-xs">
-                  {apiKey && isEnabled ? 'Tradier API Active (Primary)' : 'Tradier API Unconfigured'}
+                  {isTradierConfigured
+                    ? isServerProvisioned && !apiKey.trim()
+                      ? 'Tradier API Active (Server-Provisioned Primary)'
+                      : 'Tradier API Active (Primary)'
+                    : 'Tradier API Unconfigured'}
                 </span>
                 <p className="text-[10px] text-slate-400">
-                  Automatic failover to Charles Schwab and Yahoo Finance if Tradier is offline
+                  {isTradierConfigured
+                    ? 'Connected for direct real-time options and equities feeds.'
+                    : 'Configure credentials below or provision TRADIER_API_KEY on the server.'}
                 </p>
               </div>
             </div>
@@ -275,22 +348,30 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
                   type={showKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your Tradier API Key"
-                  className="w-full px-3 py-2 pr-16 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:outline-none focus:border-emerald-500 tracking-wider"
+                  placeholder={
+                    isServerProvisioned
+                      ? 'Server-provisioned via TRADIER_API_KEY (Leave blank to use server key)'
+                      : 'Enter your Tradier API Key'
+                  }
+                  className="w-full px-3 py-2 pr-16 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:outline-none focus:border-emerald-500 tracking-wider placeholder:text-slate-500"
                   autoComplete="off"
                   autoCorrect="off"
                   spellCheck={false}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded bg-slate-800 font-semibold transition-colors"
-                >
-                  {showKey ? 'Hide' : 'Show'}
-                </button>
+                {apiKey && (
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(!showKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded bg-slate-800 font-semibold transition-colors"
+                  >
+                    {showKey ? 'Hide' : 'Show'}
+                  </button>
+                )}
               </div>
               <p className="text-[10px] text-slate-500 mt-1">
-                Key remains masked by default to protect privacy during screen sharing.
+                {isServerProvisioned && !apiKey
+                  ? 'Server-side key is active. Browser storage remains zero-knowledge.'
+                  : 'Key is kept in browser sessionStorage for this session only and is never stored in persistent browser storage.'}
               </p>
             </div>
 
@@ -382,7 +463,7 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
               <button
                 type="button"
                 onClick={onOpenSchwabSettings}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 text-xs font-semibold whitespace-nowrap transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer"
               >
                 Configure Schwab
               </button>
@@ -397,7 +478,7 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowClearConfirm(true)}
-                className="text-[11px] text-slate-400 hover:text-rose-400 transition-colors"
+                className="text-[11px] text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
               >
                 Clear Credentials
               </button>
@@ -407,14 +488,14 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
                 <button
                   type="button"
                   onClick={handleClearCredentials}
-                  className="px-2 py-1 bg-rose-600/30 text-rose-300 border border-rose-500/50 rounded text-[10px] font-bold hover:bg-rose-600/40"
+                  className="px-2 py-1 bg-rose-600/30 text-rose-300 border border-rose-500/50 rounded text-[10px] font-bold hover:bg-rose-600/40 cursor-pointer"
                 >
                   Confirm
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowClearConfirm(false)}
-                  className="text-[10px] text-slate-400 hover:text-slate-200"
+                  className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -426,8 +507,8 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
             <button
               type="button"
               onClick={handleTestConnection}
-              disabled={testStatus === 'TESTING' || !apiKey.trim()}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center space-x-1.5 transition-colors disabled:opacity-50"
+              disabled={testStatus === 'TESTING' || (!apiKey.trim() && !isServerProvisioned)}
+              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center space-x-1.5 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${testStatus === 'TESTING' ? 'animate-spin' : ''}`} />
               <span>Test Connection</span>

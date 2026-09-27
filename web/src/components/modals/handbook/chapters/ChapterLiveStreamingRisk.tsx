@@ -74,7 +74,7 @@ export const ChapterLiveStreamingRisk: React.FC<ChapterLiveStreamingRiskProps> =
             <span>Privacy &amp; Security Architecture:</span>
           </div>
           <p>
-            Your Tradier API Key is kept <strong>strictly private</strong>. It is masked by default with bullet dots in the settings modal and stored exclusively in private client-side <code className="text-slate-300">localStorage</code> or local gitignored <code className="text-slate-300">.env</code>. It is never committed to GitHub or exposed in public deployments.
+            Your Tradier API Key is kept <strong>strictly private</strong>. It is masked by default with bullet dots in the settings modal and stored exclusively in browser-session-scoped <code className="text-slate-300">sessionStorage</code> (wiped on logout/tab close) or configured server-side via environment variables (<code className="text-slate-300">TRADIER_API_KEY</code>). It is never committed to GitHub or exposed in public deployments.
           </p>
           <p>
             <strong>Automatic Failover:</strong> If Tradier is offline or unconfigured, the system automatically falls back to <strong>Charles Schwab Retail Trader API</strong> (secondary fallback) and Yahoo Finance / CBOE directory snapshots.

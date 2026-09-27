@@ -102,6 +102,43 @@ export const Header: React.FC<HeaderProps> = ({
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAutoSyncMenuOpen, setIsAutoSyncMenuOpen] = useState(false);
+  const [isTradierActive, setIsTradierActive] = useState<boolean>(() => {
+    try {
+      const userKey = sessionStorage.getItem('tradier_api_key');
+      const isProv = sessionStorage.getItem('tradier_server_provisioned') === 'true';
+      return !!userKey || isProv;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const checkTradier = () => {
+      try {
+        const userKey = sessionStorage.getItem('tradier_api_key');
+        const isProv = sessionStorage.getItem('tradier_server_provisioned') === 'true';
+        setIsTradierActive(!!userKey || isProv);
+      } catch {
+        setIsTradierActive(false);
+      }
+    };
+    checkTradier();
+    fetch('/api/v1/options/tradier/status')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.server_provisioned && data.status === 'CONNECTED') {
+          sessionStorage.setItem('tradier_server_provisioned', 'true');
+          setIsTradierActive(true);
+        }
+      })
+      .catch(() => {});
+    window.addEventListener('storage', checkTradier);
+    window.addEventListener('focus', checkTradier);
+    return () => {
+      window.removeEventListener('storage', checkTradier);
+      window.removeEventListener('focus', checkTradier);
+    };
+  }, []);
   const [liveExecutiveMetrics, setLiveExecutiveMetrics] = useState<ExecutiveDigestMetrics>(
     () => executiveMetrics || calculateLiveExecutiveMetrics()
   );
@@ -263,12 +300,32 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Tradier API Settings (Primary) */}
           <button
             onClick={onOpenTradier}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 hover:border-emerald-400/70 transition-all cursor-pointer whitespace-nowrap shadow-sm shadow-emerald-500/10"
-            title="Configure Tradier API Key (Primary Live Market Data & Options Chains)"
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 border transition-all cursor-pointer whitespace-nowrap shadow-sm ${
+              isTradierActive
+                ? 'border-emerald-500/40 text-emerald-300 hover:border-emerald-400/70 shadow-emerald-500/10'
+                : 'border-slate-700/80 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+            }`}
+            title={
+              isTradierActive
+                ? 'Tradier API Active (Primary Live Market Data & Options Chains)'
+                : 'Configure Tradier API Key (Primary Provider Unconfigured)'
+            }
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isTradierActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
+              }`}
+            />
             <span>Tradier API</span>
-            <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-600/40 font-mono">Primary</span>
+            <span
+              className={`text-[10px] px-1 py-0.2 rounded font-mono ${
+                isTradierActive
+                  ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/40'
+                  : 'bg-slate-800 text-slate-400 border border-slate-700'
+              }`}
+            >
+              {isTradierActive ? 'Primary' : 'Off'}
+            </span>
           </button>
 
           {/* Schwab API Settings (Fallback) */}
