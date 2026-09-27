@@ -108,44 +108,47 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
     const t0 = performance.now();
 
     try {
-      const viteKey = (import.meta as any).env?.VITE_TRADIER_API_KEY || '';
-      const savedKey = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) ||
-        (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_api_key') : null) || viteKey || '';
-      const useSandbox = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true' ||
-        (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_use_sandbox') : null) === 'true';
+      const savedKey = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) || '';
+      const useSandbox = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true';
 
-      if (!savedKey) {
-        updateTest('tradier_api', {
-          status: 'WARNING',
-          latencyMs: 0,
-          message: 'Tradier API token not configured. Click "Configure Tradier API" to set your developer token.',
-          details: {
-            hint: 'Get your personal API key from developer.tradier.com for real-time NBBO quotes and option chains.',
-          },
-          timestamp: new Date().toLocaleTimeString(),
-        });
-        return;
-      }
-
-      // 1. Check backend status if running
+      // 1. Check backend status (handles both server-provisioned key and Authorization header)
       try {
-        const resp = await fetch(`/api/v1/options/tradier/status?token=${encodeURIComponent(savedKey)}`);
+        const headers: Record<string, string> = { Accept: 'application/json' };
+        if (savedKey) {
+          headers['Authorization'] = `Bearer ${savedKey.trim()}`;
+        }
+        const resp = await fetch('/api/v1/options/tradier/status', { headers });
         if (resp.ok) {
           const data = await resp.json();
-          if (data.status === 'CONNECTED' && data.sample_quote) {
+          if (data.status === 'CONNECTED' && (data.sample_quote || data.connected)) {
             const elapsed = Math.round(performance.now() - t0);
             updateTest('tradier_api', {
               status: 'SUCCESS',
               latencyMs: data.latency_ms || elapsed,
-              message: 'Connected via backend! Tradier is active as Primary market data provider.',
-              details: data.sample_quote,
+              message: data.server_provisioned
+                ? 'Connected via Server-Provisioned Tradier API (TRADIER_API_KEY). Browser storage zero-knowledge.'
+                : 'Connected via backend! Tradier is active as Primary market data provider.',
+              details: data.sample_quote || { provider: 'TRADIER', server_provisioned: true },
               timestamp: new Date().toLocaleTimeString(),
             });
             return;
           }
         }
       } catch {
-        // Fall through to direct fetch
+        // Fall through to direct fetch or unconfigured warning
+      }
+
+      if (!savedKey) {
+        updateTest('tradier_api', {
+          status: 'WARNING',
+          latencyMs: 0,
+          message: 'Tradier API token not configured. Click "Configure Tradier API" to set your developer token or configure TRADIER_API_KEY on server.',
+          details: {
+            hint: 'Get your personal API key from developer.tradier.com for real-time NBBO quotes and option chains.',
+          },
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        return;
       }
 
       // 2. Direct client-side fetch test

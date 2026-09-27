@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import time
 import urllib.request
@@ -20,7 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from api.deps import get_config_dep
@@ -326,19 +327,34 @@ def configure_tradier(
 
 
 @router.get("/tradier/status")
+@router.post("/tradier/status")
 def get_tradier_status(
-    token: Optional[str] = None,
+    token: Optional[str] = Query(None, description="Optional Tradier token (legacy param)"),
+    authorization: Optional[str] = Header(None, description="Authorization: Bearer <token> header"),
     config: Config = Depends(get_config_dep),
 ) -> Dict[str, Any]:
     """
     Returns Tradier API connection status, token validity, and tests a live quote on SPY.
+    Prefers Authorization: Bearer <token> header over query parameters to avoid logging secrets in URLs.
+    Supports server-side provisioned key via TRADIER_API_KEY environment variable.
     """
-    fetcher = TradierFetcher(api_token=token) if token else TradierFetcher()
+    client_token = None
+    if authorization and authorization.startswith("Bearer "):
+        client_token = authorization.split("Bearer ", 1)[1].strip()
+    elif token:
+        client_token = token.strip()
+
+    is_server_provisioned = not bool(client_token) and bool(
+        os.getenv("TRADIER_API_KEY") or os.getenv("TRADIER_API_TOKEN") or getattr(config, "tradier_api_key", None)
+    )
+
+    fetcher = TradierFetcher(api_token=client_token) if client_token else TradierFetcher()
     if not fetcher.is_available():
         return {
             "status": "UNCONFIGURED",
             "configured": False,
             "connected": False,
+            "server_provisioned": False,
             "message": "Tradier API token not configured.",
         }
 
@@ -352,14 +368,20 @@ def get_tradier_status(
                 "status": "CONNECTED",
                 "configured": True,
                 "connected": True,
+                "server_provisioned": is_server_provisioned,
                 "latency_ms": latency_ms,
                 "sample_quote": sample,
-                "message": "Tradier API is active (Primary Market Data Provider).",
+                "message": (
+                    "Tradier API is active (Server-provisioned Primary Market Data Provider)."
+                    if is_server_provisioned
+                    else "Tradier API is active (Primary Market Data Provider)."
+                ),
             }
         return {
             "status": "ERROR",
             "configured": True,
             "connected": False,
+            "server_provisioned": is_server_provisioned,
             "message": "Tradier quote response empty or rejected.",
         }
     except Exception as e:
@@ -367,6 +389,7 @@ def get_tradier_status(
             "status": "ERROR",
             "configured": True,
             "connected": False,
+            "server_provisioned": is_server_provisioned,
             "message": f"Tradier connection failed: {str(e)}",
         }
 
