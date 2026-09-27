@@ -35,7 +35,7 @@ class TradierFetcher(BaseFetcher):
         api_token: Optional[str] = None,
         use_sandbox: bool = False,
     ):
-        self.api_token = api_token or os.getenv("TRADIER_API_TOKEN", "").strip()
+        self.api_token = api_token or os.getenv("TRADIER_API_KEY", "").strip() or os.getenv("TRADIER_API_TOKEN", "").strip()
         self.use_sandbox = use_sandbox or os.getenv("TRADIER_USE_SANDBOX", "false").lower() == "true"
         self.base_url = "https://sandbox.tradier.com/v1" if self.use_sandbox else "https://api.tradier.com/v1"
         self.session = requests.Session()

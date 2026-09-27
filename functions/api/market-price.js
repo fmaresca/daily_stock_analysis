@@ -39,12 +39,14 @@ export async function onRequest(context) {
     });
   }
 
-  const tradierToken = (env.TRADIER_API_TOKEN || env.VITE_TRADIER_API_KEY || '').trim();
+  const tradierToken = (env.TRADIER_API_KEY || env.TRADIER_API_TOKEN || '').trim();
+  const useSandbox = (env.TRADIER_USE_SANDBOX || '').toLowerCase() === 'true';
+  const tradierBaseUrl = useSandbox ? 'https://sandbox.tradier.com/v1' : 'https://api.tradier.com/v1';
 
   // Tier 1: Tradier API (Direct Edge Fetch)
   if (tradierToken) {
     try {
-      const quoteUrl = `https://api.tradier.com/v1/markets/quotes?symbols=${encodeURIComponent(symbol)}&greeks=true`;
+      const quoteUrl = `${tradierBaseUrl}/markets/quotes?symbols=${encodeURIComponent(symbol)}&greeks=true`;
       const quoteResp = await fetch(quoteUrl, {
         headers: {
           Authorization: `Bearer ${tradierToken}`,
@@ -66,7 +68,7 @@ export async function onRequest(context) {
         let volumes = [];
 
         try {
-          const histUrl = `https://api.tradier.com/v1/markets/history?symbol=${encodeURIComponent(symbol)}&interval=daily`;
+          const histUrl = `${tradierBaseUrl}/markets/history?symbol=${encodeURIComponent(symbol)}&interval=daily`;
           const histResp = await fetch(histUrl, {
             headers: {
               Authorization: `Bearer ${tradierToken}`,
