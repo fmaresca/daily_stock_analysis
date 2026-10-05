@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, Mail, Eye, EyeOff, ShieldCheck, Zap, RefreshCw } from '../icons';
 import { DeltaHarvestLogo } from '../ui/DeltaHarvestLogo';
+import { LegalDisclosuresModal, LegalTab } from '../modals/LegalDisclosuresModal';
 
 import { AuthUser } from '../../types/auth';
 
@@ -31,6 +32,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const [requestType, setRequestType] = useState<'NEW_ACCOUNT' | 'PASSWORD_RESET' | 'MAINTENANCE'>('NEW_ACCOUNT');
   const [emailCopied, setEmailCopied] = useState(false);
   const [deliveryDelivered, setDeliveryDelivered] = useState<boolean>(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTab | null>(null);
 
   // Pre-load saved login name if previously selected
   useEffect(() => {
@@ -549,38 +551,29 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       {/* Public Footer with Legal Links & Build Identification */}
       <footer className="mt-8 text-center text-xs text-slate-500 space-y-2">
         <div className="flex flex-wrap items-center justify-center gap-4 text-slate-400">
-          <a
-            href="#terms"
-            onClick={(e) => {
-              e.preventDefault();
-              alert('Terms of Service: DeltaHarvest Institutional is a proprietary quantitative analytics terminal provided strictly for authorized professional and institutional research.');
-            }}
-            className="hover:text-slate-300 underline underline-offset-2"
+          <button
+            type="button"
+            onClick={() => setLegalModalTab('TERMS')}
+            className="hover:text-slate-200 underline underline-offset-2 cursor-pointer transition-colors"
           >
             Terms of Service
-          </a>
+          </button>
           <span className="text-slate-700">•</span>
-          <a
-            href="#privacy"
-            onClick={(e) => {
-              e.preventDefault();
-              alert('Privacy Policy: DeltaHarvest operates on zero-third-party tracking and server-scoped authentication. No personal analytical data is sold or shared.');
-            }}
-            className="hover:text-slate-300 underline underline-offset-2"
+          <button
+            type="button"
+            onClick={() => setLegalModalTab('PRIVACY')}
+            className="hover:text-slate-200 underline underline-offset-2 cursor-pointer transition-colors"
           >
             Privacy Policy
-          </a>
+          </button>
           <span className="text-slate-700">•</span>
-          <a
-            href="#disclaimer"
-            onClick={(e) => {
-              e.preventDefault();
-              alert('Risk Disclaimer: Derivative options trading involves substantial risk of loss and is not suitable for all investors. Mathematical models and Greek simulations are for informational analysis only.');
-            }}
-            className="hover:text-slate-300 underline underline-offset-2"
+          <button
+            type="button"
+            onClick={() => setLegalModalTab('DISCLAIMER')}
+            className="hover:text-slate-200 underline underline-offset-2 cursor-pointer transition-colors"
           >
             Risk Disclaimer
-          </a>
+          </button>
         </div>
         <p className="text-[11px] text-slate-600">
           &copy; {new Date().getFullYear()} DeltaHarvest Institutional. All rights reserved. &bull;{' '}
@@ -589,6 +582,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
           </span>
         </p>
       </footer>
+
+      {/* Institutional Legal & Regulatory Modal */}
+      <LegalDisclosuresModal
+        isOpen={legalModalTab !== null}
+        onClose={() => setLegalModalTab(null)}
+        initialTab={legalModalTab || 'TERMS'}
+      />
     </main>
   );
 };
