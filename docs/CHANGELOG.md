@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [改进] 边缘函数架构收敛与冗余镜像清理 (Edge Functions Architecture Consolidation & Cleanup): 彻底移除 web/functions/ 冗余镜像目录，将 covered-calls.js 整合收敛至根目录权威 functions/api/ 目录，消除多目录代码漂移风险，统一 Cloudflare Pages 边缘服务架构。
+- [改进] 仓库治理与大文件防膨胀机制 (Repository Bloat Prevention & Git History Cleanup Planning): (1) 扩充 .gitignore 严密拦截 >1MB 二进制媒体、PSD/AI 设计源文件、大体积动图与归档包；(2) 编制并归档 docs/git-history-cleanup-plan.md，详尽规划历史 Tradier 凭证脱敏与历史大文件清理的 git-filter-repo 操作方案与团队协作指引。
 - [改进] 路由级动态代码分割与登录页极致轻量化 (Route-Level Code Splitting & Ultra-Lean Cold Load): 交付 AuthenticatedTerminal 动态拆分组件，将全部认证后重型工作区、策略模态框与选股引擎移出登录页首屏打包，首屏冷启动 JS 产物由 430 KB 骤降至 45 KB (Brotli 传输压缩后仅 ~10 KB，整站冷启动资源总量低至 ~80 KB)，远优于 ≤350 KB 预算要求；各类工作区、设置模态框与管理面板实现按需动态加载与平滑 Suspense 状态。
 - [改进] 样本与模板 CSV 彻底移出 JS 打包产物 (Zero Embedded Sample CSVs in Application Bundles): 将 Schwab 模拟基准持仓 (schwab_positions_demo.csv)、观察列表样本 (deltaharvest_watchlist_sample.csv / .xls) 与选股器模板 (screener_template.csv) 全面迁移至 /samples/ 静态资源目录，在用户触发下载时按需 fetch 拉取并提供紧凑型算法兜底，彻底根除构建产物中内嵌的静态大字符串字面量。
 - [安全] 内容安全策略 (CSP) 深度收紧与零宽泛通配符 (Hardened Strict Content Security Policy): 移除 script-src 中的 'unsafe-inline' 指令，全面收紧 connect-src 移除尾部宽泛的 'https:' 和 'wss:' 通配符，精准枚举 Tradier (api/sandbox/ws)、Schwab API、Yahoo Finance、SEC 及预测市场 API 白名单，杜绝任意第三方网络外连隐患。

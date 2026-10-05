@@ -94,3 +94,23 @@ static/
 /web/node_modules/
 /node_modules/
 docs/specs/
+
+# Binary and large asset bloat prevention (>1MB media / archives / raw assets)
+*.psd
+*.ai
+*.sketch
+*.fig
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+docs/assets/*.gif
+docs/assets/*.mp4
+docs/assets/*.psd
+*.snapshot.json
+
