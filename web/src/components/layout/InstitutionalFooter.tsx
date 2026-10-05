@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MenuTreeType, OptionsTabType, EquitiesTabType } from '../../types/options';
+import { LegalDisclosuresModal, LegalTab } from '../modals/LegalDisclosuresModal';
 
 interface InstitutionalFooterProps {
   navigateTo: (tree: MenuTreeType, optionsTab?: OptionsTabType, equitiesTab?: EquitiesTabType) => void;
@@ -16,6 +17,7 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({
   setIsDiagnosticsOpen,
   setIsTradierModalOpen,
 }) => {
+  const [legalModalTab, setLegalModalTab] = useState<LegalTab | null>(null);
   return (
     <footer className="border-t border-slate-800/80 bg-slate-950/95 py-10 mt-14 text-xs text-slate-400">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -151,13 +153,28 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({
                 </a>
               </li>
               <li>
-                <a
-                  href="/disclaimer"
-                  onClick={(e) => { e.preventDefault(); navigateTo('DISCLAIMER'); }}
-                  className="hover:text-rose-400 font-medium transition-colors"
+                <button
+                  onClick={() => setLegalModalTab('TERMS')}
+                  className="hover:text-slate-200 transition-colors text-left cursor-pointer"
+                >
+                  Terms of Service
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setLegalModalTab('PRIVACY')}
+                  className="hover:text-slate-200 transition-colors text-left cursor-pointer"
+                >
+                  Privacy Policy
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setLegalModalTab('DISCLAIMER')}
+                  className="hover:text-rose-400 font-medium transition-colors text-left cursor-pointer"
                 >
                   Regulatory Disclaimers &amp; OCC Risks
-                </a>
+                </button>
               </li>
               <li>
                 <button
@@ -180,6 +197,12 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({
           </p>
         </div>
       </div>
+
+      <LegalDisclosuresModal
+        isOpen={legalModalTab !== null}
+        onClose={() => setLegalModalTab(null)}
+        initialTab={legalModalTab || 'TERMS'}
+      />
     </footer>
   );
 };
