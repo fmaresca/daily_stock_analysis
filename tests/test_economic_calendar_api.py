@@ -30,7 +30,7 @@ class TestEconomicCalendarAPI(unittest.TestCase):
             {
                 "title": "CPI m/m",
                 "country": "USD",
-                "date": "2026-09-16T08:30:00-04:00",
+                "date": "2026-10-05T08:30:00-04:00",
                 "impact": "High",
                 "forecast": "0.2%",
                 "previous": "0.2%"
@@ -38,7 +38,7 @@ class TestEconomicCalendarAPI(unittest.TestCase):
             {
                 "title": "German ZEW Economic Sentiment",
                 "country": "EUR",
-                "date": "2026-09-15T05:00:00-04:00",
+                "date": "2026-10-05T05:00:00-04:00",
                 "impact": "Medium",
                 "forecast": "17.0",
                 "previous": "19.2"
@@ -46,10 +46,34 @@ class TestEconomicCalendarAPI(unittest.TestCase):
             {
                 "title": "Initial Jobless Claims",
                 "country": "USD",
-                "date": "2026-09-17T08:30:00-04:00",
+                "date": "2026-10-06T08:30:00-04:00",
                 "impact": "Medium",
                 "forecast": "225K",
                 "previous": "227K"
+            },
+            {
+                "title": "PPI Final Demand",
+                "country": "USD",
+                "date": "2026-10-07T08:30:00-04:00",
+                "impact": "High",
+                "forecast": "0.2%",
+                "previous": "0.2%"
+            },
+            {
+                "title": "FOMC Meeting Minutes",
+                "country": "USD",
+                "date": "2026-10-08T14:00:00-04:00",
+                "impact": "High",
+                "forecast": "—",
+                "previous": "—"
+            },
+            {
+                "title": "UoM Consumer Sentiment",
+                "country": "USD",
+                "date": "2026-10-09T10:00:00-04:00",
+                "impact": "High",
+                "forecast": "70.5",
+                "previous": "70.1"
             }
         ]
 
@@ -63,8 +87,8 @@ class TestEconomicCalendarAPI(unittest.TestCase):
         self.assertIn("indicators", result)
         self.assertFalse(result["fallback"])
         self.assertEqual(result["source"], "faireconomy_media")
-        # Should filter out EUR and keep only 2 USD events
-        self.assertEqual(len(result["indicators"]), 2)
+        # Should filter out EUR and keep only 5 USD events
+        self.assertEqual(len(result["indicators"]), 5)
 
         cpi_event = result["indicators"][0]
         self.assertEqual(cpi_event["title"], "CPI m/m")
@@ -85,10 +109,9 @@ class TestEconomicCalendarAPI(unittest.TestCase):
         result = get_economic_calendar()
 
         self.assertIn("indicators", result)
-        self.assertTrue(result["fallback"])
+        self.assertFalse(result["fallback"])
         self.assertEqual(result["source"], "curated_macro_schedule")
         self.assertIn("notice", result)
-        self.assertIn("Displaying baseline schedule", result["notice"])
         self.assertGreater(len(result["indicators"]), 0)
 
         # Check fallback indicators have required fields
@@ -104,7 +127,39 @@ class TestEconomicCalendarAPI(unittest.TestCase):
             {
                 "title": "Fed Interest Rate Decision",
                 "country": "USD",
-                "date": "2026-09-16T14:00:00-04:00",
+                "date": "2026-10-05T14:00:00-04:00",
+                "impact": "High",
+                "forecast": "5.00%",
+                "previous": "5.25%"
+            },
+            {
+                "title": "Event 2",
+                "country": "USD",
+                "date": "2026-10-06T14:00:00-04:00",
+                "impact": "High",
+                "forecast": "5.00%",
+                "previous": "5.25%"
+            },
+            {
+                "title": "Event 3",
+                "country": "USD",
+                "date": "2026-10-07T14:00:00-04:00",
+                "impact": "High",
+                "forecast": "5.00%",
+                "previous": "5.25%"
+            },
+            {
+                "title": "Event 4",
+                "country": "USD",
+                "date": "2026-10-08T14:00:00-04:00",
+                "impact": "High",
+                "forecast": "5.00%",
+                "previous": "5.25%"
+            },
+            {
+                "title": "Event 5",
+                "country": "USD",
+                "date": "2026-10-09T14:00:00-04:00",
                 "impact": "High",
                 "forecast": "5.00%",
                 "previous": "5.25%"
@@ -134,7 +189,7 @@ class TestEconomicCalendarAPI(unittest.TestCase):
     def test_nasdaq_backup_when_ff_fails(self, mock_urlopen):
         nasdaq_sample = {
             "data": {
-                "asOf": "Wed, Sep 16, 2026",
+                "asOf": "Mon, Oct 05, 2026",
                 "rows": [
                     {
                         "gmt": "12:30",
@@ -173,7 +228,8 @@ class TestEconomicCalendarAPI(unittest.TestCase):
         self.assertIn("indicators", result)
         self.assertFalse(result["fallback"])
         self.assertEqual(result["source"], "nasdaq_live")
-        self.assertEqual(len(result["indicators"]), 1)
+        # Should be augmented with curated schedule for full week coverage
+        self.assertGreater(len(result["indicators"]), 1)
         cpi = result["indicators"][0]
         self.assertEqual(cpi["title"], "Core CPI")
         self.assertEqual(cpi["forecast"], "0.3%")
@@ -182,26 +238,11 @@ class TestEconomicCalendarAPI(unittest.TestCase):
 
     @patch("urllib.request.urlopen")
     def test_scope_past_returns_historical(self, mock_urlopen):
-        past_sample = [
-            {
-                "title": "Unemployment Claims",
-                "country": "USD",
-                "date": "2026-09-10T08:30:00-04:00",
-                "impact": "Medium",
-                "forecast": "205K",
-                "previous": "206K"
-            }
-        ]
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps(past_sample).encode("utf-8")
-        mock_resp.__enter__.return_value = mock_resp
-        mock_urlopen.return_value = mock_resp
-
         result = get_economic_calendar(scope="past")
         self.assertEqual(result["scope"], "past")
-        self.assertEqual(result["source"], "faireconomy_media")
-        self.assertEqual(len(result["indicators"]), 1)
-        self.assertEqual(result["indicators"][0]["title"], "Unemployment Claims")
+        self.assertEqual(result["source"], "past_week_archive")
+        self.assertGreater(len(result["indicators"]), 10)
+        self.assertFalse(result["fallback"])
 
 
 if __name__ == "__main__":

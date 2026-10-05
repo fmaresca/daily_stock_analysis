@@ -54,22 +54,42 @@ export function normalizeSortValue(val: unknown): number | string {
       return Number(cleanedNumeric);
     }
 
-    // Check for "1,200k" or "2.5M"
-    const kMatch = trimmed.match(/^([\d,.]+)\s*k$/i);
+    // Check for "1,200k", "2.5M", "137.0 B", "$45.5 B", or "1.5 T"
+    const withoutCurrency = trimmed.replace(/^\$/, '').trim();
+    const kMatch = withoutCurrency.match(/^([\d,.]+)\s*k$/i);
     if (kMatch) {
       const n = Number(kMatch[1].replace(/,/g, ''));
       if (!isNaN(n)) return n * 1000;
     }
-    const mMatch = trimmed.match(/^([\d,.]+)\s*m$/i);
+    const mMatch = withoutCurrency.match(/^([\d,.]+)\s*m$/i);
     if (mMatch) {
       const n = Number(mMatch[1].replace(/,/g, ''));
       if (!isNaN(n)) return n * 1000000;
     }
+    const bMatch = withoutCurrency.match(/^([\d,.]+)\s*b$/i);
+    if (bMatch) {
+      const n = Number(bMatch[1].replace(/,/g, ''));
+      if (!isNaN(n)) return n * 1000000000;
+    }
+    const tMatch = withoutCurrency.match(/^([\d,.]+)\s*t$/i);
+    if (tMatch) {
+      const n = Number(tMatch[1].replace(/,/g, ''));
+      if (!isNaN(n)) return n * 1000000000000;
+    }
 
-    // Check for standard date string (YYYY-MM-DD)
+    // Check for standard date string (YYYY-MM-DD or ISO timestamp)
     if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
       const parsedTime = Date.parse(trimmed);
       if (!isNaN(parsedTime)) return parsedTime;
+    }
+
+    // Check for calendar dates with month abbreviations (e.g. "Mon, Oct 5", "Oct 5, 2026", "Sep 28 08:30 AM")
+    if (/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(trimmed)) {
+      const parsedDirect = Date.parse(trimmed);
+      if (!isNaN(parsedDirect)) return parsedDirect;
+      const currentYear = new Date().getFullYear();
+      const withYear = Date.parse(`${trimmed}, ${currentYear}`);
+      if (!isNaN(withYear)) return withYear;
     }
 
     return trimmed.toLowerCase();
@@ -87,15 +107,44 @@ export function getSortValue<T>(item: T, keyOrAccessor: keyof T | string | Value
   }
 
   if (typeof keyOrAccessor === 'string') {
-    // Nested path support e.g. "extra_fields.rsi_14"
+    // Special handling for Economic Calendar Date & Time column
+    if (keyOrAccessor === 'dateET' && typeof item === 'object' && item !== null) {
+      const record = item as Record<string, unknown>;
+      if (record.isoDate && typeof record.isoDate === 'string') {
+        const parsed = Date.parse(record.isoDate);
+        if (!isNaN(parsed)) return parsed;
+      }
+      if (record.dateET) {
+        const fullTimeStr = `${record.dateET}${record.timeET ? ' ' + record.timeET : ''}`;
+        return fullTimeStr;
+      }
+    }
+
+    // Nested path support e.g. "extra_fields.market_cap" or "extra_fields.rsi_14"
     if (keyOrAccessor.includes('.')) {
       const parts = keyOrAccessor.split('.');
       let curr: unknown = item;
-      for (const p of parts) {
+      for (let i = 0; i < parts.length; i++) {
         if (curr === null || curr === undefined || typeof curr !== 'object') return undefined;
-        curr = (curr as Record<string, unknown>)[p];
+        const p = parts[i];
+        const next = (curr as Record<string, unknown>)[p];
+        // If market_cap is missing, fallback to market_cap_str
+        if (next === undefined && p === 'market_cap' && (curr as Record<string, unknown>)['market_cap_str'] !== undefined) {
+          curr = (curr as Record<string, unknown>)['market_cap_str'];
+        } else {
+          curr = next;
+        }
       }
       return curr;
+    }
+
+    // Check if market_cap is requested directly on an item with extra_fields
+    if (keyOrAccessor === 'market_cap' && typeof item === 'object' && item !== null) {
+      const extra = (item as Record<string, any>).extra_fields;
+      if (extra) {
+        if (extra.market_cap !== undefined) return extra.market_cap;
+        if (extra.market_cap_str !== undefined) return extra.market_cap_str;
+      }
     }
 
     if (typeof item === 'object' && item !== null && keyOrAccessor in item) {

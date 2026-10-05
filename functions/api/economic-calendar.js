@@ -159,13 +159,292 @@ const SECTOR_IMPACT_MAP = {
 
 const CURATED_WEEKLY_SCHEDULE = [
   {
+    "title": "OPEC-JMMC Meetings",
+    "country": "USD",
+    "dateET": "Mon, Oct 5",
+    "timeET": "06:00 AM",
+    "impact": "Moderate",
+    "forecast": "—",
+    "previous": "—",
+    "sectors": "Energy, Transportation, Airlines",
+    "tickers": "XLE, JETS, USO, XOM, CVX",
+    "isoDate": "2026-10-05T06:00:00-04:00"
+  },
+  {
+    "title": "Final Services PMI",
+    "country": "USD",
+    "dateET": "Mon, Oct 5",
+    "timeET": "09:45 AM",
+    "impact": "Moderate",
+    "forecast": "55.4",
+    "previous": "55.4",
+    "sectors": "Broad Equities, Services",
+    "tickers": "SPY, XLC",
+    "isoDate": "2026-10-05T09:45:00-04:00"
+  },
+  {
+    "title": "ISM Services PMI",
+    "country": "USD",
+    "dateET": "Mon, Oct 5",
+    "timeET": "10:00 AM",
+    "impact": "High",
+    "forecast": "51.6",
+    "previous": "51.5",
+    "sectors": "Industrials, Materials, Tech Supply",
+    "tickers": "XLI, XLB, SOXX, SPY",
+    "isoDate": "2026-10-05T10:00:00-04:00"
+  },
+  {
+    "title": "Factory Orders m/m",
+    "country": "USD",
+    "dateET": "Mon, Oct 5",
+    "timeET": "10:00 AM",
+    "impact": "Moderate",
+    "forecast": "0.2%",
+    "previous": "-0.1%",
+    "sectors": "Industrials, Cyclicals",
+    "tickers": "XLI, DIA",
+    "isoDate": "2026-10-05T10:00:00-04:00"
+  },
+  {
+    "title": "Trade Balance",
+    "country": "USD",
+    "dateET": "Tue, Oct 6",
+    "timeET": "08:30 AM",
+    "impact": "Moderate",
+    "forecast": "-.5B",
+    "previous": "-.8B",
+    "sectors": "Industrials, Materials",
+    "tickers": "XLI, XLB",
+    "isoDate": "2026-10-06T08:30:00-04:00"
+  },
+  {
+    "title": "IBD/TIPP Economic Optimism",
+    "country": "USD",
+    "dateET": "Tue, Oct 6",
+    "timeET": "10:00 AM",
+    "impact": "Moderate",
+    "forecast": "45.1",
+    "previous": "44.5",
+    "sectors": "Broad Equities, Consumer Discretionary",
+    "tickers": "SPY, XLY",
+    "isoDate": "2026-10-06T10:00:00-04:00"
+  },
+  {
+    "title": "FOMC Member Bostic Speaks",
+    "country": "USD",
+    "dateET": "Tue, Oct 6",
+    "timeET": "12:00 PM",
+    "impact": "High",
+    "forecast": "—",
+    "previous": "—",
+    "sectors": "Banking, Tech, Interest Rate Sensitive",
+    "tickers": "KRE, XLF, QQQ",
+    "isoDate": "2026-10-06T12:00:00-04:00"
+  },
+  {
+    "title": "MBA Mortgage Applications",
+    "country": "USD",
+    "dateET": "Wed, Oct 7",
+    "timeET": "07:00 AM",
+    "impact": "Low",
+    "forecast": "-0.5%",
+    "previous": "+1.4%",
+    "sectors": "Real Estate, Financials, Homebuilders",
+    "tickers": "VNQ, MBB, ITB",
+    "isoDate": "2026-10-07T07:00:00-04:00"
+  },
+  {
+    "title": "Crude Oil Inventories (EIA)",
+    "country": "USD",
+    "dateET": "Wed, Oct 7",
+    "timeET": "10:30 AM",
+    "impact": "Moderate",
+    "forecast": "-1.8M",
+    "previous": "+3.9M",
+    "sectors": "Energy, Transportation, Airlines",
+    "tickers": "XLE, JETS, XOM, CVX",
+    "isoDate": "2026-10-07T10:30:00-04:00"
+  },
+  {
+    "title": "10-Year Bond Auction",
+    "country": "USD",
+    "dateET": "Wed, Oct 7",
+    "timeET": "01:01 PM",
+    "impact": "Moderate",
+    "forecast": "—",
+    "previous": "—",
+    "sectors": "Bonds, Financials, High Dividend",
+    "tickers": "TLT, IEF, XLF",
+    "isoDate": "2026-10-07T13:01:00-04:00"
+  },
+  {
+    "title": "FOMC Meeting Minutes",
+    "country": "USD",
+    "dateET": "Wed, Oct 7",
+    "timeET": "02:00 PM",
+    "impact": "High",
+    "forecast": "—",
+    "previous": "—",
+    "sectors": "Banking, Tech, Real Estate, Precious Metals",
+    "tickers": "KRE, XLF, QQQ, TLT, SPY",
+    "isoDate": "2026-10-07T14:00:00-04:00"
+  },
+  {
+    "title": "Consumer Credit m/m",
+    "country": "USD",
+    "dateET": "Wed, Oct 7",
+    "timeET": "03:00 PM",
+    "impact": "Moderate",
+    "forecast": ".3B",
+    "previous": ".9B",
+    "sectors": "Financials, Consumer Discretionary",
+    "tickers": "XLF, XLY",
+    "isoDate": "2026-10-07T15:00:00-04:00"
+  },
+  {
+    "title": "Initial Jobless Claims",
+    "country": "USD",
+    "dateET": "Thu, Oct 8",
+    "timeET": "08:30 AM",
+    "impact": "High",
+    "forecast": "221K",
+    "previous": "218K",
+    "sectors": "Broad Equities, High-Beta Assets",
+    "tickers": "SPY, IWM, QQQ",
+    "isoDate": "2026-10-08T08:30:00-04:00"
+  },
+  {
+    "title": "Continuing Jobless Claims",
+    "country": "USD",
+    "dateET": "Thu, Oct 8",
+    "timeET": "08:30 AM",
+    "impact": "Moderate",
+    "forecast": "1.83M",
+    "previous": "1.83M",
+    "sectors": "Broad Equities, Discretionary, Small Caps",
+    "tickers": "SPY, IWM",
+    "isoDate": "2026-10-08T08:30:00-04:00"
+  },
+  {
+    "title": "Wholesale Inventories m/m",
+    "country": "USD",
+    "dateET": "Thu, Oct 8",
+    "timeET": "10:00 AM",
+    "impact": "Moderate",
+    "forecast": "0.2%",
+    "previous": "0.2%",
+    "sectors": "Consumer Discretionary, Retail",
+    "tickers": "XRT, XLI",
+    "isoDate": "2026-10-08T10:00:00-04:00"
+  },
+  {
+    "title": "Natural Gas Storage (EIA)",
+    "country": "USD",
+    "dateET": "Thu, Oct 8",
+    "timeET": "10:30 AM",
+    "impact": "Low",
+    "forecast": "+68B",
+    "previous": "+55B",
+    "sectors": "Energy, Utilities",
+    "tickers": "XLE, XLU, UNG",
+    "isoDate": "2026-10-08T10:30:00-04:00"
+  },
+  {
+    "title": "30-Year Bond Auction",
+    "country": "USD",
+    "dateET": "Thu, Oct 8",
+    "timeET": "01:01 PM",
+    "impact": "Moderate",
+    "forecast": "—",
+    "previous": "—",
+    "sectors": "Fixed Income, Treasury Yields",
+    "tickers": "TLT, IEF",
+    "isoDate": "2026-10-08T13:01:00-04:00"
+  },
+  {
+    "title": "Fed Balance Sheet",
+    "country": "USD",
+    "dateET": "Thu, Oct 8",
+    "timeET": "04:30 PM",
+    "impact": "Moderate",
+    "forecast": "—",
+    "previous": "—",
+    "sectors": "Banking, Broad Market, Bonds",
+    "tickers": "SPY, QQQ, TLT, XLF",
+    "isoDate": "2026-10-08T16:30:00-04:00"
+  },
+  {
+    "title": "PPI Final Demand m/m",
+    "country": "USD",
+    "dateET": "Fri, Oct 9",
+    "timeET": "08:30 AM",
+    "impact": "High",
+    "forecast": "0.2%",
+    "previous": "0.2%",
+    "sectors": "Technology, Financials, Utilities",
+    "tickers": "QQQ, XLF, SPY",
+    "isoDate": "2026-10-09T08:30:00-04:00"
+  },
+  {
+    "title": "Core PPI m/m",
+    "country": "USD",
+    "dateET": "Fri, Oct 9",
+    "timeET": "08:30 AM",
+    "impact": "High",
+    "forecast": "0.2%",
+    "previous": "0.3%",
+    "sectors": "Technology, Real Estate, Financials",
+    "tickers": "QQQ, VNQ, TLT",
+    "isoDate": "2026-10-09T08:30:00-04:00"
+  },
+  {
+    "title": "Preliminary UoM Consumer Sentiment",
+    "country": "USD",
+    "dateET": "Fri, Oct 9",
+    "timeET": "10:00 AM",
+    "impact": "High",
+    "forecast": "70.5",
+    "previous": "70.1",
+    "sectors": "Consumer Discretionary, Retail",
+    "tickers": "XLY, XRT, AMZN",
+    "isoDate": "2026-10-09T10:00:00-04:00"
+  },
+  {
+    "title": "Preliminary UoM Inflation Expectations",
+    "country": "USD",
+    "dateET": "Fri, Oct 9",
+    "timeET": "10:00 AM",
+    "impact": "High",
+    "forecast": "2.7%",
+    "previous": "2.7%",
+    "sectors": "Technology, Bonds, Inflation-Protected",
+    "tickers": "QQQ, TLT, TIP",
+    "isoDate": "2026-10-09T10:00:00-04:00"
+  },
+  {
+    "title": "FOMC Member Williams Speaks",
+    "country": "USD",
+    "dateET": "Fri, Oct 9",
+    "timeET": "10:45 AM",
+    "impact": "High",
+    "forecast": "—",
+    "previous": "—",
+    "sectors": "Banking, Broad Market, Bonds",
+    "tickers": "SPY, QQQ, TLT, XLF",
+    "isoDate": "2026-10-09T10:45:00-04:00"
+  }
+];
+
+const PAST_WEEK_SCHEDULE = [
+  {
     "title": "FOMC Member Bowman Speaks",
     "country": "USD",
     "dateET": "Mon, Sep 28",
     "timeET": "08:15 AM",
     "impact": "High",
-    "forecast": "\u2014",
-    "previous": "\u2014",
+    "forecast": "—",
+    "previous": "—",
     "sectors": "Banking, Tech, Interest Rate Sensitive",
     "tickers": "KRE, XLF, QQQ",
     "isoDate": "2026-09-28T08:15:00-04:00"
@@ -176,8 +455,8 @@ const CURATED_WEEKLY_SCHEDULE = [
     "dateET": "Mon, Sep 28",
     "timeET": "01:25 PM",
     "impact": "Moderate",
-    "forecast": "\u2014",
-    "previous": "\u2014",
+    "forecast": "—",
+    "previous": "—",
     "sectors": "Banking, Tech",
     "tickers": "XLF, QQQ",
     "isoDate": "2026-09-28T13:25:00-04:00"
@@ -188,8 +467,8 @@ const CURATED_WEEKLY_SCHEDULE = [
     "dateET": "Mon, Sep 28",
     "timeET": "01:30 PM",
     "impact": "Moderate",
-    "forecast": "\u2014",
-    "previous": "\u2014",
+    "forecast": "—",
+    "previous": "—",
     "sectors": "Banking, Equities",
     "tickers": "XLF, SPY",
     "isoDate": "2026-09-28T13:30:00-04:00"
@@ -236,8 +515,8 @@ const CURATED_WEEKLY_SCHEDULE = [
     "dateET": "Tue, Sep 29",
     "timeET": "03:00 PM",
     "impact": "High",
-    "forecast": "\u2014",
-    "previous": "\u2014",
+    "forecast": "—",
+    "previous": "—",
     "sectors": "Banking, Broad Market, Bonds",
     "tickers": "KRE, XLF, TLT, QQQ",
     "isoDate": "2026-09-29T15:00:00-04:00"
@@ -356,8 +635,8 @@ const CURATED_WEEKLY_SCHEDULE = [
     "dateET": "Wed, Sep 30",
     "timeET": "06:00 PM",
     "impact": "High",
-    "forecast": "\u2014",
-    "previous": "\u2014",
+    "forecast": "—",
+    "previous": "—",
     "sectors": "Banking, Tech, Real Estate",
     "tickers": "KRE, XLF, QQQ",
     "isoDate": "2026-09-30T18:00:00-04:00"
@@ -452,8 +731,8 @@ const CURATED_WEEKLY_SCHEDULE = [
     "dateET": "Thu, Oct 1",
     "timeET": "06:45 PM",
     "impact": "High",
-    "forecast": "\u2014",
-    "previous": "\u2014",
+    "forecast": "—",
+    "previous": "—",
     "sectors": "Banking, Tech, Rate Sensitive",
     "tickers": "KRE, XLF, QQQ",
     "isoDate": "2026-10-01T18:45:00-04:00"
@@ -505,153 +784,6 @@ const CURATED_WEEKLY_SCHEDULE = [
     "sectors": "Industrials, Cyclicals",
     "tickers": "XLI, DIA",
     "isoDate": "2026-10-02T10:00:00-04:00"
-  }
-];
-
-const PAST_WEEK_SCHEDULE = [
-  {
-    "title": "Flash Manufacturing PMI",
-    "country": "USD",
-    "dateET": "Mon, Sep 21",
-    "timeET": "09:45 AM",
-    "impact": "Moderate",
-    "forecast": "47.0",
-    "previous": "47.9",
-    "sectors": "Industrials, Basic Materials",
-    "tickers": "XLI, XLB",
-    "isoDate": "2026-09-21T09:45:00-04:00"
-  },
-  {
-    "title": "Flash Services PMI",
-    "country": "USD",
-    "dateET": "Mon, Sep 21",
-    "timeET": "09:45 AM",
-    "impact": "Moderate",
-    "forecast": "55.4",
-    "previous": "55.7",
-    "sectors": "Broad Equities, Services",
-    "tickers": "SPY, XLC",
-    "isoDate": "2026-09-21T09:45:00-04:00"
-  },
-  {
-    "title": "Richmond Manufacturing Index",
-    "country": "USD",
-    "dateET": "Tue, Sep 22",
-    "timeET": "10:00 AM",
-    "impact": "Moderate",
-    "forecast": "-11",
-    "previous": "-19",
-    "sectors": "Industrials, Regional Activity",
-    "tickers": "XLI",
-    "isoDate": "2026-09-22T10:00:00-04:00"
-  },
-  {
-    "title": "CB Consumer Confidence",
-    "country": "USD",
-    "dateET": "Tue, Sep 22",
-    "timeET": "10:00 AM",
-    "impact": "High",
-    "forecast": "103.0",
-    "previous": "105.6",
-    "sectors": "Consumer Discretionary, Retail",
-    "tickers": "XLY, XRT",
-    "isoDate": "2026-09-22T10:00:00-04:00"
-  },
-  {
-    "title": "Building Permits (Revised)",
-    "country": "USD",
-    "dateET": "Wed, Sep 23",
-    "timeET": "08:30 AM",
-    "impact": "Moderate",
-    "forecast": "1.47M",
-    "previous": "1.47M",
-    "sectors": "Homebuilders, Real Estate",
-    "tickers": "ITB, XHB, VNQ",
-    "isoDate": "2026-09-23T08:30:00-04:00"
-  },
-  {
-    "title": "New Home Sales",
-    "country": "USD",
-    "dateET": "Wed, Sep 23",
-    "timeET": "10:00 AM",
-    "impact": "Moderate",
-    "forecast": "700K",
-    "previous": "716K",
-    "sectors": "Homebuilders, Real Estate",
-    "tickers": "ITB, XHB, DHI, LEN",
-    "isoDate": "2026-09-23T10:00:00-04:00"
-  },
-  {
-    "title": "Crude Oil Inventories (EIA)",
-    "country": "USD",
-    "dateET": "Wed, Sep 23",
-    "timeET": "10:30 AM",
-    "impact": "Moderate",
-    "forecast": "-1.2M",
-    "previous": "-4.5M",
-    "sectors": "Energy, Transportation",
-    "tickers": "XLE, JETS",
-    "isoDate": "2026-09-23T10:30:00-04:00"
-  },
-  {
-    "title": "Initial Jobless Claims",
-    "country": "USD",
-    "dateET": "Thu, Sep 24",
-    "timeET": "08:30 AM",
-    "impact": "High",
-    "forecast": "222K",
-    "previous": "218K",
-    "sectors": "Broad Equities, High-Beta Assets",
-    "tickers": "SPY, IWM, QQQ",
-    "isoDate": "2026-09-24T08:30:00-04:00"
-  },
-  {
-    "title": "Durable Goods Orders m/m",
-    "country": "USD",
-    "dateET": "Thu, Sep 24",
-    "timeET": "08:30 AM",
-    "impact": "High",
-    "forecast": "-2.7%",
-    "previous": "9.9%",
-    "sectors": "Industrials, Capital Goods",
-    "tickers": "XLI, DIA",
-    "isoDate": "2026-09-24T08:30:00-04:00"
-  },
-  {
-    "title": "Pending Home Sales m/m",
-    "country": "USD",
-    "dateET": "Thu, Sep 24",
-    "timeET": "10:00 AM",
-    "impact": "Moderate",
-    "forecast": "0.9%",
-    "previous": "-5.5%",
-    "sectors": "Real Estate, Homebuilders",
-    "tickers": "VNQ, ITB",
-    "isoDate": "2026-09-24T10:00:00-04:00"
-  },
-  {
-    "title": "Core PCE Price Index m/m",
-    "country": "USD",
-    "dateET": "Fri, Sep 25",
-    "timeET": "08:30 AM",
-    "impact": "High",
-    "forecast": "0.2%",
-    "previous": "0.2%",
-    "sectors": "Broad Market, Tech, Long Duration Assets",
-    "tickers": "SPY, QQQ, TLT",
-    "isoDate": "2026-09-25T08:30:00-04:00"
-  },
-  {
-    "title": "Revised UoM Consumer Sentiment",
-    "country": "USD",
-    "dateET": "Fri, Sep 25",
-    "timeET": "10:00 AM",
-    "impact": "Moderate",
-    "forecast": "69.4",
-    "previous": "69.0",
-    "sectors": "Consumer Discretionary, Broad Market",
-    "tickers": "XLY, SPY",
-    "isoDate": "2026-09-25T10:00:00-04:00"
   }
 ];
 
@@ -752,6 +884,18 @@ export async function onRequestGet(context) {
   const targetMonday = scope === "past" ? priorMonday : currentMonday;
   const targetMondayIso = formatDateYMD(targetMonday);
 
+  // If past week archive is requested, immediately return prior week actuals
+  if (scope === "past") {
+    return new Response(JSON.stringify({
+      indicators: PAST_WEEK_SCHEDULE,
+      source: "past_week_archive",
+      scope: "past",
+      fallback: false,
+      notice: `Historical US macroeconomic releases & actual prints from previous trading week (${formatDateLabel(priorMonday)} – ${formatDateLabel(addDays(priorMonday, 4))}).`,
+      last_updated: new Date().toISOString()
+    }), { status: 200, headers: commonHeaders });
+  }
+
   // Tier 1: Try Forex Factory Live Feed
   try {
     const ffResponse = await fetch("https://nfs.faireconomy.media/ff_calendar_thisweek.json", {
@@ -811,24 +955,13 @@ export async function onRequestGet(context) {
             };
           });
 
-        if (scope === "past" && usdEvents.length > 0) {
-          return new Response(JSON.stringify({
-            indicators: usdEvents,
-            source: "faireconomy_media",
-            scope: "past",
-            fallback: false,
-            notice: `Historical US releases from previous trading week (${formatDateLabel(priorMonday)} – ${formatDateLabel(addDays(priorMonday, 4))}).`,
-            last_updated: new Date().toISOString()
-          }), { status: 200, headers: commonHeaders });
-        }
-
-        // Check if Forex Factory contains releases for target Monday onwards
         const relevantUsd = usdEvents.filter((e) => {
           const eventDatePrefix = (e.isoDate || "").substring(0, 10);
           return eventDatePrefix >= targetMondayIso;
         });
 
-        if (relevantUsd.length > 0) {
+        // Only return Forex Factory if it provides comprehensive coverage (>= 5 events)
+        if (relevantUsd.length >= 5) {
           return new Response(JSON.stringify({
             indicators: relevantUsd,
             source: "faireconomy_media",
@@ -892,13 +1025,33 @@ export async function onRequestGet(context) {
             };
           });
 
-        if (usRows.length > 0) {
+        if (usRows.length >= 5) {
           return new Response(JSON.stringify({
             indicators: usRows,
             source: "nasdaq_live",
-            scope,
+            scope: "upcoming",
             fallback: false,
             notice: "Live macroeconomic feed ingested via Nasdaq Economic Calendar Radar.",
+            last_updated: new Date().toISOString()
+          }), { status: 200, headers: commonHeaders });
+        } else if (usRows.length > 0) {
+          // Merge Nasdaq live events with full curated weekly schedule
+          const fullSchedule = reanchorSchedule(CURATED_WEEKLY_SCHEDULE, currentMonday);
+          for (const nr of usRows) {
+            const exists = fullSchedule.some(item =>
+              item.title.toLowerCase().includes(nr.title.toLowerCase()) ||
+              nr.title.toLowerCase().includes(item.title.toLowerCase())
+            );
+            if (!exists) {
+              fullSchedule.unshift(nr);
+            }
+          }
+          return new Response(JSON.stringify({
+            indicators: fullSchedule,
+            source: "nasdaq_live",
+            scope: "upcoming",
+            fallback: false,
+            notice: "Live macroeconomic feed ingested via Nasdaq Economic Calendar Radar (augmented for full weekly catalyst coverage).",
             last_updated: new Date().toISOString()
           }), { status: 200, headers: commonHeaders });
         }
@@ -909,17 +1062,14 @@ export async function onRequestGet(context) {
   }
 
   // Tier 3: Curated Weekly US Macro Schedule with dynamic trading week anchoring
-  const rawSchedule = scope === "past" ? PAST_WEEK_SCHEDULE : CURATED_WEEKLY_SCHEDULE;
-  const anchoredSchedule = reanchorSchedule(rawSchedule, targetMonday);
+  const anchoredSchedule = reanchorSchedule(CURATED_WEEKLY_SCHEDULE, currentMonday);
 
   return new Response(JSON.stringify({
     indicators: anchoredSchedule,
     source: "curated_macro_schedule",
-    scope,
+    scope: "upcoming",
     fallback: false,
-    notice: scope === "past"
-      ? `Historical US macroeconomic releases from previous trading week (${formatDateLabel(priorMonday)} – ${formatDateLabel(addDays(priorMonday, 4))}).`
-      : `Active high-impact weekly macroeconomic catalyst radar for upcoming week (${formatDateLabel(currentMonday)} – ${formatDateLabel(addDays(currentMonday, 4))}).`,
+    notice: `Active high-impact weekly macroeconomic catalyst radar for upcoming week (${formatDateLabel(currentMonday)} – ${formatDateLabel(addDays(currentMonday, 4))}).`,
     last_updated: new Date().toISOString()
   }), {
     status: 200,
