@@ -589,11 +589,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       </footer>
 
       {/* Institutional Legal & Regulatory Modal */}
-      <LegalDisclosuresModal
-        isOpen={legalModalTab !== null}
-        onClose={() => setLegalModalTab(null)}
-        initialTab={legalModalTab || 'TERMS'}
-      />
+      {legalModalTab !== null && (
+        <LegalDisclosuresModal
+          isOpen={legalModalTab !== null}
+          onClose={() => setLegalModalTab(null)}
+          initialTab={legalModalTab || 'TERMS'}
+        />
+      )}
     </main>
   );
 };

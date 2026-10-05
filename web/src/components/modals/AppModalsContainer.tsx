@@ -139,8 +139,8 @@ export const AppModalsContainer: React.FC<AppModalsContainerProps> = ({
   return (
     <Suspense
       fallback={
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-          <div className="flex items-center space-x-3 px-6 py-4 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm pointer-events-none">
+          <div className="flex items-center space-x-3 px-6 py-4 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl text-slate-200 pointer-events-auto">
             <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
             <span className="text-sm font-medium">Loading Module...</span>
           </div>
@@ -148,82 +148,88 @@ export const AppModalsContainer: React.FC<AppModalsContainerProps> = ({
       }
     >
       {/* 1. Help & Handbook Modal */}
-      <HelpHandbookModal
-        isOpen={modalState.isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-        onNavigate={(tree, optTab, eqTab) => {
-          setIsHelpModalOpen(false);
-          navigateTo(tree as any, optTab, eqTab);
-        }}
-        onOpenSimulator={() => {
-          setIsHelpModalOpen(false);
-          setIsSimulatorModalOpen(true);
-        }}
-        onOpenValuation={(t) => {
-          setIsHelpModalOpen(false);
-          openValuation(t || 'NVDA');
-        }}
-        onOpenTradier={() => {
-          setIsHelpModalOpen(false);
-          setIsTradierModalOpen(true);
-        }}
-        onOpenSchwab={() => {
-          setIsHelpModalOpen(false);
-          setIsSchwabModalOpen(true);
-        }}
-        onOpenDiagnostics={() => {
-          setIsHelpModalOpen(false);
-          setIsDiagnosticsOpen(true);
-        }}
-        onOpenReports={() => {
-          setIsHelpModalOpen(false);
-          setIsReportQueryModalOpen(true);
-        }}
-        onOpenWatchlists={() => {
-          setIsHelpModalOpen(false);
-          setIsWatchlistModalOpen(true);
-        }}
-        onOpenAlerts={() => {
-          setIsHelpModalOpen(false);
-          setIsAlertsModalOpen(true);
-        }}
-        onOpenCommandPalette={() => {
-          setIsHelpModalOpen(false);
-          setIsCommandPaletteOpen(true);
-        }}
-        onOpenEquityAnalysis={() => {
-          setIsHelpModalOpen(false);
-          const target = universeTickers.find((t) => t.symbol === 'TSLA') || universeTickers[0] || {
-            symbol: 'TSLA',
-            companyName: 'Tesla Inc',
-            currentPrice: 245.0,
-            priceChange: 0,
-            priceChangePercent: 0,
-            ivRank: 55,
-            ivPercentile: 50,
-            rsi14: 48,
-            historicalVol30d: 45,
-            updatedAt: new Date().toISOString(),
-          };
-          setSelectedTicker(target);
-        }}
-      />
+      {modalState.isHelpModalOpen && (
+        <HelpHandbookModal
+          isOpen={modalState.isHelpModalOpen}
+          onClose={() => setIsHelpModalOpen(false)}
+          onNavigate={(tree, optTab, eqTab) => {
+            setIsHelpModalOpen(false);
+            navigateTo(tree as any, optTab, eqTab);
+          }}
+          onOpenSimulator={() => {
+            setIsHelpModalOpen(false);
+            setIsSimulatorModalOpen(true);
+          }}
+          onOpenValuation={(t) => {
+            setIsHelpModalOpen(false);
+            openValuation(t || 'NVDA');
+          }}
+          onOpenTradier={() => {
+            setIsHelpModalOpen(false);
+            setIsTradierModalOpen(true);
+          }}
+          onOpenSchwab={() => {
+            setIsHelpModalOpen(false);
+            setIsSchwabModalOpen(true);
+          }}
+          onOpenDiagnostics={() => {
+            setIsHelpModalOpen(false);
+            setIsDiagnosticsOpen(true);
+          }}
+          onOpenReports={() => {
+            setIsHelpModalOpen(false);
+            setIsReportQueryModalOpen(true);
+          }}
+          onOpenWatchlists={() => {
+            setIsHelpModalOpen(false);
+            setIsWatchlistModalOpen(true);
+          }}
+          onOpenAlerts={() => {
+            setIsHelpModalOpen(false);
+            setIsAlertsModalOpen(true);
+          }}
+          onOpenCommandPalette={() => {
+            setIsHelpModalOpen(false);
+            setIsCommandPaletteOpen(true);
+          }}
+          onOpenEquityAnalysis={() => {
+            setIsHelpModalOpen(false);
+            const target = universeTickers.find((t) => t.symbol === 'TSLA') || universeTickers[0] || {
+              symbol: 'TSLA',
+              companyName: 'Tesla Inc',
+              currentPrice: 245.0,
+              priceChange: 0,
+              priceChangePercent: 0,
+              ivRank: 55,
+              ivPercentile: 50,
+              rsi14: 48,
+              historicalVol30d: 45,
+              updatedAt: new Date().toISOString(),
+            };
+            setSelectedTicker(target);
+          }}
+        />
+      )}
 
       {/* 2. Tradier API Settings Modal (Primary) */}
-      <TradierSettingsModal
-        isOpen={modalState.isTradierModalOpen}
-        onClose={() => setIsTradierModalOpen(false)}
-        onOpenSchwabSettings={() => {
-          setIsTradierModalOpen(false);
-          setIsSchwabModalOpen(true);
-        }}
-      />
+      {modalState.isTradierModalOpen && (
+        <TradierSettingsModal
+          isOpen={modalState.isTradierModalOpen}
+          onClose={() => setIsTradierModalOpen(false)}
+          onOpenSchwabSettings={() => {
+            setIsTradierModalOpen(false);
+            setIsSchwabModalOpen(true);
+          }}
+        />
+      )}
 
       {/* 3. Charles Schwab Retail Trader API Provisioning Modal (Fallback) */}
-      <SchwabSettingsModal
-        isOpen={modalState.isSchwabModalOpen}
-        onClose={() => setIsSchwabModalOpen(false)}
-      />
+      {modalState.isSchwabModalOpen && (
+        <SchwabSettingsModal
+          isOpen={modalState.isSchwabModalOpen}
+          onClose={() => setIsSchwabModalOpen(false)}
+        />
+      )}
 
       {/* 4. API Health & Automated Diagnostics Suite Modal */}
       {modalState.isDiagnosticsOpen && (
@@ -244,21 +250,23 @@ export const AppModalsContainer: React.FC<AppModalsContainerProps> = ({
       )}
 
       {/* 5. Multi-Watchlist Manager with Bulk & CSV/Excel Ingestion (W) */}
-      <WatchlistManagerModal
-        isOpen={modalState.isWatchlistModalOpen}
-        onClose={() => setIsWatchlistModalOpen(false)}
-        watchlistGroups={watchlistGroups}
-        activeGroupId={activeGroupId}
-        onSelectGroup={(id) => setActiveGroupId(id)}
-        onCreateGroup={handleCreateWatchlist}
-        onRenameGroup={handleRenameWatchlist}
-        onDeleteGroup={handleDeleteWatchlist}
-        onUpdateGroupTickers={handleUpdateGroupTickers}
-        availableUniverse={universeTickers}
-        onAddCustomTickerMeta={handleAddCustomTickerMeta}
-        onRecalculateTickers={handleLiveRecalculate}
-        isRecalculating={isRecalculating}
-      />
+      {modalState.isWatchlistModalOpen && (
+        <WatchlistManagerModal
+          isOpen={modalState.isWatchlistModalOpen}
+          onClose={() => setIsWatchlistModalOpen(false)}
+          watchlistGroups={watchlistGroups}
+          activeGroupId={activeGroupId}
+          onSelectGroup={(id) => setActiveGroupId(id)}
+          onCreateGroup={handleCreateWatchlist}
+          onRenameGroup={handleRenameWatchlist}
+          onDeleteGroup={handleDeleteWatchlist}
+          onUpdateGroupTickers={handleUpdateGroupTickers}
+          availableUniverse={universeTickers}
+          onAddCustomTickerMeta={handleAddCustomTickerMeta}
+          onRecalculateTickers={handleLiveRecalculate}
+          isRecalculating={isRecalculating}
+        />
+      )}
 
       {/* 6. Report Queries & Multi-Format Exports (R) */}
       {modalState.isReportQueryModalOpen && (

@@ -97,7 +97,7 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({
               <li>
                 <a
                   href="/calendar"
-                  onClick={(e) => { e.preventDefault(); navigateTo('OPTIONS', 'ECONOMIC_CALENDAR'); }}
+                  onClick={(e) => { e.preventDefault(); navigateTo('EQUITIES', undefined, 'ECONOMIC_CALENDAR'); }}
                   className="hover:text-emerald-400 transition-colors"
                 >
                   Economic &amp; Earnings Calendar
@@ -190,13 +190,13 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({
 
         <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
           <div className="flex flex-wrap items-center gap-2">
-            <span>&copy; {new Date().getFullYear()} DeltaHarvest Institutional. Quantitative Equity Analysis &amp; Options Income.</span>
+            <span>&copy; {new Date().getFullYear()} DeltaHarvest Institutional. Quantitative Equity Analysis &amp; Options Income. &bull;</span>
             <span className="inline-flex items-center gap-1.5 font-mono">
               <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold tracking-wider">
                 {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v3.4'}
               </span>
-              <span className="text-slate-600">
-                {typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : ''}
+              <span className="text-slate-500">
+                {typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'v3.4-prod'}
               </span>
             </span>
           </div>
@@ -206,11 +206,13 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({
         </div>
       </div>
 
-      <LegalDisclosuresModal
-        isOpen={legalModalTab !== null}
-        onClose={() => setLegalModalTab(null)}
-        initialTab={legalModalTab || 'TERMS'}
-      />
+      {legalModalTab !== null && (
+        <LegalDisclosuresModal
+          isOpen={legalModalTab !== null}
+          onClose={() => setLegalModalTab(null)}
+          initialTab={legalModalTab || 'TERMS'}
+        />
+      )}
     </footer>
   );
 };

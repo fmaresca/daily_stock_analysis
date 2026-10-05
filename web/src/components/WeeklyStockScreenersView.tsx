@@ -1350,13 +1350,15 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
       </div>
 
       {/* MarketChameleon Prescreen & Preset Customization Modal */}
-      <MarketChameleonPrescreenModal
-        isOpen={isPrescreenModalOpen}
-        onClose={() => setIsPrescreenModalOpen(false)}
-        onApplyPreset={handleApplyPreset}
-        currentFilters={mcFilters}
-        currentCboeOnly={cboeOnlyGate}
-      />
+      {isPrescreenModalOpen && (
+        <MarketChameleonPrescreenModal
+          isOpen={isPrescreenModalOpen}
+          onClose={() => setIsPrescreenModalOpen(false)}
+          onApplyPreset={handleApplyPreset}
+          currentFilters={mcFilters}
+          currentCboeOnly={cboeOnlyGate}
+        />
+      )}
     </div>
   );
 };

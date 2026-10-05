@@ -1489,18 +1489,20 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       )}
 
       {/* MarketChameleon Prescreen Modal */}
-      <MarketChameleonPrescreenModal
-        isOpen={isPrescreenModalOpen}
-        onClose={() => setIsPrescreenModalOpen(false)}
-        activeFilters={mcFilters}
-        cboeOnly={cboeOnlyGate}
-        onApplyPreset={(filters, cboe, presetName) => {
-          setMcFilters(filters);
-          setCboeOnlyGate(cboe);
-          if (presetName) setActivePresetName(presetName);
-          showToast(`Prescreen Active: "${presetName || 'Custom Selection'}"`);
-        }}
-      />
+      {isPrescreenModalOpen && (
+        <MarketChameleonPrescreenModal
+          isOpen={isPrescreenModalOpen}
+          onClose={() => setIsPrescreenModalOpen(false)}
+          activeFilters={mcFilters}
+          cboeOnly={cboeOnlyGate}
+          onApplyPreset={(filters, cboe, presetName) => {
+            setMcFilters(filters);
+            setCboeOnlyGate(cboe);
+            if (presetName) setActivePresetName(presetName);
+            showToast(`Prescreen Active: "${presetName || 'Custom Selection'}"`);
+          }}
+        />
+      )}
     </div>
   );
 };
