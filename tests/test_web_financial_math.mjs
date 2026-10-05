@@ -319,4 +319,62 @@ test('10. Economic Calendar Chronological Sort & Market Cap Normalization', () =
   assert.equal(sortedMcDesc[2].symbol, 'DOCU', 'Third market cap must be DOCU (9.3B)');
 });
 
+test('11. Post-Reload Route Resolution & Deep Link Mapping', async () => {
+  const { parseRouteFromLocation } = await import('../web/src/hooks/useAppNavigation.ts');
+
+  const testCases = [
+    { path: '/equities', expectedTree: 'EQUITIES', expectedEqTab: 'TECHNICAL_SCREENER' },
+    { path: '/equities/screener', expectedTree: 'EQUITIES', expectedEqTab: 'TECHNICAL_SCREENER' },
+    { path: '/equities/screeners', expectedTree: 'EQUITIES', expectedEqTab: 'WEEKLY_STOCK_SCREENERS' },
+    { path: '/equities/watchlist', expectedTree: 'EQUITIES', expectedEqTab: 'WEEKLY_STOCK_SCREENERS' },
+    { path: '/equities/watchlist-builder', expectedTree: 'EQUITIES', expectedEqTab: 'WEEKLY_STOCK_SCREENERS' },
+    { path: '/charts', expectedTree: 'EQUITIES', expectedEqTab: 'INTERACTIVE_CHARTS' },
+    { path: '/solvency', expectedTree: 'EQUITIES', expectedEqTab: 'FUNDAMENTAL_HEALTH' },
+    { path: '/calendar', expectedTree: 'EQUITIES', expectedEqTab: 'ECONOMIC_CALENDAR' },
+    { path: '/options', expectedTree: 'OPTIONS', expectedOptTab: 'INCOME_SCREENER' },
+    { path: '/spreads', expectedTree: 'OPTIONS', expectedOptTab: 'MULTI_LEG_SPREADS' },
+    { path: '/margin', expectedTree: 'OPTIONS', expectedOptTab: 'PORTFOLIO_MARGIN_SIM' },
+    { path: '/tax', expectedTree: 'OPTIONS', expectedOptTab: 'TAX_ALPHA_OPTIMIZER' },
+    { path: '/staging', expectedTree: 'OPTIONS', expectedOptTab: 'BROKER_STAGING' },
+    { path: '/workflow', expectedTree: 'WORKFLOW', expectedOptTab: 'SCHWAB_POSITIONS_UPLOAD' },
+    { path: '/workflow/cash', expectedTree: 'WORKFLOW', expectedOptTab: 'WEEKLY_CASH_LEDGER' },
+    { path: '/workflow/holdings', expectedTree: 'WORKFLOW', expectedOptTab: 'HOLDINGS_COVERED_CALLS' },
+    { path: '/workflow/screener', expectedTree: 'WORKFLOW', expectedOptTab: 'CASCADING_SCREENER' },
+  ];
+
+  for (const tc of testCases) {
+    globalThis.window = {
+      location: {
+        pathname: tc.path,
+        hash: '',
+      },
+    };
+    const route = parseRouteFromLocation();
+    assert.equal(route.tree, tc.expectedTree, `Path ${tc.path} must resolve to tree ${tc.expectedTree}`);
+    if (tc.expectedEqTab) {
+      assert.equal(route.equitiesTab, tc.expectedEqTab, `Path ${tc.path} must resolve to equitiesTab ${tc.expectedEqTab}`);
+    }
+    if (tc.expectedOptTab) {
+      assert.equal(route.optionsTab, tc.expectedOptTab, `Path ${tc.path} must resolve to optionsTab ${tc.expectedOptTab}`);
+    }
+  }
+
+  delete globalThis.window;
+});
+
+test('12. Watchlist Sample CSV Filename Integrity', async () => {
+  const fs = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+
+  // Verify static sample CSV file exists with exact spelling
+  const samplePath = fileURLToPath(new URL('../web/public/samples/deltaharvest_watchlist_sample.csv', import.meta.url));
+  assert.ok(fs.existsSync(samplePath), 'deltaharvest_watchlist_sample.csv must exist in web/public/samples/');
+
+  // Verify exportImport.ts references exact spelling
+  const exportImportPath = fileURLToPath(new URL('../web/src/utils/exportImport.ts', import.meta.url));
+  const content = fs.readFileSync(exportImportPath, 'utf-8');
+  assert.ok(content.includes('deltaharvest_watchlist_sample.csv'), 'exportImport.ts must reference deltaharvest_watchlist_sample.csv');
+  assert.ok(!content.includes('deltalharvest'), 'exportImport.ts must NOT contain misspelled deltalharvest');
+});
+
 
