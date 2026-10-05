@@ -30,6 +30,11 @@ import {
   calculateAnnualizedYield,
 } from '../web/src/utils/optionsMath.ts';
 
+import {
+  sortData,
+  normalizeSortValue,
+} from '../web/src/utils/tableSort.ts';
+
 test('1. Black-Scholes Hull Academic Benchmark & Put-Call Parity', () => {
   // S=100, K=100, DTE=91.25 (T=0.25y), r=0.05, sigma=20%, q=0
   const spot = 100.0;
@@ -141,7 +146,8 @@ test('5. Dividend Early-Assignment Risk Triggers', () => {
       exDividendDate: '2026-09-30',
       amount: 1.25,
       frequency: 'QUARTERLY',
-    }
+    },
+    '2026-09-24'
   );
   assert.equal(highRisk.hasRisk, true);
   assert.equal(highRisk.severity, 'HIGH');
@@ -158,7 +164,8 @@ test('5. Dividend Early-Assignment Risk Triggers', () => {
       exDividendDate: '2026-09-30',
       amount: 1.25,
       frequency: 'QUARTERLY',
-    }
+    },
+    '2026-09-24'
   );
   assert.equal(safeCall.hasRisk, false);
   assert.equal(safeCall.severity, 'NONE');
@@ -271,4 +278,45 @@ test('9. Expiration Payoff & Curve Generation Integrity', () => {
   const payoffAtStrike = calculateExpirationPayoff(105, 100, 105, 3.0);
   assert.equal(payoffAtStrike, 8.0);
 });
+
+test('10. Economic Calendar Chronological Sort & Market Cap Normalization', () => {
+  // Fixture: Multi-date events across month boundary (Sep 28 to Oct 9)
+  const fixtureEvents = [
+    { title: 'PPI Final Demand', dateET: 'Fri, Oct 9', timeET: '08:30 AM', isoDate: '2026-10-09T08:30:00-04:00' },
+    { title: 'FOMC Bowman Speaks', dateET: 'Mon, Sep 28', timeET: '08:15 AM', isoDate: '2026-09-28T08:15:00-04:00' },
+    { title: 'Non-Farm Payrolls', dateET: 'Fri, Oct 2', timeET: '08:30 AM', isoDate: '2026-10-02T08:30:00-04:00' },
+    { title: 'ISM Services PMI', dateET: 'Mon, Oct 5', timeET: '10:00 AM', isoDate: '2026-10-05T10:00:00-04:00' },
+    { title: 'FOMC Minutes', dateET: 'Wed, Oct 7', timeET: '02:00 PM', isoDate: '2026-10-07T14:00:00-04:00' },
+  ];
+
+  // Ascending sort (earliest first: Sep 28 -> Oct 2 -> Oct 5 -> Oct 7 -> Oct 9)
+  const sortedAsc = sortData(fixtureEvents, 'dateET', 'asc');
+  assert.equal(sortedAsc[0].dateET, 'Mon, Sep 28', 'Earliest event must be Mon, Sep 28');
+  assert.equal(sortedAsc[1].dateET, 'Fri, Oct 2', 'Second event must be Fri, Oct 2');
+  assert.equal(sortedAsc[2].dateET, 'Mon, Oct 5', 'Third event must be Mon, Oct 5');
+  assert.equal(sortedAsc[3].dateET, 'Wed, Oct 7', 'Fourth event must be Wed, Oct 7');
+  assert.equal(sortedAsc[4].dateET, 'Fri, Oct 9', 'Latest event must be Fri, Oct 9');
+
+  // Descending sort (latest first: Oct 9 -> Oct 7 -> Oct 5 -> Oct 2 -> Sep 28)
+  const sortedDesc = sortData(fixtureEvents, 'dateET', 'desc');
+  assert.equal(sortedDesc[0].dateET, 'Fri, Oct 9', 'Latest event must be Fri, Oct 9');
+  assert.equal(sortedDesc[4].dateET, 'Mon, Sep 28', 'Earliest event must be Mon, Sep 28');
+
+  // Screener market cap string normalization e.g. "137.0 B", "45.5 B", "9.3 B"
+  assert.equal(normalizeSortValue('137.0 B'), 137000000000);
+  assert.equal(normalizeSortValue('$45.5 B'), 45500000000);
+  assert.equal(normalizeSortValue('9.3 B'), 9300000000);
+
+  const fixtureScreenerRows = [
+    { symbol: 'PLTR', extra_fields: { market_cap_str: '45.5 B' } },
+    { symbol: 'NOW', extra_fields: { market_cap_str: '137.0 B' } },
+    { symbol: 'DOCU', extra_fields: { market_cap_str: '9.3 B' } },
+  ];
+
+  const sortedMcDesc = sortData(fixtureScreenerRows, 'market_cap', 'desc');
+  assert.equal(sortedMcDesc[0].symbol, 'NOW', 'Largest market cap must be NOW (137B)');
+  assert.equal(sortedMcDesc[1].symbol, 'PLTR', 'Second market cap must be PLTR (45.5B)');
+  assert.equal(sortedMcDesc[2].symbol, 'DOCU', 'Third market cap must be DOCU (9.3B)');
+});
+
 

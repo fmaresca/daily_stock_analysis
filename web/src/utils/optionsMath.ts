@@ -42,7 +42,8 @@ export function evaluateEarlyAssignmentRisk(
   strike: number,
   callMidPremium: number,
   expirationDate: string,
-  dividend?: DividendSchedule
+  dividend?: DividendSchedule,
+  referenceDate?: string | Date
 ): EarlyAssignmentAnalysis {
   const extrinsic = calculateExtrinsicValue(callMidPremium, stockPrice, strike);
 
@@ -58,7 +59,7 @@ export function evaluateEarlyAssignmentRisk(
 
   const expTime = new Date(expirationDate).getTime();
   const exDivTime = new Date(dividend.exDividendDate).getTime();
-  const now = new Date().getTime();
+  const now = referenceDate ? new Date(referenceDate).getTime() : new Date().getTime();
 
   // Ex-div has already passed or occurs after option expiration
   if (exDivTime <= now || exDivTime > expTime) {

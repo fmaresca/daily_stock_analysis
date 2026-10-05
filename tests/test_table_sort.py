@@ -58,6 +58,19 @@ def normalize_sort_value(val):
             except ValueError:
                 pass
 
+        # Month abbreviation date e.g. "Mon, Oct 5", "Fri, Oct 2", "Mon, Sep 28"
+        for m_idx, m_name in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1):
+            if m_name in s.lower():
+                d_match = re.search(r"\b(\d{1,2})\b", s)
+                if d_match:
+                    try:
+                        day = int(d_match.group(1))
+                        # Current year baseline 2026
+                        dt = datetime(2026, m_idx, day)
+                        return dt.timestamp()
+                    except ValueError:
+                        pass
+
         return s.lower()
 
     return val
@@ -104,6 +117,31 @@ class TestTableSortLogic(unittest.TestCase):
         items = ["2026-09-08", "2026-09-01", "2026-10-15"]
         sorted_asc = sorted(items, key=lambda x: normalize_sort_value(x))
         self.assertEqual(sorted_asc, ["2026-09-01", "2026-09-08", "2026-10-15"])
+
+    def test_economic_calendar_multi_date_chronological_sort(self):
+        # Fixture data with multi-date releases spanning Sep and Oct
+        events = [
+            {"title": "OPEC Meeting", "dateET": "Mon, Oct 5"},
+            {"title": "Non-Farm Payrolls", "dateET": "Fri, Oct 2"},
+            {"title": "FOMC Speaks", "dateET": "Mon, Sep 28"},
+            {"title": "CPI Release", "dateET": "Fri, Oct 9"},
+            {"title": "ISM Services", "dateET": "Tue, Oct 6"},
+        ]
+        # In lexicographical sort: "Fri, Oct 2" < "Fri, Oct 9" < "Mon, Oct 5" < "Mon, Sep 28" < "Tue, Oct 6"
+        # In chronological sort: Sep 28 < Oct 2 < Oct 5 < Oct 6 < Oct 9
+        sorted_asc = sorted(events, key=lambda x: normalize_sort_value(x["dateET"]))
+        titles_asc = [e["title"] for e in sorted_asc]
+        self.assertEqual(
+            titles_asc,
+            ["FOMC Speaks", "Non-Farm Payrolls", "OPEC Meeting", "ISM Services", "CPI Release"]
+        )
+
+        sorted_desc = sorted(events, key=lambda x: normalize_sort_value(x["dateET"]), reverse=True)
+        titles_desc = [e["title"] for e in sorted_desc]
+        self.assertEqual(
+            titles_desc,
+            ["CPI Release", "ISM Services", "OPEC Meeting", "Non-Farm Payrolls", "FOMC Speaks"]
+        )
 
     def test_null_handling(self):
         # Null values must sink to the bottom

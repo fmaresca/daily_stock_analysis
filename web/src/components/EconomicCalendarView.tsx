@@ -217,7 +217,22 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
 
   // Sorted indicators
   const sortedIndicators = useMemo(() => {
-    return sortData(filteredIndicators, sortKey, sortOrder);
+    return sortData(
+      filteredIndicators,
+      sortKey === 'dateET'
+        ? (item: EconomicIndicator) => {
+            if (item.isoDate) {
+              const t = Date.parse(item.isoDate);
+              if (!isNaN(t)) return t;
+            }
+            const fullStr = `${item.dateET || ''} ${item.timeET || ''}, ${new Date().getFullYear()}`.trim();
+            const t = Date.parse(fullStr);
+            if (!isNaN(t)) return t;
+            return item.dateET || '';
+          }
+        : sortKey,
+      sortOrder
+    );
   }, [filteredIndicators, sortKey, sortOrder]);
 
   // Unique sector options for filter dropdown
@@ -336,47 +351,61 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
             <div>
               <h2 className="text-lg font-bold text-white tracking-tight flex items-center flex-wrap gap-2">
                 <span>Weekly US Economic Indicators &amp; Macro Catalyst Radar</span>
-                <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
-                  data?.source === 'nasdaq_live'
-                    ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
-                    : data?.source === 'secondary_mirror_proxy'
-                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                    : data?.source === 'curated_macro_schedule'
-                    ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30'
-                    : data?.fallback || data?.source === 'fallback_baseline'
-                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                }`}>
-                  {data?.source === 'nasdaq_live' ? (
-                    <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                      <span>🏛️ Nasdaq Live Radar Feed</span>
-                    </>
-                  ) : data?.source === 'secondary_mirror_proxy' ? (
-                    <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                      <span>🔄 Secondary Mirror Feed</span>
-                    </>
-                  ) : data?.source === 'curated_macro_schedule' ? (
-                    <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                      <span>🛡️ High-Impact Curated Schedule</span>
-                    </>
-                  ) : data?.fallback || data?.source === 'fallback_baseline' ? (
-                    <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      <span>⚠️ Baseline Fallback Schedule</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>🟢 Forex Factory Live Feed</span>
-                    </>
-                  )}
-                </span>
+                {loading && !data ? (
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border flex items-center gap-1.5 bg-blue-500/10 text-blue-300 border-blue-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                    <span>⏳ Synchronizing Macro Feed...</span>
+                  </span>
+                ) : (
+                  <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                    scheduleScope === 'past' || data?.source === 'past_week_archive'
+                      ? 'bg-slate-800 text-slate-300 border-slate-700'
+                      : data?.source === 'nasdaq_live'
+                      ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
+                      : data?.source === 'secondary_mirror_proxy'
+                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                      : data?.source === 'curated_macro_schedule'
+                      ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30'
+                      : data?.fallback || data?.source === 'fallback_baseline'
+                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                  }`}>
+                    {scheduleScope === 'past' || data?.source === 'past_week_archive' ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                        <span>⏪ Past Week ({priorWeek.shortLabel}) Archive</span>
+                      </>
+                    ) : data?.source === 'nasdaq_live' ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                        <span>🏛️ Nasdaq Live Radar Feed</span>
+                      </>
+                    ) : data?.source === 'secondary_mirror_proxy' ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span>🔄 Secondary Mirror Feed</span>
+                      </>
+                    ) : data?.source === 'curated_macro_schedule' ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                        <span>🛡️ High-Impact Curated Schedule</span>
+                      </>
+                    ) : data?.fallback || data?.source === 'fallback_baseline' ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        <span>⚠️ Baseline Fallback Schedule</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>🟢 Forex Factory Live Feed</span>
+                      </>
+                    )}
+                  </span>
+                )}
                 <span className="text-[11px] font-mono text-slate-400 px-2.5 py-0.5 rounded-full border border-slate-700/60 bg-slate-800/60 flex items-center gap-1.5 shadow-sm">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Synced: {formatSyncTime(data?.last_updated)}</span>
+                  <span>Synced: {loading && !data ? 'Syncing...' : formatSyncTime(data?.last_updated)}</span>
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
