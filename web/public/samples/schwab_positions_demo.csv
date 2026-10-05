@@ -1,0 +1,7 @@
+"Positions for account DEMO-Portfolio (Synthetic Test) as of 04:00 PM ET, 2026/01/01",,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Symbol,Description,Qty (Quantity),Price,Price Chng % (Price Change %),Price Chng $ (Price Change $),Mkt Val (Market Value),Cost Basis,Day Chng $ (Day Change $),Day Chng % (Day Change %),Gain $ (Gain/Loss $),Gain % (Gain/Loss %),Ratings,Reinvest?,Reinvest Capital Gains?,% of Acct (% of Account),Asset Type
+AAPL,APPLE INC,"100",150.00,0.00%,0.00,"$15,000.00 ","$15,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,A,No,N/A,15.00%,Equity
+MSFT,MICROSOFT CORP,"100",300.00,0.00%,0.00,"$30,000.00 ","$30,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,A,No,N/A,30.00%,Equity
+Cash & Cash Investments,--,--,--,--,--,"$55,000.00 ",--,$0.00 ,0%,--,--,--,--,--,55.00%,Cash and Money Market
+Positions Total,,--,--,--,--,"$100,000.00 ","$100,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,--,--,--,--,--

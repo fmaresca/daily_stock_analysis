@@ -1,0 +1,4 @@
+Symbol,Name,Sector,Price,Change,ChangePct,Opinion,OpinionPrevious,OpinionLastWeek,OpinionLastMonth,HasWeeklyOptions,Strategy
+AAPL,"Apple Inc.","Technology",150.00,0.00,0.00%,"Buy","Buy","Strong Buy","Hold",Yes,"Cash-Secured Put"
+MSFT,"Microsoft Corp","Technology",300.00,0.00,0.00%,"Buy","Hold","Hold","Buy",Yes,"Covered Call"
+NVDA,"NVIDIA Corp","Semiconductors",120.00,0.00,0.00%,"Strong Buy","Strong Buy","Buy","Buy",Yes,"Cash-Secured Put"

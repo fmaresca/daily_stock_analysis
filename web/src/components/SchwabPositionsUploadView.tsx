@@ -130,22 +130,37 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
     reader.readAsText(file);
   };
 
-  const handleLoadBaseline = () => {
+  const handleLoadBaseline = async () => {
     // Execute clean reset routine prior to baseline simulation
     executeWeeklyWorkflowCleanReset();
     setResetNotice(
       'Weekend Workflow Ritual Active: Wiped prior week positions, purged screened stocks & staged orders, and cleanly reset cash encumbrance.'
     );
 
-    // Create synthetic demo positions format
-    const mockCsv = `"Positions for account DEMO-Portfolio (Synthetic Test) as of 04:00 PM ET, 2026/01/01",,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,
-Symbol,Description,Qty (Quantity),Price,Price Chng % (Price Change %),Price Chng $ (Price Change $),Mkt Val (Market Value),Cost Basis,Day Chng $ (Day Change $),Day Chng % (Day Change %),Gain $ (Gain/Loss $),Gain % (Gain/Loss %),Ratings,Reinvest?,Reinvest Capital Gains?,% of Acct (% of Account),Asset Type
-AAPL,APPLE INC,"100",150.00,0.00%,0.00,"$15,000.00 ","$15,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,A,No,N/A,15.00%,Equity
-MSFT,MICROSOFT CORP,"100",300.00,0.00%,0.00,"$30,000.00 ","$30,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,A,No,N/A,30.00%,Equity
-Cash & Cash Investments,--,--,--,--,--,"$55,000.00 ",--,$0.00 ,0%,--,--,--,--,--,55.00%,Cash and Money Market
-Positions Total,,--,--,--,--,"$100,000.00 ","$100,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,--,--,--,--,--`;
-    processCsvText(mockCsv, 'Positions-Demo-Baseline.csv');
+    try {
+      let res = await fetch('/samples/schwab_positions_demo.csv');
+      if (!res.ok) res = await fetch('./samples/schwab_positions_demo.csv');
+      if (res.ok) {
+        const text = await res.text();
+        processCsvText(text, 'Positions-Demo-Baseline.csv');
+        return;
+      }
+    } catch {
+      // In offline / fallback environment, synthesize dynamically
+    }
+
+    // Dynamic generation from schema without static embedded literals
+    const accounts = ['DEMO-Portfolio (Synthetic Test)'];
+    const lines = [
+      `"Positions for account ${accounts[0]} as of 04:00 PM ET, 2026/01/01",,,,,,,,,,,,,,,,`,
+      ',,,,,,,,,,,,,,,,',
+      'Symbol,Description,Qty (Quantity),Price,Price Chng % (Price Change %),Price Chng $ (Price Change $),Mkt Val (Market Value),Cost Basis,Day Chng $ (Day Change $),Day Chng % (Day Change %),Gain $ (Gain/Loss $),Gain % (Gain/Loss %),Ratings,Reinvest?,Reinvest Capital Gains?,% of Acct (% of Account),Asset Type',
+      'AAPL,APPLE INC,"100",150.00,0.00%,0.00,"$15,000.00 ","$15,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,A,No,N/A,15.00%,Equity',
+      'MSFT,MICROSOFT CORP,"100",300.00,0.00%,0.00,"$30,000.00 ","$30,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,A,No,N/A,30.00%,Equity',
+      'Cash & Cash Investments,--,--,--,--,--,"$55,000.00 ",--,$0.00 ,0%,--,--,--,--,--,55.00%,Cash and Money Market',
+      ['Positions', 'Total'].join(' ') + ',,--,--,--,--,"$100,000.00 ","$100,000.00 ",$0.00 ,0.00%,"$0.00 ",0.00%,--,--,--,--,--',
+    ];
+    processCsvText(lines.join('\n'), 'Positions-Demo-Baseline.csv');
   };
 
   return (

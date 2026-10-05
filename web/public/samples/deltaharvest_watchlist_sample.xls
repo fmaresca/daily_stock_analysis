@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Header">
+   <Font ss:FontName="Segoe UI" ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#047857" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Sample Watchlist">
+  <Table>
+   <Row>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Ticker</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Name</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Sector</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Notes</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">AAPL</Data></Cell>
+    <Cell><Data ss:Type="String">Apple Inc.</Data></Cell>
+    <Cell><Data ss:Type="String">Consumer Electronics</Data></Cell>
+    <Cell><Data ss:Type="String">Core Growth</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">MSFT</Data></Cell>
+    <Cell><Data ss:Type="String">Microsoft Corp</Data></Cell>
+    <Cell><Data ss:Type="String">Software - Infrastructure</Data></Cell>
+    <Cell><Data ss:Type="String">Cloud &amp; AI</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">NVDA</Data></Cell>
+    <Cell><Data ss:Type="String">NVIDIA Corp</Data></Cell>
+    <Cell><Data ss:Type="String">Semiconductors</Data></Cell>
+    <Cell><Data ss:Type="String">High IVR Play</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">AMD</Data></Cell>
+    <Cell><Data ss:Type="String">Advanced Micro Devices</Data></Cell>
+    <Cell><Data ss:Type="String">Semiconductors</Data></Cell>
+    <Cell><Data ss:Type="String">Weekly Options</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">SPY</Data></Cell>
+    <Cell><Data ss:Type="String">SPDR S&P 500 ETF</Data></Cell>
+    <Cell><Data ss:Type="String">Broad Market ETF</Data></Cell>
+    <Cell><Data ss:Type="String">Index Buffer</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+</Workbook>

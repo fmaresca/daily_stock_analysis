@@ -526,7 +526,27 @@ export async function parseUploadedFile(file: File): Promise<{
   });
 }
 
-export function downloadSampleTemplate(format: 'csv' | 'xlsx' = 'csv') {
+export async function downloadSampleTemplate(format: 'csv' | 'xlsx' = 'csv') {
+  const fileName = format === 'xlsx' ? 'deltaharvest_watchlist_sample.xls' : 'deltaharvest_watchlist_sample.csv';
+  try {
+    let res = await fetch(`/samples/${fileName}`);
+    if (!res.ok) res = await fetch(`./samples/${fileName}`);
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return;
+    }
+  } catch {
+    // Fallback to client-side synthesis
+  }
+
   const sampleData = [
     { Ticker: 'AAPL', Name: 'Apple Inc.', Sector: 'Consumer Electronics', Notes: 'Core Growth' },
     { Ticker: 'MSFT', Name: 'Microsoft Corp', Sector: 'Software - Infrastructure', Notes: 'Cloud & AI' },
@@ -550,12 +570,12 @@ export function downloadSampleTemplate(format: 'csv' | 'xlsx' = 'csv') {
     xml += ` </Styles>\n`;
     xml += buildXmlWorksheet('Sample Watchlist', headers, rows);
     xml += `</Workbook>`;
-    downloadFile(xml, 'deltaharvest_watchlist_sample.xls', 'application/vnd.ms-excel;charset=utf-8;');
+    downloadFile(xml, fileName, 'application/vnd.ms-excel;charset=utf-8;');
   } else {
     const headers = ['Ticker', 'Name', 'Sector', 'Notes'];
     const rows = sampleData.map((d) => [d.Ticker, `"${d.Name}"`, `"${d.Sector}"`, `"${d.Notes}"`]);
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
-    downloadFile(csv, 'deltaharvest_watchlist_sample.csv', 'text/csv;charset=utf-8;');
+    downloadFile(csv, fileName, 'text/csv;charset=utf-8;');
   }
 }
 
