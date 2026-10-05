@@ -12,7 +12,7 @@
       "price_change": 1.36,
       "percent_change": 1.04,
       "opinion": "Bullish (Bullish Crossover)",
-      "opinion_pct": 85.0,
+      "opinion_pct": 85,
       "opinion_previous": "RSI 54.5",
       "opinion_last_week": "IV30 50.5%",
       "opinion_last_month": "1Y Vol 53.0%",
@@ -37,13 +37,14 @@
         "rel_volume": 0.3853,
         "market_cap_str": "137.0 B",
         "pe_ratio": 81.9437,
-        "div_yield_pct": 0.0,
+        "div_yield_pct": 0,
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": true,
-        "expiration_cadence": "Daily / Multi-Weekly"
+        "expiration_cadence": "Daily / Multi-Weekly",
+        "market_cap": 137000000000
       }
     },
     {
@@ -53,7 +54,7 @@
       "price_change": 0.13,
       "percent_change": 0.07,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 64.6",
       "opinion_last_week": "IV30 56.8%",
       "opinion_last_month": "1Y Vol 65.5%",
@@ -77,14 +78,15 @@
         "avg_volume": 5016387,
         "rel_volume": 0.3352,
         "market_cap_str": "45.5 B",
-        "pe_ratio": 0.0,
-        "div_yield_pct": 0.0,
+        "pe_ratio": 0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": true,
-        "expiration_cadence": "Weekly"
+        "expiration_cadence": "Weekly",
+        "market_cap": 45500000000
       }
     },
     {
@@ -94,7 +96,7 @@
       "price_change": 3.37,
       "percent_change": 2.79,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 54.1",
       "opinion_last_week": "IV30 38.4%",
       "opinion_last_month": "1Y Vol 38.8%",
@@ -125,7 +127,8 @@
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 13900000000
       }
     },
     {
@@ -135,7 +138,7 @@
       "price_change": 1.22,
       "percent_change": 1.58,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 65.3",
       "opinion_last_week": "IV30 71.0%",
       "opinion_last_month": "1Y Vol 67.8%",
@@ -166,7 +169,8 @@
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 9300000000
       }
     },
     {
@@ -176,7 +180,7 @@
       "price_change": -0.08,
       "percent_change": -0.21,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 65.0",
       "opinion_last_week": "IV30 48.3%",
       "opinion_last_month": "1Y Vol 53.0%",
@@ -207,7 +211,8 @@
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 9100000000
       }
     },
     {
@@ -217,7 +222,7 @@
       "price_change": 2.21,
       "percent_change": 3.33,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 69.2",
       "opinion_last_week": "IV30 68.3%",
       "opinion_last_month": "1Y Vol 72.1%",
@@ -241,14 +246,15 @@
         "avg_volume": 2962643,
         "rel_volume": 0.5835,
         "market_cap_str": "8.9 B",
-        "pe_ratio": 0.0,
-        "div_yield_pct": 0.0,
+        "pe_ratio": 0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 8900000000
       }
     },
     {
@@ -258,7 +264,7 @@
       "price_change": -0.31,
       "percent_change": -0.66,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 63.2",
       "opinion_last_week": "IV30 47.0%",
       "opinion_last_month": "1Y Vol 59.2%",
@@ -282,14 +288,15 @@
         "avg_volume": 5321009,
         "rel_volume": 0.5622,
         "market_cap_str": "8.0 B",
-        "pe_ratio": 0.0,
-        "div_yield_pct": 0.0,
+        "pe_ratio": 0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": true,
-        "expiration_cadence": "Weekly"
+        "expiration_cadence": "Weekly",
+        "market_cap": 8000000000
       }
     },
     {
@@ -299,7 +306,7 @@
       "price_change": 2.3,
       "percent_change": 1.61,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 66.6",
       "opinion_last_week": "IV30 46.5%",
       "opinion_last_month": "1Y Vol 47.3%",
@@ -324,13 +331,14 @@
         "rel_volume": 0.8869,
         "market_cap_str": "6.5 B",
         "pe_ratio": 12.3428,
-        "div_yield_pct": 0.0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": true,
-        "expiration_cadence": "Weekly"
+        "expiration_cadence": "Weekly",
+        "market_cap": 6500000000
       }
     },
     {
@@ -340,7 +348,7 @@
       "price_change": 0.06,
       "percent_change": 0.27,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 64.9",
       "opinion_last_week": "IV30 44.6%",
       "opinion_last_month": "1Y Vol 62.4%",
@@ -364,14 +372,15 @@
         "avg_volume": 1173552,
         "rel_volume": 1.0692,
         "market_cap_str": "6.3 B",
-        "pe_ratio": 0.0,
-        "div_yield_pct": 0.0,
+        "pe_ratio": 0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 6300000000
       }
     },
     {
@@ -381,7 +390,7 @@
       "price_change": -0.12,
       "percent_change": -0.17,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 60.5",
       "opinion_last_week": "IV30 52.1%",
       "opinion_last_month": "1Y Vol 56.2%",
@@ -412,7 +421,8 @@
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": true,
-        "expiration_cadence": "Weekly"
+        "expiration_cadence": "Weekly",
+        "market_cap": 6300000000
       }
     },
     {
@@ -422,7 +432,7 @@
       "price_change": -1.34,
       "percent_change": -1.98,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 58.2",
       "opinion_last_week": "IV30 41.2%",
       "opinion_last_month": "1Y Vol 54.3%",
@@ -446,24 +456,25 @@
         "avg_volume": 1860273,
         "rel_volume": 0.5525,
         "market_cap_str": "6.2 B",
-        "pe_ratio": 0.0,
-        "div_yield_pct": 0.0,
+        "pe_ratio": 0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 6200000000
       }
     },
     {
       "symbol": "MRX",
       "name": "Marex Group Limited -",
-      "last_price": 73.0,
+      "last_price": 73,
       "price_change": -1.09,
       "percent_change": -1.47,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 55.7",
       "opinion_last_week": "IV30 46.2%",
       "opinion_last_month": "1Y Vol 44.2%",
@@ -494,7 +505,8 @@
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 5200000000
       }
     },
     {
@@ -504,7 +516,7 @@
       "price_change": -0.08,
       "percent_change": -0.86,
       "opinion": "Bullish (Bullish Crossover)",
-      "opinion_pct": 85.0,
+      "opinion_pct": 85,
       "opinion_previous": "RSI 58.4",
       "opinion_last_week": "IV30 57.5%",
       "opinion_last_month": "1Y Vol 61.6%",
@@ -529,13 +541,14 @@
         "rel_volume": 0.7833,
         "market_cap_str": "5.0 B",
         "pe_ratio": 15.2459,
-        "div_yield_pct": 0.0,
+        "div_yield_pct": 0,
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": true,
-        "expiration_cadence": "Daily / Multi-Weekly"
+        "expiration_cadence": "Daily / Multi-Weekly",
+        "market_cap": 5000000000
       }
     },
     {
@@ -545,7 +558,7 @@
       "price_change": 9.5,
       "percent_change": 6.09,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 70.0",
       "opinion_last_week": "IV30 41.5%",
       "opinion_last_month": "1Y Vol 44.3%",
@@ -570,13 +583,14 @@
         "rel_volume": 0.5545,
         "market_cap_str": "4.9 B",
         "pe_ratio": 23.0592,
-        "div_yield_pct": 0.0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 4900000000
       }
     },
     {
@@ -586,7 +600,7 @@
       "price_change": 1.21,
       "percent_change": 1.62,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 64.9",
       "opinion_last_week": "IV30 65.9%",
       "opinion_last_month": "1Y Vol 57.8%",
@@ -617,7 +631,8 @@
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 4700000000
       }
     },
     {
@@ -627,7 +642,7 @@
       "price_change": -1.32,
       "percent_change": -2.43,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 65.1",
       "opinion_last_week": "IV30 61.8%",
       "opinion_last_month": "1Y Vol 74.2%",
@@ -651,14 +666,15 @@
         "avg_volume": 416647,
         "rel_volume": 1.5288,
         "market_cap_str": "3.8 B",
-        "pe_ratio": 0.0,
-        "div_yield_pct": 0.0,
+        "pe_ratio": 0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 3800000000
       }
     },
     {
@@ -668,7 +684,7 @@
       "price_change": -0.33,
       "percent_change": -1.36,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 56.7",
       "opinion_last_week": "IV30 40.8%",
       "opinion_last_month": "1Y Vol 42.6%",
@@ -699,7 +715,8 @@
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 3600000000
       }
     },
     {
@@ -709,7 +726,7 @@
       "price_change": 5.45,
       "percent_change": 7.06,
       "opinion": "Bullish (Bullish Crossover)",
-      "opinion_pct": 85.0,
+      "opinion_pct": 85,
       "opinion_previous": "RSI 60.4",
       "opinion_last_week": "IV30 45.1%",
       "opinion_last_month": "1Y Vol 44.8%",
@@ -734,13 +751,14 @@
         "rel_volume": 2.9999,
         "market_cap_str": "3.0 B",
         "pe_ratio": 37.1298,
-        "div_yield_pct": 0.0,
+        "div_yield_pct": 0,
         "ma_signal": "Bullish Crossover",
         "ma_desc": "When the stock has been on a downtrend and the short term moving average (20-day) makes a bullish crossover. Can be the beginning of a trend reversal.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 3000000000
       }
     },
     {
@@ -750,7 +768,7 @@
       "price_change": 0.91,
       "percent_change": 3.38,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 55.7",
       "opinion_last_week": "IV30 36.5%",
       "opinion_last_month": "1Y Vol 39.8%",
@@ -781,7 +799,8 @@
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": true,
-        "expiration_cadence": "Weekly"
+        "expiration_cadence": "Weekly",
+        "market_cap": 2900000000
       }
     },
     {
@@ -791,7 +810,7 @@
       "price_change": 0.04,
       "percent_change": 0.38,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 55.4",
       "opinion_last_week": "IV30 53.5%",
       "opinion_last_month": "1Y Vol 63.7%",
@@ -815,14 +834,15 @@
         "avg_volume": 1757115,
         "rel_volume": 1.1166,
         "market_cap_str": "1.7 B",
-        "pe_ratio": 0.0,
-        "div_yield_pct": 0.0,
+        "pe_ratio": 0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 1700000000
       }
     },
     {
@@ -832,7 +852,7 @@
       "price_change": 0.41,
       "percent_change": 3.73,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 66.1",
       "opinion_last_week": "IV30 59.3%",
       "opinion_last_month": "1Y Vol 67.7%",
@@ -857,13 +877,14 @@
         "rel_volume": 1.9288,
         "market_cap_str": "1.5 B",
         "pe_ratio": 64.5882,
-        "div_yield_pct": 0.0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": true,
-        "expiration_cadence": "Weekly"
+        "expiration_cadence": "Weekly",
+        "market_cap": 1500000000
       }
     },
     {
@@ -873,7 +894,7 @@
       "price_change": -0.54,
       "percent_change": -0.44,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 62.3",
       "opinion_last_week": "IV30 34.2%",
       "opinion_last_month": "1Y Vol 48.6%",
@@ -904,7 +925,8 @@
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 1300000000
       }
     },
     {
@@ -914,7 +936,7 @@
       "price_change": 1.97,
       "percent_change": 2.7,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 59.2",
       "opinion_last_week": "IV30 37.1%",
       "opinion_last_month": "1Y Vol 52.8%",
@@ -939,13 +961,14 @@
         "rel_volume": 0.7139,
         "market_cap_str": "1.2 B",
         "pe_ratio": 64.0789,
-        "div_yield_pct": 0.0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 1200000000
       }
     },
     {
@@ -955,7 +978,7 @@
       "price_change": 0.34,
       "percent_change": 2.47,
       "opinion": "Bullish (Uptrend)",
-      "opinion_pct": 95.0,
+      "opinion_pct": 95,
       "opinion_previous": "RSI 68.1",
       "opinion_last_week": "IV30 57.0%",
       "opinion_last_month": "1Y Vol 55.4%",
@@ -980,13 +1003,14 @@
         "rel_volume": 0.6666,
         "market_cap_str": "1.1 B",
         "pe_ratio": 6.7734,
-        "div_yield_pct": 0.0,
+        "div_yield_pct": 0,
         "ma_signal": "Uptrend",
         "ma_desc": "When the stock price and moving averages are all crossing each other in a positive trend.",
         "country": "United States of America",
         "stock_idea": "Momentum Stocks",
         "in_cboe_registry": false,
-        "expiration_cadence": "Monthly Only"
+        "expiration_cadence": "Monthly Only",
+        "market_cap": 1100000000
       }
     }
   ]

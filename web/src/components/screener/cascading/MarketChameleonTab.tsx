@@ -231,8 +231,14 @@ export const MarketChameleonTab: React.FC<MarketChameleonTabProps> = React.memo(
                       {isPositive ? `+${item.percent_change.toFixed(2)}%` : `${item.percent_change.toFixed(2)}%`}
                     </div>
                   </td>
-                  <td className="py-2.5 px-3 text-right text-slate-300">
-                    {item.extra_fields?.market_cap ? `$${(item.extra_fields.market_cap / 1e9).toFixed(1)}B` : '—'}
+                  <td className="py-2.5 px-3 text-right text-slate-300 font-mono">
+                    {item.extra_fields?.market_cap_str
+                      ? (item.extra_fields.market_cap_str.startsWith('$')
+                          ? item.extra_fields.market_cap_str
+                          : `$${item.extra_fields.market_cap_str}`)
+                      : item.extra_fields?.market_cap
+                      ? `$${(item.extra_fields.market_cap / 1e9).toFixed(1)}B`
+                      : '—'}
                   </td>
                   <td className="py-2.5 px-3 text-right font-bold text-amber-300">
                     {item.extra_fields?.rsi_14 ? item.extra_fields.rsi_14.toFixed(1) : '55.0'}

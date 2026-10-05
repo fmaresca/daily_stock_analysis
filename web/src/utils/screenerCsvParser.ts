@@ -129,6 +129,21 @@ export function parseScreenerCSV(
       recStrat = 'IRON_CONDOR';
     }
 
+    const mktCapRaw = getCol('market_cap', 'market cap', 'mktcap', 'mkt cap', 'marketcap');
+    let extraFields: Record<string, any> = {};
+    if (mktCapRaw) {
+      extraFields.market_cap_str = mktCapRaw;
+      const m = mktCapRaw.replace(/[$,]/g, '').trim().match(/^([\d.]+)\s*([BMTK])/i);
+      if (m) {
+        const num = parseFloat(m[1]);
+        const mult = m[2].toUpperCase() === 'T' ? 1e12 : m[2].toUpperCase() === 'B' ? 1e9 : m[2].toUpperCase() === 'M' ? 1e6 : 1e3;
+        extraFields.market_cap = Math.round(num * mult);
+      } else {
+        const n = cleanNum(mktCapRaw);
+        if (n > 0) extraFields.market_cap = n;
+      }
+    }
+
     records.push({
       symbol,
       name,
@@ -149,6 +164,7 @@ export function parseScreenerCSV(
       updated_at: new Date().toISOString(),
       recommended_strategy: recStrat,
       notes: `Ingested ${sourceType} Screener`,
+      extra_fields: Object.keys(extraFields).length > 0 ? extraFields : undefined,
     });
   }
 
