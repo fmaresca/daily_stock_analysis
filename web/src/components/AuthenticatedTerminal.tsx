@@ -519,7 +519,7 @@ export const AuthenticatedTerminal: React.FC = () => {
   };
 
   const handleSelectEquitiesTab = (tab: EquitiesTabType) => {
-    setActiveEquitiesTab(tab);
+    navigateTo('EQUITIES', activeOptionsTab, tab);
     if (tab === 'TECHNICAL_SCREENER') {
       setFilters((prev) => ({ ...prev, sortBy: 'symbol', sortOrder: 'asc', onlyHighIvr: false, onlyEarningsAlert: false, onlyOversold: false }));
     } else if (tab === 'TREND_SUPPORT') {
@@ -536,7 +536,7 @@ export const AuthenticatedTerminal: React.FC = () => {
   };
 
   const handleSelectOptionsTab = (tab: OptionsTabType) => {
-    setActiveOptionsTab(tab);
+    navigateTo(activeTree === 'WORKFLOW' ? 'WORKFLOW' : 'OPTIONS', tab, activeEquitiesTab);
     setFilters((prev) => ({ ...prev, onlyHighIvr: false, onlyEarningsAlert: false }));
     if (tab === 'TICKER_AUDIT') {
       const target = modalState.selectedTicker || filteredTickers[0] || universeTickers[0];
@@ -1141,7 +1141,8 @@ export const AuthenticatedTerminal: React.FC = () => {
       </main>
 
       {/* 1. Global Command Palette (Ctrl+K) */}
-      <CommandPalette
+      {modalState.isCommandPaletteOpen && (
+        <CommandPalette
           isOpen={modalState.isCommandPaletteOpen}
           onClose={() => setIsCommandPaletteOpen(false)}
           tickers={universeTickers}
@@ -1149,10 +1150,12 @@ export const AuthenticatedTerminal: React.FC = () => {
           onNavigateTree={(tree, tab) => {
             if (tree === 'WORKFLOW') {
               navigateTo('WORKFLOW', (tab as OptionsTabType) || 'SCHWAB_POSITIONS_UPLOAD');
+            } else if (tree === 'EQUITIES') {
+              navigateTo('EQUITIES', activeOptionsTab, (tab as EquitiesTabType) || 'TECHNICAL_SCREENER');
+            } else if (tree === 'OPTIONS') {
+              navigateTo('OPTIONS', (tab as OptionsTabType) || 'INCOME_SCREENER', activeEquitiesTab);
             } else {
-              setActiveTree(tree);
-              if (tree === 'EQUITIES' && tab) setActiveEquitiesTab(tab as EquitiesTabType);
-              if (tree === 'OPTIONS' && tab) setActiveOptionsTab(tab as OptionsTabType);
+              navigateTo(tree);
             }
           }}
           onOpenHelp={() => setIsHelpModalOpen(true)}
@@ -1167,6 +1170,7 @@ export const AuthenticatedTerminal: React.FC = () => {
           onExportExcel={handleExportExcel}
           onTriggerPrint={triggerPrintReport}
         />
+      )}
 
       {/* Centralized Modals Container */}
       <AppModalsContainer

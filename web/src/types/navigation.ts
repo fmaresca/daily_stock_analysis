@@ -1,5 +1,4 @@
-import { MenuTreeType, EquitiesTabType, OptionsTabType, WorkflowStepType } from './options';
-
+import type { MenuTreeType, EquitiesTabType, OptionsTabType, WorkflowStepType } from './options.ts';
 export type { MenuTreeType, EquitiesTabType, OptionsTabType, WorkflowStepType };
 
 export interface RouteLocation {
