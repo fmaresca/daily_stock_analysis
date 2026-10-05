@@ -189,9 +189,17 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({
         </div>
 
         <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
-          <p>
-            &copy; {new Date().getFullYear()} DeltaHarvest Institutional. Quantitative Equity Analysis &amp; Options Income.
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span>&copy; {new Date().getFullYear()} DeltaHarvest Institutional. Quantitative Equity Analysis &amp; Options Income.</span>
+            <span className="inline-flex items-center gap-1.5 font-mono">
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold tracking-wider">
+                {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v3.4'}
+              </span>
+              <span className="text-slate-600">
+                {typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : ''}
+              </span>
+            </span>
+          </div>
           <p>
             Rules: Cash-Secured Put strikes &le; Lower Bollinger Band (2 SD); Covered Call strikes &ge; Upper Bollinger Band (2 SD); 80% Buy-to-Close rule; 0.50 Delta Roll trigger.
           </p>

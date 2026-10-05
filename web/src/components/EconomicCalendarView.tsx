@@ -29,6 +29,37 @@ import {
   reanchorScheduleToWeek,
 } from '../utils/tradingWeekUtils';
 
+const CALENDAR_CACHE_KEY_PREFIX = 'deltaharvest_calendar_cache_';
+const CALENDAR_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+function getSessionCachedCalendar(scope: 'upcoming' | 'past'): EconomicCalendarResponse | null {
+  try {
+    const raw = sessionStorage.getItem(`${CALENDAR_CACHE_KEY_PREFIX}${scope}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.data && Array.isArray(parsed.data.indicators) && parsed.data.indicators.length > 0) {
+        if (Date.now() - parsed.timestamp < CALENDAR_CACHE_TTL_MS) {
+          return parsed.data;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function setSessionCachedCalendar(scope: 'upcoming' | 'past', payload: EconomicCalendarResponse) {
+  try {
+    sessionStorage.setItem(`${CALENDAR_CACHE_KEY_PREFIX}${scope}`, JSON.stringify({
+      timestamp: Date.now(),
+      data: payload,
+    }));
+  } catch {
+    // ignore
+  }
+}
+
 interface EconomicCalendarViewProps {
   onSelectSymbolForChart?: (symbol: string) => void;
   onOpenTickerAudit?: (symbol: string) => void;
@@ -38,8 +69,23 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
   onSelectSymbolForChart,
   onOpenTickerAudit,
 }) => {
-  const [data, setData] = useState<EconomicCalendarResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const upcomingWeek = useMemo(() => getUpcomingTradingWeek(), []);
+  const priorWeek = useMemo(() => getPriorTradingWeek(), []);
+
+  // Initialize from session cache or bundled fallback immediately so view NEVER blocks
+  const [data, setData] = useState<EconomicCalendarResponse | null>(() => {
+    const cached = getSessionCachedCalendar('upcoming');
+    if (cached) return cached;
+    return {
+      indicators: reanchorScheduleToWeek(BUNDLED_MACRO_SCHEDULE, getUpcomingTradingWeek()),
+      source: 'curated_macro_schedule',
+      fallback: false,
+      notice: 'Active weekly macroeconomic catalyst radar & sector transmission schedule.',
+      last_updated: new Date().toISOString(),
+    };
+  });
+  const [loading, setLoading] = useState<boolean>(false);
+  const [isUpdating, setIsUpdating] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [refreshSuccess, setRefreshSuccess] = useState<boolean>(false);
@@ -61,10 +107,6 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       setSortOrder('asc');
     }
   };
-
-  // Dynamically resolved trading weeks (updates when component mounts; auto-advances each calendar day)
-  const upcomingWeek = useMemo(() => getUpcomingTradingWeek(), []);
-  const priorWeek = useMemo(() => getPriorTradingWeek(), []);
 
   // AI Macro Synthesis States
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
@@ -93,7 +135,7 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
 
   const fetchCalendar = async (isManualRefresh = false, targetScope: 'upcoming' | 'past' = scheduleScope) => {
     if (isManualRefresh) setIsRefreshing(true);
-    else setLoading(true);
+    else setIsUpdating(true);
     setError(null);
 
     let success = false;
@@ -123,10 +165,12 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
           if (targetScope === 'upcoming' && !hasUpcomingEvents) {
             console.warn('Upstream feed contains only past week events. Falling back to upcoming macro schedule.');
           } else {
-            setData({
+            const nextPayload: EconomicCalendarResponse = {
               ...json,
               last_updated: isManualRefresh ? new Date().toISOString() : (json.last_updated || new Date().toISOString()),
-            });
+            };
+            setData(nextPayload);
+            setSessionCachedCalendar(targetScope, nextPayload);
             success = true;
           }
         }
@@ -148,11 +192,13 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
         if (bRes && bRes.ok) {
           const bJson: EconomicCalendarResponse = await bRes.json();
           if (bJson && Array.isArray(bJson.indicators) && bJson.indicators.length > 0) {
-            setData({
+            const nextPayload: EconomicCalendarResponse = {
               ...bJson,
               source: bJson.source || 'curated_macro_schedule',
               last_updated: new Date().toISOString(),
-            });
+            };
+            setData(nextPayload);
+            setSessionCachedCalendar(targetScope, nextPayload);
             success = true;
           }
         }
@@ -166,7 +212,7 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       const resolvedWeek = targetScope === 'past' ? priorWeek : upcomingWeek;
       const rawList = targetScope === 'past' ? PAST_WEEK_SCHEDULE : BUNDLED_MACRO_SCHEDULE;
       const fallbackList = reanchorScheduleToWeek(rawList, resolvedWeek);
-      setData({
+      const nextPayload: EconomicCalendarResponse = {
         indicators: fallbackList,
         source: targetScope === 'past' ? 'faireconomy_media' : 'curated_macro_schedule',
         fallback: false,
@@ -174,7 +220,9 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
           ? `Historical US macroeconomic releases from previous trading week (${priorWeek.label}).`
           : `Active weekly macroeconomic catalyst radar & sector transmission schedule for upcoming week (${upcomingWeek.label}).`,
         last_updated: new Date().toISOString(),
-      });
+      };
+      setData(nextPayload);
+      setSessionCachedCalendar(targetScope, nextPayload);
       success = true;
     }
 
@@ -184,6 +232,7 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
     }
 
     setLoading(false);
+    setIsUpdating(false);
     setIsRefreshing(false);
   };
 
@@ -407,6 +456,12 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Synced: {loading && !data ? 'Syncing...' : formatSyncTime(data?.last_updated)}</span>
                 </span>
+                {isUpdating && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 flex items-center gap-1 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+                    <span>Updating in background...</span>
+                  </span>
+                )}
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 {scheduleScope === 'upcoming'
@@ -424,7 +479,19 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
             <button
               onClick={() => {
                 setScheduleScope('upcoming');
-                fetchCalendar(true, 'upcoming');
+                const cached = getSessionCachedCalendar('upcoming');
+                if (cached) {
+                  setData(cached);
+                } else {
+                  setData({
+                    indicators: reanchorScheduleToWeek(BUNDLED_MACRO_SCHEDULE, upcomingWeek),
+                    source: 'curated_macro_schedule',
+                    fallback: false,
+                    notice: `Active weekly macroeconomic catalyst radar & sector transmission schedule (${upcomingWeek.label}).`,
+                    last_updated: new Date().toISOString(),
+                  });
+                }
+                fetchCalendar(false, 'upcoming');
               }}
               className={`px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
                 scheduleScope === 'upcoming'
@@ -440,7 +507,19 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
             <button
               onClick={() => {
                 setScheduleScope('past');
-                fetchCalendar(true, 'past');
+                const cached = getSessionCachedCalendar('past');
+                if (cached) {
+                  setData(cached);
+                } else {
+                  setData({
+                    indicators: reanchorScheduleToWeek(PAST_WEEK_SCHEDULE, priorWeek),
+                    source: 'past_week_archive',
+                    fallback: false,
+                    notice: `Historical US macroeconomic releases from previous trading week (${priorWeek.label}).`,
+                    last_updated: new Date().toISOString(),
+                  });
+                }
+                fetchCalendar(false, 'past');
               }}
               className={`px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
                 scheduleScope === 'past'
@@ -654,7 +733,7 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
       )}
 
       {/* Main Indicators Table */}
-      {loading ? (
+      {loading && !data ? (
         <div className="glass-panel p-12 rounded-xl border border-slate-800 text-center space-y-3">
           <RefreshCw className="w-6 h-6 text-blue-400 animate-spin mx-auto" />
           <div className="text-sm font-semibold text-slate-300">Retrieving Macroeconomic Schedule...</div>
