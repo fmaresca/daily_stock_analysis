@@ -245,6 +245,36 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
         diagnostics.formSubmitError = String(fsErr);
         console.warn("[inquiries] FormSubmit dispatch error:", fsErr);
       }
+
+      // Try URL-encoded FormSubmit endpoint if JSON attempt did not report success
+      if (!emailSent) {
+        try {
+          const formParams = new URLSearchParams();
+          formParams.append("_subject", subject);
+          formParams.append("name", cleanName);
+          formParams.append("email", cleanEmail);
+          formParams.append("requestType", typeLabel);
+          formParams.append("message", cleanNote || "None provided");
+          formParams.append("_replyto", cleanEmail);
+          formParams.append("timestamp", timestampFormatted);
+
+          const formResp = await fetch(`https://formsubmit.co/${encodeURIComponent(adminRecipient)}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              "Accept": "application/json",
+            },
+            body: formParams.toString(),
+          });
+          const formResData = await formResp.json().catch(() => ({}));
+          if (formResp.ok && (formResData.success === true || formResData.success === "true")) {
+            emailSent = true;
+            deliveryProtocols.push("FormSubmit URL-Encoded");
+          }
+        } catch {
+          // Ignore
+        }
+      }
     }
 
     // 5. Additional Fallback: MailChannels (if available)
@@ -374,6 +404,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
         success: true,
         delivered: emailSent,
         protocols: deliveryProtocols,
+        adminRecipient,
         mailtoUrl,
         message: emailSent
           ? "Your inquiry has been submitted and forwarded directly to the platform administrator."

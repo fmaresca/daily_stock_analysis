@@ -394,4 +394,25 @@ test('13. Admin Inquiries Multi-Channel Dispatch Contract & Server-Side Security
   assert.ok(fs.existsSync(requestAccessPath), 'functions/api/auth/request-access.js must exist');
 });
 
+test('14. Built-in Bootstrap Tenant Verification & Wayne O Donohue Provisioning Integrity', async () => {
+  const { BUILTIN_BOOTSTRAP_USERS, verifyPassword, getUserByEmail } = await import('../functions/api/_auth_utils.js');
+
+  assert.ok(Array.isArray(BUILTIN_BOOTSTRAP_USERS), 'BUILTIN_BOOTSTRAP_USERS must be an array');
+  const wayne = BUILTIN_BOOTSTRAP_USERS.find((u) => u.email === 'wayneodonohue@gmail.com');
+  assert.ok(wayne, 'wayneodonohue@gmail.com must be provisioned in bootstrap users');
+  assert.strictEqual(wayne.role, 'client', 'Wayne must have role client');
+  assert.strictEqual(wayne.is_active, 1, 'Wayne must be active');
+
+  const isPasswordValid = await verifyPassword('Whffranklin26', wayne.password_salt, wayne.password_hash);
+  assert.strictEqual(isPasswordValid, true, 'Whffranklin26 must verify against Wayne salt and hash');
+
+  const resolvedWayne = await getUserByEmail({}, 'wayneodonohue@gmail.com');
+  assert.ok(resolvedWayne, 'getUserByEmail must resolve Wayne even without D1 database binding');
+  assert.strictEqual(resolvedWayne.email, 'wayneodonohue@gmail.com');
+
+  const admin = BUILTIN_BOOTSTRAP_USERS.find((u) => u.email === 'fjmaresca@gmail.com');
+  assert.ok(admin, 'fjmaresca@gmail.com must be provisioned as admin');
+  assert.strictEqual(admin.role, 'admin');
+});
+
 

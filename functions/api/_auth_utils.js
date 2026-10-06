@@ -183,27 +183,59 @@ export function parseSessionCookie(request) {
 }
 
 // ==========================================
-// 4. Memory / Fallback Store for Local Dev
+// 4. Memory / Fallback Store & Bootstrap Users
 // ==========================================
 
+export const BUILTIN_BOOTSTRAP_USERS = [
+  {
+    id: "admin-root-0000-0000-000000000001",
+    email: DEFAULT_ADMIN_EMAIL, // admin@deltaharvest.local
+    password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
+    password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
+    role: "admin",
+    is_active: 1,
+    must_change_password: 0,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "admin-root-0000-0000-000000000002",
+    email: "fjmaresca@gmail.com",
+    password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
+    password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
+    role: "admin",
+    is_active: 1,
+    must_change_password: 0,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "user-tenant-0000-0000-000000000001",
+    email: "wayneodonohue@gmail.com",
+    password_hash: "109eae8174b76c1c7440d583806281325e843a1ab0c01ade8510223c7116485d",
+    password_salt: "4f059882c1df1b504f9809e99302c6bf",
+    role: "client",
+    is_active: 1,
+    must_change_password: 0,
+    created_at: "2026-10-06T00:00:00.000Z",
+    updated_at: "2026-10-06T00:00:00.000Z",
+  },
+];
+
 const localMemoryDb = {
-  users: [
-    {
-      id: "admin-root-0000-0000-000000000001",
-      email: DEFAULT_ADMIN_EMAIL,
-      password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
-      password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
-      role: "admin",
-      is_active: 1,
-      must_change_password: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ],
+  users: [...BUILTIN_BOOTSTRAP_USERS],
   profiles: {
     "admin-root-0000-0000-000000000001": {
       display_name: "Administrator",
       account_notes: "Primary System Administrator",
+    },
+    "admin-root-0000-0000-000000000002": {
+      display_name: "Frank Maresca",
+      account_notes: "Principal Administrator",
+    },
+    "user-tenant-0000-0000-000000000001": {
+      display_name: "Wayne O'Donohue",
+      account_notes: "Client Tenant Workspace",
     },
   },
   trades: [],
@@ -262,7 +294,10 @@ export async function getUserByEmail(env, email) {
   }
 
   const found = localMemoryDb.users.find((u) => u.email.toLowerCase() === cleanEmail);
-  return found ? { ...found } : null;
+  if (found) return { ...found };
+
+  const bootstrap = BUILTIN_BOOTSTRAP_USERS.find((u) => u.email.toLowerCase() === cleanEmail);
+  return bootstrap ? { ...bootstrap } : null;
 }
 
 export async function getUserById(env, id) {
@@ -278,7 +313,10 @@ export async function getUserById(env, id) {
   }
 
   const found = localMemoryDb.users.find((u) => u.id === id);
-  return found ? { ...found } : null;
+  if (found) return { ...found };
+
+  const bootstrap = BUILTIN_BOOTSTRAP_USERS.find((u) => u.id === id);
+  return bootstrap ? { ...bootstrap } : null;
 }
 
 export async function getAllUsers(env) {
@@ -294,7 +332,7 @@ export async function getAllUsers(env) {
         ORDER BY u.created_at DESC
       `);
       const { results } = await stmt.all();
-      return (results || []).map((u) => ({
+      const userList = (results || []).map((u) => ({
         id: u.id,
         email: u.email,
         role: (u.role || "client").toUpperCase(),
@@ -312,6 +350,32 @@ export async function getAllUsers(env) {
         trade_count: u.trade_count || 0,
         tradeCount: u.trade_count || 0,
       }));
+
+      // Merge builtin bootstrap tenants (e.g. Wayne O'Donohue, Frank Maresca) if not yet in D1
+      const existingEmails = new Set(userList.map((u) => u.email.toLowerCase()));
+      for (const bu of BUILTIN_BOOTSTRAP_USERS) {
+        if (!existingEmails.has(bu.email.toLowerCase())) {
+          userList.push({
+            id: bu.id,
+            email: bu.email,
+            role: (bu.role || "client").toUpperCase(),
+            is_active: bu.is_active,
+            status: bu.is_active === 1 ? "ACTIVE" : "SUSPENDED",
+            must_change_password: bu.must_change_password,
+            last_login_at: null,
+            lastLoginAt: null,
+            created_at: bu.created_at,
+            createdAt: bu.created_at,
+            updated_at: bu.updated_at,
+            display_name: bu.display_name,
+            displayName: bu.display_name,
+            account_notes: "Provisioned Tenant Account",
+            trade_count: 0,
+            tradeCount: 0,
+          });
+        }
+      }
+      return userList;
     } catch (err) {
       console.warn("D1 query error in getAllUsers, falling back to local store:", err);
     }

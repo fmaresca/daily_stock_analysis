@@ -76,20 +76,25 @@ export async function onRequestPost(context) {
       );
     }
 
-    // Auto-sync / repair Super Admin in D1 if physically bound
-    if (isValid && (user.role === "admin" || isConfiguredAdmin) && env && env.DB) {
+    // Auto-sync / persist verified user in D1 if physically bound
+    if (isValid && env && env.DB) {
       try {
-        const saltHex = "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c";
-        const hashHex = "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a";
         await env.DB.prepare(
           "INSERT INTO users (id, email, password_hash, password_salt, role, is_active, must_change_password, updated_at) " +
-          "VALUES (?, ?, ?, ?, 'admin', 1, 0, DATETIME('now')) " +
+          "VALUES (?, ?, ?, ?, ?, 1, ?, DATETIME('now')) " +
           "ON CONFLICT(email) DO UPDATE SET " +
           "password_hash = excluded.password_hash, password_salt = excluded.password_salt, " +
-          "role = 'admin', is_active = 1, updated_at = DATETIME('now')"
-        ).bind(user.id || "admin-root-0000-0000-000000000001", cleanEmail, hashHex, saltHex).run();
+          "role = excluded.role, is_active = 1, updated_at = DATETIME('now')"
+        ).bind(
+          user.id || `user-${Date.now()}`,
+          cleanEmail,
+          user.password_hash,
+          user.password_salt,
+          user.role || 'client',
+          user.must_change_password ? 1 : 0
+        ).run();
       } catch (d1Err) {
-        console.warn("Auto-sync super admin to D1 note:", d1Err);
+        console.warn("Auto-sync user to D1 note:", d1Err);
       }
     }
 

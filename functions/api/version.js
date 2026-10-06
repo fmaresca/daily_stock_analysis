@@ -16,6 +16,9 @@ export async function onRequestGet(context) {
       branch,
       timestamp,
       environment: context.env.ENVIRONMENT || "production",
+      hasD1: !!context.env.DB,
+      hasResend: !!context.env.RESEND_API_KEY,
+      adminNotificationEmail: context.env.ADMIN_NOTIFICATION_EMAIL || "fjmaresca@gmail.com",
     }),
     {
       status: 200,

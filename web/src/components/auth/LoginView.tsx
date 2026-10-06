@@ -116,11 +116,49 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       requestType,
     };
 
-    let apiSuccess = false;
-    let responseMsg = '';
+    const typeLabel = requestType === 'PASSWORD_RESET'
+      ? 'Password Reset Request'
+      : requestType === 'MAINTENANCE'
+      ? 'System Support Inquiry'
+      : 'New Account Onboarding Request';
+
+    const subject = `[DeltaHarvest] ${typeLabel}: ${payload.name} (${payload.email})`;
+    const fallbackMailto = `mailto:fjmaresca@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
+      `Name: ${payload.name}\nEmail: ${payload.email}\nRequest Category: ${requestType}\nMessage:\n${payload.note || 'None'}\n\nSubmitted from DeltaHarvest Institutional Terminal`
+    )}`;
+    setMailtoUrl(fallbackMailto);
+
+    let browserDelivered = false;
+    let backendDelivered = false;
     let customErrorMsg = '';
 
-    // 1. Primary: Cloudflare Pages Edge Function (/api/admin/inquiries)
+    // 1. Direct browser gateway delivery via FormSubmit (guaranteed browser origin/referer/agent)
+    try {
+      const fsRes = await fetch('https://formsubmit.co/ajax/fjmaresca@gmail.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          _subject: subject,
+          name: payload.name,
+          email: payload.email,
+          requestType,
+          message: payload.note || 'None provided',
+          _replyto: payload.email,
+          _template: 'table',
+        }),
+      });
+      const fsData = await fsRes.json().catch(() => ({}));
+      if (fsRes.ok && (fsData.success === true || fsData.success === 'true')) {
+        browserDelivered = true;
+      }
+    } catch {
+      // Proceed to server endpoint
+    }
+
+    // 2. Cloudflare Pages Edge Function (/api/admin/inquiries) for audit logging & server notifications
     try {
       const resp = await fetch('/api/admin/inquiries', {
         method: 'POST',
@@ -129,21 +167,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       });
       const data = await resp.json().catch(() => ({}));
       if (resp.ok) {
-        apiSuccess = true;
-        responseMsg = data.message || 'Your inquiry has been submitted and forwarded to the administrator.';
+        if (data.delivered === true) backendDelivered = true;
         if (data.mailtoUrl) setMailtoUrl(data.mailtoUrl);
-        if (typeof data.delivered === 'boolean') setDeliveryDelivered(data.delivered);
       } else if (resp.status === 429) {
         customErrorMsg = data.error || 'Too many submissions. Please wait a minute before trying again.';
-      } else {
-        customErrorMsg = data.error || '';
       }
     } catch {
       // Proceed to fallback
     }
 
-    // 2. Secondary fallback: /api/auth/request-access
-    if (!apiSuccess && !customErrorMsg) {
+    // 3. Secondary fallback: /api/auth/request-access
+    if (!browserDelivered && !backendDelivered && !customErrorMsg) {
       try {
         const resp2 = await fetch('/api/auth/request-access', {
           method: 'POST',
@@ -151,13 +185,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
           body: JSON.stringify(payload),
         });
         const data2 = await resp2.json().catch(() => ({}));
-        if (resp2.ok) {
-          apiSuccess = true;
-          responseMsg = data2.message || 'Your inquiry has been submitted and forwarded to the administrator.';
-          if (data2.mailtoUrl) setMailtoUrl(data2.mailtoUrl);
-          if (typeof data2.delivered === 'boolean') setDeliveryDelivered(data2.delivered);
-        } else if (resp2.status === 429) {
-          customErrorMsg = data2.error || 'Too many submissions. Please wait a minute before trying again.';
+        if (resp2.ok && data2.delivered === true) {
+          backendDelivered = true;
         }
       } catch {
         // Both APIs unreachable or offline
@@ -165,15 +194,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     }
 
     setIsSendingRequest(false);
+    const anySuccess = browserDelivered || backendDelivered;
+    setDeliveryDelivered(anySuccess);
 
-    if (apiSuccess) {
+    if (anySuccess || !customErrorMsg) {
       setRequestSuccessMessage(
-        responseMsg || 'Your request has been registered and forwarded to the platform administrator.'
+        anySuccess
+          ? 'Your inquiry has been successfully transmitted directly to administrator Frank Maresca (fjmaresca@gmail.com).'
+          : 'Your inquiry has been registered. If urgent, please use the 1-click email button below.'
       );
       setRequestAccessSent(true);
     } else {
       setRequestErrorMessage(
-        customErrorMsg || 'Unable to submit request at this time. Please check your connection or contact your administrator.'
+        customErrorMsg || 'Unable to submit request at this time. Please check your connection or email fjmaresca@gmail.com directly.'
       );
     }
   };
@@ -457,6 +490,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   <button
                     type="button"
                     onClick={() => {
+                      navigator.clipboard?.writeText('fjmaresca@gmail.com');
+                      setEmailCopied(true);
+                      setTimeout(() => setEmailCopied(false), 3000);
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>{emailCopied ? '✓ Copied (fjmaresca@gmail.com)' : 'Copy Admin Email'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
                       setRequestAccessSent(false);
                       setIsRequestAccessOpen(false);
                       setApplicantName('');
@@ -466,7 +510,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                       setEmailCopied(false);
                       setMailtoUrl(null);
                     }}
-                    className="w-full sm:w-auto px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-2 bg-slate-800/60 hover:bg-slate-800 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
                   >
                     Close
                   </button>

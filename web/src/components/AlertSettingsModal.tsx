@@ -16,6 +16,7 @@ import {
   sendBrowserNotification,
   sendDiscordAlert,
   sendTelegramAlert,
+  sendEmailAlert,
   evaluateAndDispatchAlerts,
 } from '../utils/alertDispatcher';
 import { TickerMeta, OptionOpportunity } from '../types/options';
@@ -113,6 +114,21 @@ export const AlertSettingsModal: React.FC<AlertSettingsModalProps> = ({
       '⚡ *DeltaHarvest Test Alert*\nYour Telegram alerts are verified and active.'
     );
     setTestStatus(ok ? 'Telegram test message sent!' : 'Telegram delivery failed. Check bot token and chat ID.');
+    setTimeout(() => setTestStatus(null), 5000);
+  };
+
+  const handleTestEmail = async () => {
+    if (!settings.alertEmailAddress || !settings.alertEmailAddress.includes('@')) {
+      setTestStatus('Please enter a valid Alert Email Address first.');
+      return;
+    }
+    setTestStatus('Sending test notification to Email...');
+    const ok = await sendEmailAlert(
+      settings.alertEmailAddress,
+      'DeltaHarvest Test Alert: Market Engine',
+      'This is a verified test opportunity alert from your DeltaHarvest options screener session. When technical triggers occur, alerts will arrive here.'
+    );
+    setTestStatus(ok ? 'Email test alert dispatched successfully! Check inbox.' : 'Email alert delivery failed. Please check address.');
     setTimeout(() => setTestStatus(null), 5000);
   };
 
@@ -329,6 +345,42 @@ export const AlertSettingsModal: React.FC<AlertSettingsModalProps> = ({
                   Test
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Section 5: Direct Email Opportunity Alerts */}
+          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-bold text-white text-sm">Email Opportunity Alerts</span>
+                <p className="text-[11px] text-slate-400">Receive algorithmic breakout and oversold trigger digests in your email inbox.</p>
+              </div>
+              <label className="flex items-center space-x-2 cursor-pointer text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={settings.enableEmailAlerts}
+                  onChange={(e) => setSettings({ ...settings, enableEmailAlerts: e.target.checked })}
+                  className="rounded border-slate-700 text-emerald-500 bg-slate-900"
+                />
+                <span>Active</span>
+              </label>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={settings.alertEmailAddress}
+                onChange={(e) => setSettings({ ...settings, alertEmailAddress: e.target.value })}
+                placeholder="trader@investmentfirm.com"
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleTestEmail}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-semibold whitespace-nowrap transition-colors"
+              >
+                Test Email
+              </button>
             </div>
           </div>
         </div>

@@ -17,6 +17,8 @@ export interface AlertSettings {
   enableTelegramWebhook: boolean;
   telegramBotToken: string;
   telegramChatId: string;
+  enableEmailAlerts: boolean;
+  alertEmailAddress: string;
   alertOnRsiOversold: boolean;
   alertOnBollingerBand: boolean;
   alertOnHighIvr: boolean;
@@ -30,6 +32,8 @@ const DEFAULT_ALERT_SETTINGS: AlertSettings = {
   enableTelegramWebhook: false,
   telegramBotToken: '',
   telegramChatId: '',
+  enableEmailAlerts: false,
+  alertEmailAddress: '',
   alertOnRsiOversold: true,
   alertOnBollingerBand: true,
   alertOnHighIvr: true,
@@ -154,6 +158,38 @@ export async function sendTelegramAlert(
   }
 }
 
+export async function sendEmailAlert(
+  recipientEmail: string,
+  subject: string,
+  content: string
+): Promise<boolean> {
+  const cleanEmail = recipientEmail.trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) return false;
+
+  try {
+    const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(cleanEmail)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        _subject: `[DeltaHarvest Alert] ${subject}`,
+        recipient: cleanEmail,
+        alertType: 'Market Opportunity Trigger',
+        details: content,
+        timestamp: new Date().toUTCString(),
+        _template: 'table',
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return res.ok && (data.success === true || data.success === 'true');
+  } catch (e) {
+    console.warn('Email alert failed:', e);
+    return false;
+  }
+}
+
 export async function evaluateAndDispatchAlerts(
   tickers: TickerMeta[],
   opportunities: OptionOpportunity[]
@@ -225,6 +261,15 @@ export async function evaluateAndDispatchAlerts(
       if (settings.enableTelegramWebhook && settings.telegramBotToken && settings.telegramChatId) {
         const tgText = `*DeltaHarvest Alert: ${t.symbol}*\nPrice: $${t.spot_price.toFixed(2)}\nTriggers: ${triggers.join(', ')}`;
         sendTelegramAlert(settings.telegramBotToken, settings.telegramChatId, tgText);
+      }
+
+      // 4. Email Alert
+      if (settings.enableEmailAlerts && settings.alertEmailAddress) {
+        sendEmailAlert(
+          settings.alertEmailAddress,
+          `${t.symbol} Opportunity Alert (${triggers.join(', ')})`,
+          `Ticker: ${t.symbol}\nSpot Price: $${t.spot_price.toFixed(2)}\nRSI-14: ${t.rsi_14?.toFixed(1) || 'N/A'}\nIV Rank: ${t.iv_rank?.toFixed(0) || 'N/A'}%\nTriggers: ${triggers.join(', ')}\nGenerated at: ${new Date().toUTCString()}`
+        );
       }
     }
   }

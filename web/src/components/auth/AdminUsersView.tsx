@@ -99,6 +99,8 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [emailSaveSuccess, setEmailSaveSuccess] = useState(false);
   const [emailSaveError, setEmailSaveError] = useState<string | null>(null);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
@@ -198,6 +200,52 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
       setEmailSaveError('Network error updating admin notification email.');
     } finally {
       setIsSavingEmail(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    const targetEmail = adminNotificationEmail.trim() || 'fjmaresca@gmail.com';
+    setIsTestingEmail(true);
+    setTestEmailResult(null);
+
+    try {
+      const subject = `[DeltaHarvest System Test] Administrator Email Alert Verified`;
+      const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetEmail)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          _subject: subject,
+          name: 'Platform Administrator (Frank Maresca)',
+          email: targetEmail,
+          requestType: 'System Test',
+          message: `This is a verified live test alert sent from the DeltaHarvest Tenant User Directory to confirm that email notifications arrive in ${targetEmail}.`,
+          timestamp: new Date().toUTCString(),
+          _template: 'table',
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && (data.success === true || data.success === 'true')) {
+        setTestEmailResult({
+          success: true,
+          message: `✓ Test alert successfully delivered to ${targetEmail}! Check your inbox.`,
+        });
+      } else {
+        setTestEmailResult({
+          success: false,
+          message: data.message || `Unable to send test alert to ${targetEmail}. Please check spam filter or settings.`,
+        });
+      }
+    } catch {
+      setTestEmailResult({
+        success: false,
+        message: `Network error dispatching test email alert to ${targetEmail}.`,
+      });
+    } finally {
+      setIsTestingEmail(false);
     }
   };
 
@@ -459,7 +507,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
               </p>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center gap-3">
               <button
                 type="submit"
                 disabled={isSavingEmail}
@@ -477,7 +525,45 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
                   </>
                 )}
               </button>
+
+              <button
+                type="button"
+                onClick={handleTestEmail}
+                disabled={isTestingEmail}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                {isTestingEmail ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                    <span>Sending Test Alert...</span>
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Send Test Alert Email</span>
+                  </>
+                )}
+              </button>
             </div>
+
+            {testEmailResult && (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+                  testEmailResult.success
+                    ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
+                    : 'bg-rose-950/60 border-rose-500/50 text-rose-300'
+                }`}
+              >
+                <span>{testEmailResult.message}</span>
+                <button
+                  type="button"
+                  onClick={() => setTestEmailResult(null)}
+                  className="text-slate-400 hover:text-white ml-2 text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
           </form>
         </div>
       ) : (
