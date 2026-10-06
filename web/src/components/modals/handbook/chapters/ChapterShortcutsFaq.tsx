@@ -118,6 +118,27 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
           Frequently Asked Questions
         </h4>
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/40 space-y-1">
+          <div className="text-xs font-bold text-emerald-300">Where can I find a complete breakdown of every menu button and tool on the platform?</div>
+          <p className="text-xs text-slate-300">
+            Open the <strong>Strategy Handbook (?)</strong> and select <strong>🧭 Platform Map &amp; Menu Tour (Tab 2)</strong>! It decodes every single button in the top header (API Self-Test, DCF Valuation, Equity Analysis, Watchlists, Alerts, Reports, Day/Night Mode, Admin Console) and every tier of the left sidebar (Workflow Ritual Steps 1–7, My Workspace, Investment Portfolio, 7 Equities Universe, 10 Strategy Labs, Tactical Tools).
+          </p>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+          <div className="text-xs font-bold text-white">What is the difference between &quot;My Workspace&quot; and &quot;Investment Portfolio&quot; in the sidebar?</div>
+          <p className="text-xs text-slate-400">
+            <strong>My Workspace</strong> is your individualized tenant workstation containing personal quick-action launchers, strategy shortcuts, and recent transactions. <strong>Investment Portfolio</strong> (formerly Trust Portfolio) is the institutional master digest that visualizes your full capital waterfall, Net Liquidation Value, 3-tier liquid cash reserves, active Covered Calls, and open CSP collateral liabilities.
+          </p>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+          <div className="text-xs font-bold text-white">How does the 1-Click Prompt with Gemini AI in Step 5 work?</div>
+          <p className="text-xs text-slate-400">
+            In <strong>Step 5 (Tri-Screen Cascading Screener)</strong>, DeltaHarvest aggregates hundreds of opportunities from ThinkorSwim, Barchart, and MarketChameleon into a synthesized candidate pool with Black-Scholes Delta (&Delta;), IV Rank, and strike prices. Clicking <strong>&quot;1-Click Copy Prompt for Gemini AI Hub&quot;</strong> copies an institutional quantitative prompt to your clipboard. Paste it into Gemini AI Pro to receive 3 clean tables: Top 5 Recommended Trades, Borderline Setups, and Excluded Stocks with full qualitative reasoning.
+          </p>
+        </div>
+
         <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
           <div className="text-xs font-bold text-white">How does the Koyfin / TradingView Institutional Terminal Architecture work?</div>
           <p className="text-xs text-slate-400">

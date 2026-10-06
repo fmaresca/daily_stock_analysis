@@ -19,6 +19,7 @@ import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options'
 
 // Chapter components
 import { ChapterLaypersonPrimer } from './modals/handbook/chapters/ChapterLaypersonPrimer';
+import { ChapterPlatformNavigationTour } from './modals/handbook/chapters/ChapterPlatformNavigationTour';
 import { ChapterTradeQualityScoring } from './modals/handbook/chapters/ChapterTradeQualityScoring';
 import { ChapterWeeklyWorkflowGuide } from './modals/handbook/chapters/ChapterWeeklyWorkflowGuide';
 import { ChapterWeeklyScreenersGuide } from './modals/handbook/chapters/ChapterWeeklyScreenersGuide';
@@ -58,6 +59,7 @@ interface HelpHandbookModalProps {
 
 type HandbookTab =
   | 'LAYPERSON_PRIMER'
+  | 'PLATFORM_NAVIGATION_TOUR'
   | 'TRADE_QUALITY_SCORING'
   | 'WEEKLY_WORKFLOW_GUIDE'
   | 'AI_OPTIONS_INCOME'
@@ -152,6 +154,18 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
           >
             <span>🌟</span>
             <span>Plain-English Primer</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('PLATFORM_NAVIGATION_TOUR')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'PLATFORM_NAVIGATION_TOUR'
+                ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                : 'text-cyan-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <span>🧭</span>
+            <span>Platform Map &amp; Menu Tour (Every Tool Explained)</span>
           </button>
 
           <button
@@ -402,6 +416,22 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
               onNavigate={onNavigate}
               onOpenSimulator={onOpenSimulator}
               onOpenValuation={onOpenValuation}
+            />
+          )}
+
+          {activeTab === 'PLATFORM_NAVIGATION_TOUR' && (
+            <ChapterPlatformNavigationTour
+              onNavigate={onNavigate}
+              onOpenSimulator={onOpenSimulator}
+              onOpenValuation={onOpenValuation}
+              onOpenTradier={onOpenTradier}
+              onOpenSchwab={onOpenSchwab}
+              onOpenDiagnostics={onOpenDiagnostics}
+              onOpenReports={onOpenReports}
+              onOpenWatchlists={onOpenWatchlists}
+              onOpenAlerts={onOpenAlerts}
+              onOpenCommandPalette={onOpenCommandPalette}
+              onOpenEquityAnalysis={onOpenEquityAnalysis}
             />
           )}
 

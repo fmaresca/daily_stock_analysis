@@ -27,6 +27,11 @@ export const ChapterLaypersonPrimer: React.FC<ChapterLaypersonPrimerProps> = ({
       <DirectActionBanner
         actions={[
           {
+            label: '🧭 Full Platform Map & Menu Tour',
+            location: 'Handbook > Tab 2',
+            onClick: () => onNavigate?.('WORKFLOW', 'SCHWAB_POSITIONS_UPLOAD'),
+          },
+          {
             label: 'Options Income Screener',
             location: 'Options > Income Screener',
             onClick: () => onNavigate?.('OPTIONS', 'INCOME_SCREENER'),
@@ -48,6 +53,57 @@ export const ChapterLaypersonPrimer: React.FC<ChapterLaypersonPrimerProps> = ({
           },
         ]}
       />
+
+      {/* Novice Quick-Start Cheat Sheet */}
+      <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-950 border border-emerald-500/30 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🚀</span>
+          <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+            Novice Quick-Start: The 4 Critical Buttons Every Everyday Investor Needs
+          </h4>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Don&apos;t feel overwhelmed by all the advanced tools! If you are just starting out, you only need to use these 4 primary buttons to generate safe weekly income:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1">
+            <div className="font-bold text-emerald-400 text-xs flex items-center justify-between">
+              <span>1. &quot;Workflow Ritual (7 Steps)&quot;</span>
+              <span className="text-[10px] text-slate-500 font-mono">[Left Sidebar]</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Your weekly guided tour. Follow Steps 1 through 7 every weekend to upload your positions, collect premium on uncovered stocks, and screen top puts.
+            </p>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1">
+            <div className="font-bold text-teal-400 text-xs flex items-center justify-between">
+              <span>2. &quot;DCF Valuation ($)&quot;</span>
+              <span className="text-[10px] text-slate-500 font-mono">[Top Header]</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Type any stock symbol (like NVDA or AAPL) to see its true mathematical fair value and confirm you are selling puts at a massive discount.
+            </p>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1">
+            <div className="font-bold text-amber-400 text-xs flex items-center justify-between">
+              <span>3. &quot;Simulator (⚡)&quot;</span>
+              <span className="text-[10px] text-slate-500 font-mono">[Top Header]</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Grade any option trade from 0 to 100 before risking a dollar. Targets &ge;75 Points with ~85% Probability of Profit.
+            </p>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1">
+            <div className="font-bold text-cyan-400 text-xs flex items-center justify-between">
+              <span>4. &quot;Investment Portfolio&quot;</span>
+              <span className="text-[10px] text-slate-500 font-mono">[Left Sidebar]</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              See your entire capital waterfall, net liquidation value, active contracts, and liquid cash reserves in one clean view.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Concept 1: What is an Option? */}
