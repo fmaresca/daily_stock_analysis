@@ -32,6 +32,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const [requestType, setRequestType] = useState<'NEW_ACCOUNT' | 'PASSWORD_RESET' | 'MAINTENANCE'>('NEW_ACCOUNT');
   const [emailCopied, setEmailCopied] = useState(false);
   const [deliveryDelivered, setDeliveryDelivered] = useState<boolean>(false);
+  const [mailtoUrl, setMailtoUrl] = useState<string | null>(null);
   const [legalModalTab, setLegalModalTab] = useState<LegalTab | null>(null);
 
   // Pre-load saved login name if previously selected
@@ -130,6 +131,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       if (resp.ok) {
         apiSuccess = true;
         responseMsg = data.message || 'Your inquiry has been submitted and forwarded to the administrator.';
+        if (data.mailtoUrl) setMailtoUrl(data.mailtoUrl);
+        if (typeof data.delivered === 'boolean') setDeliveryDelivered(data.delivered);
       } else if (resp.status === 429) {
         customErrorMsg = data.error || 'Too many submissions. Please wait a minute before trying again.';
       } else {
@@ -151,6 +154,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
         if (resp2.ok) {
           apiSuccess = true;
           responseMsg = data2.message || 'Your inquiry has been submitted and forwarded to the administrator.';
+          if (data2.mailtoUrl) setMailtoUrl(data2.mailtoUrl);
+          if (typeof data2.delivered === 'boolean') setDeliveryDelivered(data2.delivered);
         } else if (resp2.status === 429) {
           customErrorMsg = data2.error || 'Too many submissions. Please wait a minute before trying again.';
         }
@@ -439,7 +444,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   <div><strong>Status:</strong> Forwarded to Administrator</div>
                 </div>
 
-                <div className="pt-2 flex items-center justify-center">
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+                  {mailtoUrl && (
+                    <a
+                      href={mailtoUrl}
+                      className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Open in Email App</span>
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -450,6 +464,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                       setApplicantNote('');
                       setRequestSuccessMessage(null);
                       setEmailCopied(false);
+                      setMailtoUrl(null);
                     }}
                     className="w-full sm:w-auto px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors cursor-pointer"
                   >

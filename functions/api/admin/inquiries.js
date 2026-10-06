@@ -366,13 +366,15 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
       }
     }
 
-    // 8. Return response with delivery confirmation
+    // 8. Return response with delivery confirmation and optional mailto link
+    const mailtoUrl = `mailto:${encodeURIComponent(adminRecipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(textContent)}`;
+
     return new Response(
       JSON.stringify({
         success: true,
         delivered: emailSent,
         protocols: deliveryProtocols,
-        diagnostics,
+        mailtoUrl,
         message: emailSent
           ? "Your inquiry has been submitted and forwarded directly to the platform administrator."
           : "Your inquiry has been registered with the platform administrator.",
