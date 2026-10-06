@@ -17,7 +17,8 @@ export async function onRequestPost(context) {
 
   try {
     const body = await context.request.json().catch(() => ({}));
-    const { currentPassword, newPassword } = body;
+    const currentPassword = body.currentPassword || body.oldPassword;
+    const { newPassword } = body;
 
     if (!currentPassword || !newPassword || typeof newPassword !== "string" || newPassword.length < 8) {
       return new Response(

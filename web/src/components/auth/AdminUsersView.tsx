@@ -319,6 +319,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
         credentials: 'same-origin',
         body: JSON.stringify({
           userId: targetResetUser.id,
+          email: targetResetUser.email,
           newPassword: resetPasswordVal,
         }),
       });

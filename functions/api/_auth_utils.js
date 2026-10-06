@@ -243,6 +243,45 @@ const localMemoryDb = {
   portfolios: {},
 };
 
+export const dynamicUserOverrides = new Map();
+
+export function applyPasswordOverride(emailOrId, hashHex, saltHex, mustChange = 0) {
+  const cleanKey = String(emailOrId).trim().toLowerCase();
+  const now = new Date().toISOString();
+  const overrideData = {
+    password_hash: hashHex,
+    password_salt: saltHex,
+    must_change_password: mustChange,
+    updated_at: now,
+  };
+
+  dynamicUserOverrides.set(cleanKey, overrideData);
+
+  // Sync into localMemoryDb.users
+  for (const u of localMemoryDb.users) {
+    if (u.id === emailOrId || u.email.toLowerCase() === cleanKey) {
+      u.password_hash = hashHex;
+      u.password_salt = saltHex;
+      u.must_change_password = mustChange;
+      u.updated_at = now;
+      dynamicUserOverrides.set(u.id, overrideData);
+      dynamicUserOverrides.set(u.email.toLowerCase(), overrideData);
+    }
+  }
+
+  // Sync into BUILTIN_BOOTSTRAP_USERS
+  for (const bu of BUILTIN_BOOTSTRAP_USERS) {
+    if (bu.id === emailOrId || bu.email.toLowerCase() === cleanKey) {
+      bu.password_hash = hashHex;
+      bu.password_salt = saltHex;
+      bu.must_change_password = mustChange;
+      bu.updated_at = now;
+      dynamicUserOverrides.set(bu.id, overrideData);
+      dynamicUserOverrides.set(bu.email.toLowerCase(), overrideData);
+    }
+  }
+}
+
 // ==========================================
 // 5. Database User Queries (D1 + Fallback)
 // ==========================================
@@ -282,41 +321,100 @@ export async function ensureUsersTables(env) {
 
 export async function getUserByEmail(env, email) {
   const cleanEmail = email.trim().toLowerCase();
+  let user = null;
+
   if (env && env.DB) {
     try {
       await ensureUsersTables(env);
       const stmt = env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?)").bind(cleanEmail);
-      const user = await stmt.first();
-      if (user) return user;
+      user = await stmt.first();
     } catch (err) {
       console.warn("D1 query error in getUserByEmail, falling back to local store:", err);
     }
   }
 
-  const found = localMemoryDb.users.find((u) => u.email.toLowerCase() === cleanEmail);
-  if (found) return { ...found };
+  if (!user) {
+    const found = localMemoryDb.users.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (found) user = { ...found };
+  }
 
-  const bootstrap = BUILTIN_BOOTSTRAP_USERS.find((u) => u.email.toLowerCase() === cleanEmail);
-  return bootstrap ? { ...bootstrap } : null;
+  if (!user) {
+    const bootstrap = BUILTIN_BOOTSTRAP_USERS.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (bootstrap) user = { ...bootstrap };
+  }
+
+  if (user) {
+    if (dynamicUserOverrides.has(cleanEmail)) {
+      const override = dynamicUserOverrides.get(cleanEmail);
+      user = {
+        ...user,
+        password_hash: override.password_hash,
+        password_salt: override.password_salt,
+        must_change_password: override.must_change_password,
+        updated_at: override.updated_at || user.updated_at,
+      };
+    } else if (dynamicUserOverrides.has(user.id)) {
+      const override = dynamicUserOverrides.get(user.id);
+      user = {
+        ...user,
+        password_hash: override.password_hash,
+        password_salt: override.password_salt,
+        must_change_password: override.must_change_password,
+        updated_at: override.updated_at || user.updated_at,
+      };
+    }
+  }
+
+  return user;
 }
 
 export async function getUserById(env, id) {
+  let user = null;
+
   if (env && env.DB) {
     try {
       await ensureUsersTables(env);
       const stmt = env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(id);
-      const user = await stmt.first();
-      if (user) return user;
+      user = await stmt.first();
     } catch (err) {
       console.warn("D1 query error in getUserById, falling back to local store:", err);
     }
   }
 
-  const found = localMemoryDb.users.find((u) => u.id === id);
-  if (found) return { ...found };
+  if (!user) {
+    const found = localMemoryDb.users.find((u) => u.id === id);
+    if (found) user = { ...found };
+  }
 
-  const bootstrap = BUILTIN_BOOTSTRAP_USERS.find((u) => u.id === id);
-  return bootstrap ? { ...bootstrap } : null;
+  if (!user) {
+    const bootstrap = BUILTIN_BOOTSTRAP_USERS.find((u) => u.id === id);
+    if (bootstrap) user = { ...bootstrap };
+  }
+
+  if (user) {
+    const cleanEmail = (user.email || "").toLowerCase();
+    if (dynamicUserOverrides.has(cleanEmail)) {
+      const override = dynamicUserOverrides.get(cleanEmail);
+      user = {
+        ...user,
+        password_hash: override.password_hash,
+        password_salt: override.password_salt,
+        must_change_password: override.must_change_password,
+        updated_at: override.updated_at || user.updated_at,
+      };
+    } else if (dynamicUserOverrides.has(id)) {
+      const override = dynamicUserOverrides.get(id);
+      user = {
+        ...user,
+        password_hash: override.password_hash,
+        password_salt: override.password_salt,
+        must_change_password: override.must_change_password,
+        updated_at: override.updated_at || user.updated_at,
+      };
+    }
+  }
+
+  return user;
 }
 
 export async function getAllUsers(env) {
@@ -449,23 +547,15 @@ export async function updateUserPassword(env, userId, newHash, newSalt) {
       await env.DB.prepare(`
         UPDATE users
         SET password_hash = ?, password_salt = ?, must_change_password = 0, updated_at = ?
-        WHERE id = ?
-      `).bind(newHash, newSalt, now, userId).run();
-      return true;
+        WHERE id = ? OR LOWER(email) = LOWER(?)
+      `).bind(newHash, newSalt, now, userId, userId).run();
     } catch (err) {
       console.warn("D1 password update error:", err);
     }
   }
 
-  const u = localMemoryDb.users.find((user) => user.id === userId);
-  if (u) {
-    u.password_hash = newHash;
-    u.password_salt = newSalt;
-    u.must_change_password = 0;
-    u.updated_at = now;
-    return true;
-  }
-  return false;
+  applyPasswordOverride(userId, newHash, newSalt, 0);
+  return true;
 }
 
 export async function resetUserPasswordAdmin(env, userId, newHash, newSalt, forceReset = true) {
@@ -476,23 +566,36 @@ export async function resetUserPasswordAdmin(env, userId, newHash, newSalt, forc
       await env.DB.prepare(`
         UPDATE users
         SET password_hash = ?, password_salt = ?, must_change_password = ?, updated_at = ?
-        WHERE id = ?
-      `).bind(newHash, newSalt, forceReset ? 1 : 0, now, userId).run();
-      return true;
+        WHERE id = ? OR LOWER(email) = LOWER(?)
+      `).bind(newHash, newSalt, forceReset ? 1 : 0, now, userId, userId).run();
     } catch (err) {
       console.warn("D1 reset password error:", err);
     }
   }
 
-  const u = localMemoryDb.users.find((user) => user.id === userId);
-  if (u) {
-    u.password_hash = newHash;
-    u.password_salt = newSalt;
-    u.must_change_password = forceReset ? 1 : 0;
-    u.updated_at = now;
-    return true;
+  applyPasswordOverride(userId, newHash, newSalt, forceReset ? 1 : 0);
+  return true;
+}
+
+export async function resetUserPasswordByEmail(env, email, newHash, newSalt, forceReset = false) {
+  const cleanEmail = email.trim().toLowerCase();
+  const now = new Date().toISOString();
+
+  if (env && env.DB) {
+    try {
+      await ensureUsersTables(env);
+      await env.DB.prepare(`
+        UPDATE users
+        SET password_hash = ?, password_salt = ?, must_change_password = ?, updated_at = ?
+        WHERE LOWER(email) = LOWER(?)
+      `).bind(newHash, newSalt, forceReset ? 1 : 0, now, cleanEmail).run();
+    } catch (err) {
+      console.warn("D1 resetUserPasswordByEmail error:", err);
+    }
   }
-  return false;
+
+  applyPasswordOverride(cleanEmail, newHash, newSalt, forceReset ? 1 : 0);
+  return true;
 }
 
 export async function toggleUserStatus(env, userId, isActive) {

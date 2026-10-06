@@ -3,7 +3,9 @@ import {
   generateRandomSalt,
   hashPassword,
   resetUserPasswordAdmin,
+  resetUserPasswordByEmail,
   getUserById,
+  getUserByEmail,
 } from "../../_auth_utils.js";
 
 /**
@@ -16,16 +18,24 @@ export async function onRequestPost(context) {
 
   try {
     const body = await context.request.json().catch(() => ({}));
-    const { userId, newPassword, must_change_password = true } = body;
+    const { userId, email, newPassword, must_change_password = true } = body;
 
-    if (!userId || !newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+    const targetIdentifier = userId || email;
+    if (!targetIdentifier || !newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
       return new Response(
-        JSON.stringify({ error: "User ID and a new password (min 6 characters) are required." }),
+        JSON.stringify({ error: "User identifier (ID or email) and a new password (min 6 characters) are required." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const targetUser = await getUserById(context.env, userId);
+    let targetUser = null;
+    if (userId) {
+      targetUser = await getUserById(context.env, userId);
+    }
+    if (!targetUser && (email || userId)) {
+      targetUser = await getUserByEmail(context.env, email || userId);
+    }
+
     if (!targetUser) {
       return new Response(
         JSON.stringify({ error: "Target user not found." }),
@@ -36,7 +46,8 @@ export async function onRequestPost(context) {
     const saltHex = generateRandomSalt();
     const hashHex = await hashPassword(newPassword, saltHex);
 
-    await resetUserPasswordAdmin(context.env, userId, hashHex, saltHex, must_change_password);
+    await resetUserPasswordAdmin(context.env, targetUser.id, hashHex, saltHex, must_change_password);
+    await resetUserPasswordByEmail(context.env, targetUser.email, hashHex, saltHex, must_change_password);
 
     return new Response(
       JSON.stringify({

@@ -412,6 +412,21 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             <li><strong>Trader Networks &amp; Live Squawks:</strong> Direct one-click share deep-links to Telegram, WhatsApp, and StockTwits, plus direct launcher access to live trading squawks (FinancialJuice) and derivative discussion communities (r/thetagang, r/options, MarketChameleon).</li>
           </ul>
         </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-emerald-400">🔐</span>
+            <span>How does tenant authentication and the password reset workflow operate?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            DeltaHarvest utilizes a multi-tenant authentication architecture powered by native Web Crypto API PBKDF2 password hashing (100,000 iterations) with salted HMAC-SHA256 session tokens:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Self-Service Password Reset (Login Screen):</strong> Users who have forgotten their credentials click &quot;Forgot password?&quot; on the sign-in screen, enter their registered institutional email address, and specify a new secure password (min. 8 characters). The edge worker verifies tenant existence, hashes the credentials with a fresh cryptographic salt, and immediately dispatches an automated security audit alert to administrator Frank Maresca (<code className="text-emerald-300 font-mono">fjmaresca@gmail.com</code>).</li>
+            <li><strong>Administrative Reset Console:</strong> Platform administrators can reset tenant passwords directly from the User Administration Directory (<code className="text-cyan-300 font-mono">/admin/users</code>) using either tenant ID or email.</li>
+            <li><strong>In-Session Password Rotation:</strong> Authenticated users can rotate credentials at any time directly within their personal tenant workspace using the Password Change modal.</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Lock, Mail, Eye, EyeOff, ShieldCheck, Zap, RefreshCw } from '../icons';
+import { Lock, Mail, Eye, EyeOff, ShieldCheck, Zap, RefreshCw, Key } from '../icons';
 import { DeltaHarvestLogo } from '../ui/DeltaHarvestLogo';
 import { LegalDisclosuresModal, LegalTab } from '../modals/LegalDisclosuresModal';
 
@@ -20,6 +20,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Dedicated Password Reset State
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
+  const [resetErrorMessage, setResetErrorMessage] = useState<string | null>(null);
+
+  // Account Request / Inquiry State
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
   const [requestAccessSent, setRequestAccessSent] = useState(false);
   const [applicantName, setApplicantName] = useState('');
@@ -58,6 +71,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isRequestAccessOpen]);
+
+  useEffect(() => {
+    if (!isResetPasswordOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsResetPasswordOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isResetPasswordOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +122,51 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetErrorMessage(null);
+    setResetSuccessMessage(null);
+
+    const cleanEmail = resetEmail.trim().toLowerCase();
+    if (!cleanEmail) {
+      setResetErrorMessage('Please enter your registered email address.');
+      return;
+    }
+    if (resetNewPassword.length < 8) {
+      setResetErrorMessage('New password must be at least 8 characters long.');
+      return;
+    }
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetErrorMessage('New password and confirmation do not match.');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          newPassword: resetNewPassword,
+          confirmPassword: resetConfirmPassword,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setResetSuccessMessage(data.message || 'Password successfully updated! You can now sign in.');
+        setEmail(cleanEmail);
+        setPassword(resetNewPassword);
+      } else {
+        setResetErrorMessage(data.error || 'Failed to reset password. Please check your email or contact the administrator.');
+      }
+    } catch {
+      setResetErrorMessage('Network error resetting password. Please check your connection.');
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -294,8 +363,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 <button
                   type="button"
                   onClick={() => {
-                    setRequestType('PASSWORD_RESET');
-                    setIsRequestAccessOpen(true);
+                    setResetEmail(email.trim());
+                    setResetNewPassword('');
+                    setResetConfirmPassword('');
+                    setResetErrorMessage(null);
+                    setResetSuccessMessage(null);
+                    setIsResetPasswordOpen(true);
                   }}
                   className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
                 >
@@ -401,6 +474,215 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
           </div>
         </div>
       </div>
+
+      {/* Dedicated Self-Service Password Reset Modal */}
+      {isResetPasswordOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-password-modal-title"
+        >
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative text-slate-100 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 id="reset-password-modal-title" className="text-base font-bold text-white">
+                    Reset Account Password
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Institutional Edge Credential Update
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsResetPasswordOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer text-sm"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {resetSuccessMessage ? (
+              <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs text-center space-y-3 animate-fade-in">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-white">Password Updated Successfully!</p>
+                  <p className="text-slate-300 text-xs leading-relaxed mt-1">
+                    {resetSuccessMessage}
+                  </p>
+                </div>
+
+                <div className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 text-left font-mono text-[11px] text-slate-300 space-y-0.5">
+                  <div><strong>Account:</strong> {resetEmail}</div>
+                  <div><strong>Status:</strong> Active &amp; Verified</div>
+                  <div><strong>Audit:</strong> Notification Dispatched to Administrator</div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsResetPasswordOpen(false);
+                      const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                      handleSubmit(fakeEvent);
+                    }}
+                    className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>Sign In Now</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsResetPasswordOpen(false)}
+                    className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-3.5">
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Enter your registered institutional email address and set your new password. An automated audit notification will be transmitted to administrator Frank Maresca.
+                </p>
+
+                {resetErrorMessage && (
+                  <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/50 text-rose-300 text-xs flex items-center gap-2">
+                    <span className="font-bold shrink-0">!</span>
+                    <span>{resetErrorMessage}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="reset-email" className="block text-xs text-slate-300 mb-1 font-semibold">
+                    Registered Email Address *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="reset-email"
+                      type="email"
+                      required
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="name@domain.com"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="reset-new-password" className="block text-xs text-slate-300 mb-1 font-semibold">
+                    New Password (min. 8 characters) *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="reset-new-password"
+                      type={showResetPassword ? 'text' : 'password'}
+                      required
+                      minLength={8}
+                      value={resetNewPassword}
+                      onChange={(e) => setResetNewPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword(!showResetPassword)}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
+                    >
+                      {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="reset-confirm-password" className="block text-xs text-slate-300 mb-1 font-semibold">
+                    Confirm New Password *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="reset-confirm-password"
+                      type={showResetConfirm ? 'text' : 'password'}
+                      required
+                      minLength={8}
+                      value={resetConfirmPassword}
+                      onChange={(e) => setResetConfirmPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetConfirm(!showResetConfirm)}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
+                    >
+                      {showResetConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsResetPasswordOpen(false)}
+                    className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isResettingPassword}
+                    className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isResettingPassword ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Updating Password...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Key className="w-3.5 h-3.5" />
+                        <span>Reset Password</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="pt-3 border-t border-slate-800 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsResetPasswordOpen(false);
+                      setRequestType('NEW_ACCOUNT');
+                      setApplicantEmail(resetEmail);
+                      setIsRequestAccessOpen(true);
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                  >
+                    Need new account onboarding or administrator assistance? Contact Admin →
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Access Request / Admin Alert Modal */}
       {isRequestAccessOpen && (

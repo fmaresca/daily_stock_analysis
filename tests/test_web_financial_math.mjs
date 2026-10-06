@@ -415,4 +415,93 @@ test('14. Built-in Bootstrap Tenant Verification & Wayne O Donohue Provisioning 
   assert.strictEqual(admin.role, 'admin');
 });
 
+test('15. Password Reset Functionality, Web Crypto PBKDF2 Persistence & Edge Route Integrity', async () => {
+  const fs = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+
+  // A. Verify route whitelist in functions/_middleware.js
+  const middlewarePath = fileURLToPath(new URL('../functions/_middleware.js', import.meta.url));
+  const middlewareContent = fs.readFileSync(middlewarePath, 'utf-8');
+  assert.ok(
+    middlewareContent.includes('/api/auth/reset-password'),
+    'functions/_middleware.js must whitelist /api/auth/reset-password for unauthenticated access'
+  );
+
+  // B. Verify functions/api/auth/reset-password.js exists and exports onRequestPost
+  const resetHandlerModule = await import('../functions/api/auth/reset-password.js');
+  assert.ok(typeof resetHandlerModule.onRequestPost === 'function', 'Must export onRequestPost');
+
+  // C. Test reset request validation (password too short)
+  const badShortReq = new Request('http://localhost/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'wayneodonohue@gmail.com', newPassword: 'short' }),
+  });
+  const badShortRes = await resetHandlerModule.onRequestPost({ request: badShortReq, env: {} });
+  assert.strictEqual(badShortRes.status, 400, 'Short password must return 400');
+  const badShortBody = await badShortRes.json();
+  assert.ok(badShortBody.error.includes('8 characters'), 'Must mention 8 characters requirement');
+
+  // D. Test reset request for non-existent user
+  const unknownUserReq = new Request('http://localhost/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'nonexistent_test_tenant@randomcorp.com', newPassword: 'BrandNewSecurePassword2026!' }),
+  });
+  const unknownUserRes = await resetHandlerModule.onRequestPost({ request: unknownUserReq, env: {} });
+  assert.strictEqual(unknownUserRes.status, 404, 'Unknown user must return 404');
+
+  // E. Execute actual password reset for Wayne O Donohue
+  const newPass = 'WayneNextGenPass2026!';
+  const validResetReq = new Request('http://localhost/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'wayneodonohue@gmail.com',
+      newPassword: newPass,
+      confirmPassword: newPass,
+    }),
+  });
+  const validResetRes = await resetHandlerModule.onRequestPost({ request: validResetReq, env: {} });
+  assert.strictEqual(validResetRes.status, 200, 'Valid reset must return 200');
+  const validResetBody = await validResetRes.json();
+  assert.strictEqual(validResetBody.success, true);
+  assert.ok(validResetRes.headers.get('Set-Cookie'), 'Must issue fresh session cookie upon reset');
+
+  // F. Verify that getUserByEmail now reflects the updated password
+  const { getUserByEmail, verifyPassword } = await import('../functions/api/_auth_utils.js');
+  const updatedWayne = await getUserByEmail({}, 'wayneodonohue@gmail.com');
+  assert.ok(updatedWayne, 'Must resolve Wayne');
+
+  // New password must verify successfully
+  const newPassValid = await verifyPassword(newPass, updatedWayne.password_salt, updatedWayne.password_hash);
+  assert.strictEqual(newPassValid, true, 'New password must verify against updated salt and hash');
+
+  // Old password must now fail!
+  const oldPassValid = await verifyPassword('Whffranklin26', updatedWayne.password_salt, updatedWayne.password_hash);
+  assert.strictEqual(oldPassValid, false, 'Old password must fail after reset');
+
+  // G. Reset password back to standard seed Whffranklin26 for reproducible test suites
+  const restoreReq = new Request('http://localhost/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'wayneodonohue@gmail.com',
+      newPassword: 'Whffranklin26',
+      confirmPassword: 'Whffranklin26',
+    }),
+  });
+  const restoreRes = await resetHandlerModule.onRequestPost({ request: restoreReq, env: {} });
+  assert.strictEqual(restoreRes.status, 200);
+
+  const restoredWayne = await getUserByEmail({}, 'wayneodonohue@gmail.com');
+  const restoredPassValid = await verifyPassword('Whffranklin26', restoredWayne.password_salt, restoredWayne.password_hash);
+  assert.strictEqual(restoredPassValid, true, 'Original password restored successfully');
+
+  // H. Verify user/change-password.js parameter aliases
+  const changePasswordCode = fs.readFileSync(fileURLToPath(new URL('../functions/api/user/change-password.js', import.meta.url)), 'utf-8');
+  assert.ok(changePasswordCode.includes('currentPassword = body.currentPassword || body.oldPassword'), 'change-password must accept both currentPassword and oldPassword');
+});
+
+
 
