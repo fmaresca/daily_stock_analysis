@@ -278,7 +278,7 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
               )}
             </button>
 
-            {/* 2b. Master Trust Portfolio (Admin Only) */}
+            {/* 2b. Investment Portfolio (Admin Only) */}
             {isAdmin && (
               <button
                 onClick={() => {
@@ -297,12 +297,7 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
                 <Briefcase className="w-4 h-4 text-teal-400 shrink-0" />
                 {!isCollapsed && (
                   <div className="flex items-center justify-between w-full text-left">
-                    <span>Trust Portfolio</span>
-                    {freeCashAmount !== undefined && (
-                      <span className="text-[10px] font-mono text-emerald-400 font-semibold">
-                        ${Math.round(freeCashAmount / 1000)}k
-                      </span>
-                    )}
+                    <span>Investment Portfolio</span>
                   </div>
                 )}
               </button>

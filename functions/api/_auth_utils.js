@@ -215,10 +215,44 @@ const localMemoryDb = {
 // 5. Database User Queries (D1 + Fallback)
 // ==========================================
 
+export async function ensureUsersTables(env) {
+  if (env && env.DB) {
+    try {
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS users (
+          id TEXT PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          password_salt TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'client',
+          is_active INTEGER NOT NULL DEFAULT 1,
+          must_change_password INTEGER NOT NULL DEFAULT 0,
+          last_login_at TEXT,
+          created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
+          updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+        )
+      `).run();
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS user_profiles (
+          user_id TEXT PRIMARY KEY,
+          display_name TEXT,
+          account_notes TEXT,
+          created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
+          updated_at TEXT NOT NULL DEFAULT (DATETIME('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `).run();
+    } catch (e) {
+      console.warn("D1 ensureUsersTables error:", e);
+    }
+  }
+}
+
 export async function getUserByEmail(env, email) {
   const cleanEmail = email.trim().toLowerCase();
   if (env && env.DB) {
     try {
+      await ensureUsersTables(env);
       const stmt = env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?)").bind(cleanEmail);
       const user = await stmt.first();
       if (user) return user;
@@ -234,6 +268,7 @@ export async function getUserByEmail(env, email) {
 export async function getUserById(env, id) {
   if (env && env.DB) {
     try {
+      await ensureUsersTables(env);
       const stmt = env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(id);
       const user = await stmt.first();
       if (user) return user;
@@ -249,6 +284,7 @@ export async function getUserById(env, id) {
 export async function getAllUsers(env) {
   if (env && env.DB) {
     try {
+      await ensureUsersTables(env);
       const stmt = env.DB.prepare(`
         SELECT u.id, u.email, u.role, u.is_active, u.must_change_password, u.last_login_at, u.created_at, u.updated_at,
                p.display_name, p.account_notes,
@@ -258,7 +294,24 @@ export async function getAllUsers(env) {
         ORDER BY u.created_at DESC
       `);
       const { results } = await stmt.all();
-      return results || [];
+      return (results || []).map((u) => ({
+        id: u.id,
+        email: u.email,
+        role: (u.role || "client").toUpperCase(),
+        is_active: u.is_active,
+        status: (u.is_active === 1 || u.is_active === true) ? "ACTIVE" : "SUSPENDED",
+        must_change_password: u.must_change_password,
+        last_login_at: u.last_login_at,
+        lastLoginAt: u.last_login_at,
+        created_at: u.created_at,
+        createdAt: u.created_at,
+        updated_at: u.updated_at,
+        display_name: u.display_name || "",
+        displayName: u.display_name || u.email.split("@")[0],
+        account_notes: u.account_notes || "",
+        trade_count: u.trade_count || 0,
+        tradeCount: u.trade_count || 0,
+      }));
     } catch (err) {
       console.warn("D1 query error in getAllUsers, falling back to local store:", err);
     }
@@ -267,15 +320,20 @@ export async function getAllUsers(env) {
   return localMemoryDb.users.map((u) => ({
     id: u.id,
     email: u.email,
-    role: u.role,
+    role: (u.role || "client").toUpperCase(),
     is_active: u.is_active,
+    status: (u.is_active === 1 || u.is_active === true) ? "ACTIVE" : "SUSPENDED",
     must_change_password: u.must_change_password,
     last_login_at: u.last_login_at,
+    lastLoginAt: u.last_login_at,
     created_at: u.created_at,
+    createdAt: u.created_at,
     updated_at: u.updated_at,
     display_name: localMemoryDb.profiles[u.id]?.display_name || "",
+    displayName: localMemoryDb.profiles[u.id]?.display_name || u.email.split("@")[0],
     account_notes: localMemoryDb.profiles[u.id]?.account_notes || "",
     trade_count: localMemoryDb.trades.filter((t) => t.user_id === u.id).length,
+    tradeCount: localMemoryDb.trades.filter((t) => t.user_id === u.id).length,
   }));
 }
 
@@ -286,6 +344,7 @@ export async function createUser(env, { id, email, password_hash, password_salt,
 
   if (env && env.DB) {
     try {
+      await ensureUsersTables(env);
       const batch = await env.DB.batch([
         env.DB.prepare(`
           INSERT INTO users (id, email, password_hash, password_salt, role, is_active, must_change_password, created_at, updated_at)
@@ -322,6 +381,7 @@ export async function updateUserPassword(env, userId, newHash, newSalt) {
   const now = new Date().toISOString();
   if (env && env.DB) {
     try {
+      await ensureUsersTables(env);
       await env.DB.prepare(`
         UPDATE users
         SET password_hash = ?, password_salt = ?, must_change_password = 0, updated_at = ?
@@ -348,6 +408,7 @@ export async function resetUserPasswordAdmin(env, userId, newHash, newSalt, forc
   const now = new Date().toISOString();
   if (env && env.DB) {
     try {
+      await ensureUsersTables(env);
       await env.DB.prepare(`
         UPDATE users
         SET password_hash = ?, password_salt = ?, must_change_password = ?, updated_at = ?
@@ -374,6 +435,7 @@ export async function toggleUserStatus(env, userId, isActive) {
   const now = new Date().toISOString();
   if (env && env.DB) {
     try {
+      await ensureUsersTables(env);
       await env.DB.prepare(`
         UPDATE users
         SET is_active = ?, updated_at = ?
@@ -385,13 +447,15 @@ export async function toggleUserStatus(env, userId, isActive) {
     }
   }
 
-  const u = localMemoryDb.users.find((user) => user.id === userId);
-  if (u) {
+  let u = localMemoryDb.users.find((user) => user.id === userId);
+  if (!u) {
+    u = { id: userId, email: userId, is_active: isActive ? 1 : 0, role: "client", updated_at: now };
+    localMemoryDb.users.push(u);
+  } else {
     u.is_active = isActive ? 1 : 0;
     u.updated_at = now;
-    return true;
   }
-  return false;
+  return true;
 }
 
 export async function updateLastLogin(env, userId) {

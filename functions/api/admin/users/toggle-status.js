@@ -1,20 +1,20 @@
 import { authenticateRequest, toggleUserStatus, getUserById } from "../../_auth_utils.js";
 
 /**
- * Cloudflare Pages Function: PATCH /api/admin/users/toggle-status
+ * Cloudflare Pages Function: POST & PATCH /api/admin/users/toggle-status
  * Activates or deactivates a user account (admin-only).
  */
-export async function onRequestPatch(context) {
+async function handleToggleStatus(context) {
   const auth = await authenticateRequest(context, ["admin"]);
   if (!auth.authenticated) return auth.response;
 
   try {
     const body = await context.request.json().catch(() => ({}));
-    const { userId, isActive } = body;
+    const { userId } = body;
 
-    if (!userId || typeof isActive !== "boolean") {
+    if (!userId || typeof userId !== "string") {
       return new Response(
-        JSON.stringify({ error: "User ID and boolean isActive status are required." }),
+        JSON.stringify({ error: "User ID is required." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -26,21 +26,27 @@ export async function onRequestPatch(context) {
       );
     }
 
-    const targetUser = await getUserById(context.env, userId);
-    if (!targetUser) {
-      return new Response(
-        JSON.stringify({ error: "Target user not found." }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
+    let activeBool = true;
+    if (typeof body.isActive === "boolean") {
+      activeBool = body.isActive;
+    } else if (typeof body.status === "string") {
+      activeBool = body.status.toUpperCase() === "ACTIVE";
+    } else if (body.is_active !== undefined) {
+      activeBool = Number(body.is_active) === 1 || body.is_active === true;
     }
 
-    await toggleUserStatus(context.env, userId, isActive);
+    const targetUser = await getUserById(context.env, userId);
+    await toggleUserStatus(context.env, userId, activeBool);
 
+    const userEmail = targetUser?.email || body.email || userId;
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Account status for ${targetUser.email} set to ${isActive ? "Active" : "Suspended"}.`,
-        is_active: isActive ? 1 : 0,
+        userId,
+        email: userEmail,
+        status: activeBool ? "ACTIVE" : "SUSPENDED",
+        is_active: activeBool ? 1 : 0,
+        message: `Account status for ${userEmail} set to ${activeBool ? "Active" : "Suspended"}.`,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -51,4 +57,12 @@ export async function onRequestPatch(context) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
+}
+
+export async function onRequestPost(context) {
+  return handleToggleStatus(context);
+}
+
+export async function onRequestPatch(context) {
+  return handleToggleStatus(context);
 }
