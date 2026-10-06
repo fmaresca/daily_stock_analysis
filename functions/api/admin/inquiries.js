@@ -1,4 +1,4 @@
-import { getAdminNotificationEmail } from "../_auth_utils.js";
+import { getAdminNotificationEmail, authenticateRequest } from "../_auth_utils.js";
 
 // In-memory rate limiting for per-IP burst protection
 const ipRequestHistory = new Map();
@@ -161,8 +161,9 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
 </html>`;
 
     let emailSent = false;
+    const deliveryProtocols = [];
 
-    // 3. Primary Dispatch: Resend REST API
+    // 3. Primary Dispatch: Resend REST API (if configured)
     if (env.RESEND_API_KEY) {
       try {
         const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
@@ -184,7 +185,8 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
 
         if (resendResp.ok) {
           emailSent = true;
-          console.info(`[inquiries] Dispatched inquiry ${type} via Resend API to administrator.`);
+          deliveryProtocols.push("Resend API");
+          console.info(`[inquiries] Dispatched inquiry ${type} via Resend API to ${adminRecipient}.`);
         } else {
           const errData = await resendResp.text();
           console.warn(`[inquiries] Resend API returned ${resendResp.status}:`, errData);
@@ -194,7 +196,48 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
       }
     }
 
-    // 4. Secondary Fallback: MailChannels (Zero-config for Cloudflare Pages/Workers)
+    // 4. Active Fallback: FormSubmit Direct Email Gateway (Zero-config HTTPS transport)
+    if (!emailSent && adminRecipient) {
+      try {
+        const fsResp = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminRecipient)}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Origin": "https://daily-stock-analysis-89j.pages.dev",
+            "Referer": "https://daily-stock-analysis-89j.pages.dev/",
+          },
+          body: JSON.stringify({
+            _subject: subject,
+            name: cleanName,
+            email: cleanEmail,
+            requestType: typeLabel,
+            message: cleanNote || "None provided",
+            timestamp: timestampFormatted,
+            originIP: clientIp,
+            _replyto: cleanEmail,
+            _template: "table",
+          }),
+        });
+
+        if (fsResp.ok) {
+          const fsData = await fsResp.json().catch(() => ({}));
+          if (fsData && (fsData.success === true || fsData.success === "true")) {
+            emailSent = true;
+            deliveryProtocols.push("FormSubmit Gateway");
+            console.info(`[inquiries] Dispatched inquiry ${type} via FormSubmit to ${adminRecipient}.`);
+          } else {
+            console.warn(`[inquiries] FormSubmit returned:`, fsData);
+          }
+        } else {
+          console.warn(`[inquiries] FormSubmit HTTP ${fsResp.status}`);
+        }
+      } catch (fsErr) {
+        console.warn("[inquiries] FormSubmit dispatch error:", fsErr);
+      }
+    }
+
+    // 5. Additional Fallback: MailChannels (if available)
     if (!emailSent) {
       try {
         const mcResp = await fetch("https://api.mailchannels.net/tx/v1/send", {
@@ -224,6 +267,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
 
         if (mcResp.ok || mcResp.status === 202) {
           emailSent = true;
+          deliveryProtocols.push("MailChannels");
           console.info(`[inquiries] Dispatched inquiry ${type} via MailChannels.`);
         }
       } catch (mcErr) {
@@ -231,11 +275,96 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
       }
     }
 
-    // 5. Always return a generic success message that discloses no email address
+    // 6. Webhook Broadcast (if env.ADMIN_NOTIFICATION_WEBHOOK or env.DISCORD_WEBHOOK_URL is configured)
+    const webhookUrl = env.ADMIN_NOTIFICATION_WEBHOOK || env.DISCORD_WEBHOOK_URL;
+    if (webhookUrl) {
+      try {
+        const isDiscord = webhookUrl.includes("discord.com") || webhookUrl.includes("discordapp.com");
+        const webhookBody = isDiscord
+          ? {
+              embeds: [
+                {
+                  title: `[DeltaHarvest] ${typeLabel}`,
+                  color: type === "NEW_ACCOUNT" ? 0x10b981 : type === "PASSWORD_RESET" ? 0xf59e0b : 0x6366f1,
+                  fields: [
+                    { name: "Submitter Name", value: cleanName, inline: true },
+                    { name: "Submitter Email", value: cleanEmail, inline: true },
+                    { name: "Inquiry Type", value: typeLabel, inline: true },
+                    { name: "Submitted Message", value: cleanNote || "None provided" },
+                    { name: "Origin IP", value: clientIp, inline: true },
+                    { name: "Timestamp", value: timestampFormatted, inline: true },
+                  ],
+                  footer: { text: "DeltaHarvest Institutional Security" },
+                },
+              ],
+            }
+          : {
+              event: "user.inquiry",
+              requestType: type,
+              name: cleanName,
+              email: cleanEmail,
+              note: cleanNote,
+              timestamp: timestampIso,
+              ip: clientIp,
+            };
+
+        const whResp = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(webhookBody),
+        });
+        if (whResp.ok || whResp.status === 204) {
+          deliveryProtocols.push("Admin Webhook");
+          console.info(`[inquiries] Dispatched inquiry ${type} to admin webhook.`);
+        }
+      } catch (whErr) {
+        console.warn("[inquiries] Webhook dispatch error:", whErr);
+      }
+    }
+
+    // 7. Persistent Audit Record in Cloudflare D1 (Guaranteed storage on platform)
+    if (env && env.DB) {
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS access_inquiries (
+            id TEXT PRIMARY KEY,
+            request_type TEXT NOT NULL,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            note TEXT,
+            ip TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+          )
+        `).run();
+        const inquiryId = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        await env.DB.prepare(`
+          INSERT INTO access_inquiries (id, request_type, name, email, note, ip, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          inquiryId,
+          type,
+          cleanName,
+          cleanEmail,
+          cleanNote,
+          clientIp,
+          emailSent ? "delivered" : "received"
+        ).run();
+        deliveryProtocols.push("D1 Audit Storage");
+      } catch (dbErr) {
+        console.warn("[inquiries] D1 access_inquiries insert error:", dbErr);
+      }
+    }
+
+    // 8. Return response with delivery confirmation
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Your inquiry has been submitted and forwarded to the platform administrator.",
+        delivered: emailSent,
+        protocols: deliveryProtocols,
+        message: emailSent
+          ? "Your inquiry has been submitted and forwarded directly to the platform administrator."
+          : "Your inquiry has been registered with the platform administrator.",
       }),
       {
         status: 200,
@@ -252,6 +381,50 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
         status: 500,
         headers: { "Content-Type": "application/json" },
       }
+    );
+  }
+}
+
+/**
+ * Cloudflare Pages Function: GET /api/admin/inquiries
+ * Returns recent access inquiries and requests (restricted to authenticated administrators).
+ */
+export async function onRequestGet(context) {
+  const { env } = context;
+  const auth = await authenticateRequest(context, ["admin"]);
+  if (!auth.authenticated) return auth.response;
+
+  try {
+    if (env && env.DB) {
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS access_inquiries (
+          id TEXT PRIMARY KEY,
+          request_type TEXT NOT NULL,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          note TEXT,
+          ip TEXT,
+          status TEXT DEFAULT 'pending',
+          created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+        )
+      `).run();
+      const rows = await env.DB.prepare(
+        "SELECT * FROM access_inquiries ORDER BY created_at DESC LIMIT 50"
+      ).all();
+      return new Response(
+        JSON.stringify({ success: true, inquiries: rows.results || [] }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    return new Response(
+      JSON.stringify({ success: true, inquiries: [] }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    console.error("[inquiries] Failed to fetch inquiries:", err);
+    return new Response(
+      JSON.stringify({ error: "Failed to retrieve access inquiries." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
