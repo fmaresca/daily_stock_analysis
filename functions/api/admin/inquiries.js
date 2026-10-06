@@ -196,6 +196,11 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
       }
     }
 
+    const diagnostics = {
+      adminRecipient,
+      resendConfigured: !!env.RESEND_API_KEY,
+    };
+
     // 4. Active Fallback: FormSubmit Direct Email Gateway (Zero-config HTTPS transport)
     if (!emailSent && adminRecipient) {
       try {
@@ -206,6 +211,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
             "Accept": "application/json",
             "Origin": "https://daily-stock-analysis-89j.pages.dev",
             "Referer": "https://daily-stock-analysis-89j.pages.dev/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           },
           body: JSON.stringify({
             _subject: subject,
@@ -220,8 +226,11 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
           }),
         });
 
+        diagnostics.formSubmitStatus = fsResp.status;
+        const fsData = await fsResp.json().catch((parseErr) => ({ parseError: String(parseErr) }));
+        diagnostics.formSubmitResponse = fsData;
+
         if (fsResp.ok) {
-          const fsData = await fsResp.json().catch(() => ({}));
           if (fsData && (fsData.success === true || fsData.success === "true")) {
             emailSent = true;
             deliveryProtocols.push("FormSubmit Gateway");
@@ -233,6 +242,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
           console.warn(`[inquiries] FormSubmit HTTP ${fsResp.status}`);
         }
       } catch (fsErr) {
+        diagnostics.formSubmitError = String(fsErr);
         console.warn("[inquiries] FormSubmit dispatch error:", fsErr);
       }
     }
@@ -362,6 +372,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
         success: true,
         delivered: emailSent,
         protocols: deliveryProtocols,
+        diagnostics,
         message: emailSent
           ? "Your inquiry has been submitted and forwarded directly to the platform administrator."
           : "Your inquiry has been registered with the platform administrator.",
