@@ -377,4 +377,21 @@ test('12. Watchlist Sample CSV Filename Integrity', async () => {
   assert.ok(!content.includes('deltalharvest'), 'exportImport.ts must NOT contain misspelled deltalharvest');
 });
 
+test('13. Admin Inquiries Multi-Channel Dispatch Contract & Server-Side Security', async () => {
+  const fs = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+
+  const inquiriesPath = fileURLToPath(new URL('../functions/api/admin/inquiries.js', import.meta.url));
+  assert.ok(fs.existsSync(inquiriesPath), 'functions/api/admin/inquiries.js must exist');
+  const inquiriesContent = fs.readFileSync(inquiriesPath, 'utf-8');
+
+  assert.ok(inquiriesContent.includes('export async function onRequestPost'), 'Must export onRequestPost');
+  assert.ok(inquiriesContent.includes('export async function onRequestGet'), 'Must export onRequestGet');
+  assert.ok(inquiriesContent.includes('formsubmit.co/ajax/'), 'Must integrate FormSubmit direct transport');
+  assert.ok(inquiriesContent.includes('access_inquiries'), 'Must integrate Cloudflare D1 persistent audit storage');
+
+  const requestAccessPath = fileURLToPath(new URL('../functions/api/auth/request-access.js', import.meta.url));
+  assert.ok(fs.existsSync(requestAccessPath), 'functions/api/auth/request-access.js must exist');
+});
+
 

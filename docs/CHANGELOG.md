@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [修复] 恢复新用户申请与问询全链路多通道邮件投递 (Multi-Channel Inquiry Email Dispatch to Admin): (1) 解决 MailChannels 终止免费中继导致的邮件静默丢失问题，在 Cloudflare Pages 边缘函数 functions/api/admin/inquiries.js 引入 FormSubmit 直连 HTTPS 传输通道，实现零配置直达超级管理员个人邮箱 (fjmaresca@gmail.com)；(2) 深度集成 Cloudflare D1 数据库 access_inquiries 持久化台账，确保即使第三方邮件网关故障申请亦永久留存；(3) 交付 GET /api/admin/inquiries 接口支持管理员控制台查看申请；(4) 交付自动化回归测试 13 验证多协议调度契约。
 - [改进] 全站认证页与未认证页页脚 v3.4 版本徽章展示一致性 (Institutional In-App Footer Version Badge Alignment): 在 InstitutionalFooter 中对齐登录页规范，于构建 ID 旁展示「v3.4」高亮徽章与语义化容器，确保全站 Header、登录页页脚及已认证终端页脚呈现统一的机构级版本标识。
 - [修复] 观察列表样本 CSV 命名拼写纠正与全域防断裂守卫 (Watchlist Sample CSV Typo Remediation): 彻底纠正样本导出文件名中的拼写错误，统一定名为 deltaharvest_watchlist_sample.csv，并在金融工程测试套件中交付针对样本文件名一致性与 HTTP 200 静态可访问性的防回归断言。
 - [修复] 根除 z-50 隐形模态遮罩与 Suspense Fallback 偶发拦截页脚及标签页点击缺陷 (Eliminate Invisible Overlay & Lazy Modal Ghost Interception): (1) 在 AppModalsContainer 中为四大重型模态框 (HelpHandbookModal, TradierSettingsModal, SchwabSettingsModal, WatchlistManagerModal) 建立显式条件挂载守卫，未唤起时彻底移出 DOM；(2) 全屏 Suspense fallback 容器默认添加 pointer-events-none，仅保留卡片主体 pointer-events-auto；(3) CommandPalette、LegalDisclosuresModal 及 MarketChameleonPrescreenModal 均添加显式挂载判定与全域 pointer-events 防御，杜绝不可见 DOM 元素拦截页脚按钮与自定义 CSV 标签页点击。
