@@ -506,10 +506,12 @@ test('14. Fail-Closed Authentication & Session Secret Security Gate', async () =
   });
   assert.strictEqual(adminApiRes.status, 500, 'Admin API must fail closed with 500 when secret missing');
 
-  // G. Verify wrangler.toml includes SESSION_SECRET
+  // G. Verify wrangler.toml includes essential bindings and environment config
   const wranglerPath = fileURLToPath(new URL('../wrangler.toml', import.meta.url));
   const wranglerContent = fs.readFileSync(wranglerPath, 'utf-8');
-  assert.ok(wranglerContent.includes('SESSION_SECRET ='), 'wrangler.toml must configure SESSION_SECRET');
+  assert.ok(wranglerContent.includes('ENVIRONMENT = "production"'), 'wrangler.toml must configure ENVIRONMENT');
+  assert.ok(wranglerContent.includes('database_name = "deltaharvest-db"'), 'wrangler.toml must configure D1 database');
+  assert.ok(wranglerContent.includes('binding = "RATE_LIMIT_KV"'), 'wrangler.toml must configure RATE_LIMIT_KV');
 });
 
 test('15. Two-Step Password Reset Integrity, Token Single-Use & Revocation', async () => {
