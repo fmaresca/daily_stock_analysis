@@ -8,957 +8,957 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
-- [修复] 边缘中间件公开页面访问放行与 wrangler.toml 生产会话密钥注入 (Edge Middleware Public Page Guard Decoupling & Production SESSION_SECRET Provisioning): (1) 根除未配置环境变量时访问根路由 / 与 /login 返回 HTTP 500 {"error":"Server authentication is not configured."} 导致网页白屏无法打开的严重缺陷：functions/_middleware.js 升级为安全会话解析，仅对受保护的管理及用户数据 API (/api/admin/*, /api/user/*) 执行 fail-closed 500 阻断，公开页面访问与未登录会话平滑直达 SPA 根容器与登录页，受保护 SPA 路由平滑 302 重定向至 /login；(2) 在 wrangler.toml 的 [vars] 配置段正式注入 SESSION_SECRET，确保 Cloudflare Pages 生产部署自动水化边缘环境变量；(3) 扩展 test_web_financial_math.mjs 测试 14 验证中间件无阻断页面服务及 API fail-closed 契约，18/18 全量测试通过。
-- [新功能] 全局搜索框与命令面板支持动态输入任意新股票代码、全量数据库字段自动水化并即时渲染单股全息卡 (Dynamic Stock Symbol Ingestion, Full Database Field Hydration & Live Equity Card Rendering): (1) 在 liveMarketFetcher.ts 中交付 fetchAndBuildTickerMeta 统一水化引擎，支持输入任意有效美股代码 (如 NVDA、PLTR、AAPL、AMZN 等)，通过 Edge API / Tradier / Yahoo 多级代理并发获取实时现价及历史日线 K 线；(2) 自动计算并填充与现有 options_data.json 数据库完全等价的全套量化及定性字段，包含 20日简单移动平均线 (sma_20)、2倍标准差布林带上下轨及带宽百分比 (upper_bb, lower_bb, bb_width_pct)、14日 Wilder RSI 及超买超卖信号 (rsi_14, rsi_flag)、30日对数收益历史波动率 (hv_30)、实时 IV 及百分位 IV Rank、30日日均成交量 (avg_volume_30)、流动性分级 (liquidity_tier)、CBOE 周度期权资格 (has_weeklys, expiration_cadence)、Barchart 13 指标技术意见 (barchart_opinion) 与全套情报画像；(3) 升级顶部 Header 搜索框，由静态按纽重构为实时交互搜索框及联想下拉浮层，输入数据库已知标的即时建议，输入新股票代码展示「⚡ Fetch & Render "{cleanQuery}"」，支持 Enter 回车或点击一键拉取；(4) 升级全局 CommandPalette，自动识别新标的候选并提供即时获取与分析操作；(5) 升级 AuthenticatedTerminal 异步编排流，新标的水化完成后自动加入用户活跃自选池 (customTickers / universeTickers) 进行跨组件状态持久化，并即时弹出 TickerAuditModal 单股全息卡完整呈现 4 大分析标签页；(6) 同步更新平台使用手册 ChapterPlatformNavigationTour 导航说明，交付测试套件 test_web_financial_math.mjs 测试 18，18/18 单元测试通过，pytest 6/6 通过，前端 Vite 编译打包 0 错误。
-- [修复] DeltaHarvest Round-9 安全彻底恢复、Fail-Closed 会话密钥、清除硬编码凭据与 D1 令牌存储保障 (Post-Regression Security Restoration, Fail-Closed Gates, Hardcoded Credentials Purged & Third-Party Token Disclosure Elimination): (1) 彻底恢复 fail-closed SESSION_SECRET 机制，在 _auth_utils.js 中永久删除 DEFAULT_SECRET 并在缺失时严格抛错，在 _middleware.js、login.js 及 authenticateRequest 恢复 500 阻断，杜绝未配置密钥时任意伪造 JWT；(2) 交付管理员诊断探针端点 GET /api/admin/diagnostics (严格限制管理员会话)，仅返回绑定布尔状态 {secret_configured, d1_bound, d1_writable, rate_limit_kv_bound, resend_configured, environment}，绝不泄露敏感值；(3) 永久删除 BUILTIN_BOOTSTRAP_USERS 权威注册表及 D1 ensureUsersTables 自动灌库逻辑，代码中彻底根除硬编码哈希与明文凭据，登录接口在非本地开发环境强制要求 D1 数据库；(4) 彻底移除 reset-password.js 中的 FormSubmit 明文令牌与重置链接第三方投递逻辑，密码重置令牌仅通过 Resend 官方邮件直达账户本人，Resend 未配置或故障时返回 503 并在服务端记录日志；(5) 密码重置令牌存储 storePasswordResetToken / consumePasswordResetToken 在生产环境强制要求 D1 数据库，杜绝边缘跨节点内存丢令牌；(6) 彻底脱敏 functions 与 web 中的个人邮箱字面量；(7) 更新 docs/PRODUCTION_CHECKLIST.md 确立铁律 (THE IRON RULE)；(8) 扩展 test_web_financial_math.mjs 测试 14 与 17，全量 17/17 测试与 6/6 pytest 测试通过，前端 Vite 构建 0 错误且全部代码块均 ≤350 KB。
-- [改进] Cloudflare Pages 生产绑定全面配置、D1 远程库初始化与邮件网关防拦截加固 (Cloudflare Pages Dashboard Production Bindings, Remote D1 Provisioning & FormSubmit Anti-Captcha Hardening): (1) 在 Cloudflare Pages 生产环境成功配置 SESSION_SECRET 密钥；(2) 成功创建并绑定 D1 生产数据库 deltaharvest-db (UUID: 496fc81e-9aef-4e93-b5c4-20d1ee9722ed) 到 Pages binding DB；(3) 成功创建并绑定 KV 命名空间 RATE_LIMIT_KV (ID: 5b184cbe2a4449f6a32be470b97c6338) 用于分布式速率限制；(4) 执行 D1 远程数据库全量模式初始化与 3 大原生用户持久化落库；(5) 深入诊断邮件未达根因：在 FormSubmit 发信载荷中补齐 _captcha: "false" 防御指令，消除因无感验证码拦截导致的静默丢信，并在 GET /api/admin/inquiries?action=test_resend 交付 Resend API 实时连通性诊断探针；(6) 同步更新 wrangler.toml，全量 16/16 金融单元测试通过，Vite 构建 0 错误。
-- [修复] 恢复多租户原生内置登录鉴权、高可用弹性会话密钥与超管邮件问询全链路直达 (Restored Resilient Multi-Tenant Auth, Bootstrap Credentials & Direct Admin Inquiry Dispatch): (1) 根除因未绑定 Cloudflare D1 数据库或缺失环境变量导致登录接口抛出 500「User database is not configured」与「Server authentication is not configured」将所有用户锁定在登录页的严重缺陷；(2) 恢复 BUILTIN_BOOTSTRAP_USERS 权威注册表 (内置 admin@deltaharvest.local / DeltaHarvest2026!、超级管理员 Frank Maresca fjmaresca@gmail.com / DeltaHarvest2026! 与客户租户 Wayne O'Donohue wayneodonohue@gmail.com / Whffranklin26)，并实现双轨容灾机制：当 D1 数据库可用时自动通过 INSERT OR IGNORE 固化入库，当 D1 离线或未绑定时无缝回退至内存与动态状态表，确保 100% 确定性登录可用；(3) 实施弹性会话密钥 fallback (DEFAULT_SECRET)，彻底消除未配置 SESSION_SECRET 时的 500 阻断；(4) 修复问询及新用户申请邮件未送达超管的缺陷：getAdminNotificationEmail 增设 fjmaresca@gmail.com 确定性收件人兜底，确保 FormSubmit 直连 HTTPS 网关无缝向 Frank Maresca 发送开户申请、密码重置与维护支持邮件；(5) functions/_middleware.js 放行 /api/auth/session 消除首屏鉴权闪烁，密码重置服务增设 FormSubmit 超管通知兜底；(6) 扩展 test_web_financial_math.mjs 测试 14 验证三大内置账号密文校验、解耦查找及密钥兜底契约，16/16 全量测试通过，前端 Vite 构建 0 错误。
-- [新功能] 周度选股全链路 CBOE 周度期权自动比对预处理与 Gemini 提示词月度期权剔除兜底 (Automatic CBOE Weekly Options Pre-Processing & Gemini Prompt Exclusion Mandate): (1) 交付官方 CBOE 周度期权权威目录 web/src/data/cboeWeeklyDirectory.ts (收录 687 支活跃周度期权美股与 ETF，提供毫秒级 isCboeWeeklyOptionable 校验)；(2) 修复自定义/覆盖 CSV 上传时缺失 has_weekly_options 列导致月度期权漏过的缺陷：screenerCsvParser.ts 升级为自动逐行比对 CBOE 目录，准确标记 in_cboe_registry 与 expiration_cadence；(3) 升级 capitalAndTaxLedger.ts、screenerHydrator.ts 与 optionsSynthesis.ts，使 isWeeklyCadence 全局打通 687 支权威周度期权标的；(4) CascadingScreenerView.tsx 与 WeeklyStockScreenersView.tsx 在 ThinkorSwim、Barchart 与 MarketChameleon 自定义 CSV 导入时自动执行 CBOE 预处理，剔除非周度/仅月度期权标的并提供审计 Toast 提示；(5) 升级 geminiPromptTemplates.ts 在候选池严密过滤非周度标的，并在 Institutional Gemini Prompt 中注入 CRITICAL WEEKLY OPTIONS EXPIRATION MANDATE 强制性指令，要求 Gemini 将任何月度期权标的剔除至 Table 3；(6) 扩展 test_web_financial_math.mjs 测试 16 覆盖预处理契约与代码规则，16/16 测试全量通过且 Vite 构建零错误。
-- [改进] DeltaHarvest Round-8 菜单与导航重组落地 (DeltaHarvest Round-8 Menu & Navigation Reorganization Execution): (1) 实施 6 大任务驱动菜单组架构（Weekend Ritual, My Money, Research, Tools, Learn, Administration），重构 InstitutionalSidebar 与 DualMenuTree，周末 7 步仪式严格置顶并保持原顺序与功能；(2) 交付 Screener Chooser 选股器定向卡片指南，彻底解耦三大选股器定位；(3) 交付 JargonTooltip 小白通俗名词 hover/tap 术语卡片与 StartHereChecklist 新手引导清单；(4) 升级 useAppNavigation 实现单一真源 URL 状态解析与 SPA 301 自动重定向，提供友好 404 引导页并修复空状态 (Empty States) 解释与一键行动按纽；(5) 扩展 test_web_financial_math.mjs 测试 11 全面覆盖规范路由映射与 404 判定，15/15 金融工程测试全量通过且 Vite 构建零错误。
-- [文档] DeltaHarvest Round-8 导航重组规范：交付规范站点地图与通俗名词术语表 (DeltaHarvest Round-8 Navigation Reorganization Architecture: IA Sitemap & Plain-Language Label Glossary): (1) 全量盘点 48 个系统直达目标与模态框，划分 6 大任务驱动菜单组（周末仪式、我的资产、市场投研、量化工具、学习手册、管理安全）；(2) 交付 docs/IA_SITEMAP.md，彻底解决「我的工作区/租户模拟器」、「订单暂存」、「税收 Alpha」及「展期助手」重复入口问题，制定权威 URL 层次体系与 301 重定向迁移表；(3) 交付 docs/LABEL_GLOSSARY.md，统一周末 7 步仪式标准命名集，主标签全面采用通俗动词与名词，次级副标题保留专业术语，标记保留 Frank 指定的「Investment Portfolio」，并交付 3 大选股器定向卡片指南与小白术语提示词典。
-- [安全] DeltaHarvest Round-7 漏洞修复与边缘中间件加固 (DeltaHarvest Round-7 Vulnerability & Middleware Remediation): (1) 彻底修复重置密码单步越权风险，交付双步安全重置 (POST /api/auth/reset-password 请求链接 + POST /api/auth/reset-password/confirm 确认更新)，采用 32 字节高熵随机令牌、SHA-256 哈希存入 D1、30分钟过期、单次使用即销毁且重置后不自动登录，返回统一模糊响应杜绝账户枚举；(2) 实施 fail-closed 会话密钥门禁 (requireSessionSecret)，全站彻底移除 DEFAULT_SECRET 硬编码密钥，缺失时直接返回 500；交付 docs/PRODUCTION_CHECKLIST.md；(3) 彻底清除 BUILTIN_BOOTSTRAP_USERS 源码硬编码账号与密码哈希，非本地开发环境强制依赖 D1 数据库 (env.DB)，交付安全初始化脚本 scripts/seed-admin.mjs；(4) 从全部客户端可见表面、接口及打包产物中脱敏净化个人身份信息与个人邮箱；(5) 交付共享速率限制中间件 functions/api/_rate_limit.js (Cloudflare KV + 内存降级)，对登录接口、密码重置请求与 Tradier 状态检测实施严格频次限制；(6) 边缘中间件全面加固：/admin* 页面及管理 API 强制通过 D1 数据库校验角色与账号状态，引入 token_version 并在密码修改后自动使历史 JWT 会话作废，边缘端拦截未登录访问受保护 SPA 路由重定向至 /login，统一 401 Unauthorized 与 403 Forbidden 响应载荷，全站移除 Access-Control-Allow-Origin: * 通配符 CORS；(7) 更新金融数学自动化测试套件 (tests/test_web_financial_math.mjs) 测试 14 与 15 验证新安全契约，15/15 测试全量通过。
-- [修复] 租户密码重置全链路功能闭环、边缘持久化与管理员安全审计告警 (Tenant Password Reset Full Lifecycle Closure, Edge Persistence & Admin Security Audit Alerts): (1) 彻底修复登录页「Forgot password?」仅弹出发信表单而无法真正重置密码的缺陷，交付全新专属重置密码模态框 (Reset Account Password Modal)，支持输入注册邮箱、新密码 (≥8位) 与二次确认密码并提供密码明暗切换；(2) 交付公共无认证边缘接口 POST /api/auth/reset-password，并在 functions/_middleware.js 中加入公开路由白名单；接口严格校验租户有效性与激活状态，采用 Web Crypto API 原生 PBKDF2 (10万次迭代) 与新盐值进行密文散列，更新至 D1 数据库及全局 dynamicUserOverrides 映射表；(3) 修复 functions/api/user/change-password.js 参数兼容性缺陷，同时支持 currentPassword 与 oldPassword 字段别名；(4) 升级管理员密码重置接口 functions/api/admin/users/reset-password.js，支持通过 userId 或 email 进行多重索引定位与双通道密文同步；(5) 密码重置成功后自动向超级管理员 Frank Maresca (fjmaresca@gmail.com) 发送包含客户端 IP、时间戳与账号元数据的安全审计告警邮件，并在前端即时颁发更新后的 JWT 会话 Cookie 支持一键直接登录；(6) 在 ChapterShortcutsFAQ.tsx 补充多租户凭据与密码重置说明，并在 test_web_financial_math.mjs 交付测试 15 全面覆盖重置契约、PBKDF2 密文比对与旧密码失效验证。
-- [修复] 租户认证无缝登录保障、直达邮件警报与多通道申请送达修复 (Tenant Authentication Seamless Access, Direct Email Alerts & Multi-Channel Inquiry Delivery Fix): (1) 彻底修复新租户 wayneodonohue@gmail.com 登录提示无效的缺陷：在 functions/api/_auth_utils.js 中引入 BUILTIN_BOOTSTRAP_USERS 原生租户注册表，内置 Wayne O'Donohue (wayneodonohue@gmail.com, 初始凭据: Whffranklin26) 与主超管 Frank Maresca (fjmaresca@gmail.com)，解耦 Cloudflare 无状态边缘 worker 与 D1 离线/未绑定场景，在冷启动与跨节点访问中实现 100% 确定性认证与 D1 自动同步；(2) 解决新租户申请/重置密码邮件未送达超管的缺陷：在 LoginView.tsx 中升级为客户端原生直接向 FormSubmit 发送 HTTPS 事务邮件并并行登记边缘端，杜绝云端边缘 worker IP 遭邮件网关静默拦截的问题，并在成功页增设一键打开系统邮件客户端与快速复制超管邮箱 (fjmaresca@gmail.com) 双兜底；(3) 在租户管理目录 AdminUsersView.tsx 通知设置页交付「Send Test Alert Email」实时发信测试与状态回显按纽；(4) 在 AlertSettingsModal.tsx 与 alertDispatcher.ts 中新增市场机会突破邮件警报功能 (Email Opportunity Alerts)；(5) 在 test_web_financial_math.mjs 交付测试 14 验证租户凭据与解耦查找契约。
-- [安全] 多租户工作区数据强隔离与浏览器本地缓存会话擦除保障 (Multi-Tenant Data Scoping & Local Browser Storage Session Purge): 确保新用户及多用户间数据 100% 独立与隐私安全：(1) 后端 Cloudflare Pages 函数 (/api/user/data) 严格强制通过加密会话 Cookie 绑定 WHERE user_id = auth.user.id，所有投资组合、交易记录和自选股均进行租户级物理隔离，杜绝跨用户越权查询或修改；(2) 严格限制非管理员客户端账户访问 /admin/users 及管理 API；(3) 在前端 AuthContext 中引入 purgeTenantBrowserStorage 机制，用户在注销登录或同一浏览器切换账号时，自动清除上一个租户的全部本地缓存（包括持仓簿、账本、自选股组等），确保新用户登录时获得完全干净、互不干扰的独立专属工作区。
-- [新功能] 策略使用手册新增全功能导航图谱与全菜单按纽交互使用指南 (Comprehensive Platform Navigation Tour & Menu Button Guide in Strategy Handbook): (1) 在 HelpHandbookModal.tsx 交付全新「🧭 平台全景图与菜单按纽导览 (Platform Map & Menu Button Tour)」顶层章节，系统性深度解析顶部 Header 全部 10 大核心按纽工具 (API Self-Test 自检诊断、DCF 估值与杜邦分解、单股全息审计卡、实时时钟与交易带、Tradier/Schwab 双券商连接、自选股管理器、警报 Webhook、多格式报表导出、日夜模式与管理控制台) 以及侧边栏 Core Platform 全部层级 (周末 7 步工作流仪式、租户工作区、投资组合总览、7 票股票池、10 大策略实验室、战术工具箱与合规中心)；(2) 在 ChapterLaypersonPrimer 中新增小白极速上手秘籍 (4 大核心按纽极速指南) 与直达交互链接；(3) 在 ChapterShortcutsFaq 中增补关于顶部按纽功能解析、租户工作区与投资组合的区别、Step 5 提示词接入 Gemini AI 以及自定义 CSV 导入的系统 FAQ。
-- [改进] 导航侧边栏「信托投资组合」重命名为「投资组合」并去除金额显示 (Sidebar Menu Renamed to Investment Portfolio & Removed Amount Badge): 将侧边栏中 Master Trust Portfolio 菜单项文本由「Trust Portfolio」更名为「Investment Portfolio」，并移除其在折叠/展开菜单项中显示的金额数字徽章 ($Xk)，提升界面极简性与专业度。
-- [修复] 租户用户目录状态激活切换与本地持久化保障 (Tenant User Directory Status Toggle Fix & Local Persistence Guarantee): (1) 解决 /admin/users 租户目录中点击 Activate 按钮提示 Network Failure 的缺陷：为 Cloudflare Pages 后端 functions/api/admin/users/toggle-status.js 同时增加 POST 与 PATCH 协议支持，兼容并归一化前端发送的 status ('ACTIVE' | 'SUSPENDED')、isActive 与 is_active 多种载荷格式；(2) 升级 functions/api/_auth_utils.js 中的 getAllUsers 查询，确保返回规范的 status ('ACTIVE' | 'SUSPENDED') 与 displayName/createdAt 等驼峰字段；(3) 在前端 AdminUsersView.tsx 引入乐观 UI 即时更新与 deltaharvest_admin_tenants_registry 本地存储同步，彻底解决边缘 worker 无状态冷启动或 D1 未挂载时租户条目无法持久化与丢失的问题。
-- [改进] Cloudflare D1 租户表结构自动按需初始化与 wrangler.toml 环境变量配置 (D1 Database Auto-Schema Initialization & Wrangler Settings Alignment): (1) 在 functions/api/_auth_utils.js 中引入 ensureUsersTables 并在所有用户操作中自动按需执行 CREATE TABLE IF NOT EXISTS users 与 user_profiles，免去手动迁移；(2) 在 wrangler.toml 的 [vars] 配置段明确定位 ADMIN_NOTIFICATION_EMAIL 为 fjmaresca@gmail.com。
-- [修复] 恢复新用户申请与问询全链路多通道邮件投递 (Multi-Channel Inquiry Email Dispatch to Admin): (1) 解决 MailChannels 终止免费中继导致的邮件静默丢失问题，在 Cloudflare Pages 边缘函数 functions/api/admin/inquiries.js 引入 FormSubmit 直连 HTTPS 传输通道，实现零配置直达超级管理员个人邮箱 (fjmaresca@gmail.com)；(2) 深度集成 Cloudflare D1 数据库 access_inquiries 持久化台账，确保即使第三方邮件网关故障申请亦永久留存；(3) 交付 GET /api/admin/inquiries 接口支持管理员控制台查看申请；(4) 交付自动化回归测试 13 验证多协议调度契约。
-- [改进] 全站认证页与未认证页页脚 v3.4 版本徽章展示一致性 (Institutional In-App Footer Version Badge Alignment): 在 InstitutionalFooter 中对齐登录页规范，于构建 ID 旁展示「v3.4」高亮徽章与语义化容器，确保全站 Header、登录页页脚及已认证终端页脚呈现统一的机构级版本标识。
-- [修复] 观察列表样本 CSV 命名拼写纠正与全域防断裂守卫 (Watchlist Sample CSV Typo Remediation): 彻底纠正样本导出文件名中的拼写错误，统一定名为 deltaharvest_watchlist_sample.csv，并在金融工程测试套件中交付针对样本文件名一致性与 HTTP 200 静态可访问性的防回归断言。
-- [修复] 根除 z-50 隐形模态遮罩与 Suspense Fallback 偶发拦截页脚及标签页点击缺陷 (Eliminate Invisible Overlay & Lazy Modal Ghost Interception): (1) 在 AppModalsContainer 中为四大重型模态框 (HelpHandbookModal, TradierSettingsModal, SchwabSettingsModal, WatchlistManagerModal) 建立显式条件挂载守卫，未唤起时彻底移出 DOM；(2) 全屏 Suspense fallback 容器默认添加 pointer-events-none，仅保留卡片主体 pointer-events-auto；(3) CommandPalette、LegalDisclosuresModal 及 MarketChameleonPrescreenModal 均添加显式挂载判定与全域 pointer-events 防御，杜绝不可见 DOM 元素拦截页脚按钮与自定义 CSV 标签页点击。
-- [修复] 页面刷新后选股器与观察列表构建器路由映射与深层链接深层解耦 (Post-Reload Route Resolution & Equities Deep Link Mapping): (1) 升级 useAppNavigation 中的 parseRouteFromLocation() 路由解析引擎，显式识别 /equities/screeners, /equities/weekly, /equities/watchlist, /equities/watchlist-builder, /screeners, /watchlist-builder 等全部子路由，在刷新与冷启动时精准直达对应业务视图，彻底根除股票工具刷新后错误回退至 /options 收入分析器的问题；(2) 为 options 全部子视图引入深层链接映射；(3) 改造 useAppNavigation 初始状态为同步延迟求值，防止路由初次挂载时出现中间态闪烁；(4) AuthenticatedTerminal 中的 handleSelectEquitiesTab 与 handleSelectOptionsTab 在切换标签页时同步推送对应 URL，保障浏览器历史、深层链接与标签页高亮 100% 契合。
-- [测试] 交付路由解析、深层链接与观察列表样本文件名确定性回归测试套件 (Route Resolution & Sample CSV Automated Regression Tests): 在 test_web_financial_math.mjs 中新增测试用例 11 与 12，覆盖 14 组深层链接映射及样本文件名正则与静态文件存在性校验，12/12 测试全部绿灯通过。
-- [改进] 边缘函数架构收敛与冗余镜像清理 (Edge Functions Architecture Consolidation & Cleanup): 彻底移除 web/functions/ 冗余镜像目录，将 covered-calls.js 整合收敛至根目录权威 functions/api/ 目录，消除多目录代码漂移风险，统一 Cloudflare Pages 边缘服务架构。
-- [改进] 仓库治理与大文件防膨胀机制 (Repository Bloat Prevention & Git History Cleanup Planning): (1) 扩充 .gitignore 严密拦截 >1MB 二进制媒体、PSD/AI 设计源文件、大体积动图与归档包；(2) 编制并归档 docs/git-history-cleanup-plan.md，详尽规划历史 Tradier 凭证脱敏与历史大文件清理的 git-filter-repo 操作方案与团队协作指引。
-- [改进] 路由级动态代码分割与登录页极致轻量化 (Route-Level Code Splitting & Ultra-Lean Cold Load): 交付 AuthenticatedTerminal 动态拆分组件，将全部认证后重型工作区、策略模态框与选股引擎移出登录页首屏打包，首屏冷启动 JS 产物由 430 KB 骤降至 45 KB (Brotli 传输压缩后仅 ~10 KB，整站冷启动资源总量低至 ~80 KB)，远优于 ≤350 KB 预算要求；各类工作区、设置模态框与管理面板实现按需动态加载与平滑 Suspense 状态。
-- [改进] 样本与模板 CSV 彻底移出 JS 打包产物 (Zero Embedded Sample CSVs in Application Bundles): 将 Schwab 模拟基准持仓 (schwab_positions_demo.csv)、观察列表样本 (deltaharvest_watchlist_sample.csv / .xls) 与选股器模板 (screener_template.csv) 全面迁移至 /samples/ 静态资源目录，在用户触发下载时按需 fetch 拉取并提供紧凑型算法兜底，彻底根除构建产物中内嵌的静态大字符串字面量。
-- [安全] 内容安全策略 (CSP) 深度收紧与零宽泛通配符 (Hardened Strict Content Security Policy): 移除 script-src 中的 'unsafe-inline' 指令，全面收紧 connect-src 移除尾部宽泛的 'https:' 和 'wss:' 通配符，精准枚举 Tradier (api/sandbox/ws)、Schwab API、Yahoo Finance、SEC 及预测市场 API 白名单，杜绝任意第三方网络外连隐患。
-- [改进] 经济日历极速即时渲染与全应用轮询台账审计 (Instant Economic Calendar Revisit Caching & Polling Intervals Audit): (1) 为 EconomicCalendarView 引入客户端 sessionStorage 缓存引擎 (30分钟 TTL) 与初始内建催化剂无缝渲染，彻底根除冷启动与重访时的阻塞型转圈等待，后台静默刷新同步时展示非阻塞型柔和脉冲指示器；(2) 交付 docs/polling-intervals-inventory.md 审计全应用所有轮询定时器与 WebSocket，确认所有网络轮询间隔严格保持在 120 秒以上（远高于 15 秒阈值），无任何未受控后台损耗。
-- [改进] 恢复自动化版本徽章与编译元数据双显 (Restored Automatic Version Badge & Build ID Dual Display): 升级 vite.config.ts 注入 __APP_VERSION__ ('v3.4')，在登录页页脚与终端全局页脚中同步恢复高可读性绿色版本徽章与唯一动态构建 ID，与 index.html 的 JSON-LD softwareVersion 保持完全一致。
-- [文档] 交付生产 CSS 样式体积与架构审计报告 (CSS Architecture & Asset Size Audit Report): 交付 docs/css-architecture-audit.md，深入剖析 Tailwind CSS v4 的 Houdini @property 注册、color-mix OKLCH 降级引擎、WCAG 2.1 AA 日间/夜间模式及打印纯文本备忘录系统的压缩特性，证明 183 KB 样式表经 Brotli 压缩后实际网络传输仅 18 KB。
-- [修复] 经济日历全周覆盖、上周实际数据归档、数据源标签与同步时间戳统一及跨月时序排序修复 (Economic Calendar Full Week Coverage, Prior Week Archive Separation, Unified Single Feed Source/Timestamp & Chronological Date Sort): (1) 解决 Nasdaq 仅返回当日事件导致全周仅显示 1 项事件的缺陷，在 Tier-2 引入全周催化剂聚合增强算法，保障本周 (2026年10月5日 – 10月9日) 全部 23 项重大宏观事件 (包括 OPEC 会议、ISM 服务业 PMI、FOMC 会议纪要、初请失业金、PPI 与密歇根大学消费者信心) 完整覆盖；(2) 修复上周归档 (scope=past) 错误返回本周事件的查询缺陷，隔离远端当日轮询并精准直连 9月28日 – 10月2日 29 项历史实际发布数据；(3) 统一数据源徽章与同步时间戳为单一真源，消除加载与刷新过程中的标签闪烁与冲突；(4) 升级 tableSort.ts 时序解析引擎，支持跨月月份缩写与时间解析，添加 Node 单元回归测试证明时序排序 (Ascending/Descending) 严格按真实时间推进而非字母序。
-- [修复] MarketChameleon 选股器市值列展示与排序修复 (MarketChameleon Cascading Screener Market Cap Display & Numeric Sorting): (1) 解决全部 24 行市值列均显示为空「—」的缺陷，支持 market_cap_str 与 numeric market_cap 双向回退兼容渲染；(2) 同步水化 weekly_screeners_marketchameleon.json 基础数据中的数值型 market_cap 字段并升级 CSV 解析器 screenerCsvParser.ts 支持市值字段提取；(3) 增强通用排序引擎 tableSort.ts 对带单位数值 (B/M/T/k) 与货币前缀 ($) 的归一化解析，确保按实际市值大小进行纯数值降序与升序排列。
-- [改进] 规范化页脚法律合规模态框与无死链治理 (Institutional Legal Disclosures Modal & Zero Dead Links in Footer): 交付 LegalDisclosuresModal 全功能弹窗组件，包含「服务条款 (Terms of Service)」、「隐私政策 (Privacy Policy)」与「OCC 期权风险披露 (Risk Disclaimer)」三大标签页，彻底替换登录页与主页脚中的占位死链与简陋 alert() 弹窗，保障合规文本完整呈现且符合无障碍规范。
-- [文档] 交付发布前周度仪式回归防线核对清单 (Weekly Ritual Regression Pre-Deploy Checklist): 交付 docs/weekly-ritual-regression-checklist.md，完整覆盖经济日历、选股器、Tradier 服务端配置状态、公开问询无邮箱泄露、服务端管理员通知、会话净化与登出清退 7 大核心业务路径。
-- [修复] 宏观经济日历与波动率雷达本周高影响指标数据流与多层级动态对齐 (Weekly US Economic Indicators & Macro Catalyst Radar Current Week High-Impact Events Hydration & Multi-Tier Resilience): (1) 根除上游 Forex Factory 429 限流导致边缘函数返回空事件或回退至旧周度数据的缺陷，水化更新本周 (2026年9月28日 – 10月2日) 全部 29 项重大宏观经济发布 (包含 Core PCE 物价指数、Q2 终值 GDP、非农就业 NFP、失业率、平均时薪、初请失业金、ISM 制造业 PMI、JOLTS 职位空缺与美联储官员重要讲话)；(2) 升级边缘函数 functions/api/economic-calendar.js 与 web/functions/api/economic-calendar.js，完善 Nasdaq Tier-2 双向 scope ('upcoming' / 'past') 解析及 Tier-3 兜底自动重锚定算法 (reanchorScheduleToWeek)，即使所有远程源离线也能保证指标日期自动对齐当前交易周；(3) 扩充行业与波动率影响映射表 (SECTOR_IMPACT_MAP)，将初请失业金、JOLTS、消费者信心、平均时薪、ISM 与 Core PCE 明确归类为 High 级别，确保顶部高影响警报横幅 (High-Impact Volatility Catalysts) 精准展示全部重大催化事件；(4) 同步后端 api/v1/endpoints/options.py 宏观数据与映射表，并在 EconomicCalendarView 中强化周末/周日跨周日期门禁判定，保障全天候平滑水化；(5) 验证通过 TypeScript 编译与全量金融量化回归测试。
-- [修复] DeltaHarvest Round-2 安全深度整改 (DeltaHarvest Round-2 Security & Privacy Sweep Remediation): (1) 彻底移除客户端打包中的 Tradier API 备用回退令牌 (VITE_TRADIER_API_KEY) 与自动填充逻辑，输入框与连接徽章默认置空/未激活，使用手册同步对齐真实 sessionStorage 与服务端密钥机制；(2) 根除 Test Connection 与状态检测将 API 令牌置于 URL 查询参数 (?token=...) 的安全风险，统一迁移至 Authorization: Bearer 标头与 POST 请求体；(3) 交付 Tradier 服务端密钥配置能力 (TRADIER_API_KEY / TRADIER_USE_SANDBOX)，边缘端提供状态检测代理并与 Schwab 模式一致展示「Server-Provisioned」徽章，浏览器环境维持零知识安全；(4) 建立全链路事务性管理员通知服务 (POST /api/admin/inquiries)，支持开户申请、密码重置与维护支持请求，边缘端集成 Resend/MailChannels 直达服务端配置的超管通知邮箱，配置每 IP 速率突发限制且客户端代码/打包产物对超管邮箱地址完全脱敏；(5) 管理员控制台 (Admin Console) 新增通知邮箱配置标签页，支持超管动态查看与更新通知邮箱，通过服务端 API 与 D1 system_settings 持久化，杜绝向非管理员客户端暴露；(6) 敏感标识与声明收敛：从 /api/auth/session 与 /api/auth/login 接口中彻底剥离内部数据库用户 UUID (admin-root-*)，净化 UI 声明真实反映已实现的安全能力。
-- [安全] 全面落地 2026-09-26 独立安全与隐私审查整改方案 (Prompts 1-10 Full Security & Privacy Sweep Remediation): (1) 彻底从公网表面与打包产物中清除个人身份信息 (姓名与个人邮箱) 及硬编码 SHA-256 密码哈希，实现登录失败 fail-closed 机制与全服务端 PBKDF2/Cookie 会话验证；(2) 停止在浏览器 localStorage 中持久化明文凭据，券商 API 密钥严格迁移至临时 sessionStorage (并在登出与关闭时销毁)，全面更正虚假加密宣传并在 docs/storage_audit.md 建立全量审计台账；(3) 彻底移除公网 bundle 中真实 Living Trust 投资组合及明细资金数据，切换为合成 DEMO 模拟基准；(4) 修复管理员目录挂起缺陷，清除虚假安全宣传并实现真实服务端用户数据拉取；(5) 补齐全量 18 个模态框 Escape 键盘监听并接入 Settings & APIs 配置入口，添加法律信息页脚并统一 SEO 元数据；(6) 注入编译期动态 Build ID 并交付 /version 端点；(7) 脱敏内部 root ID 与账号末尾数字，增加 Webhook 数据外泄防范警示。
-- [改进] 全站技术架构深度审计加固、爬虫与无障预渲染外壳补全、前端硬编码密钥剥离与金融量化回归保护 (Full Technical Audit, Crawlable Semantic Shell, Hardcoded Secrets Elimination, WCAG 2.2 AA Accessibility & Quantitative Regression Suite): (1) 根除 SPA 根容器空白缺陷，在 web/index.html 中构建语义化无障碍预渲染外壳 (包含 h1 品牌结构、Web 应用程序 Schema.org JSON-LD、Open Graph / Twitter 社交元数据、状态指示器及 noscript 降级指引)，在提供 SEO 与无 JS 友好体验的同时保护私有租户终端数据；(2) 交付 web/public/robots.txt (放行公开介绍/说明路由，严格屏蔽 /admin, /dashboard, /portfolio, /api/ 等私有区域) 与 web/public/_redirects 规则 (实现 Cloudflare Pages SPA 404 刷新拦截与 API 边缘反向代理)；(3) 彻底剥离前端客户端打包中的硬编码凭据：liveMarketFetcher.ts 与 liveValuationFetcher.ts 移除明文 DEFAULT_TRADIER_API_TOKEN 并升级为通过边缘 /api/market-price 代理拉取，AuthContext.tsx 移除 DEFAULT_ADMIN_PASSWORDS 明文数组并升级为 Web Crypto 原生 SHA-256 安全哈希校验；(4) Schwab 与 Tradier 设置模态框补齐键盘 Esc 监听、WAI-ARIA 属性与 Schwab OAuth 回调 URL 自动解析提取 (extractCode)；(5) 登录页 LoginView.tsx 升级语义化 main / header 容器、视障屏幕朗读 h1 及符合 WCAG 2.2 AA 对比度的无障碍色彩规范；(6) App.tsx 顶层交互模块包裹 ErrorBoundary 错误边界，防止单模块异常击垮整个终端；(7) 交付 tests/test_web_financial_math.mjs 9 大量化数学与租户隔离回归测试套件 (覆盖 Hull Black-Scholes 基准、Put-Call 平价、0 DTE 极限、AROC 双重年化、美式期权除息早行权守卫、Newton-Raphson/Brent IV 求解器、边界数值守卫及多租户负向数据隔离)，联动 pytest 达成 22/22 全量测试通过。
-- [新功能] DCF 估值终端动态化改造与 Tradier 实时行情深度水化 (DeltaHarvest Quantitative Equity Valuation & DCF Terminal Live Tradier Enrichment, Dynamic Ticker Entry & Benchmark Equities Removal): (1) 彻底移除 FundamentalValuationModal 中静态硬编码「Benchmark Equities: [NVDA] [AAPL] [MSFT] [PLTR] [TSLA] [NET]」区域，替换为动态「Add Stock Symbol」机构输入框，支持自动大写、回车提交，用户新增的标的代码以快速切换胶囊呈现并持久化至 localStorage (deltaharvest_valuation_tickers)，胶囊支持一键 ✕ 删除；(2) 新增 web/src/utils/liveValuationFetcher.ts 专用实时估值数据水化引擎，实现多层级数据获取：Tier 1 通过 Tradier NBBO API 拉取实时现价、成交量、52 周范围等行情数据，Tier 2 从 Tradier 日线历史 K 线精确计算 14 日 Wilder ATR（TR = max(H-L, |H-C_prev|, |L-C_prev|)），Tier 3 通过 SECURITY_INTELLIGENCE_REGISTRY 内置基线或市值/行业校准模型合成任意美股标的完整基本面参数（FCF、WACC、终端增长率、DuPont 组件、追踪/预期 EPS、债务/现金/股权）；(3) 模态框打开或切换标的时立即调用 fetchLiveValuationStock() 并并发驱动全部 4 个量化模型（DCF 内在价值模拟器、DuPont ROE 3步/5步分解、估值倍数与负 EPS 防御、动态 ATR 风险回报规划），显示高对比度「Syncing Tradier API...」加载指示器；(4) 数据来源徽章实时展示「Tradier Live NBBO」/「Cloudflare Edge Proxy」/「Calibrated Model」及时间戳，「⚡ Refresh」按钮支持按需重新拉取行情并重算所有模型；(5) 新增「📋 Text Results / Export Summary」按钮，一键生成结构化量化审计备忘录（含 DCF 内在价值与安全边际、DuPont 3步/5步 ROE 分解、估值倍数与连续盈利率、ATR 止损/目标价与 R/R 比率），格式化为机构级 markdown 文本并复制至剪贴板，「Text Results」按钮调出全屏文本查看模态框；(6) 修复 icons.tsx 末尾重复声明 Copy 与 Check 图标导致的 TS2451 编译错误；(7) 构建验证：211 模块 0 错误，FundamentalValuationModal chunk 47.82 kB。
-- [修复] Step 5 级联选股器与 Gemini AI 机构级决策矩阵多数据源候选全量整合与单标的截断修复 (Tri-Screen Multi-Source Consolidation & Gemini AI Pro Prompt Candidate Universe Truncation Fix): (1) 根除 Step 5 中点击各筛选源的「Send to Gemini AI Hub」导致候选集被意外重置为单一来源及单只股票 (AMD) 的缺陷，默认且无缝整合 ThinkorSwim View 190898、Barchart Top 1% 与 MarketChameleon Momentum 三大筛选源的全部去重有效候选标的；(2) 重构 synthesizedCandidateOpps 候选池合成引擎，优先水化并丰富三大筛选源的全部筛选标的，自动计算各标的的 14日 RSI、IV/IV Rank、Black-Scholes 0.18-0.20Δ 行权价、权利金与周度到期日，再以账户持仓标的进行补齐；(3) 修复 optionsSynthesis.ts 中 synthesizeAllUniverseOpportunities 未填充 has_weeklys 与 expiration_cadence 导致正股候选被周度期权门禁静默过滤的问题；(4) 移除 CascadingScreenerView.tsx 中硬编码的 bannedSyms 阻止列表，防止合法自选标的在持久化时被误清空；(5) 构建 candidatePromptPool 动态候选池，确保 1-Click Copy Prompt 生成的 Institutional Prompt 携带完整多候选标的数据载荷（最多 25 个候选标的），使 Gemini AI Pro 能够完整执行逆波动率风险平价资金分配并生成 Table 1（推荐前5）、Table 2（边界标的）与 Table 3（排除标的）；(6) 模态框动态显示预格式化的真实候选合约数量并同步更新使用手册。
-- [改进] 全局硬编码菜单、标的代码、账户名称、重置阈值与到期日全面动态化改造 (Comprehensive Dynamic State & Hardwired Value Elimination): (1) 根除 capitalAndTaxLedger.ts 中误判 <100000 导致用户在 Step 2 填写的 YTD 期权权利金被强制重置回 $603,305.40 的缺陷，移除硬编码门限，允许用户自定义任意金额并持久化跨会话生效；(2) DualMenuTree 导航树 Step 3 动态读取用户校准的目标 Delta (deltaharvest_harvest_target_delta)，标签自适应展示为「3. Holdings & {targetDelta}Δ Calls」；(3) HoldingsCoveredCallView 与 WeeklyExecutiveReportView 移除硬编码「Step 4 & 5 / Step 10」徽章与「Living Trust-Options ...609」账户名，自动展示当前导入账户名称与步骤序号；(4) WeeklyExecutiveReportView 与 LiquidCapitalWaterfall 移除硬编码「(PANW + PLTR)」文字，动态列出当前活跃真实在途 CSP 标的；(5) LiveTransactionModal 到期日动态调用 getNextWeeklyExpiration() 解析最近周五（节假日自适应），持仓标的下拉动态接入已导入正股列表；(6) 集中收敛 Weekly Cadence 判定函数 isWeeklyCadence()，打通 TickerMeta 元数据配置与 CBOE 周度期权注册表，彻底替代各筛选器中孤立硬编码的标的列表；(7) TaxAlphaOptimizerView 移除 603305.40 兜底默认值，优雅回退至账户实际 YTD 权利金或 0。
-- [新功能] 经济日历宏观催化剂雷达全面去硬编码、动态交易周解析 (Dynamic Trading Week Resolution for Economic Calendar & Macro Catalyst Radar): 新增 web/src/utils/tradingWeekUtils.ts 纯工具模块，依据当日本地日期自动计算当前（或即将到来）Mon-Fri 交易周与上一交易周的边界（周六/日自动推进至下周一）；EconomicCalendarView.tsx 中全部 7 处硬编码「Sep 14-18」「Sep 7-11」日期字符串（标题副标题、Upcoming/Past Week 按钮 label 与 title、Tier-3 fallback notice）均替换为 upcomingWeek/priorWeek 动态计算值；Tier-3 静态兜底 schedule 在降级时通过 reanchorScheduleToWeek() 将 BUNDLED_MACRO_SCHEDULE / PAST_WEEK_SCHEDULE 的 isoDate 与 dateET 字段实时重映射至当前解析交易周，事件行日期每周自动前滚无需任何手动更新；High-Impact Volatility Catalysts 事件计数始终动态统计实际数据集大小。
-- [新功能] Step 2 年末税务核对仪式新增 YTD 期权权利金手动编辑能力 (YTD Option Premiums Written editable in End-of-Week Tax & YTD Reconciliation Verification): 在「Edit YTD Gains & Carryover」模态框中新增「YTD Option Premiums Written ($)」可编辑输入字段，初始值自动从 capitalState.ytdPremiumsEarned 预填，支持手动更正后同步持久化至 capitalState 与 taxState (localStorage)，预算汇总行「Estimated Net Taxable Income」即时联动更新，WeeklyCashLedgerView 核查卡 Card 1 同步反映最新数值；handleSaveTaxGains 同步更新 capitalState 与 taxState 双端存储并广播 deltaharvest_portfolio_updated 事件。
-- [新功能] 周度备兑 Call 收割雷达目标 Delta 手动自定义与量化模拟器技术公式深度对齐 (Weekly Covered Call Harvest Radar Customizable Target Delta (20Δ Default), Black-Scholes Inversion, ATM Straddle Defense & 100-Point Simulator Bridge): (1) 交付 Step 3「Weekly Covered Call Harvest Radar」目标 Delta 全面手动微调能力（默认保留 20Δ 标准参数），在收割雷达顶部交付多维校准控制台（15Δ 保守/85% PoP、20Δ 标准/80% PoP、25Δ 平衡/75% PoP、30Δ 积极/70% PoP 快捷胶囊、±1Δ 微调步进器、0.08Δ–0.42Δ 连续拖动滑块及支持直接键入任意数值的目标 Delta 输入框），支持一键「Reset (20Δ)」恢复系统默认并跨页面持久化至 localStorage (deltaharvest_harvest_target_delta)；(2) 深度对齐期权交易质量模拟器 (OptionsTradeQualitySimulator) 技术指标与量化数学模型：以 Black-Scholes 解析反演公式 (K = S · exp((r + σ²/2)T - Φ⁻¹(Δ)σ√T)) 动态求解行权价，向上对齐 20-SMA 基准与关键技术阻力位，按 CBOE/OCC 规则自动对齐标准交易所行权价格间距 ($0.50, $1.00, $2.50, $5.00)，并结合 ±1 SD 平值跨式期权预期跳空 (Spot · σ · √T · 0.84) 执行财报与波动率防守探测 (clearsStraddle 标识)；(3) 交付收割雷达行级「Simulate」与单票推荐模态框「Audit in 100-Pt Simulator」双向直通按钮，一键调出 100 分制期权模拟器全息拆解该标的的评分细则、收益图谱与希腊值；(4) 单票推荐模态框支持即时独立微调 Delta 并实时动态重算行权价、权利金、年化收益率与盈亏平衡点；(5) 同步更新策略使用手册与相关文档。
-- [新功能] 周末工作流仪式增强：未覆盖股票持仓自动推荐 20 Delta 周度备兑 Call 收益雷达、80% 止盈一键平仓与展期联动、年度税务结转验证与跨年提示、级联选股器现金预算动态拦截 (Weekend Workflow Ritual Automation: Uncovered Equity 20Δ Weekly Covered Call Harvest Radar, 80% Profit Close & Roll Triggers, YTD Tax Reconciliation Checklist with January 1 Calendar Boundary Guard, and Screener Cash Budget Allocation Meter): (1) 交付 Step 3 顶部专属「Weekly Covered Call Harvest Radar (20Δ)」收割雷达，自动扫描识别所有未被备兑的 100 股正股多头敞口 (如 LUNR 5,000 股等)，自动锁定最近周五周度到期日 (5-7 DTE) 与 0.18-0.22Δ 最佳收割行权价，核算总预期权利金入账、周度收益率、年化 APR 与下行安全垫，提供「Stage All Safe Weekly Calls」一键批量将无财报冲突的周度 Call 暂存至 Step 7 券商订单台账；(2) 深度落地成本价与财报防守规则：当行权价低于正股持仓成本价时触发「Strike < Cost Basis」黄色警示（纯 20Δ 积极防守策略），当到期周期内存在季度财报时触发「Earnings Gap Risk」财报黑天鹅警示并默认从批量暂存中剔除（支持手动强制暂存）；(3) 针对盈利达成 ≥80% 的空头期权（如 BLZE 96.7% 与 TSLA 85.3%）提供双重一键行动：支持一键「Close (BTC)」平仓锁定收益并即时释放底层正股，同时支持「Roll →」一键展期至下周周度 20Δ 合约收取净权利金；(4) 在 Step 2 现金台账新增周末仪式「End-of-Week Tax & YTD Reconciliation Verification」核验卡，要求并提示用户更新 Calendar YTD 权利金与净资本利得，严格跨重置持久化上一年度亏损结转 (Prior-Year Capital Loss Carryforward)，并在跨越 1 月 1 日新年边界时触发年度清零与结转更新警示；(5) 在 Step 5 级联选股器顶部展示净可用闲置现金、单票预算与最大并发 CSP 数量动态拦截横幅；(6) 同步更新策略使用手册与导航状态指示。
-- [新功能] 周末工作流仪式自动清理重置例程、动态现金与货币市场基金汇总及未平仓 CSP 保证金自动扣除 (Weekly Workflow Ritual Clean Reset Routine, Dynamic Cash & MMF Aggregation, and Automatic Open CSP Collateral Back-out): (1) 交付 web/src/utils/weeklyWorkflowReset.ts 模块，在周末新一周工作流启动并导入 Schwab CSV 前自动执行整洁重置例程 (executeWeeklyWorkflowCleanReset)，清空上一周持仓 (deltaharvest_portfolio_book)、级联选股器三大候选集 (ThinkorSwim, Barchart, MarketChameleon)、上一周 Gemini AI 报表与建议记录以及暂存订单历史队列，重置周度权利金收取计数并清空临时性扣减；(2) 现金与生活费法定支出保留：在清空临时扣减的同时，严格保留并预置默认 $5,000 周度生活费支出扣减 (DISB_DEFAULT_LIVING)，并完整保留历史 YTD 税务台账与亏损结转；(3) 动态现金池全量汇总：在 schwabPositionsParser.ts 中全面实现基于银行活期扫额 (Bank Sweep Core Cash) 与所有货币市场基金 (SNYXX, SNAXX, SWVXX, SNSXX 等 MMF) 的纯动态无硬编码汇总，先计算总流动现金池 (Total Liquid Cash Pool)；(4) 未平仓现金担保看跌期权 (CSP) 保证金自动扣除：按行权价 × 合约数 × 100 自动核算所有 open CSP 所需占用的 100% 现金担保负债，从总流动现金池中优先全自动扣除，得出扣除生活费前的可用现金 (Available Cash Before Living Expenses)，再扣除默认 $5,000 生活费得出可用于新开 CSP 的净可支配闲置现金 (Net Free Cash for New CSPs)；(5) 在 SchwabPositionsUploadView (第 1 步) 与 WeeklyCashLedgerView (第 2 步) 导入前与导入后贯通重置执行与即时通知徽章，并在顶部提供「Start New Week (Clean Reset)」手动重置入口；(6) 同步更新策略使用手册 (ChapterWeeklyWorkflowGuide.tsx)。
-- [新功能] 高级备兑看涨期权组合覆盖引擎、OptionForge 到期损益图与除息提早行权守卫 (Advanced Buy-Write Covered Call Module, OptionForge Payoff Visualizer & Early Dividend Assignment Risk Engine): (1) 交付 web/src/components/BuyWritePayoffChart.tsx 交互式到期损益图组件（灵感源自 OptionForge），支持实时动态计算与可视化盈亏平衡点 (Breakeven = Spot - Premium)、最大利润空间与回报率、下行缓冲垫 (Downside Cushion) 以及资本年化收益率 (Annualized Yield)，并提供股票现价、行权价、权利金与到期天数 (DTE) 交互式沙盒敏感度滑块微调；(2) 交付 web/src/services/findOptimalCoveredCalls.ts 量化筛选引擎（灵感源自 Optopsy），精准过滤目标 Delta 甜点区 (0.20 - 0.30Δ) 与最佳 Theta 时间衰减周期 (21 - 45 DTE)，优先匹配高隐含波动率等级 (IV Rank > 50%) 标的以最大化权利金收割，同时执行买卖价差流动性门禁；(3) 交付 web/src/components/PortfolioOverlayScanner.tsx 投资组合覆盖扫描器（灵感源自 Trading-Skills），支持录入/一键注入多头正股持仓，智能推荐 Top 2-3 笔最佳备兑交易，并关键性植入除息提早行权守卫 (Early Assignment Risk Flag)：当除息日位于到期日前且单季股息大于期权外在时间价值时 (Dividend > Extrinsic)，自动触发高风险预警旗标以防被动提早指派与股息损失；(4) 交付 Cloudflare Pages 边缘端点 functions/api/covered-calls.js 与抽象数据接入层 (optionsDataProvider.ts)；(5) 在 HoldingsCoveredCallView (第 4 & 5 步持仓台账) 中无缝集成一键切换入口与单票快捷跳转；(6) 同步更新策略使用手册 (ChapterShortcutsFaq.tsx)。
-- [新功能] 股票权益卡动态标的检索、实时行情水化与期权模拟器双向直通 (Equity Analysis Card Dynamic Ticker Input, Real-Time Market Hydration & Preloaded Trade Simulator Launch): (1) 在股票权益卡 (TickerAuditModal) 顶部新增实时标的检索输入框与热门标的快捷胶囊按钮 (NVDA, TSLA, AAPL, MSFT, PLTR, AMD, SPY, QQQ)，支持直接输入任意美股或 ETF 股票代码；(2) 录入新标的或点击「Fetch Price」后，通过边缘代理 (/api/market-price) 与多路金融行情通道并发拉取真实最新现价与历史日线数据，自动实时重新计算 J. Welles Wilder 14日 RSI、20日 SMA、2-SD 布林带边界、30日历史波动率 (HV30) 与隐含波动率 (IV)，并基于 Black-Scholes 解析模型全自动水化生成现金担保看跌期权 (CSP) 与备兑看涨期权 (CC) 的精准行权价、权利金、保证金、Delta 与 POP 胜率；(3) 在权益卡顶栏与第 1 标签页 (TickerOptionsTechTab) CSP / CC 策略卡中增设「⚡ Trade Simulator」直通按纽，点击后自动关闭权益卡并打开期权交易质量模拟器 (OptionsTradeQualitySimulator)，自动预填该股票代码与策略类型，便于量化演算自定义看涨/看跌行权价及模拟收益曲线；(4) 同步在使用手册 (ChapterShortcutsFaq.tsx) 补充操作指引与常见问题解答。
-- [修复] 消除模块加载死循环、静态化主工作流首屏与内存单次重试 (Eliminate Dynamic Import Reload Loop, Inline Primary Workflow Initial Screen & In-Memory Retry): (1) 根除因 vite:preloadError、lazyWithRetry 与 ErrorBoundary 之间由于分包拉取失败触发自动页面重载而产生的死循环 (Reload Loop)；(2) 剥离所有自动化 window.location.reload() 调用，lazyWithRetry 改为纯内存 300ms 延迟重试，并在 ErrorBoundary 中保留完全受控的用户手动重载入口；(3) 在 App.tsx 中将管理员首屏主工作流 SchwabPositionsUploadView 切换为静态模块导入，彻底消除主工作流首屏对异步动态分包的依赖与加载失败风险。
-- [新功能] Chrome 渲染黑屏修复、登录/密码重置邮件投递直达超管 (fjmaresca@gmail.com) 与独立股票权益卡菜单按钮 (Fix Chrome Blank Screen, Ensure Login Request Email Delivery to fjmaresca@gmail.com & Add Dedicated Equity Analysis Menu Button): (1) 修复 Vite base 路径配置 (base: '/')，解决 Google Chrome 访问非根子路由 (/login) 时相对路径加载脚本返回 text/html 触发严格 MIME 检查导致的完全黑屏，并在 main.tsx 顶层增设全局 ErrorBoundary 容错保护与 AuthContext 3.5秒快速会话超时回退；(2) 升级开户与维护凭据申请流 (request-access.js, LoginView.tsx)，增加请求类别选择（新开户、密码重置、系统维护），在 Cloudflare 边缘端支持 FormSubmit 事务邮件直转发，并在前端自动即时调起向 fjmaresca@gmail.com 的预填邮件客户端，提供 Web 邮箱直达与一键复制详情双兜底；(3) 在顶部导航 Header 与左侧机构侧边栏 InstitutionalSidebar 中新增「Equity Analysis」专属常驻菜单按钮，点击立即调出全功能 4 标签页股票权益卡模态框 (TickerAuditModal)，无缝联动当前活跃标的，并在使用手册 (ChapterShortcutsFaq.tsx) 同步更新操作指引与快捷跳转。
-- [修复] 修复 market-price 边缘函数代码块括号闭合语法缺陷并解除 Cloudflare Pages 发布阻断 (Fix market-price.js SyntaxError: Unexpected "catch" Unblocking Cloudflare Pages Functions Build): 修复 functions/api/market-price.js 中 Tradier 接口数据校验块 (if (quoteResp.ok)) 缺少闭合大括号导致 catch (tErr) 语法失效的缺陷，消除 Wrangler 边缘函数打包阶段的 Build failed with 1 error 阻断；通过 Node ESM 全量模块语法校验与前端生产构建验证。
-- [修复] 超级管理员 (fjmaresca@gmail.com) 凭证重置与边缘双重离线回退加固 (Super Admin fjmaresca@gmail.com Password Reset, Edge Recovery & D1 Auto-Sync Hardening): (1) 针对主超级管理员账户 (Frank Maresca / fjmaresca@gmail.com) 重置并加固专属超管登录口令为 DeltaHarvest2026! (同时兼容 ChangeMeNow!2026, Admin123!, Frank2026!)；(2) 修复 functions/api/_auth_utils.js 中 getUserByEmail 与 getUserById 在 D1 数据库中暂无记录时直接返回 null 导致无法回退至内存库的缺陷，建立「D1 优先 -> 内存兜底」弹性查找机制；(3) 升级 functions/api/auth/login.js 登录处理：当超管登入时自动补齐超管身份结构、保障 is_active 激活态与 admin 角色，并在口令校验成功后自动向 D1 数据库异步写入/更新超管哈希，防止因未执行迁移脚本或数据冷启动导致超管登入受阻；(4) 同步在 AuthContext.tsx 中对齐超管默认凭证白名单，完成前端与边缘双重验证。
-- [新功能] 股票权益卡实时新闻精简面板与文章弹出预览模态框 (Equity Card Live News Compact Feed & Article Pop-Out Modal): (1) 交付 web/src/components/NewsCompactFeed.tsx 精简新闻面板组件，调用已有 /api/news/{ticker} 边缘聚合端点，按「优先正文新闻，补充 SEC 8-K」顺序展示最多 5 条多源实时资讯（Google News / Yahoo Finance / MarketChameleon / SEC EDGAR），列表区域限高 260px 可独立滚动，刷新按钮支持手动更新；(2) 交付内嵌 ArticleModal 文章弹出预览：点击任意标题即弹出全屏毛玻璃遮罩模态框，完整展示标题、来源徽章、发布时间及摘要（如有），底部「Read Full Story ↗」按钮外链跳转原文，右上角 ✕ 关闭按钮与 Esc 键均可关闭；(3) 将 NewsCompactFeed 挂载于 TickerOptionsTechTab（默认期权技术面板）末尾，作为第 6 部分"Recent News Stories & Volatility Drivers"，同时复用已有 onViewNewsAnalyst 回调在底部导流至完整新闻与分析师标签页；TypeScript 全量编译 0 错误。
-- [新功能] 类型化 Discord Webhook 警报派发引擎与 DiscordAlertButton 组件 (Typed Discord Webhook Dispatcher, DiscordAlertButton Component & SocialShareToolbar Integration): (1) 交付 web/src/utils/discordNotifier.ts 类型化派发核心，实现严谨的 Discord Webhook URL 正则校验、基于策略类型的四色主题 Embed 渲染 (CSP 祖母绿 / CC 青色 / 信用价差 琥珀色 / 铁鹰 紫色)、六维期权交易字段映射 (现价、技术/波动率指标、策略、合约行权与到期日、年化收益率与所需保证金、Delta/POP/盈亏平衡点) 及基于 HTTP 429 retry_after 的指数退避自动重试；(2) 交付 web/src/components/trading/DiscordAlertButton.tsx 自包含交互组件，支持本地 localStorage (dh_discord_webhook) 凭据持久化、发报前嵌入卡片全息预览、异步发送状态反馈及点击外区域自动收起；(3) 重构 SocialShareToolbar.tsx，剥离原有内嵌简易模态框，接入 DiscordAlertButton 与类型守卫收敛，并在使用手册 (ChapterShortcutsFaq.tsx) 同步补充功能与操作指引；经 TypeScript 全量编译 0 错误通过。
-- [新功能] 社交分享与交易者社区工具栏 (SocialShareToolbar — Outbound Trade Dispatch & Trader Community Launcher): (1) 交付 web/src/components/trading/SocialShareToolbar.tsx，接受 ticker/currentPrice/rsi/ivRank/strategy/strikePrice/expirationDate 等交易参数，自动构建标准化「📊 DeltaHarvest Setup」分享文本；(2) 五路行动按钮全部采用内联品牌 SVG 图标（零外部依赖）：Telegram 分享深链接、WhatsApp 发送、StockTwits 股票聊天室直达、Copy Summary 剪贴板一键复制（2 秒「Copied!」视觉反馈）、Discord Webhook Modal（用户输入私有 Webhook URL 并持久化至 localStorage，点击后 POST Discord Embed JSON 结构体含 Price/RSI/IV Rank/Strategy 字段，支持 HTTP 204 成功与错误状态回显）；(3) 「Trader Communities & Squawks」下拉菜单，聚合四路社区外链（Telegram FinancialJuice 实时鸣笛、Reddit ThetaGang/Options 股票搜索直达、MarketChameleon 新闻页），点击外区域自动关闭；(4) 将工具栏挂载于 TickerOptionsTechTab.tsx Section 3 标题行右侧、InteractiveChart 正上方，自动从 bestCSP/bestCC 提取策略、行权价与到期日填充分享上下文；TypeScript 全量编译 0 错误。
-- [新功能] 多源实时新闻聚合引擎与 CompanyNewsFeed 组件 (Multi-Source Live News Aggregation Engine & CompanyNewsFeed Component): (1) 交付 Cloudflare Pages 边缘函数 (functions/api/news/[ticker].js)，以 Promise.allSettled 并行聚合 Google News RSS、Yahoo Finance RSS、SEC EDGAR 8-K Atom 与 MarketChameleon HTML 精准抓取四路数据源，按标题前 45 位字母数字归一化去重，结果以 s-maxage=300 / stale-while-revalidate=600 缓存于 Cloudflare 边缘网络；MarketChameleon 抓取使用真实浏览器 UA，遭遇 403/503/Cloudflare 人机验证时优雅静默降级返回空数组；在 _middleware.js 放行 /api/news/* 公开访问；(2) 交付 CompanyNewsFeed.tsx React 组件，提供「All / MarketChameleon / Top News / SEC 8-K」四路过滤标签页、来源计数角标、每条新闻的来源色彩徽章、发布时间与跳转链接；MarketChameleon 标签页在抓取被阻断时展示降级横幅并提供直达外链兜底；Header 区域常驻「View Live on MarketChameleon ↗」按钮；SEC 8-K 标签页底部附 SEC EDGAR 查看全量申报直通链接；(3) 将 TickerNewsAnalystTab.tsx 中原有静态 intel.recentNews 列表替换为 CompanyNewsFeed 实时组件，TypeScript 全量编译 0 错误。
-- [新功能] Cloudflare Pages 边缘实时行情代理服务与零 CORS 现价多级水化引擎 (Cloudflare Pages Edge Market Price Proxy & Multi-Tier Zero-CORS Live Pricing Engine): (1) 交付 Cloudflare Pages 边缘函数 (functions/api/market-price.js)，打通 /api/market-price 零 CORS 市场行情代理端点，并在中间件 (_middleware.js) 放行公开调用；(2) 架构双层边缘拉取管线：优先以服务器端凭证调用 Tradier API 实时 NBBO 报价与历史日线，次级自动降级至边缘 Yahoo Finance 直连，突破浏览器 CORS 限制与公共代理封禁；(3) 升级前端实时图表拉取引擎 (web/src/utils/liveMarketFetcher.ts)，将 /api/market-price 设为 Tier 0 优先拉取，并在 securityIntelligence 中贯通 spotPrice 实时注入；(4) 同步更新策略手册第 18 章流控与风控架构 (ChapterLiveStreamingRisk.tsx) 说明文档。
-- [新功能] 期权交易质量模拟器 Tradier API 现价拦截机制与标的录入即时并发水化 (Option Trade Quality Simulator Tradier API Price Feed Interceptor & Immediate Parallel Hydration): (1) 交付 fetchTradierTickerData 实时行情与历史日线拉取接口 (web/src/utils/liveMarketFetcher.ts)，打通 Tradier API 原生 CORS 零延迟通道，当 Yahoo Finance 或第三方 CORS 代理网关拉取失败或响应超时时，Tradier API 立即自动拦截现价请求，精准回填实时 NBBO 现价与过去 250+ 日真实收盘价；(2) 重构期权交易质量模拟器 (OptionsTradeQualitySimulator.tsx) 标的录入触发机制：用户输入、粘贴或回车录入股票代码的毫秒级瞬间，系统立即以 Promise.all 并发启动现价指标拉取与未来财报日程探测 (fetchLiveEarningsInfo)，彻底消除原有的先串行等待财报探测导致长达 15+ 秒卡顿的缺陷；(3) 优化财报网络探测超时并移除无谓的 artificial delay，在模拟器现价区域新增 Tradier Intercept 动态来源指示勋章；(4) 同步更新策略使用手册第 13 章 (ChapterTradeQualityScoring.tsx)。
-- [新功能] 新租户开户与登录凭证申请全链路邮件通知协议与自动化直达超管 (Automated Multi-Protocol Email Notification for New User Login Credential Requests): (1) 交付 Cloudflare Pages 边缘函数端点 (functions/api/auth/request-access.js) 与后端路由 (api/v1/endpoints/auth.py POST /api/v1/auth/request-access)，在 Cloudflare 中间件 (_middleware.js) 中放行免密公开访问；(2) 实现多协议高韧性邮件投递体系：优先通过 Cloudflare Email Routing 边缘绑定或 MailChannels 事务性邮件 API 直接向主超管 (Frank Maresca / fjmaresca@gmail.com) 发送申请通知，包含申请人姓名、邮箱、交易方向说明、提交时间戳、客户端 IP 与一键审批直达链接，并具备 Resend/SendGrid/Webhook 扩展通道与 Cloudflare D1 access_requests 审计台账与本地 data/access_requests.json 持久化；(3) 在登录视图 (LoginView.tsx) 中升级凭证申请模态框，接入边缘与后端 API 真实投递，提供实时加载状态、成功送达确认横幅与客户端原生邮件客户端唤起兜底，彻底解决原 mailto 单一方案因本地无默认邮箱客户端导致超管无法收到开户申请的问题。
-- [修复] 登录页面品牌标头居中对齐与垂直布局支持 (Center Login Page Brand Logo Header & Support Vertical Alignment Layout): 在 DeltaHarvestLogo 组件中新增 layout="vertical" 属性支持，将立体 Delta 徽标与 DELTAHARVEST 及 INSTITUTIONAL 机构级文字标识切换为居中垂直排版，并在 LoginView.tsx 登录页中应用完全居中布局，消除原有右倾/偏侧视觉偏差，保持全平台深浅模式自适应与专业金融级质感。
-- [修复] 7步交易闭环仪式导航跳转修复、全域步骤暴露与端点路由补齐 (Fix 7-Step Workflow Ritual Navigation, Expose All 7 Steps Across Dashboard/Sidebar & Complete Endpoint Routing): (1) 彻底根除“Open 7-Step Workflow Ritual”点击无效或回弹的问题：在 AuthContext 中加固 isAdmin 角色大小写自适应与主管理员邮箱白名单校验，并在 App.tsx 中移除原对 WORKFLOW 模式的越权弹回逻辑，确保点击后立即直达闭环仪式 Step 1 (SCHWAB_POSITIONS_UPLOAD)；(2) 在私有租户工作台 (UserDashboardView.tsx) 中高光挂载 7 步量化交易闭环全景互动中枢网格，显式暴露出全部 7 个步骤卡片 (Step 1 导入券商持仓、Step 2 资金与税务台账、Step 3 正股备兑策略、Step 4 宏观日历风控、Step 5 级联期权筛选、Step 6 执行长主报表、Step 7 券商订单暂存)，支持一键直达任意具体步骤；(3) 在左侧机构导航侧边栏 (InstitutionalSidebar.tsx) 中解除非超管遮罩，并在激活 WORKFLOW 时展开 7 步带数字角标的次级导航条；(4) 在路由层 (useAppNavigation.ts) 补齐 /workflow/step1 至 /workflow/step7 及语义化路由 (/workflow/upload, /workflow/cash, /workflow/holdings, /workflow/calendar, /workflow/screener, /workflow/report, /workflow/staging)；(5) 在全局快捷命令面板 (CommandPalette.tsx Ctrl+K) 中全面对齐 7 步编号并优化直接跳转链路；(6) 经全量生产编译构建 (tsc -b && vite build) 0 错误通过，期权量化数学模型 (pytest 9/9) 与 AI 治理校验全部绿灯。
-- [改进] 全站代码深度架构审计、模块化解耦与 Rollup 手动分包性能优化 (Full Codebase Performance Audit, Modular Decomposition & Rollup Manual Chunks Optimization): (1) 抽离并精简核心单体组件，创建专用子模块体系：App.tsx 提取 useFilteredOpportunities (标的过滤、期权筛选与多腿偏度计算)、useOrderStaging (单腿、多腿与期权链订单暂存) 与 AppModalsContainer (集中容错隔离 13 大惰性模态框)；(2) 模块化解耦周度选股器 (WeeklyStockScreenersView) 与周度持仓审计 (WeeklyPositionAuditView)，抽离高频渲染的记忆化行组件 (MarketChameleonRow, BarchartScreenRow, ScreenerExportBar, PositionAuditRow, AssetClassSummaryCards, AddPositionModal)，消除超 800 行冗余 JSX 与无效重渲染；(3) 隔离静态数据字典与重型算法，抽离宏观日程静态数据 (macroScheduleData.ts)、13F 机构与标的研报注册表 (securityIntelligenceRegistry.ts) 与 Gemini Markdown 报表解析器 (geminiMarkdownParser.ts)；(4) 类型安全加固，收紧 tableSort、FilterState.sortBy 及 securityIntelligence 弱类型断言；(5) 优化 vite.config.ts 的 Rollup manualChunks 策略，智能拆分 vendor-react、vendor-charts (lightweight-charts 隔离)、ui-icons、data-macro-schedule 与 data-security-registry，使首页核心入口 index 产物体积由 604 kB 大幅缩减至 355 kB (降幅 41.2%，Gzip 后仅 90 kB)，并通过全量生产构建与单测，保持 100% 现有量化模型与交互能力零回归。
-- [新功能] 全站 Help 使用手册全面同步、IRC 第 P 分章税务审计与期权交易质量模拟器全域超链接与战术工具直通 (Comprehensive Help Handbooks Synchronization, IRC Subchapter P Tax Alpha Audit, Options Trade Quality Simulator Hyperlinks & Tactical Tools Sidebar Direct Access): (1) 在策略手册 (HelpHandbookModal.tsx) 新增并注册第 15 章《机构级衍生品税务阿尔法与 IRC 第 P 分章审计》 (ChapterTaxAlphaAudit.tsx)，完整收录 IRC §1256 非权益类指数合约 60/40 资本利得及盯市结转规则、§1092(c)(4) 合格备兑看涨期权 (QCC) 跨期套利门槛与基准行权价规则、§1091 虚假洗售 (Wash Sale) 61 日窗口追踪与成本垫高、§1233 保护性认沽持有期重置与 §1259 托拉斯推定销售判定；(2) 在期权交易质量评分手册 (ChapterTradeQualityScoring.tsx) 与使用手册常见问题 (ChapterShortcutsFaq.tsx) 及周度交易流程 (ChapterWeeklyWorkflowGuide.tsx) 贯通 DirectActionBanner 交互式跳转横幅，直达 4 标签页期权交易质量模拟器 (OptionsTradeQualitySimulator.tsx)、税务阿尔法优化器 (TaxAlphaOptimizerView.tsx)、防御性展期助手 (DefensiveRollAssistantView.tsx) 与投资组合保证金压力测试器 (PortfolioMarginSimulatorView.tsx)；(3) 在左侧机构导航侧边栏 (InstitutionalSidebar.tsx) 战术工具 (Tactical Tools) 中直接暴露 Tax Alpha (1256) 与 Roll Assistant 导航入口；(4) 同步更新自动化期权选股器文档 (docs/automated-options-screener.md) 与周度期权交易工作流文档 (docs/weekly-options-workflow.md)，增补 4 标签页数学公式、财报跨式跳空安全垫、双重收益率与行权回报及系统文件全息清单；(5) 经生产环境全量编译构建验证 (tsc -b && vite build 0 错误)。
-- [新功能] 机构级备兑看涨与期权收益引擎及期权交易质量模拟器全面集成 (Institutional Covered Call & Option Income Engine & Options Trade Quality Simulator Integration): (1) 交付定量期权定价与希腊值计算服务 (src/services/options/pricing.py)，实现 Hull 基准 European Black-Scholes-Merton 与 Cox-Ross-Rubinstein American Binomial 树模型，高精度数值与解析希腊值 (Delta, Gamma, Theta, Vega, Rho)，以及带二分回退的 Newton-Raphson 隐含波动率 (IV) 求解器；(2) 交付波动率智能分析与方差风险溢价引擎 (src/services/options/volatility.py)，计算 30 日实现波动率 (RV30d)、252 日 IV Rank (IVR)、IV 百分位 (IVP) 与方差风险溢价 (VRP = IV - RV30d)；(3) 交付除息与提早行权防御守卫 (src/services/options/dividend_guard.py)，当剩余外在价值小于单季股息 (C_ext < Dividend) 时精准触发 HIGH_ASSIGNMENT_RISK 提早行权风险告警；(4) 交付双重收益率与行权回报引擎 (src/services/options/yield_calculator.py)，计算年化未被行权静态收益率 (Static Yield)、行权总回报率 (If-Called Return) 与下行安全垫 (Downside Cushion)；(5) 交付多数据源期权链拉取适配器 (src/services/options/market_data.py) 与多智能体 AI 期权策略综合器 (src/pipeline/option_agent.py)，联动技术阻力支撑与财报黑天鹅评估输出 1-100 置信度与质化分析假说；(6) 在 Web 前端 (apps/dsa-web) 交付现代化深色面板 (/dashboard/covered-calls)，提供目标 Delta、到期周期与 IVP 滑块过滤、合约全息表、Recharts 到期损益图与展期优化矩阵；(7) 深度集成期权交易质量模拟器 (OptionsTradeQualitySimulator.tsx)，新增量化评分、到期损益图 (SimulatorPayoffTab)、防御性展期助手 (SimulatorRollOptimizerTab) 与波动率及股息守卫 (SimulatorIntelligenceTab) 4 大扁平无缝交互标签页，全面通过自动化单元测试 (tests/test_options_math.py 100% 通过) 与全站编译构建验证。
-- [修复] 超管账户 (Frank Maresca / fjmaresca@gmail.com) 真实信托资产数据恢复与直通大师闭环仪式 (Restore & Directly Link Living Trust Portfolio, Liquid Cash Reserves, Harvested Premiums & Active Options to Frank Maresca Admin Account): (1) 修复前端登入后由于异步状态闭环导致的路由回退缺陷，确立当超管 (Frank Maresca / fjmaresca@gmail.com / role === 'ADMIN') 登入时，无论首选路由为何，系统均无缝直达专属的核心指挥中枢——Master End-of-Week 7-Step Workflow (SCHWAB_POSITIONS_UPLOAD 步骤)，杜绝跳转至空白客户租户仪表盘；(2) 深度绑定并水化超管专属 Charles Schwab Living Trust-Options ...609 真实资产：$2,388,228.85 清算净值、三层流动资金池储备 $579,707.77 (SNYXX $202,775.94 + SNAXX $77,341.30 + Core Cash $299,590.53)、扣减 $160,000 PLTR CSP 担保负债与 $5,000 生活费后的 $414,707.77 净可支配闲置现金、2026 年度已入账 Calendar YTD 权利金 $603,305.40 以及 7 笔真实在途期权合约 (AXTI, BLZE, IONQ, NET, RTX, TSLA 备兑看涨期权与 PLTR 现金担保看跌期权)；(3) 边缘端 API (/api/user/data) 与工作台视图 (UserDashboardView.tsx) 严格区分权限上下文：超管账户访问工作台时全面呈现真实信托数据卡片、7 笔在途期权台账与“Open 7-Step Workflow Ritual”高管直通按纽；普通非超管租户 (role === 'CLIENT') 则继续获得纯净的零数据独立工作空间与物理隔离，杜绝资产越权暴露。
-- [安全] 全站默认未认证强制拦截重定向至登录页、超管隐私数据全域封锁与新租户纯净零数据工作台 (Fail-Safe Unauthenticated Privacy Gate, Living Trust Data Lockdown & Clean Unpopulated Client Workspace): (1) 在 App.tsx 顶层建立强韧的未认证熔断拦截守卫 (Fail-Safe Privacy Gate)，任何未经身份校验的访客访问根域名 (https://daily-stock-analysis-89j.pages.dev/) 或任何子路由时，100% 自动拦截并呈现受限登录与开户申请中枢 (LoginView.tsx)，物理阻断对超管 (Frank Maresca) 真实 Schwab 信托持仓、现金流与期权量化模型的渲染与外泄；(2) 剥离登录页面公网可见的明文默认密码展示与一键自动填充，阻断未经授权者一键登入，并交付一键向超管 (fjmaresca@gmail.com) 提交租户接入申请的互动模态框；(3) 实施严格的基于角色权限控制 (RBAC) 隔离：新开户或获授权的普通租户 (role === 'CLIENT') 登入后自动直达其专属的独立工作台 (UserDashboardView.tsx)，默认呈现纯净无初始数据的零状态 (0 笔持仓、0 张活跃期权、$0.00 资产净值)，可自主录入交易与跟踪自选；(4) 在 InstitutionalSidebar 与 Header 中对普通租户隐藏超管专属的 End-of-Week 7 步闭环信托流程、资金台账与高管健康脉搏，并在 App.tsx 路由中对非超管越权访问执行无缝回跳防御。
-- [修复] 移除 wrangler.toml 中 D1 数据库占位 UUID 并消除 Cloudflare Pages 构建发布阻断 (Fix Cloudflare Pages Deployment Error 8000022 on Invalid D1 Database UUID): 移除/注释 wrangler.toml 中的 [[d1_databases]] 临时占位配置，消除 Cloudflare Pages Functions 发布阶段因 database_id 非规范 36 位 UUID 导致的 Error 8000022 部署阻断；应用边缘函数 (functions/api/_auth_utils.js) 与前端鉴权状态引擎保持优雅解耦与多层回退，在 D1 物理数据库通过 Cloudflare Dashboard 绑定或具备真实 UUID 前，支持本地韧性与全流程鉴权管理平稳运行。
-- [改进] 多租户管理员专属控制台常驻导航、用户开户配给与超管默认登录凭证加固 (Multi-Tenant Administrator Navigation, User Provisioning & Default Admin Credentials Hardening): (1) 在左侧机构侧边栏 (InstitutionalSidebar.tsx) 与顶部标头 (Header.tsx) 贯通 Security & Tenants 管理员专属导航组，直达 Admin Console (用户开户配给与密码重置) 与 Client Workspace (私有租户工作台)；(2) 固化主管理员 (Frank Maresca / fjmaresca@gmail.com) 默认凭证为 DeltaHarvest2026! (同时兼容 ChangeMeNow!2026 与 Admin123!)，在登录界面提供一键预填与密码显隐；(3) 在 AuthContext.tsx 与 AdminUsersView.tsx 中集成 localStorage 离线韧性持久化，即使在脱机、本地开发或边缘 D1 物理绑定前，亦支持超管即时开户、停用账户与重置用户登录密码。
-- [新功能] Cloudflare D1 边缘架构多租户鉴权与权限隔离系统及租户独立工作台 (Cloudflare D1 Edge Multi-Tenant Authentication, Strict Authorization Isolation & Client Tenant Workspace): (1) 交付 Cloudflare D1 关系型数据库模式迁移 (migrations/0001_initial_auth_and_multitenant.sql)，包含 users、user_profiles、user_portfolios、user_trades 与 user_watchlists 表，建立外键索引与超管 (fjmaresca@gmail.com) 初始 PBKDF2 密文；(2) 交付零依赖纯原生 Web Crypto API 边缘鉴权套件 (functions/api/_auth_utils.js)，提供 10 万次迭代 PBKDF2 密码散列与时间恒定比对验证、HMAC-SHA256 JWT 令牌生成及 HTTP-only SameSite=Strict 安全 Cookie；(3) 交付边缘路由拦截中间件 (functions/_middleware.js) 与完整 API 端点群 (/api/auth/login, /api/auth/logout, /api/auth/session, /api/user/data, /api/user/change-password, /api/admin/users, /api/admin/users/create, /api/admin/users/reset-password, /api/admin/users/toggle-status)；所有租户数据读写严格执行 WHERE user_id = session.user.id 隔离校验，坚决杜绝越权与数据泄露；(4) 前端交互交付现代暗黑玻璃质感登录视图 (LoginView.tsx)，包含记住登录名 (Remember Login Name) 本地持久化、密码明暗切换、未认证用户一键向超管 (fjmaresca@gmail.com) 申请接入提醒；(5) 交付客户端私有租户工作台 (UserDashboardView.tsx)、密码修改模态框 (PasswordChangeView.tsx)、超管专属用户管理与临时密码重置控制台 (AdminUsersView.tsx) 以及顶部 Header 租户身份角标与退出菜单联动。
-- [改进] 全站代码审计性能重构与模块化解耦架构升级 (Full Codebase Performance Audit, Modular Decomposition & Architectural Remediation): (1) 导出标准正态分布累积函数 normCdf、实现 Peter J. Acklam 高精度 probit 逆标准正态算法 inverseNormalCdf 与交易所最近有效行权价对齐算法 getNearestExchangeStrike；(2) 稳定 useOptionsData.ts 定时器，消除依赖项热循环与竞态条件引起的重复重置；(3) 解耦期权交易质量模拟器 (OptionsTradeQualitySimulator.tsx)，抽离 5 维交互滑块面板 (SimulatorSliders)、合约全景蓝图卡片 (SimulatorBlueprintCard)、跨式期权财报动态防御 (SimulatorStraddleDefense) 与 SVG 环形霓虹计分仪表盘 (SimulatorScoreGauge)；(4) 解耦全站最大单体组件策略手册与教育中心 (HelpHandbookModal.tsx 由 3,271 行解耦至 358 行)，抽离 20 个独立高内聚章节子组件 (web/src/components/modals/handbook/chapters/) 并保留 100% 原生文案、排版与 DirectActionBanner 深度跳转；(5) 解耦标的审计模态框 (TickerAuditModal.tsx 由 1,188 行解耦至 360 行)，抽离期权与技术分析面板 (TickerOptionsTechTab) 及新闻评级与合规披露面板 (TickerNewsAnalystTab)；(6) 抽离全站统一页脚 (InstitutionalFooter.tsx)，清理 App.tsx 重复计算的 executiveMetrics 记忆化状态；(7) 经 tsc -b && vite build 全量生产验证 0 错误构建通过，100% 保持既有量化模型、UI 交互与业务能力零回归。
-- [新功能] DeltaHarvest 策略手册与教育中心全面升级至 v3.4、集成 DCF 内在价值与基本面估值终端及全域超链接与顶部标头版本同步 (DeltaHarvest Strategy Handbook & Educational Center v3.4 Upgrade, DCF Intrinsic Valuation Terminal, DuPont ROE Decomposition & Universal Navigation Synchronization): (1) 升级策略手册 (HelpHandbookModal.tsx) 与主页顶部菜单标头及页面标题 (Header.tsx, index.html) 至 v3.4 版本；(2) 交付全功能交互式基本面估值与折现现金流终端 (FundamentalValuationModal.tsx)，提供 5 年期自由现金流中点折现模型 (Midpoint Discounting, t-0.5)、严格约束于 WACC 之下的戈登永续增长终端价值 (g < WACC)、安全边际 (Margin of Safety %)、杜邦 3 步与 5 步 ROE 结构性分解、负盈利 P/E 防御与连续盈利收益率 (Earnings Yield E/P)，以及基于动态波动率 (k*ATR) 与风险收益比 (R/R >= 2.0) 门禁的止损止盈规划器；(3) 在策略手册中开辟第 14 章《量化股票估值、DCF 模型与动态波动风险收益终端》，并在 Plain-English Primer、基本面健康等各章节 DirectActionBanner 增设一键直达估值终端的快捷链接；(4) 在左侧机构导航侧边栏 (InstitutionalSidebar.tsx) Tactical Tools、顶层快捷命令面板 (CommandPalette.tsx Ctrl+K) 与全站页脚中全域贯通估值终端入口，支持一键针对 Schwab 信托持仓 (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA) 与主流巨头 (NVDA, AAPL, MSFT, PLTR) 快速水化估值测算。
-- [修复] 股票量化分析与基本面估值管线全量审计与加固 (Quantitative Equity Analytics, Technical Indicators, Valuation Models, Sentiment NLP & Prediction Market Calibration Audit): (1) 修复 technicalIndicators.ts 中 RSI(14) 平滞序列死锁返回 100.0 超买值的量化缺陷，严格校准为 50.0 中性与单向无损 100.0 / 单向无利 0.0 边界守卫；(2) 修复 EMA 指数移动平均线首元素冷启动失真，升级为前 N 周期 SMA 平滑预热；(3) 修复布林带 (Bollinger Bands) 总体方差除以 N 导致的带宽低估缺陷，升级为 Bessel 贝塞尔样本标准差 (N-1)；(4) 补齐前日收盘跳空防御的 Wilder RMA ATR(14) 指标、日内分时交易时段自动重置的 VWAP 指标及平盘价格保持成交量不变的能量潮 OBV 指标；(5) 交付企业基本面量化估值引擎 (fundamentalValuation.ts)，严格处理负盈利 P/E (转为 N/A 并连续切换至 Earnings Yield 盈利收益率)、PEG 增长率百分比/小数自适应归一化与负增长剔除、完整企业价值 (EV) 与自由现金流 (FCF) 计算、杜邦 3 步/5 步 ROE 严格分解，以及带中点折现 (Midpoint Discounting) 与 g < WACC 渐近线严格防御的 DCF 内在价值折现模型；(6) 在 contextual_intelligence_service.py 与 securityIntelligence.ts 中升级社交情绪 NLP 否定词倒转识别 ("not bullish" -> 看跌)、互动量对数加权与空流 50.0% 中性回退，并校准 Polymarket/Kalshi 预测市场赔率去水 (Vig Stripping) 与微小流动性 (<$1k) 降权过滤；(7) 增设基于动态 ATR 倍数的止损止盈与风险收益比 (R/R >= 2.0) 检验器及异动警报成交量确认守卫；(8) 新增全量股票量化测试套件 (tests/test_equity_quantitative_pipeline.py，7 组用例 100% 通过)。
-- [改进] 期权定价、希腊值模型、蒙特卡洛模拟与多腿价差量化金融引擎全面审计与校准 (Quantitative Derivatives Pricing, Greeks Accuracy, Monte Carlo Simulation & Multi-Leg Spread Mathematical Engine Audit): (1) 修复 portfolioStressTest.ts 中现金担保看跌期权 (CSP) 与牛市看跌价差 (Bull Put Spread) 的 Delta 符号取反缺陷，校准为正确的正向多头现货敞口 (+Delta)，并剔除备兑看涨期权 (Covered Call) 中对底层正股资产价值与保证金的重复计算 (消除 $1.8M 幻影净值与虚增保证金)；(2) 在 financeMath.ts 与 optionChainMatrix.ts 中严格区分看涨期权 Rho (>0) 与看跌期权 Rho (<0，-K*T*e^(-rT)*N(-d2)/100)，修复看跌期权错误继承看涨正 Rho 的量化缺陷；(3) 在 financeMath.ts 中交付 0 DTE 到期边界严格内含价值与希腊值处理，实现 Newton-Raphson 与 Brent 二分法高精度隐含波动率 (IV) 求解器与对偶变量几何布朗运动 (GBM) 蒙特卡洛模拟引擎 (含 -0.5*sigma^2 真实漂移项、VaR95/CVaR、POP 与连续触碰概率 POT)；(4) 在 optionsMultiLeg.ts 中将垂直价差与铁鹰期权 (Iron Condor) 远端腿定价升级为 Black-Scholes 解析模型与真实盈亏平衡点胜率 PoP；(5) 在 alertDispatcher.ts 中增设流动性与数据纯度守卫；(6) 交付自动化量化金融单元测试套件 (tests/test_quantitative_finance_models.py) 并通过 TypeScript 全量构建 (tsc -b && vite build 0 错误)。
-- [修复] Position Health & Threat Register 持仓健康与威胁登记簿标的正股与期权合约解耦 (Position Health & Threat Register Option Contracts & Long Stock Separation): (1) 修复 ExecutivePortfolioDigestView、executiveReportGenerator 及 continuousRiskSweeper 中将多头正股持仓 (Delta = 1.000) 误判为 ≥0.40Δ 临界受威胁期权合约的缺陷；(2) 严格隔离期权合约与多头股票评估逻辑，对多头股票识别为 1.00Δ 资产持有并评估其对备兑看涨期权 (Covered Call) 的 100% 担保覆盖率 (如 AXTI、BLZE、IONQ、NET、RTX、TSLA 均 100% 完全覆盖，LUNR 识别为未写备兑可供卖 Call 正股)；(3) 校准 Position Health & Threat Register 统计，准确展示当前 7 笔活跃期权合约 (6 笔备兑看涨期权 + 1 笔 PLTR 现金担保看跌期权) 均位于 |Δ| < 0.30 安全区 (0 笔受威胁、0 笔观察、7 笔安全，行权与被指派风险为零)，消除合规评分中对正股 delta 的错误 70 分重罚。
-- [新功能] DeltaHarvest 策略手册全量功能直接超链接与交互式跳转引擎 (Strategy Handbook Direct Functionality Hyperlinks & In-App Navigation Engine): (1) 针对 DeltaHarvest 策略手册与教育中心 (HelpHandbookModal.tsx) 披露的全部 19 项核心量化功能与实盘组件，交付 DirectActionBanner 交互式跳转横幅体系，并在 App.tsx 中打通完整的导航路由树 (WORKFLOW, OPTIONS, EQUITIES, METHODOLOGY, FAQ, DISCLAIMER) 与 12 大模态框回调链路；(2) 用户在查阅新手指南、100分制评分模型、周度7步仪式、Barchart/MarketChameleon选股器、Gemini AI决策中枢、宏观经济日历、核心交易法则、K线形态、多腿价差/偏度、基本面偿债能力、压力测试与回测引擎、券商订单暂存、情绪审计、实时风险流控、到期日步调、希腊值公式、流动性分级与快捷键等任一章节时，均可一键直达对应功能页面或弹窗；(3) 经生产环境全量编译构建验证 (tsc -b && vite build 0 错误)。
-- [新功能] 官方 DeltaHarvest Institutional 机构级 Logo 与暗/亮自适应主题布局重构 (DeltaHarvest Institutional Official Vector Logo, Dark/Light Mode Theming & Institutional Dashboard Redesign): (1) 交付高保真 SVG 矢量组件 (DeltaHarvestLogo.tsx)，精准还原 3D 几何刻面希腊 Delta (Δ) 勋章、祖母绿/青色/海洋深蓝立体切面与穿梭而过的动态轨道光环及箭头，并自适应支持全景 (full)、标头 (header)、纯标记 (mark) 与应用磁贴 (icon) 4 种形态；(2) 深度支持 Day Mode (亮色浅灰/纯白底色与深藏青 slate-900 字体) 与 Night Mode (暗色黑曜石底色与发光青翠霓虹强调色) 自适应无缝切换；(3) 参考机构交易终端视觉布局打造全新可折叠左侧导航侧边栏 (InstitutionalSidebar.tsx)，一键贯通 End-of-Week 7 步闭环仪式、持仓全景、美股宇宙、衍生品策略实验室、订单暂存工作台、研报生成与系统诊断；(4) 在主舞台顶层交付实时金融仪表盘英雄横幅 (InstitutionalHeroBanner.tsx)，实时渲染净资产规模、每日 Theta 收益速率、合规健康评分、可用资金储备与平滑 SVG 收益轨迹曲线；(5) 100% 保持既有菜单、量化模型、API 轮询同步与 12 大模态框业务逻辑与交互体验零回归。
-- [修复] Options Trade Quality Simulator 现价与财报日同步刷新、14日标准 Wilder RMA RSI 与 IV 百分比展示校准及全站 SEC CIK 链接修复 (Options Trade Quality Simulator Price/Earnings Auto-Sync, 14-Day Wilder RMA RSI Calibration, IV Percentage Normalization & SEC CIK Registry): (1) 升级期权交易质量模拟器 (OptionsTradeQualitySimulator.tsx)，当录入/切换标的代码并检查财报日历时，同步并发拉取实时最新市场现价 (Mkt Price)、日线收盘价、均线与技术指标，实现标的现价与财报日期及跨式防御行权价一键同步水化；(2) 校准 14 日 RSI 算法为标准 J. Welles Wilder 指数平滑 RMA 模型 (calculateRSI)，对齐 TradingView/Thinkorswim/Barchart/Yahoo Finance 权威标准 (解决因 Cutler 简单均线混合导致 RTX 等标的由 32.7 偏离至 27 超卖的问题)；(3) 修复当前隐含波动率 (IV Current) 在全站及 TickerAuditModal 中的百分比格式化与量化运算 (解决因小数存储误格式化为 0.3% 的问题)，统一以百分比 (如 28.5%) 展示并在期权定价与希腊值计算中自适应归一化；(4) 交付权威 SEC EDGAR CIK 注册表 (web/src/utils/secEdgarRegistry.ts)，修复并重构 TickerAuditModal、securityIntelligence、fundamentalSolvency 及 multiAgentTradeAuditor 中所有 10-K/10-Q/8-K/N-CSR 等 SEC 官方披露链接与 10 位官方 CIK 代码。
-- [修复] IDE 静态分析导入路径根目录识别 (Pyright Extra Paths Configuration): 在 pyproject.toml 中为 [tool.pyright] 显式配置 extraPaths = [".", "src"]，解决 IDE 语言分析器默认仅推断 src 导致 scripts/test_schwab_connection.py 报错无法识别 data_provider 的问题。
-- [改进] Executive Portfolio Digest 持仓风险与财报暴露可点击详情模态框 (Executive Portfolio Digest Interactive Position Health & Earnings Exposure Modal Engine): (1) 将 ExecutivePortfolioDigestView 中的 Position Health & Threat Register 卡片与 Upcoming Binary Events & Margin Haircut 卡片升级为可点击交互卡片，点击展开全屏模态框显示完整明细；(2) 持仓风险模态框按威胁等级分段（Critical ≥0.50Δ、Threatened ≥0.40Δ、On Watch ≥0.30Δ、Safe <0.30Δ），每行展示标的代码、合约类型、行权价/现价、到期日、Delta 值、合约数量与每日 Theta 收益，并附滚仓协议说明；(3) 财报暴露模态框按距离财报天数分段（7天内、30天内、30天以上），每行展示财报日期（已确认/估算）、DTE、历史平均波动幅度与合约到期日，并对财报落在合约到期日内的持仓高亮显示暴露风险警示与处理建议；(4) 同步更新使用手册 (HelpHandbookModal.tsx) 与架构文档 (docs/weekly-options-workflow.md)。
-- [改进] 财报日期估算降级策略：最近已知财报日 +90 天优先推算 (Earnings Calendar 90-Day Rolling Fallback): (1) 在 earningsCalendar.ts 中为 EarningsCalendarEntry 新增 lastEarningsDate 字段；(2) 在 fetchLiveEarningsInfo 与 checkEarningsInsideExpiration 网络回退逻辑中，优先以最近已知财报日（无论来自 lastEarningsDate 或历史注册条目）加 90 天作为下次财报日期估算，而非通用的季度窗口推演；(3) 仅当无可用历史日期时，降级至标准季度窗口（每年 1/4/7/10 月末第 28 日）作为二级兜底；所有估算日期均标记为 isConfirmed: false 并在 UI 中以"~ Estimated"提示用户。
-- [新功能] 期权交易质量模拟器财报窗口自动侦测与跨式期权隐含波动推荐行权价动态防御引擎 (Options Trade Quality Simulator Dynamic Earnings Detection & ATM Straddle Implied Move Strike Defense Engine): (1) 交付权威财报日程与跨式期权隐含波动计算核心 (web/src/utils/earningsCalendar.ts)，全面收录 Schwab 信托正股 (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA) 与主流巨头财报日程，动态计算财报日是否落于交易日与到期日之间 (tradeDate <= earningsDate <= expirationDate)；(2) 基于做市商标准平值跨式期权定价模型 (ATM Straddle = C_atm + P_atm) 精准推算财报单日跳空期望范围与波动极限，计算上下跳空安全边界；(3) 在期权交易质量模拟器 (OptionsTradeQualitySimulator.tsx) 中实现推荐行权价自动防御校正：卖出认沽 (CSP) 自动下移至下行跨式跳空边界下方 15% 安全垫外 (Strike <= Spot - Move * 1.15)，卖出备兑认购 (CC) 自动上移至上行跨式跳空边界上方 15% 阻力位外，避免财报黑天鹅击穿；(4) 升级 100 分制评分风控闸门 (scoringModel.ts)，对跨式防御到位的标的免除硬性一票否决淘汰 (由 -40 分骤降改为轻度 -12 分事件溢价)，并在界面展示跨式期望波动范围、行权价防御徽章与快捷到期日财报预警；(5) 同步更新使用手册 (HelpHandbookModal.tsx) 与选股文档 (docs/automated-options-screener.md)。
-- [新功能] 导入持仓与自选股最新行情/收盘价自动校验与实时同步引擎 (Automatic Live & Closing Price Sync Engine for Imported Holdings & Watchlists): (1) 交付 syncLiveEquitiesPrices 与 autoSyncSchwabPortfolioPrices (web/src/utils/liveMarketFetcher.ts)，打通 Tradier 实时行情接口与多源日线图表，精准获取盘中最新成交价或盘后最终收盘价 (Closing Price) 及涨跌幅；(2) 在 SchwabPositionsUploadView 与 WeeklyCashLedgerView 中集成自动静默同步机制，当导入券商持仓 CSV 时若标的现价未更新或为空，立即自动拉取最新价格并刷新持仓簿 (deltaharvest_portfolio_book) 与市值/盈亏统计；(3) 在 CascadingScreenerView (Tab 3 TOS/Barchart) 与 WeeklyStockScreenersView (Barchart View 190898) 中落地数据行行情校验与异步自动补全，确保扫描标的均显示最新市场收盘价。
-- [改进] 级联选股与 ThinkorSwim 选股器标的池净化与 Schwab CSV 导入联动 (ThinkorSwim Screen & Barchart View Universe Sanitization & Schwab CSV Import Binding): (1) 彻底移除 ThinkorSwim 自选股与 Barchart View 190898 中原内置的 Mag 7, Semis, CBOE High Vol, AI & Cloud 预设标的及示例，从扫描宇宙与 UI 预设中全面剔除；(2) 严格将默认与推荐扫描宇宙收敛为用户通过 Charles Schwab CSV 导入的持仓正股标的及用户手动复制粘贴/录入的自定义代码，在 schwabPositionsParser.ts 中交付 getSchwabImportedEquities 动态解析引擎并打通 deltaharvest_portfolio_updated 全局事件联动；(3) 净化本地预置数据集 weekly_screeners_barchart_custom.json，将记录收敛为真实的 7 只 Schwab 信托正股 (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA)，并在 CascadingScreenerView 中增设过期历史旧分类缓存自动清洗机制；(4) 同步更新使用手册 (HelpHandbookModal.tsx) 与选股器文档 (docs/weekly-stock-screeners.md)。
-- [改进] 全站代码深度性能重构、模块化解耦与零能力回归 (Full Web Architecture Audit, Modular Decomposition & Zero Capability Regression Refactor): (1) 彻底重构单体臃肿入口 App.tsx (由 2,804 行解耦收敛为 ~880 行)，解耦提取 5 大专属状态与通信 React Hooks (useAppNavigation, useWatchlistState, useModalManager, useGlobalShortcuts, useOptionsData) 及纯函数期权合成引擎 (optionsSynthesis.ts)；(2) 深度解耦复合视图——将级联选股器 CascadingScreenerView (由 2,602 行精简为 1,374 行) 拆分子标签组件 (BarchartTopTab, MarketChameleonTab, TosReturnScreenTab, GeminiDecisionHubTab)；将可用资金与税收中枢 WeeklyCashLedgerView (由 1,704 行精简为 430 行) 拆分流动资金瀑布流 (LiquidCapitalWaterfall.tsx)、税收台账面板 (TaxAlphaLedgerPanel.tsx) 与 5 大编辑模态框 (EditCarryforwardModal.tsx)；(3) 抽取高性能记忆化数据行 PrimaryScreenerRow 与 ScreenerRow，交付通用面包屑导航 (BreadcrumbsBar) 与选股过滤工具栏 (ScreenerFilterToolbar)；(4) 100% 保持所有量化模型 (Bollinger Bands 2.0 SD, 0.15-0.25Δ, IV Rank, Barchart 13 指标共识, $200k 单正股上限, 现金瀑布流, 14 个模态框) 零能力回归，生产构建全绿通过 (tsc -b && vite build 0 错误)。
-- [修复] 宏观经济日历下周指标刷新与双周作用域选择器 (Upcoming Week US Economic Indicators Refresh & Bi-Scope Selector Architecture): (1) 解决当前周末 (2026-09-12) 上游公开源 (Forex Factory) 仅返回已完成的过去一周 (Sep 7 – Sep 11) 导致“无法刷新显示下周指标”的痛点，在 Cloudflare Edge (/functions/api/economic-calendar.js) 与后端 FastAPI (/api/v1/endpoints/options.py) 中引入 scope 参数 (scope=upcoming 与 scope=past)；(2) 在 scope=upcoming 时按美东当天日期严格过滤，当远端尚未轮转至下周时自动降级切换至包含 18 项下周核心催化剂 (FOMC 利率决议与点阵图、8月零售销售、初请失业金、四巫日等) 的精选日程；在 scope=past 时提供上周实际发布数据归档；(3) 前端 EconomicCalendarView 交付“Upcoming Week (Sep 14 – 18)”与“Past Week (Sep 7 – 11)”双模式切换胶囊按纽组，在手动刷新时传递 &scope 与动态时间戳实现精准穿透；(4) 同步更新使用手册 (HelpHandbookModal.tsx)、文档 (docs/economic-calendar.md) 与自动化单元测试 (tests/test_economic_calendar_api.py)。
-- [修复] 宏观经济指标三级数据源韧性加固、纳斯达克实时雷达回退、美东时间实时同步与缓存穿透刷新 (Resilient Multi-Tier Economic Indicators Feed, Nasdaq Live Radar Fallback, Live ET Synchronization & Cache-Bypass Refresh Architecture): (1) 升级 Cloudflare Edge (/functions/api/economic-calendar.js) 与后端 FastAPI (/api/v1/endpoints/options.py) 为三级高韧性容灾架构：Tier 1 Forex Factory 实时周度日历、Tier 2 Nasdaq 机构级实时经济日历雷达 (api.nasdaq.com/api/calendar/economicevents)、Tier 3 深度编排的高影响周度宏观基准日程；(2) 解决前端与边缘节点缓存导致的“数据不刷新”假死痛点，在手动点击“Refresh Feed”时注入动态时间戳 (?t=...) 强行旁路浏览器与 Cloudflare 边缘缓存，并在请求体中回传最新 ISO 时间戳；(3) 升级 EconomicCalendarView 状态徽章体系，精确识别并渲染各层级数据源（🟢 Forex Factory Live Feed、🏛️ Nasdaq Live Radar Feed、🛡️ High-Impact Curated Schedule、⚠️ Baseline Offline Schedule），在表头常驻动态美东时间同步脉搏 (Synced: HH:MM:SS AM/PM ET)，并在刷新按键上提供即时成功反馈；(4) 同步更新使用手册 (HelpHandbookModal.tsx) 与自动化单元测试 (tests/test_economic_calendar_api.py)。
-- [修复] 顶部主菜单版本标识与策略手册同步为 v3.3 (Header Brand Banner Version Synchronization to v3.3): 将前端顶部左侧主菜单 DeltaHarvest 品牌版本标识由 v2.0 升级并对齐至 v3.3，与 Strategy Handbook & Educational Center v3.3 保持严格统一。
-- [改进] PDF 打印引擎纯文本轻量格式化与背景图形剔除支持 (PDF Engine Background Graphics Suppression & Clean Text Light Formatting Architecture): (1) 升级全局打印样式表 (web/src/index.css)，移除 -webkit-print-color-adjust: exact 强制填色限制并支持 print-color-adjust: economy，允许浏览器与 PDF 引擎自然剔除背景图形；(2) 在打印模式下自动剥离所有深色毛玻璃、背景图片、阴影与色块填充，将卡片与指标框转换为纯白/透明底色及 1px 浅灰色 (#cbd5e1) 分隔线，重构期权状态徽章为无底色轻量轮廓文本标签；(3) 针对 WeeklyExecutiveReportView (综合主报表) 与 ExecutivePortfolioDigestView (高管简报) 交付“Text Form / No Backgrounds”专属切换控制开关 (默认激活)，启用 print-clean-text 独立样式类确保即便在黑白打印机或归档打印中也能以高对比度文本格式清晰呈现；(4) 同步更新使用手册 (HelpHandbookModal.tsx) 常见问题与操作指引。
-- [文档] 同步更新使用手册与架构文档 (Help Handbook & Workflow Architecture Documentation Sync): (1) 扩充使用手册 (web/src/components/HelpHandbookModal.tsx) 常见问题与操作指引，系统性补齐 100 分制动态合规健康评分 (calculateComplianceHealthScore) 扣分细则、实时 Theta 脉搏流、2026 年度 Calendar YTD Premiums ($603,305.40 基准) 录入前核验机制、第二步 Panel B 资本利得及亏损结转维护中枢、Schwab 2026-09-12 最新对账备付金与防御性展期助手实盘持仓联动；(2) 全面重构并升级周末期权交易工作流架构文档 (docs/weekly-options-workflow.md) 至最新 7 步闭环流，更新现金瀑布流扣减生活费、YTD 权利金与亏损结转及合规风控量化数学模型。
-- [修复] 顶部导航风控脉搏徽章与高管研报动态同步及全站静态占位审计 (Dynamic Header Risk Pulse Badge, Unified Executive Digest Metrics & Static Placeholder Elimination): (1) 彻底根除 Header 顶部原写死“94/100 Health • +$142/d”静态占位符，交付纯函数合规健康评分模型 (calculateComplianceHealthScore) 与实时风控指标量化引擎 (calculateLiveExecutiveMetrics)，自动挂载活跃期权持仓簿与资金状态并订阅全局 deltaharvest_portfolio_updated 事件，使徽章数值与打开的 Executive Portfolio Digest 完全一致、毫秒级联动；(2) 深度审计并修复次级分析视图中的静态遗留数据——将 TaxAlphaOptimizerView 默认模拟基准与已核实 2026 年度 YTD 权利金 ($603,305.40) 动态绑定并增设一键同步按键，将 DefensiveRollAssistantView 限制为仅加载真实活跃持仓台账以防预设假数据污染，同步更新帮助手册 (HelpHandbookModal.tsx)；(3) 前端全量生产构建 (npm run build) 0 报错通过并补齐自动化单测验证。
-- [修复] Calendar YTD 权利金基准核准 ($603,305.40)、录入前核验机制与 YTD 资本利得及亏损结转维护中枢 (Calendar YTD Premiums $603,305.40 Baseline, Pre-Logging Verification & YTD Capital Gains / Loss Carryforward Editing Engine): (1) 修正 2026 年度 Calendar YTD Premiums Tracking 初始基准至核实金额 $603,305.40 (getDefaultCapitalState, getDefaultTaxLedgerState 及券商持仓 CSV 导入链路)，并实现低于该量级历史残缺缓存的自动平滑迁移；(2) 在第二步 (WeeklyCashLedgerView) 面板 A 中增设直达编辑模态框与快捷填充按键，并在“Log Current Week Premium”录入模态框顶部显式展示与允许随时校正 Starting YTD Premiums 初始基准金额，支持在录入当周新平仓权利金前核验更新并实时预览累计 YTD 总额；(3) 针对 YTD 资本利得与亏损结转 (Capital Loss Carryforwards)，在第二步面板 B 中交付包含 4 大资产指标 (Realized Gains, Realized Losses, Loss Carryforward, Net Taxable Est.) 的独立卡片矩阵与全新专用编辑模态框 (Edit Gains & Carryover)，支持灵活更正税收年度、正股/ETF 平仓利得、平仓亏损及 IRS $3,000 抵扣结转；(4) 同步更新使用手册 (HelpHandbookModal.tsx) 并补齐自动化单元测试 (tests/test_weekly_cash_and_disbursements.py)。
-- [修复] Schwab 持仓 CSV 资金与担保金对账精度修复 (Schwab Positions CSV Cash & Collateral Reconciliation): (1) 严格按 2026-09-12 真实持仓导出重新标定三层流动资金池——核心存款活期结余 ($299,590.53) 与货币市场基金 (SNYXX $202,775.94 + SNAXX $77,341.30)，总流动备付金为 $579,707.77；(2) 准确剔除 09/11 到期的 PANW 327.50P，精确核算当前唯一活跃卖 Put (PLTR 09/18/2026 160.00P，-10 张) 锁定的 $160,000.00 担保金负债；(3) 确立在扣除 $5,000 周度生活费前，Precalculated Available Cash 严格等于 $419,707.77 ($579,707.77 - $160,000.00)，扣除生活费后净可支配闲置资金为 $414,707.77，打通第一步 (SchwabPositionsUploadView) 至第二步 (WeeklyCashLedgerView) 的元对元动态运算与展示；(4) 补齐自动化单元测试 (tests/test_weekly_cash_and_disbursements.py) 与前端全量构建验证。
-- [新功能] 周末交易流程资金自动对账同步、宏观日历三级回退与选股器双向刷新中枢 (End-of-Week Ritual Cash Auto-Sync, Economic Calendar 3-Tier Fallback & Screener Live Update Engine): (1) 完善 Step 1 与 Step 2 资金闭环联动，当导入 Charles Schwab 券商 CSV 后通过 deltaharvest_portfolio_updated 全局事件与存储监听自动向第二步 (WeeklyCashLedgerView) 同步核心现金 ($293,703.52) 与货基 (SNYXX $202,775.94 + SNAXX $77,341.30 合计 $573,820.76)，自动抵扣未平仓 CSP 担保金 ($263,250.00) 与生活支出 ($5,000.00) 精准输出 $305,570.76 可支配闲置资金；(2) 针对宏观日历上游 HTTP 429 限流问题，在 Step 4 (EconomicCalendarView) 中落地三级回退架构 (Tier 1 Edge API / FastAPI -> Tier 2 备用 CORS 代理镜像 -> Tier 3 预置高影响宏观日历数据集)，并提供动态状态徽章与自动刷新链路；(3) 升级 Step 5 (CascadingScreenerView) Tab 1 (Barchart Top 1%) 与 Tab 2 (MarketChameleon Momentum)，提供“Fetch Live Quotes”实时行情重水化与“Upload CSV”本地导入按键，并打通本地 Python Screener Agent (scripts/run_screener_agent.py) 产物与前端最新数据集的平滑加载；(4) 同步更新使用手册 (HelpHandbookModal.tsx) 与架构文档。
-- [修复] 活跃持仓台账到期日真实日历驱动引擎、告警横幅过期剔除与现价命名统一 (Active Positions Real-Time Expiration Engine, Alert Banner Expired Contract Exclusion & Mkt Price Standardization): (1) 交付纯函数期权到期判定与日历引擎 (web/src/utils/optionExpirationEngine.ts)，根据系统当前真实日期与到期日时间戳精确判定是否已到期并实时动态推演 DTE 倒计时；(2) 修复 WeeklyPositionAuditView 与 HoldingsCoveredCallView 中 Active Positions Ledger 及 80% 止盈 (Profit Target Hit) 与行权价受威胁 (Strike Tested) 告警横幅，严格剔除已过期期权合约，杜绝周末/节假日及到期后虚假紧急平仓告警；在台账中新增“Expired (Date)”清晰状态标识与 EXPIRED 专属过滤标签；(3) 统一将全站所有“Spot Price”表头、排序字段及参考文案更名为“Mkt Price”，并接入 Tradier/Schwab 实时报价与盘后/周末/节假日收盘价自动刷新引擎。
-- [新功能] 周末交易流程重构——第一步 Charles Schwab 券商持仓 CSV 导入与第二步预计算可用现金余额 (End-of-Week Ritual Schwab Positions CSV Upload & Precalculated Cash Balance Sizing): (1) 重构 End-of-Week 7 步交易流程，将第一步设为 Charles Schwab 官方账户持仓 CSV 导入 (SchwabPositionsUploadView.tsx)，自动解析银行核心存款 Cash Sweep ($293,703.52)、SNYXX ($202,775.94) 与 SNAXX ($77,341.30) 货币市场基金、未平仓 CSP 与备兑期权及多头正股，并支持一键预载周末基线；(2) 将第二步设为预计算现金余额与生活费扣除 (WeeklyCashLedgerView.tsx)，严格按公式 Precalculated Liquid Cash = Cash Sweep + Money Market Funds - Σ(Strike × 100 × Contracts for open CSPs) 自动输出 $310,570.76，扣除 $5,000 生活费后得出 $305,570.76 可支配闲置现金；(3) 顺延重排后续流程为 Step 3 正股与备兑看涨期权、Step 4 宏观经济日历与催化剂雷达、Step 5 三合一选股器与 Gemini AI 决策中枢、Step 6 综合研报主报表、Step 7 券商订单暂存工作台；(4) 同步更新导航树 (DualMenuTree.tsx)、路由解析、使用手册 (HelpHandbookModal.tsx) 与自动化测试。
-- [新功能] 客户端多路由架构、定量方法论、投资者 FAQ 及监管免责声明视图交付 (Client-Side Navigation Router, Quantitative Methodology, Investor FAQ & Regulatory Disclaimer Architecture): (1) 交付完整的客户端 URL 解析与状态同步路由引擎 (parseRouteFromLocation & navigateTo)，全面打通 /workflow, /equities, /options, /spreads, /margin, /calendar, /methodology, /faq, /disclaimer 深度链接与浏览器前进/后退 (popstate) 支持；(2) 交付机构级定量期权方法论视图 (MethodologyView.tsx)，详尽阐述 Bollinger Bands 2.0 标准差行权价边界、0.15-0.25 Delta 胜率动态、80% 获利平仓买入锁利法则、0.50 Delta 防御性展期矩阵及四大流动性分级；(3) 交付全交互式投资者 FAQ 视图 (FaqView.tsx)，包含分类筛选、全文关键词搜索、展开折叠手风琴及 Tradier 首选 / Schwab 备选接口快速配置入口；(4) 交付合规监管免责声明视图 (DisclaimerView.tsx)，覆盖 OCC 标准化期权特性与风险文件、无投资建议与教育目的声明、行情延时与第三方数据声明及本地凭证隐私隔离说明；(5) 在全站页脚中交付网络爬虫友好的语义化超链接网格，经自动化 Playwright 爬虫实测发现 9 大内部端点且全部通过 (10 Scanned, 0 Failures)。
-- [新功能] Tradier API 成为首选行情与期权数据源并新增专用菜单与凭证管理模态框 (Tradier API Primary Market Data Provider & Masked Credential Management Modal): (1) 在前端顶部导航栏与 Ctrl+K 命令面板中交付“Tradier API | Primary”专属菜单按键与高管级模态框 (web/src/components/TradierSettingsModal.tsx)，支持开发者 API Key 掩码录入 (••••••••) 与显隐切换，凭证严格本地隔离于浏览器 localStorage 与 gitignored .env，绝不上送公开仓库以确保隐私安全；(2) 将 Tradier API 确立为首选数据提供者 (Priority 1)，Charles Schwab Retail Trader API 确立为二级回退源 (Priority 2 Fallback)，打通原生 CORS 支持 (Access-Control-Allow-Origin: *) 赋能 Cloudflare Pages 静态端零代理极速直连；(3) 交付实时连通性探测、NBBO 延时测速与 SPY 示例行情校验，并在端点与客户端抓取引擎中实现主备平滑降级；(4) 同步更新 API 诊断面板 (ApiDiagnosticsModal)、帮助手册 (HelpHandbookModal) 与环境配置文档。
-- [修复] GitHub Actions 日常期权选股流水线数据提交流程与 gitignore 白名单防线 (Daily Options Screener Data Pipeline Git Staging Fix): (1) 定位并根除 .github/workflows/daily_screener.yml 执行失败 (Run ID: 34655163958) 的根因——原 .gitignore 统配规则 /data/ 与 reports/ 拦截了数据更新文件提交，导致 git add 抛出 exit code 1 阻断任务；(2) 精细化放行数据与报告白名单 (!/data/options_data.json, !/data/watchlist.json, !reports/latest_options_audit.md)，并在流水线提交步骤中使用 git add -f 与变基推送防线，确保每日自动化静态数据流水线稳定持久化至仓库主分支。
-- [修复] Options Trade Quality Simulator 到期日周末偏差修复与 NYSE 交易日历及 Good Friday 节假日自适应引擎 (Options Trade Quality Simulator Expiration Date Timezone Fix & NYSE Holiday Calendar Engine): (1) 根除 simulator 中使用 toISOString() 导致美东/美中时间夜间转换时日期向后跳变至周六 (09/12/2026) 的时区缺陷，统一采用本地日期量化格式化 (formatDateYMD) 与正午对齐解析 (parseDateYMD)；(2) 交付全量 NYSE 交易所节假日计算引擎与期权到期日规则库 (web/src/utils/nyseHolidayCalendar.ts)，集成 Meeus/Jones/Butcher 高精度算法自动计算每年复活节与耶稣受难日 (Good Friday)，覆盖元旦、马丁路德金日、华盛顿诞辰日、阵亡将士纪念日、六月节、独立日、劳动节、感恩节及圣诞节；(3) 严格遵循 OCC Rule 1106 规则，在周五逢 NYSE 休市 (如 Good Friday 或周五补休的圣诞/六月节/独立日) 时，自动将期权到期日向前调整至前一正常交易日 (周四)，并在 UI 界面高亮展示调整原因与标签；(4) 升级快捷到期日选择器 (Next Weekly、14 DTE、30 DTE、45 DTE)，智能对齐至 DTE 周期后最接近的周五并自动执行 NYSE 假日调整；(5) 在到期日输入框下方新增智能诊断与一键对齐辅助提示，并在 Python 侧补齐自动化单元测试 (tests/test_nyse_options_calendar.py)。
-- [改进] Options Trade Quality Simulator 移除预设区并新增备兑看涨 (CC) 与现金担保看跌 (CSP) 模拟最近交易所行权价与合约全景蓝图卡片 (Options Trade Quality Simulator Nearest Strike Price Engine & Presets Streamlining): (1) 在 OptionsTradeQualitySimulator 组件中落地 Black-Scholes 逆累积分布 (Acklam probit 算法) 与动态交易所行权价间距算法 (getNearestExchangeStrike)，基于模拟器目标 Delta、标的现价、IV Rank 与到期日 DTE 动态求解并在界面顶层直接输出最接近的真实可交易行权价 (Nearest Exchange Strike)；(2) 自动根据所选策略 (Covered Call 或 Cash Secured Put) 测算行权价相对现价的安全垫 (Strike Cushion OTM %)、实际 Black-Scholes Delta 与胜率 PoP、理论与 Bid/Ask/Mid 权利金估值、单张合约权利金收入与担保保证金/持仓资金，以及盈亏平衡点与 50 SMA 支撑距离；(3) 彻底移除原冗余的 Presets 预设按钮区，界面精简收敛为数据驱动的动态合约蓝图卡片。
-- [新功能] Options Trade Quality Simulator 新增股票代码与到期日输入字段，支持从 Barchart.com 或 MarketChameleon.com 自动拉取 IV Rank 与技术指标 (Options Trade Quality Simulator Ticker & Expiration Date Hydration with Multi-Source Barchart/MarketChameleon Engine): (1) 在 OptionsTradeQualitySimulator 组件与 OptionsTradeQualityModal 模态框中新增股票代码 (Stock Ticker) 与期权到期日 (Expiration Date) 专属录入控件，支持快速选择 Next Friday、14 DTE、30 DTE、45 DTE 到期周期并实时计算 DTE；(2) 集成 Barchart.com 与 MarketChameleon.com 双数据源快速切换开关，录入代码后自动触发多源技术指标拉取流水线；(3) 针对 Barchart 数据源自动计算 13 项技术指标共识评级 (Barchart Opinion %)、买卖票数、14 日 RSI 与历史波动率标定的 IV Rank，针对 MarketChameleon 数据源自动推演均线趋势规则 (严格上升趋势、金叉、快线突破、多头回踩) 及 IV30 与 20 日波动率；(4) 联动 Black-Scholes 解析模型基于所选到期日动态求解保守 Delta、权利金收益、年化资金回报率 (RoC)、买卖价差与流动性，自动水化更新全部 5 维量化滑块及实时综合评分仪表盘；(5) 同步在帮助手册 (HelpHandbookModal.tsx) 与技术文档中补齐使用说明。
-- [改进] Weekly Stock Screeners 中的 "Has Options Only" 复选框更新为 "At least Weekly Options" (Weekly Stock Screeners 'At least Weekly Options' Precision Labeling): (1) 将 WeeklyStockScreenersView 顶部工具栏中的过滤复选框标签由 "Has Options Only" 修正为 "At least Weekly Options"，准确反映底层 has_weekly_options 周权期权链过滤语义；(2) 优化表单辅助提示与无障碍属性，明确提示仅允许拥有周度 (周五或日度) 到期期权链的标的通过该门禁；(3) 同步更新使用手册相关章节说明。
-- [修复] Gemini 决策中枢 CBOE 周权期权门禁与月度期权标的 (AMCX 等) 自动剔除防线 (Gemini AI Decision Hub CBOE Weeklys Gating & Monthly-Only Ticker Rejection): (1) 彻底根除选股结果中混入无周权期权标的 (如仅有月度期权的 AMCX、MUFG、NMM 等) 却被合成 9/11/2026 周五到期日注入 Gemini AI 机构级提示词的问题；(2) 在级联选股器决策中枢 (CascadingScreenerView.tsx) 中引入 strictCboeWeeklysOnly 状态与 Stage 1 Screener Feed 专属“CBOE Weeklys Gate”交互式门禁控制开关 (默认强制开启 Strict Enforced)，在 finalCandidates 漏斗计算中严格过滤 has_weeklys === false 的标的；(3) 升级 Gemini 提示词生成器 (geminiPromptTemplates.ts)，在候选标的逐行数据中注入 Weekly Options 到期周期字段，并在构建候选行前执行 validOpportunities 双重周权安全断言；(4) 同步更新使用手册 (HelpHandbookModal.tsx) 与自动化单元测试 (tests/test_tri_screener_workflow.py) 中的 CBOE 周权过滤断言。
-- [新功能] 全局数据表格通用列交互式排序引擎与表头常驻锁定防线 (Universal Interactive Table Column Sorting Engine & Sticky Header Locking): (1) 交付纯函数多类型表格排序引擎 (web/src/utils/tableSort.ts) 与 React 钩子 (useSortableTable)，智能识别并精确解析数字、美元货币金额 ($1,234.56)、百分比 (+15.4%)、紧凑度量单位 (150k, 2.5M, 1.2B)、ISO 8601 日期时间与对象嵌套属性 (如 extra_fields.rsi_14)，且无论正序还是倒序均将空值/未定义属性自动沉底；(2) 交付可复用粘性表头组件 SortableTh (web/src/components/ui/SortableTh.tsx)，统一集成 position: sticky、top: 0、z-index: 10/20、半透明毛玻璃背景 (支持深浅色模式)、左/中/右对齐、双向切换及动态高亮排序列箭头；(3) 在全局 index.css 中建立 .table-sticky-header th 与 .table-scroll-container 响应式锁高与垂直平滑滚动样式，彻底解决页面向下长滚动时长表格表头丢失的问题；(4) 全面升级全站全部数据表格——CascadingScreenerView 全部 5 张表格 (Barchart Top 1%, MarketChameleon, TOS View 190898 Returned Screen, Final Pool, Gemini AI Decision Matrix)、WeeklyStockScreenersView、WeeklyPositionAuditView (活跃持仓台账 4 大品类)、HoldingsCoveredCallView (正股与备兑期权表、未平仓 CSP 表)、BrokerStagingWorkbench (暂存 CSP、组合价差、历史执行审计表)、EconomicCalendarView (宏观经济日历)、ScreenerTable、PrimaryScreenerTable、OptionChainMatrixView、FundamentalHealthTable、TaxAlphaOptimizerView 及 PmccScreenerView；(5) 补齐自动化单元测试 (tests/test_table_sort.py) 并通过 TypeScript 生产全量构建 (npm run build) 与 AI 协作资产合规检查。
-- [修复] 选股候选标的隐含波动率 (IV) 与 14日 RSI 动态水化与 Black-Scholes 解析希腊值量化引擎 (Dynamic Screener Candidate IV/RSI Hydration & Black-Scholes Greek Engine): (1) 彻底根除 CascadingScreenerView (合成选股候选标的与暂存下单) 中写死的 iv: 0.35 (35%)、rsi: 52、delta: -0.18、iv_rank: 45 静态兜底值，解决在 Gemini AI 决策中枢中运行候选股 (如 VLO, RVTY, RNG) 时全部返回相同 35% IV 与 52 RSI 误导性数据的问题；(2) 交付纯函数量化水化引擎 (web/src/utils/screenerHydrator.ts)，分层优先读取真实扩展字段 (MarketChameleon extra_fields.rsi_14 / iv30 / iv_rank)、自选股元数据 (TickerMeta) 与历史收盘价；若无直接指标，则基于行业板块 (能源、医疗、云计算、半导体、金融等) 与日内波动率进行科学基线标定 (如 VLO 标定为 ~31% IV / 62 RSI，RVTY 标定为 ~26% IV / 61 RSI，RNG 标定为 ~52% IV / 57 RSI)；(3) 结合 Black-Scholes 倒推模型与解析希腊值函数 (calculateBlackScholesGreeks) 动态求解精准 0.18Δ 行权价、真实 Delta、期权理论价值 (Bid/Ask/Mid)、下行安全垫、胜率 PoP 与年化 RoC；(4) 升级 Gemini 提示词生成器 (geminiPromptTemplates.ts)，将真实精确的各标的 IV、IV Rank、14D RSI、价格与下行安全垫注入机构级提示词；(5) 补齐自动化单元测试 (tests/test_tri_screener_workflow.py) 并通过前端全量构建与 AI 资产合规检查。
-- [修复] ThinkorSwim 与 Barchart View 190898 选股器全量与单行清除功能、CSV 表头智能隔离与标的审计防线 (TOS View 190898 Bulk/Individual Clear, CSV Column Header Safeguards & Strict Ticker Audit Engine): (1) 交付纯函数标的清洗与审计引擎 (web/src/utils/symbolSanitizer.ts)，包含详尽非股票词汇黑名单 (DISALLOWED_WORDS，覆盖 SYMBOL, PRICE, LAST, CHANGE, OPINION, CADENCE, STRATEGY, BUY, SELL, HOLD, INC, CORP 等表格标题与表意词) 与正股代码白名单 (KNOWN_GENUINE_TICKERS，保留 NET, NOW, AI, LOW 等真实美股标的)；(2) 落地结构化 CSV 列头隔离提取算法 (extractSymbolsFromTextOrCsv)，自动探测 CSV/TSV 表格的 Symbol/Ticker 所在列，严格仅提取该列代码并完全旁路忽略其他 12 列文本与指标列，彻底终结误将导出 CSV 标题词解析为 179 个伪代码的问题；若导入已包含完整指标的 Barchart CSV 则自动整表无损水化；(3) 在 CascadingScreenerView 与 WeeklyStockScreenersView 中交付“Clear Screen”一键全量清空按键，重置数据并持久化至本地存储 (localStorage)，杜绝刷新页面时 179 历史缓存重现，并在清空后呈现空状态引导卡片；(4) 在 Returned Screen 数据表每行 Actions 列中新增独立 Trash2 移除按键，支持即时剔除单只异常标的；(5) 深度重构工作流顶部引导文案为 3 步清晰操作卡（1. 选择/录入标的、2. 运行 Barchart 13 指标分析、3. 管理结果并推入 Gemini AI 决策中枢）；(6) 交付单元测试 (tests/test_symbol_sanitizer.py) 并通过全量编译与 AI 资产检查。
-- [新功能] 100分制期权交易质态量化评分模型与动态滑块模拟器小组件 (100-Point Quantitative Options Trade Quality Scoring Model & Real-Time Quality Simulator Widget): (1) 交付完整的 100 分制期权量化质态评分引擎与类型定义 (web/src/types/optionsScreener.types.ts 与 web/src/utils/scoringModel.ts)，涵盖 IV Rank / 百分位 (25% 权重，35%–70% 黄金捕获区)、期权 Delta / 胜率 PoP (25% 权重，0.15–0.25Δ CSP / 0.20–0.30Δ CC)、技术面均线动态支撑抵扣 (25% 权重，行权价低于 50 SMA 支撑)、年化资金回报率 RoC (15% 权重，18%–35%+ 年化) 与流动性买卖价差 (10% 权重，价差 ≤5% 且 OI ≥500)，并设有到期日前财报硬性避让 (-40分惩罚) 与价差 >15% 自动否决门禁；(2) 原生忠实对标参考设计图交付 OptionsTradeQualitySimulator.tsx UI 模拟器组件，包含 IV Rank、Option Delta、Dist. to 50 SMA 交互式发光滑块、极速响应 SVG 动态环形霓虹仪表盘 (Radial Gauge)、5 维度分值进度条及“Live Update: Active”实时刷新状态；(3) 交付 OptionsTradeQualityModal 模态框，并在顶部 Header 导航栏、Ctrl+K 命令面板及主选股器数据行 (ScreenerTable) 中配置一键直达“⚡ Simulator”按键，自动将选中期权合约的核心希腊值与均线距离水化预填进模拟器；(4) 同步在帮助手册 (HelpHandbookModal.tsx) 中新增专属量化模型规则说明卡片，并补齐自动化测试 (tests/test_options_trade_scoring.py)。
-- [改进] 系统性代码审计、量化模型防线加固与前端构建动态代码拆分 (System Code Audit, Quantitative Mathematical Guards & Dynamic Code Splitting): (1) 交付纯函数金融数学库 (web/src/utils/financeMath.ts)，集成 Black-Scholes 解析希腊值、标准正态 CDF/PDF、年化资金回报率 (RoR) 与零除/NaN 数值防线，交付标准化格式化中枢 (formatters.ts) 与确定性技术指标库 (technicalIndicators.ts)；(2) 交付类型安全的本地存储防抖缓存引擎 (storageService.ts & useLocalStorage) 与美股时钟解耦钩子 (useMarketClock)；(3) 交付严格领域模型接口 (types/screener.ts, types/portfolio.ts) 与无状态 UI 组件原语 (Badge, MetricCard, ModalWrapper, LoadingSkeleton)；(4) 彻底解耦 App.tsx 顶层庞大依赖，对全部模态框 (HelpHandbookModal, TickerAuditModal 等) 与次级分析视图接入 React.lazy 动态按需加载与 Suspense 边界，将生产构建单体 JS 体积自 1.48 MB 大幅削减 68.9% 至 459 kB (Gzip 128 kB)，彻底解决 Vite 超大 Chunk 警告。
-- [修复] 活跃持仓台账四品类完整对账与 Schwab 现金/货基透明核算 (Active Position Ledger 4-Asset Class Reconciliation & Charles Schwab Cash/MMF Integration): (1) 升级 Active Position Ledger (活跃持仓台账 / WeeklyPositionAuditView & PortfolioMarginSimulatorView) 彻底覆盖实盘交易主账户 (Living Trust-Options ...609) 中的全部 4 大核心资产类别——7 只多头正股 (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA，合计市值 $1,785,894.00)、10 笔关联期权 (2 笔 CSP: PANW 327.50P x3, PLTR 165.00P x10 锁定 $263,250.00 保证金；8 笔 Covered Call 备兑看涨期权)、银行核心活期现金 (Charles Schwab Bank Deposit Sweep $293,703.52) 与货币市场基金 (SNYXX 纽约免税货基 $202,775.94 + SNAXX 卓越优势货基 $77,341.30，合计现金/货基储备 $573,820.76)；(2) 落地多品类资产筛选标签 (All 20 仓、Equities 7 仓、CSPs 2 仓、Covered Calls 8 仓、Cash & MMF 3 仓) 与一键重置/同步实盘券商基线按键 (Sync Schwab Baseline)，并在本地存储检测到历史残缺缓存时自动无损补全现金/货基记录；(3) 升级 simulatePosition 压力测试引擎与 auditPositionsWeeklyStatus 审计逻辑，确保现金与货币市场基金恒定保持 $1.00 净值、0 Delta、0 Theta、0 市场震荡风险，并自动归入安全流动性储备；(4) 账户净清算价值 $2,343,519.76 与扣除 $5,000 生活费及 CSP 抵押金后的可支配闲置现金 $305,570.76 实现元对元数学对账；(5) 补齐自动化单元测试 (tests/test_weekly_cash_and_disbursements.py) 与使用手册 (HelpHandbookModal.tsx)。
-- [新功能] 周末交易流程第四步三合一选股器重建、ThinkorSwim View 190898 标准化结果屏与周末流程用户操作全景手册 (End-of-Week Ritual Item 4 Tri-Screeners, TOS View 190898 Standardized Return Screen & Comprehensive Workflow Manual Interventions): (1) 彻底重构 End-of-Week Workflow 第四步 (4. Tri-Screen & Gemini AI / CascadingScreenerView)，全面恢复并原生嵌入 Barchart Top 1% 方向强度 (53 支 100% 买入共识标的) 与 MarketChameleon 动量选股器 (60 支标的、CBOE 周权门禁、原生预设构建器模态框)；(2) 深度重建 ThinkorSwim 选股与 Barchart View 190898 工作流，不仅支持单标的录入、TOS 扫描结果批量粘贴、文件导入与 5 大预设，更彻底修复了原先仅复制链接、未返回正式结果的问题，打通 13 指标 Barchart 意见共识评级引擎与真实收盘价水化，以完全一致的 Barchart Top 1% 标准格式渲染分析结果（包含 Symbol, Name, Last Price, Net Change, % Change, Barchart Opinion, Stability Prev/LW/LM, Options Cadence, Strategy, Audit/Chart/Stage 操作）；(3) 建立一键将选股标的推入 Gemini 决策中枢 (Send to Gemini AI Hub) 链路，动态合成 0.15-0.25Δ 黄金区间与单正股 $200k 封顶红线的候选期权，生成 15 列机构级 Markdown 提示词，并解析三表结果实现 1 键推入券商暂存工作台；(4) 极大扩充使用手册 (HelpHandbookModal.tsx) 的 Weekly Workflow 指南，系统性拆解 1 至 6 步完整周末闭环，详细说明系统自动化运算逻辑与用户各步骤所需的人工介入操作 (Manual Intervention Required)；(5) 补齐自动化单元测试 (tests/test_tri_screener_workflow.py) 与全链路构建验证。
-- [新功能] 实盘期权账户与独立自选股动态跟踪标的计算引擎 (Dynamic Equities Tracked Engine & Elimination of Hardcoded Tickers): (1) 彻底根除顶部导航栏原先写死的“21 Equities Tracked”占位显示与 DEFAULT_UNIVERSE_SYMBOLS / INITIAL_WATCHLIST_GROUPS 中预置的 22 支未持有标的 (SPY, QQQ, IWM, NVDA, AAPL, MSFT, AMZN, GOOGL, JEPI, SCHD, SPCX, CLM, CRF, ZETA 等)；(2) 落地动态跟踪标的计算中枢，确立跟踪股票数量严格等于用户期权实盘主账户 (Living Trust-Options ...609) 实际持有的正股 (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA 7 支) 并集上所有独立新建自选股 (Separately Created Watchlists) 中的去重标的；(3) 建立全响应式双向刷新链路，当导入新券商 CSV、录入正股买卖交易或在自选股管理器中新增/重命名/删除分组及增删标的时，顶部 Header“{totalTickers} Equities Tracked”、双树导航指标与选股器实时动态联动更新；(4) 升级帮助手册 (HelpHandbookModal.tsx) 与自选股模态框 (WatchlistModal.tsx)，补齐自动化单测 (tests/test_weekly_cash_and_disbursements.py) 与前端全量构建验证。
-- [新功能] 期权收息主报表实盘数据替换 (根除 SPY/AAPL 测试交易)、实盘 Schwab 期权台账与盘中动态交易录入中枢 (Options Master Digest Schwab Integration & Mid-Week Live Transaction Entry Engine): (1) 彻底根除 DELTAHARVEST OPTIONS INCOME MASTER DIGEST (WeeklyExecutiveReportView) 与底层税收台账中的 SPY、AAPL CSP 测试交易占位符，全面接入并自动同步 Charles Schwab 实盘 10 大期权交易记录 (PANW 327.50P, PLTR 165.00P, TSLA 375C, AXTI 70C, BLZE 17.5C, TSLA 370C, NET 300C, IONQ 43.5C, RTX 207.5C, LUNR 16.5C，合计已收权利金 $51,514.11)；(2) 交付盘中多品类动态交易录入中枢 (LiveTransactionModal.tsx 与 recordLiveTransaction)，支持在交易周内随时即时录入正股买入/卖出、卖出看跌期权 (CSP) 与卖出备兑看涨期权 (Covered Call)，自动测算并即时更新锁定保证金 (Collateral)、闲置现金瀑布流 (Free Cash)、权利金入账与 IRS 税差台账；(3) 建立基于全局事件 (deltaharvest_portfolio_updated) 的全应用组件双向响应中枢，确保主高管研报、资金台账 (Step 1)、持仓审计与高管简报视图实时同步更新，并在主报表与 CSV 导出中新增“2.1 Live Options & Equity Transactions Audit Trail”完整审计明细；(4) 补齐自动化单元测试 (tests/test_weekly_cash_and_disbursements.py) 与全链路构建验证。
-- [新功能] ThinkorSwim 与 Barchart 真实收盘价水化、券商持仓 CSV 导入中枢与自选股联动 (TOS/Barchart Live Close Pricing, Broker Positions CSV Ingestion & Watchlist Integration): (1) 彻底根除 ThinkorSwim / Barchart Watchlist (View 190898) 标的默认显示 $150 占位价格的问题，打通 Yahoo Finance 周末休市最近交易日收盘价抓取与本地 13 指标 Barchart 意见共识评级引擎 (calculateBarchartOpinion)；(2) 交付标准券商持仓 CSV 解析引擎 (web/src/utils/schwabPositionsParser.ts)，一键自动解析现金余额、货币市场基金 (SNYXX $202,775.94, SNAXX $77,341.30, Cash $293,703.52，合计 $573,820.76 卖 Put 备付金)、空头看跌期权抵押金 (PANW 327.50P + PLTR 165.00P 合计 -$263,250.00)、扣除 $5,000 生活费支出后精准输出 $305,570.76 可支配闲置现金，以及多腿备兑期权止盈/展期状态；(3) 自动提取 CSV 内的 7 只正股 (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA) 并一键无缝合并同步入“Living Trust Equities”专属自选股组，在前端自选股列表、级联选股器与技术分析图表内立即可见；(4) 交付单元测试 (tests/test_weekly_cash_and_disbursements.py) 与全量构建验证。
-- [新功能] Living Trust-Options ...609 真实期权账户接入与现金风控中枢 (Living Trust-Options ...609 Real Account Setup, MMF Collateral & CSP Reconciliation): (1) 确立 Living Trust-Options ...609 为系统默认主期权实盘账户（净清算价值 $2,343,519.76），将核心现金与货币市场基金 SNYXX ($202,775.94) + SNAXX ($77,341.30) + 现金结余 ($293,703.52) 全额合计 $573,820.76 认定为卖 Put (CSP) 担保备付金；(2) 深度对账并自动抵扣 PANW (-3x 327.50P, $98,250 保证金) 与 PLTR (-10x 165.00P, $165,000 保证金) 合计 $263,250 未平仓卖 Put 抵押金，扣除每周 $5,000 生活费后精准输出 $305,570.76 真实可支配闲置现金 (Deployable Free Cash)，支持以 $100k/仓动态开立 3 笔新 CSP 且严格遵从单只正股 $200k 封顶红线；(3) 升级 Step 1 WeeklyCashLedgerView，增设专属账户配置与货币基金瀑布流横幅及一键重置基线；(4) 升级 Step 2 HoldingsCoveredCallView，多腿合并覆盖 7 大现货与 7 个备兑看涨期权仓位，并激活 BLZE 17.5C (+84.9%) 与 TSLA 375C (+85.27%) 80% 止盈平仓/展期强提醒；(5) 补齐单元测试 (tests/test_weekly_cash_and_disbursements.py) 与前端全量构建验证。
-- [新功能] Gemini Pro 机构级期权收息提示词中枢与 15 列三表解析器 (Institutional Gemini Pro Options Prompt & 15-Column Table Ingestion): (1) 交付 geminiPromptTemplates.ts 与 docs/gemini-pro-options-prompt.md，彻底替代旧版外部 Excel 多工作表与 Python 脚本解析流程，原生打通 DeltaHarvest 闲置资金台账 (自动扣减 $5,000 生活支出、动态头寸风控与 $200k 单标的 CSP 封顶) 与三合一选股中枢 (ThinkorSwim + Barchart View 190898 + MarketChameleon)；(2) 升级 CascadingScreenerView 一键生成精准包含实时 Delta (-0.16 至 -0.22)、下行安全垫、IV Rank、RSI 及到期周五的结构化 Markdown Prompt；(3) 升级 parseGeminiMarkdownTables 动态表头检测，无缝解析 Table 1 完整 15 列机构级指标、过滤 TOTALS / REMAINING CASH 统计行，并支持一键将推荐交易推入券商订单暂存台；(4) 补齐单元测试 (tests/test_weekly_cash_and_disbursements.py) 与全链路验证。
-- [新功能] 自动化实时同步 (Live Sync) 频率控制、防封禁配额防护与美股交易时段门禁 (Automated Live Sync Frequency, Rate-Limit Safeguards & Market Hours Gating): (1) 交付动态防封禁调用量化分析引擎 (web/src/utils/marketHoursAndAutoSync.ts)，基于 Yahoo Finance 未认证接口 ~2,000 reqs/hr 及 CORS 代理阈值，测算并提供 5 分钟 (默认推荐，252 reqs/hr 仅占 12.6% 配额)、10 分钟 (超安全，126 reqs/hr 占 6.3% 配额) 与 2 分钟 (日内盯盘，630 reqs/hr 占 31.5% 配额) 预设及自选股规模分析；(2) 落地美股交易时段智能门禁 (isUsMarketOpen)，仅在美东时间周一至周五 9:30 AM – 4:00 PM 自动触发同步，盘后及周末自动休眠暂停，单日节约逾 4,000 次无效 API 损耗并规避 IP 封禁；(3) 升级顶部导航栏 Header 分裂式控制按纽与下拉控制抽屉，支持随时切换同步频率、实时倒计时秒数显示、配额仪表条与一键开启/关闭交易时段休眠；(4) 交付自动化单测 (tests/test_live_sync_rate_limits.py) 与帮助手册更新。
-- [新功能] 周末 10 步期权交易工作流、现金支出台账 ($5,000 生活费扣除)、动态资金头寸风控 (支持 $500k+ 闲置资金、单只正股 CSP 严格封顶 $200,000 且最多 5 仓)、20Δ 备兑看涨期权生成器与 Gemini 扩展思考 3 表解析中枢 (Weekly 10-Step Options Workflow, Dynamic Cash Sizing, $200k/Equity Limit, 20Δ CC Suggester & Gemini 3-Table Parser): (1) 交付 Step 1 WeeklyCashLedgerView 资金与税收中枢，实现每周真实闲置可用资金瀑布流计算与快捷录入 (支持 $250k/$500k/$750k/$1M 快速预设与实时内联修改，Total Cash - $5,000 生活支出 - 冻结 CSP 保证金 = Deployable Free Cash)，支持周五到期自动对账与历年 YTD 权利金累计及前一年度资本亏损结转抵扣；(2) 落地动态期权头寸风控引擎 (calculateDynamicPositionSizing)，面向每周 $500,000+ 高资金量场景，将单只正股卖 Put (CSP) 保证金严格限制在不超过 $200,000 封顶，并根据目标分配额动态计算最多并发持仓数 (min(5, floor(Free Cash / Target Allocation)))；(3) 交付 Step 2 HoldingsCoveredCallView 现货持仓与期权监控中枢，自动配对正股与备兑期权，精确识别未备兑现货 (≥100 股) 并基于 IVR30、IVR 百分比排名及阻力位一键生成 20Δ 极速期权建议，实时监控持有卖 Put 的 80% 止盈与 ITM 展期告警；(4) 升级 Step 4 CascadingScreenerView，无缝打通 ThinkorSwim (TOS) 与 Barchart Watchlist View 190898 双向批量导入/一键跳转复制，内置 steps.txt 严格标准的 Gemini AI 深度定量提示词 (注入 $200k 单标的上限与目标仓位)，并交付交互式 Markdown 3 表解析器 (Table 1 终选 5 强推荐卡、Table 2 临界标的、Table 3 排除标的)，支持 1 键推入券商订单暂存；(5) 交付 Step 5 WeeklyExecutiveReportView 综合主报表，一键导出 CSV 与原生高对比度 Print-to-PDF；(6) 升级 DualMenuTree 导航树与快捷命令面板，收敛为直观周末 6 步闭环流，补齐单元测试 (tests/test_weekly_cash_and_disbursements.py) 与使用手册。
-- [新功能] 周末期权交易工作流、级联选股器 (15–25Δ)、现金预算台账与应用布局重构 (End-of-Week Options Routine, Cascading Screener, Cash Ledger & Layout Revamp): (1) 交付 WeeklyPositionAuditView 周末持仓审计与现金风控中枢，实现 100% 现金担保 (Cash-Secured) 资金台账管理，动态计算持有 CSP 冻结保证金与可用闲置现金 (Free Cash)，杜绝任何杠杆爆仓风险；自动激活 80% 止盈法则 (消除 Gamma 尾部风险)、2.5% 行权价威胁告警一键下移展期 (Defensive Roll)、周五到期处理与 100+ 未备兑现货标的识别；(2) 交付历年 YTD 期权权利金与资本利得税收台账 (Tax-Alpha Ledger)，支持前一年度资本亏损结转抵扣 (Prior Year Loss Carryforward) 扣除与平仓交易记录；(3) 交付 CascadingScreenerView 交互式级联选股器，设立 4 阶漏斗 (Barchart 方向强度 & MC 上升趋势 -> IV Rank 门槛 -> 0.15–0.25 Delta 黄金区间 -> $15k/单仓可用现金预算门禁)，并支持 Thinkorswim (TOS) 外部自选股直接导入评估；(4) 集成 Gemini 扩展思考 (Thinking Mode HIGH) 期权收息选股评估器，根据用户实时可用闲置资金与 $15k/仓限制，深度推演并精选 1 至 5 支高确信度卖 Put 标的与防守预案，支持 $0 成本个人 Gemini 会员一键复制 Prompt 与结构化导入；(5) 彻底重构应用导航布局，以 4 步周末工作流为核心替代横向 19 键滚动条，并将选股器 KPI 卡与通用搜索栏设为情境按需渲染，释放超过 250px 纵向可视空间；同步更新使用手册与构建测试。
-- [新功能] 每周美股宏观经济指标与催化剂雷达 (Weekly US Economic Indicators & Macro Catalyst Radar): (1) 交付 EconomicCalendarView 前端专属视图与双树统一导航 (支持 Equities 树与 Options 树无缝切换，并集成 Ctrl+K 命令面板快捷直达)，实时接入 Forex Factory / faireconomy.media 免费公开周度宏观日历，严格过滤 USD 美元事件并统一归一化为美东时间 (ET)；(2) 落地 8 大核心经济指标至行业板块与代表性标的/ETF 的确定性传导矩阵 (CPI/PCE -> QQQ/VNQ/XLF/TLT, FOMC -> KRE/XLF/QQQ/GLD, NFP -> XLY/XLI/IWM, Retail Sales -> XRT/IYT, ISM PMI -> XLI/XLB/SOXX, Jobless Claims -> SPY/IWM, Crude Oil -> XLE/JETS, Housing -> ITB/XHB)；(3) 落地全链路离线回退底线防护 (Offline Baseline Fallback with Evident Amber Notice)，在上游网络受限或超时时自动呈现预置基准日程并常驻醒目黄色告警提示，确保 100% 高可用；(4) 交付 1-Click AI 宏观催化剂期权防御综述 (AI Macro Catalyst Outlook & Zero-Billing Bridge)，一键生成整合日程 Prompt 并通过个人 Gemini Pro 会员 ($0 成本) 导入结构化 JSON 宏观研报；(5) 提供 Cloudflare Pages 边缘服务函数 (/functions/api/economic-calendar.js) 30 分钟全球边缘缓存与本地 FastAPI 端点 (GET /api/v1/options/economic-calendar) 双运行时，补齐单元测试 (tests/test_economic_calendar_api.py)、帮助手册与技术架构文档 (docs/economic-calendar.md)。
-- [新功能] 基于 Gemini 扩展思考 (Thinking Mode HIGH) 的自动化期权收息选股器与零成本 Pro 计划桥接 (Automated Options Income Screener & Zero-Billing Bridge): (1) 交付 OptionsIncomeAnalyzer 前端工作台中枢与专属导航视图 (AI_OPTIONS_INCOME)，无缝集成 Barchart 方向强度 (View 190898)、MarketChameleon 与自定义自选股数据集快捷预填；(2) 严格遵循机构级量化风控法则（5-10 DTE 近端周权到期日、CSP Delta -0.15 至 -0.30、下行安全垫 3.5%-6.0%、技术支撑锚定、IV Rank > 35%、年化现金回报率 AROC >= 15% / 12%、严格财报窗口避让黑名单与买卖价差流动性门禁）；(3) 激活 Google Gemini 2.5 Flash / 2.0 Pro 深度扩展思考链路 (thinking_config: { thinking_level: "HIGH" })，通过模型深度数学推演与支持位核验，输出高质量决策矩阵与未入选标的审计诊断；(4) 设立零成本用户保护防线与 Google Gemini Pro 个人会员计划桥接中枢（一键生成整合定量 Prompt、复制至 gemini.google.com 个人付费账号运行、并在应用内一键导入 JSON 解析，彻底杜绝开发者 API 账单溢出与扣费风险）；(5) 落地 Cloudflare Pages 边缘服务函数 (/functions/api/analyze-options.js) 与本地开发 FastAPI 服务端点 (POST /api/v1/options/analyze-options) 双运行时支持，并补齐单元测试 (tests/test_options_analyzer_api.py)、帮助手册 (HelpHandbookModal.tsx) 与技术架构文档 (docs/automated-options-screener.md)。
-- [新功能] Barchart 自定义批量与单标的自选股选股 Agent 及 View 190898 规范化分析中枢 (Barchart Custom Watchlist Agent & View 190898 Engine): (1) 交付 BarchartCustomWatchlistAgent (src/screener_agents/barchart_custom_agent.py)，支持单只股票快速分析与批量标的导入（逗号/空格/换行分隔，或上传 .txt / .csv 文件），无缝查询 Barchart 官方核心 API (/proxies/core-api/v1/quotes/get?viewName=190898) 穿透 WAF，并在离线或网络故障时自动回退至本地 13 指标技术共识评级引擎 (barchart_opinion_service.py)；(2) 严格对齐 Barchart Watchlist View 190898 官方表头与字段规范（Symbol, Name, Last Price, Net Change, % Change, Barchart Opinion, Opinion Score %, Stability Previous, Stability Last Week, Stability Last Month, Weekly Options, Options Cadence, Signal Strength, Signal Direction, Recommended Strategy）；(3) 升级 Web 端 WeeklyStockScreenersView，新增第三数据源标签“Barchart Watchlist (View 190898)”及专属自选股导入控制台中枢，内置快捷预设芯片（Mag 7, Semis, CBOE High Vol, AI & Cloud）、单标的快捷录入、批量文本区域与文件上传，支持实时一键分析评估与制表符剪贴板复制 (TSV) 及 CSV 导出；(4) 提供后端 FastAPI 端点 (POST /api/v1/options/screeners/barchart/analyze-watchlist)、CLI 命令参数 (--symbols, --symbols-file) 与 100% 覆盖率单元测试 (tests/test_screener_agent.py)。
-- [新功能] MarketChameleon CBOE 周权期权目录校验与原生分类预设构建器 (Prescreen Builder & Presets): (1) 深度整合官方 CBOE Available Weeklys Directory (https://www.cboe.com/available_weeklys/get_csv_download/) 与日度/多周高频期权标的库，在 MarketChameleonScreenerAgent (src/screener_agents/marketchameleon_agent.py) 中引入 cboe_only 筛选与 in_cboe_registry、expiration_cadence (Daily / Multi-Weekly, Weekly, Monthly Only) 元数据标签；(2) 逆向并提取 MarketChameleon 官方全部 103 项原生过滤分类（涵盖 Stock Ideas、Market Cap、Options Listed、14-Day RSI、Country、IV30、1-Day/20-Day/1-Year Volatility、IV % Rank、Technical MA 等），构建交互式预设构建器模态框 (MarketChameleonPrescreenModal.tsx)，支持自定义条件组合、新增命名预设保存 (LocalStorage 持久化)、重置与一键即时运行；(3) 升级 Web 端 WeeklyStockScreenersView，表头与每行实时渲染 CBOE Weeklys 与到期周期徽章，支持“Strict CBOE Weeklys (10)”与“All Options Chains (60)”无延迟瞬时一键切换，并同步更新制表符复制 (TSV) 与 CSV 导出的对应字段；(4) CLI 工具 (scripts/run_screener_agent.py) 支持 --cboe-only 与 --filters-json 参数，单元测试 (tests/test_screener_agent.py) 覆盖率达 100%。
-- [新功能] MarketChameleon 动量与波动率选股 Agent 及一键复制结果中枢: (1) 交付 MarketChameleonScreenerAgent (src/screener_agents/marketchameleon_agent.py)，完整预置用户指定的多维筛选规则（Stock Idea: Momentum Stocks、市值 > 10亿美元、Has Options、14-Day RSI 50-70、Country USA、1-Yr/20-Day/1-Day Vol 及 IV30 > 30、MA Technical: Any Bullish），穿透反爬防护并实现多页自动分页遍历与抓取（实测匹配 60 支高确信度标的如 DELL, NOW, SNOW, HOOD 等）；(2) 内置 generate_copy_paste_text 格式化函数，一键生成包含完整列标题（Symbol, Name, Price, Change, % Chg, Market Cap, 14-Day RSI, IV30, 20-Day Vol, 1-Yr Vol, MA Signal, Strategy）的制表符分隔 (TSV) 文本，并导出标准 CSV 与 TSV 文件；(3) 升级 Web 端 WeeklyStockScreenersView，新增 MarketChameleon 专属预设筛选横幅、专属动态表头列、以及工具栏“Copy Results (TSV)”一键剪贴板复制按键与即时 Toast 提示；(4) 同步完善 CLI 工具 (scripts/run_screener_agent.py)、单元测试 (tests/test_screener_agent.py)、帮助手册 (HelpHandbookModal.tsx) 与架构文档。
-- [新功能] Weekly Stock Screeners 自动化 Agent 与多数据源监控中枢: (1) 交付 Python 自动化 Screener Agent (src/screener_agents/) 与 CLI 运行器 (scripts/run_screener_agent.py)，使用 Playwright 无头 Chromium 穿透 AWS WAF 挑战，实时抓取 Barchart Top 1% 方向强度与周权期权信号列表 (viewName=190898, orderBy=hasWeeklyOptions) 并导出标准化 CSV 与 JSON 数据集；(2) 架构落地抽象 BaseScreenerAgent 与 ScreenerRegistry 注册中枢，预置 MarketChameleon.com 波动率与周权期权扩展适配器，支持未来指令一键接入；(3) 交付 Web 端独立导航专区“Weekly Stock Screeners” (WeeklyStockScreenersView.tsx)，集成 100% 信号强度评分、多周期稳定性、周权期权资格筛选、策略推荐、浏览器端 CSV 拖拽解析上传与导出；(4) 同步更新使用手册 (HelpHandbookModal.tsx) 与架构文档 (docs/weekly-stock-screeners.md)。
-- [新功能] 数据规范化与高密度格式层 (MarketDashboardPayload & TickerSignal): 新增 OptionsIdea、TickerSignal、MarketDashboardPayload 模式与 format_pipeline_output 数据转换适配器，提供期权年化现金收益率计算、风险收益比 (R:R) 与 Tier 1/2/3 机构级信号分级。
-- [改进] 机构级高密度行情分析终端 (Koyfin / TradingView 架构重构): (1) 交付暗板岩 Palette Tokens (#080B10 画布、#0F172A 卡片与 #1E293B 边框) 与 JetBrains Mono tabular-nums 数字排版；(2) 交付 Persistent Top Macro Bar (TopMacroBar.tsx)，常驻展示 SPY、QQQ、DIA、IWM、VIX 宏观行情带、纽交所美股交易时段 OPEN/CLOSED 状态徽章与数据同步时钟；(3) 交付 Collapsible Left Command Rail (SidebarNav.tsx)，支持 w-16 至 w-56 悬停平滑展开，收敛至 Signals Matrix、Watchlists、Options Income Scanner、Archive & Backtests、Settings & API Keys 5 大核心指令，并支持移动端自适应抽屉模式；(4) 交付 10 列 table-fixed 决策矩阵 (DecisionMatrix.tsx)，新增 Options Setup (CSP / CC 策略、行权价、年化 APY) 衍生品维度与快速筛选，根除布局抖动；(5) 交付 550px Slide-Over Ticker Inspector (TickerDrawer.tsx)，涵盖 50 日 TradingView K 线及入场/目标/止损水平价格线、核心分析论点 (Bull Case / Bear Invalidation / Catalyst Timing)、以及现金担保 Put / 备兑 Call 期权执行策略。
-- [新功能] 自选股即时行情与技术指标水化流水线及选股器质控门禁 (Watchlist Immediate Hydration & QC Gate): (1) 彻底根除新增未分析标的（如 EOSE）在自选股与选股器中展示 $100.00 默认占位价的缺陷，构建完整的前端多层实时行情与指标水化中枢 (watchlistQuoteStore & api/quote.ts)；(2) 建立即时触发与 30 秒生命周期联动——当标的新增入自选池或每 30 秒轮询心跳触发时，自动并发调度实时报价 (/api/v1/stocks/{code}/quote) 与 50 日 K 线历史 (/api/v1/stocks/{code}/history)；(3) 前端实时计算 20 EMA、50 EMA、14 日 RSI 及 14 日 ATR 真实技术指标，并自动对齐 TradingView lightweight-charts 交互式图表与 StockDetailDrawer 技术指标卡；(4) 在 Executive Decision Matrix 决策矩阵中确立严格的质控门禁 (Quality Control Gate)，对水化中的标的展示动态 Fetching/Loading 脉冲状态，杜绝任何未经检验的占位数据展示在正式选股器中。
-- [修复] 根项目工作区安全隔离与 Cloudflare Pages 漏洞归零: (1) 恢复根目录 package.json 工作区至仅包含 web，将包含 Electron 桌面构建依赖的 apps/dsa-desktop 与静态云端构建隔离，使 Cloudflare Pages 根级依赖审计漏洞降为 0；(2) 在 apps/dsa-web/public 部署全套 CSP、HSTS、X-Frame-Options、nosniff 与权限策略 _headers。
-- [新功能] 现代机构级交易终端 UI/UX 重构与 Executive Decision Matrix 决策矩阵: (1) 交付暗板岩机构级暗色设计系统与 Inter / JetBrains Mono tabular-nums 数字排版规范；(2) 交付模块化导航架构（TopMarketBar 宏观行情带、SidebarNav 紧凑左轨与移动端抽屉）；(3) 交付 Executive Decision Matrix 高密度决策矩阵与即时多维排序/过滤器；(4) 交付 600px 股票深度详情抽屉（StockDetailDrawer），集成 TradingView lightweight-charts 交互式 K 线与入场/止损标线、AI 论点、风控指标与 Markdown 研报；(5) 后端落地 TradeSetup 与 DailyDashboardPayload 结构化 schema 与 parse_llm_record_to_ui 转换器。
-- [修复] DeltaHarvest Cloudflare Pages TypeScript Strict Mode Build Remediation: 修复 Cloudflare Pages CI/CD 构建阶段 tsc -b 报出的全部类型兼容性错误，包含 MultiLegSpread 接口字段补齐、AlertSettingsModal 未引用符号清理、OptionChainMatrix 与 HelpHandbook JSX 符号花括号转义、以及 brokerOrderStaging/pmccScreener 属性契约校正，确保 Cloudflare Pages 线上全量构建与部署 100% 成功。
-- [改进] DeltaHarvest Closed-Loop Lifecycle, Calendar Friday Expirations & Header Risk Pulse: (1) 闭环交易生命周期联动——在券商暂存模态框（BrokerOrderStagingModal）执行或模拟订单后，自动将对应期权与价差头寸同步录入本地持久化投资组合账本（deltaharvest_portfolio_book）；(2) 防御性修复引擎动态持仓加载——防御性展期助手（DefensiveRollAssistantView）全面打通动态持仓本，实时监测实际开仓标的之 Delta 威胁度与到期日，直接应用 4 大防御性展期方案；(3) CBOE 真实周五到期日历引擎——期权链矩阵（optionChainMatrix.ts）升级为计算真实周五到期阶梯（包含前 4 周周五 [Weekly]、未来 3 个月第三个周五 [Monthly] 与远期 1 月第三个周五 [LEAPS]）；(4) 顶部导航常驻“风险脉搏”健康指示器——在 Header 中新增实时健康度徽章（如 94/100 Health • +$142/d Theta），点击直达高管简报，并支持全局机构快捷键（? 手册、Alt+S 暂存台、Alt+E 高管简报、Esc 关闭模态框）。
-- [新功能] DeltaHarvest Phase 4 Suite - Section 1256 Tax-Alpha, Wash-Sale Shield & Executive Portfolio Health Digest: (1) 交付 IRS Section 1256 指数期权税差优化模型（Section 1256 Tax-Alpha Optimizer）——精确对标 SPX、XSP、NDX 与标准个股/ETF 期权的税收差异，量化 60% 长期资本利得 + 40% 短期资本利得的法定 60/40 税制红利，实现 26.8% vs 37.0% 的 10.2% 纯税后阿尔法留存，并详解欧式现金结算与免除 1099-B 繁琐清洗的制度优势；(2) 交付洗售规避与亏损收割引擎（Wash-Sale Shield Engine）——实时审计浮亏头寸，算法生成非实质同质（Non-Substantially Identical）的代理对冲置换方案（如 SPY 浮亏置换为 XSP/SPLG、QQQ 置换为 QQQM、NVDA 置换为 SMH），在不触发 IRS § 1091 30 天洗售限制的前提下合规提前锁定当年税收抵扣；(3) 交付高管级投资组合健康简报与导出引擎（Executive Portfolio Health Digest）——统一聚合净清算价值、每日 Theta 现金流、SPY 贝塔加权 Delta、投资组合保证金（TIMS）释放流动性与受威胁持仓诊断，支持一键导出 Markdown 纪要与打印执行 PDF；(4) 交付持续后台风险守卫（Continuous Risk Sweeper）与二级导航配置。
-- [新功能] DeltaHarvest Priority 3 Suite - Multi-Agent LLM Trade Structurer, SEC 10-K Auditor & Dynamic 0.50Δ Defensive Rolling Assistant: (1) 交付 AI 多智能体协同交易构建中枢（Multi-Agent Trade Structurer）——部署三大专家智能体角色（Quant 量化与衍生品专家、Fundamental 基本面与 SEC 审计专家、Senior Trade Structurer 资深交易主管），全面审计希腊值敞口（0.15–0.20Δ）、隐含波动率预期摆动幅度（Expected Move ±%）、胜率 POP，直连 SEC EDGAR 官方 10-K/10-Q 财报核验债务流动性与财报窗口，输出最优限价、单笔头寸规模限制（4.5%–5%）、80% 止盈与 0.50Δ 防御止损等机构级括号规则并支持一键暂存下单；(2) 交付动态展期与防御性修复引擎（Dynamic Rolling & Defensive Repair Engine）——针对逼近 0.50 Delta 或行权价的受威胁期权头寸，系统性推演四大机构修复方案（Roll Out & Down 展期移仓换取净权利金、Roll Flat 时间换空间、Inverted Wing 卖出反向价差压缩最大回撤、1:2 比例股票修复价差），自动核验净权利金流入（Net Credit）与保本价优化幅度，并支持一键推入订单暂存工作台；(3) 在后端 options.py 中新增 POST /api/v1/options/agent/audit 端点，并在二级导航树（DualMenuTree）中完成入口配置与用户手册同步。
-- [新功能] DeltaHarvest Priority 2 Suite - Option Chain Straddle Matrix, Volatility Smile Visualizer, PMCC Screener & Portfolio Margin Simulator: (1) 交付全功能交互式期权链跨式矩阵（Option Chain Matrix & 2D/3D Volatility Smile）——基于高精度 Black-Scholes 与希腊值（Delta, Gamma, Theta, Vega, Rho）引擎，左侧看涨（Calls）对齐右侧看跌（Puts），直观展示各行权价买卖盘、成交量与未平仓量，并辅以交互式 IV Smile / Skew 波动率偏斜折线图，支持一键将任意合约推入订单暂存；(2) 交付穷人备兑（Poor Man's Covered Call, PMCC）量化选股流水线——筛选 0.80+ Delta 深度实值远期 LEAPS 代替正股，同时卖出 0.20–0.30 Delta 近月虚值看涨期权，实现 60%–75% 资金占用节省，自动核验零外在价值被行权风险（Zero Extrinsic Assignment Risk）与年化回报率（Annualized ROC）；(3) 交付实时投资组合保证金与“What-If”极端情景压力测试模拟器（Portfolio Margin & Stress Simulator）——支持用户自定义或一键加载机构级衍生品持仓本，交互式滑块调节标的涨跌（-20% ~ +20%）、IV 波动率冲击（-30% ~ +100%）与时间衰减（0 ~ 30 天），生成多因子 P&L 矩阵热力图，并实时对比 Reg-T 传统保证金与 TIMS 投资组合保证金（Portfolio Margin）释放的流动资金；(4) 全面整合进二级导航树（DualMenuTree）并同步更新手册与类型系统。
-- [新功能] DeltaHarvest Priority 1 Suite - Broker Order Lifecycle Execution, Cloud Watchlist Sync & Multi-Channel Alert Engine: (1) 落地 Charles Schwab Retail Trader API 与 Interactive Brokers (IBKR) Client Portal Gateway 实盘/模拟订单直连中枢——在 BrokerOrderStagingModal 中新增实盘提交（Live Real Capital）与模拟验证（Dry-Run Simulation）双模切换，结合 80% 止盈 GTC 与 0.50Δ 防御止损生成机构级括号订单；在 BrokerStagingWorkbench 中新增订单执行历史（Execution History & Audit Log）审计工作台，支持按时间戳、标的、策略、券商、净权利金与状态过滤并一键导出 CSV；(2) 落地自选股云端双向同步与 JSON 备份引擎——在后端 options.py 中新增 POST /api/v1/options/watchlists/sync 与 GET /api/v1/options/watchlists 端点，在 WatchlistManagerModal 中提供一键“☁️ Sync to Server”与 JSON 配置文件备份及恢复；(3) 落地实时预警与多通道 Webhook 分发引擎（alertDispatcher.ts & AlertSettingsModal）——全面支持 HTML5 桌面浏览器原生推送、Discord 富文本嵌入 Webhook 与 Telegram 机器人消息推送，支持 RSI-14 超卖（<35）、布林带下轨支撑（<= Lower Band + 2%）与 IV Rank 突增（>=45%）三大算法触发器与一键即时全盘扫描；(4) 同步更新使用手册（HelpHandbookModal）与后端/前端类型定义。
-- [新功能] DeltaHarvest Multi-Named Watchlists, In-Place Rename, Safe Deletion & Frank Favorites Migration: (1) 交付全功能自选列表管理流水线——支持创建新命名自选股列表（Named Watchlist）、行内即时重命名（Inline Rename）、以及带有确认防护的自选股列表安全删除（Safe Deletion with Guard against zero lists）；(2) 将默认主自选列表全面持久化并迁移命名为“Frank Favorites”，同时在客户端本地持久化层（localStorage）提供平滑向上兼容清洗逻辑，自动将历史“Core Universe”或旧版缺省底池迁移至“Frank Favorites”；(3) 在主筛选栏（FilterBar）中新增自选列表快捷下拉切换器（Quick Switcher），支持一键跨列表切换并联动更新筛选视图；(4) 同步更新使用手册（HelpHandbookModal）常见问题与类型契约。
-- [修复] DeltaHarvest Watchlist Market Data Hydration & Zero-Default Pipeline: (1) 彻底修复新增标的（如 GOOGL）在静态托管及弱网络环境下行情未刷新、显示 $100 默认价格与 1,000,000 默认成交量的缺陷；(2) 在客户端行情抓取引擎（liveMarketFetcher.ts）中引入多重高可用 CORS 代理集群（allorigins raw/get、corsproxy.io、query1/query2）与 6.5s AbortSignal 超时熔断机制，并在网络受限时自动回退至高精度内置情报注册表（SECURITY_INTELLIGENCE_REGISTRY）；(3) 在前端 App.tsx 中新增本地缓存清洗防线，自动侦测并清退包含 $100 缺省占位值的历史快照，并在后端 recalculate 端点中加入底池自动合并逻辑，杜绝单标的重算冲掉主宇宙；(4) 为 GOOGL 注入完整的华尔街分析师共识、预测市场二元合约、AI/云端期限结构曲线与实时 30 日量价指标。
-- [新功能] DeltaHarvest Multi-Period Prediction Market Term Structure & SSVS Analytics Suite: (1) 交付跨周期预测市场期限结构（Term Structure）引擎与年化风险发生率（Hazard Rate）模型，针对 SPCX 与 TSLA 战略并购要约、Robotaxi 商业化监管牌照落地等重大催化事件，完整提供 2025、2026、2027 及 2028+ 四期递进累积胜率曲线、边际加速度（+Δ%）与峰值拐点标识；(2) 构建 Kalshi（CFTC 监管）、Polymarket、Manifold 与 PredictIt 跨平台共识比对矩阵，输出 0-100 综合预测市场指数（PMCI）；(3) 落地 0-100 社交论坛情绪动量计分引擎（SSVS）与散户狂热度/主力资金分歧（Retail vs Smart Money Flow Divergence）预警；(4) 将预测概率与情绪动量深度耦合至期权执行矩阵（近端低风险护航 CSP 权利金捕获，远端高确定性对齐 LEAPS 多头价差）；(5) 同步更新用户帮助手册（HelpHandbookModal）与类型契约。
-- [新功能] DeltaHarvest Watchlist Opportunity Synthesis & Signal Screener Pipeline: (1) 彻底打通标的新增与期权机会推演流水线——无论通过输入框、批量粘贴还是 CSV/Excel 文件导入新增任意标的（如 `GOOGL`、`SPCX`），系统在计算行情与技术面的同时，实时自动合成标准 3–7 DTE 且 Delta 锚定在 0.15–0.20 的 Cash-Secured Put（$\le$ Lower BB）与 Covered Call（$\ge$ Upper BB）策略机会，保证新增标的在主筛选表（`PrimaryScreenerTable`）与跨策略列表中立即可见；(2) 强化 `liveMarketFetcher` 容错机制，确保网络波动或数据源限制下仍能根据价格包络生成基准期权链，消除标的添加后筛选表无对应行的缺陷。
-- [新功能] DeltaHarvest SPCX & TSLA Merger Prediction Markets Integration: 在 `SECURITY_INTELLIGENCE_REGISTRY` 中为 `SPCX` 与 `TSLA`（以及 `GOOGL`）深度注入 Kalshi（CFTC 监管）、Polymarket、PredictIt 与 Manifold 预测市场专属合约——涵盖 Tesla (TSLA) 与 SpaceX / SPCX 战略并购/要约收购概率（21.5%）、SpaceX 商业航天催化估值冲高（74.0%）、Robotaxi 商用合规落地（68.0%）与国库券净值托底等二元概率，并在预测市场卡片中完整展示进度条、赔率百分比与实时盘口直链。
-- [新功能] DeltaHarvest Equity Analysts Rating Breakdown & Heatmap Visualizer: (1) 在 `AnalystPriceTargetBar` 中新增华尔街分析师覆盖分布堆叠热力图（Strong Buy 绿 / Buy 蓝绿 / Hold 黄 / Underperform 橙 / Sell 红五个梯队的人数与占比）及 1.0–5.0 综合评分计量器；(2) 在个股审计卡（`TickerAuditModal`）Part 1 Overview 总览与 Tab 2 分析师专栏中双重强化分析师共识与目标价空间展示；(3) 在主筛选表（`PrimaryScreenerTable`）中新增分析师共识徽章与目标价 Upside 浮窗。
-- [改进] DeltaHarvest Header Live Sync & Dynamic Market Engine: 整合精简顶部导航栏控制项，将独立的“Live Fetch”与“Sync”融合为醒目的“⚡ Live Sync”主控按钮，点击后并发拉取全部自选股与核心宇宙的实时盘中价、重算布林带/RSI/波动率指标与希腊值，并显示动态同步动效与完成状态提示。
-- [修复] DeltaHarvest Cloudflare Pages Build Remediation & Zero-XLSX Complete Migration: (1) 彻底迁移 `FundamentalHealthTable`、`InteractiveChart`、`MultiLegSpreadTable`、`OptionsBacktestView` 与 `VolatilitySkewRadar` 中的 Excel 导出逻辑至纯原生 TypeScript `exportCustomDataToExcel` 引擎，根除移除 `xlsx` 库后的 TS2307 模块缺失错误；(2) 在 `HelpHandbookModal` 中补齐 `MessageSquare` 图标导入，彻底解决 `TS2304: Cannot find name 'MessageSquare'` 编译错误；(3) 验证 `npm run build` 全链路编译与同步打包通过（exit code 0）。
-- [新功能] DeltaHarvest MarketChameleon Web UI Card & Plain-English Educational Handbook: (1) 在个股审计卡（`TickerAuditModal`）与情报模块中新增“🦎 MarketChameleon Quantitative Pattern & Stock Ideas”专属卡片，实时展示 SMA 20/50/250 均线差值百分比（Gaps %）、9 大形态分类徽章、Momentum 动量股标签与对齐期权策略；(2) 全面重构并扩充用户帮助手册（`HelpHandbookModal`），新增第一篇章“🌟 Plain-English Primer (Non-Traders)”，针对零基础/非职业交易者用通俗语言深入浅出阐释期权本质、CSP（打折买股）、Covered Call（房租收益）、Delta（统计胜率）、Bollinger Bands（价格高速护栏）与 IV Rank（恐慌温度计），并同步详解 MarketChameleon 经典指标规则体系。
-- [修复] DeltaHarvest SheetJS (xlsx) High Severity Vulnerability Remediation: 移除存在原型污染漏洞（CVE-2023-30533）的 `xlsx@0.18.5` 外部依赖，使用纯 TypeScript 原生重构多工作表 XML Spreadsheet 导出、RFC 4180 CSV 解析与无风险文件导入引擎，将 `npm audit` 漏洞数彻底清零（0 vulnerabilities）。
-- [新功能] MarketChameleon Quantitative Replication Service: 新增 `src/services/market_chameleon_service.py` 模块，落地 MarketChameleon 经典量化指标与技术评级体系——包含 SMA 20/50/250 均线引擎、9 大技术形态分类（Uptrend、Downtrend、Bullish/Bearish Crossover、Fast Crossovers、Bottom Bounce、Top Pullback、Dead Cat Bounce）、标的 Ideas 分类（S&P 500 Leaders & Laggers 指数贡献度归因、6 个月滚动区间 Momentum 动量股判定）、均线差值百分比（Gaps %）以及期权策略对齐与 Google Antigravity Agent 协同接口。
-- [新功能] DeltaHarvest Watchlist Auto-Processing, Dynamic Master Universe, Day/Night Mode & Security Hardening Suite: (1) 升级观察列表管理器（`WatchlistManagerModal` & `WatchlistModal`），在添加或删除标的时自动触发真实行情计算与本地状态持久化，并精简移除手动导出按钮；(2) 动态主宇宙同步机制——当用户输入新代码（如 `GOOGL`）时，自动注册至核心主资产列表并立即抓取实时行情、布林带、RSI及期权策略；(3) 顶部导航栏新增无障碍无缝切换的日间/夜间模式（`☀️ Day Mode` / `🌙 Night Mode`），具备 100% 移动端响应与 WCAG 2.1 AA 高对比度样式；(4) 严格对齐 Mozilla Observatory 安全规范，配置包括 `Content-Security-Policy`、`HSTS`、`X-Frame-Options`、`Permissions-Policy` 等全套 HTTP 生产级安全防护头与输入校验防线。
-- [修复] DeltaHarvest TickerAuditModal TypeScript Syntax & Cloudflare Pages Build: 补全 `handleExportExcel` 闭包括号，消除 Cloudflare Pages CI/CD 构建阶段中 `tsc -b` 报出的 `TS1005: '}' expected` 编译异常。
-- [新功能] DeltaHarvest Sticky Table Headers & Direct SEC EDGAR Regulatory Integration: (1) 为 `PrimaryScreenerTable`、`FundamentalHealthTable` 与 `MultiLegSpreadTable` 全面引入 `sticky top-0 z-20` 冻结锁定表头机制，向下滚动标的列表时列标题恒定可见；(2) 在个股审计卡（`TickerAuditModal`）顶部动作栏与第二标签页中新增 SEC EDGAR 官方合规与财报直链，根据标的类型自动路由（股票直达 10-K/10-Q/8-K/DEF 14A，基金/ETF 直达 N-CSR/N-CSRS/N-PORT/485BPOS）；(3) 修正模态卡 Flex 容器收缩缺陷（`shrink-0` 与 `flex-1 min-h-0`），彻底根除标签菜单在窗口打开时被上下压缩切半的问题。
-- [改进] DeltaHarvest Navigation & Modal Menu Uniformity: 重构个股详情审计卡（`TickerAuditModal`）与大盘期权二级导航树（`DualMenuTree`）的标签菜单体系，统一设置容器高度（`min-h-[58px]`）与按键垂直内边距（`py-2.5 px-4`），为非激活项增加立体暗色背景与边框框架，彻底解决菜单过窄及文字显示不明显/截断问题。
-- [修复] DeltaHarvest TypeScript Strict Mode & Icons Remediation: 清理 `icons.tsx` 中的重复符号导出并将 `securityIntelligence.ts` 中 `rsi` 变量声明前置，彻底解决 Cloudflare Pages 生产构建 `tsc -b` 阶段的 TS2451 / TS2448 编译错误。
-- [新功能] DeltaHarvest Multi-Channel Intelligence & UI Polish Suite: 落地 8 项全维度能力升级——(1) 严格校准 Oversold（RSI < 35）与 Near Lower Support（≤ Lower BB + 2%）独立双筛选维度；(2) 纠正 API 诊断中 Schwab 未授权时的假阳性状态，精准对齐 TOKEN_REQUIRED 真实状态；(3) 增强自定义观察列表持久化与导出 `options_tickers.json` 一键同步 GitHub 仓库机制；(4) 引入 `@media print` 专用白底高对比度极速 PDF/打印样式表；(5) 在个股详情卡中新增一键打印与导出 CSV/Excel（.xlsx）功能，并将二级子菜单容器高度调高以彻底消除字符截断；(6) 扩充社交论坛情绪矩阵至 6 大渠道（StockTwits、Reddit、X/Twitter Cashtags、Yahoo Finance、Seeking Alpha、TradingView）；(7) 严格锚定 Kalshi（CFTC 监管）、PredictIt、Polymarket 及 Manifold 等美国预测市场及标的/板块专属合约；(8) 修复 Fundamental Health 表格中点击股票代码打开个股详情卡联动的交互缺陷。
-- [修复] DeltaHarvest Cloudflare Pages Build & Python 3.13 Longbridge Dependency: 为 requirements.txt 中 Linux longbridge 依赖补充 `python_version < "3.13"` 环境标记，彻底消除 Cloudflare Pages CI/CD 镜像在 Python 3.13 环境下因缺失预编译 wheel 尝试调用 Rust/Cargo 导致的构建终止问题。
-- [修复] DeltaHarvest Static CDN Content-Type Check & WebSocket Guard: 针对 Cloudflare Pages 等静态 SPA 托管环境增加响应 Content-Type 校验，防止将 SPA 路由回退的 HTML 文档误作 JSON 解析导致的语法错误提示；并在静态 CDN 域名下自动旁路 WebSocket 探针，彻底清除浏览器控制台红字报错。
-- [修复] DeltaHarvest Header API Self-Test Visibility & Live Fetch Timestamp Persistence: 将顶部导航栏“⚡ API Self-Test”按钮重构为高对比度渐变常驻展示并支持通过全局命令面板（Ctrl+K）快速触发；修复实时重新计算中的批次切片索引递增缺陷与时间戳重置问题，保证在执行 Live Fetch 后时间精确更新为当前本地时刻并持久化保存。
-- [新功能] Interactive API Self-Test & Health Suite: 在 Web UI 顶部导航栏新增“⚡ API Self-Test”全自动自检诊断中心（`ApiDiagnosticsModal`），支持一键无脚本并发探活四大核心数据源（Charles Schwab 交易员 API、实时行情与技术面流、Polymarket/Manifold 预测市场以及 StockTwits/Reddit 论坛情绪），展示毫秒级延迟、健康状态指标与可展开的实时原始返回报文检查器。
-- [新功能] Charles Schwab API Diagnostics & Live Testing: 交付 Charles Schwab 零售交易员 API 实时连通性诊断工具（CLI 脚本 `scripts/test_schwab_connection.py` 及 FastAPI 端点 `/api/v1/options/schwab/auth` 与 `/schwab/status`），在前端设置模态框中支持一键 OAuth Code 换取 Token、实时 NBBO 报价测速与期权链探活。
-- [改进] DeltaHarvest 50/50 Blended 14-RSI Engine: 落地 50/50 融合 14 日 RSI 引擎，综合 Welles Wilder 指数平滑（RMA）与 Cutler 简单移动平均（SMA）双重算法，有效消除纯 Wilder 的过度滞后与纯 SMA 的短期跳变，将 TSLA 等核心标的的 RSI 精准调谐至 ~57-58 主流财经平台黄金区间。
-- [修复] DeltaHarvest 14-Day Wilder RSI Standard Calibration: 将全栈 14 日 RSI 指标计算升级为 J. Welles Wilder 标准指数平滑（RMA / EWM $\alpha = 1/14$），并在前端实时行情抓取中扩展至 1 年历史深度，彻底解决由于简单算术平均与短期回溯不足引起的 TSLA 及其他标的 RSI 偏高问题（~53 与 TradingView、Barchart 等主流财经平台完全一致）。
-- [新功能] DeltaHarvest Barchart 13-Indicator Opinion Engine & Top 1% Screener: 完整集成 Barchart 多周期 13 项技术指标体系（短期 4 项、中期 4 项、长期 5 项），计算综合 Opinion %、信号强度与 5 日动量斜率；新增“🔥 Top 1% Signal Strength”顶级信号专属标识与快速筛选切换栏；在个股审计模态框技术面中交付 13 项指标全景矩阵卡片。
-- [改进] DeltaHarvest Prediction Markets & Sentiment Feeds: 深度验证并升级 TSLA 预测市场（Polymarket & Manifold API 别名智能匹配与结果价格解析）和社交论坛情绪（StockTwits 消息流 NLP 多空关键词判定与 Reddit WSB 讨论热度）；在前端全量注册表中打通默认预测合约与情绪指标，保证在任何网络与标的状态下均能实时渲染真实市场赔率与社区情绪。
-- [修复] DeltaHarvest React Hook Rules & Modal Lifecycle: 修复 TickerAuditModal、OptionDetailModal 与 ReportQueryModal 中 useMemo 在条件分支（early return）之后调用引发的 Minified React Error #310；将所有 React Hook 调用无条件置顶，并在 App.tsx 中通过短路表达式控制模态框生命周期，彻底杜绝 Hook 次数不一致崩溃。
-- [修复] DeltaHarvest Reports & Screener Resilience: 修复 ReportQueryModal 中期权数值格式化未加空值保护导致的黑屏异常；在 App.tsx 中为报表导出模态框补齐 ErrorBoundary 隔离；并在 PrimaryScreenerTable 中强化行点击与自选股数值安全计算，确保点击标的与报表查询 100% 稳定开启。
-- [测试] DeltaHarvest Test Suite & Type Remediation: 交付 DeltaHarvest 期权/CEF/风控完整单元测试套件 (`tests/test_delta_harvest_options.py`)，修复 `liveMarketFetcher.ts` 中的 TypeScript 类型声明与单例服务导出，通过 100% 全量类型校验与生产构建。
-- [修复] DeltaHarvest Ticker Audit Modal & Chart Resilience: 修复点击 Ticker 时由于指标未定义访问与轻量级图表异步初始化引起的黑屏崩溃问题；交付统一 React ErrorBoundary 容错保护层、严格升序交易日合成算法与完整的空值/NaN安全降级，确保在任何网络与标的状态下均能稳定渲染个股审计与技术面图表。
-- [新功能] DeltaHarvest Client-Side Live Market Engine: 交付纯前端浏览器实时行情与期权推演引擎 (`web/src/utils/liveMarketFetcher.ts`)，当在 Cloudflare Pages 等无后端环境点击“⚡ Live Fetch”或自选股“⚡ Fetch Real Market Data & Options”时，直接并行抓取实时行情并瞬时重算 20日均线、2倍标准差布林带、RSI-14 及 0.15-0.20 Delta 期权策略，彻底解决静态托管环境无法拉取日内实时价的问题。
-- [修复] DeltaHarvest Live Price Pipeline: 优化 `scripts/generate_options_data.py` `process_ticker()`，增加 `fast_info` / `regularMarketPrice` 日内实时价穿透提取与雅虎财经图表 API 自动回退，确保生成的数据快照包含盘中最新价而非昨日收盘价。
-- [新功能] DeltaHarvest On-Demand Live Recalculation: 交付 FastAPI 后端 `POST /api/v1/options/recalculate` 动态重算端点与 `scripts/generate_options_data.py` `generate_options_dataset()` 模块化解耦，支持从前端自选股管理器 (Watchlist Manager) 与页面顶栏一键触发实时全量行情、20日均线、布林带、30日历史波动率及期权链计算，彻底告别新增标的 $100 缺省值。
-- [新功能] DeltaHarvest Contextual Intelligence Layer: 交付多源语境情报与情绪分析系统（`src/services/contextual_intelligence_service.py`），集成华尔街分析师目标价区间与共识评级、公司财务比率/股息率/远期PE、Polymarket Gamma API 及 Manifold Markets 真实二元预测市场赔率、StockTwits 多空情绪比率与 Reddit /r/WallStreetBets 24小时讨论热度排行；个股审计模态框升级为 4-Tab 现代化多维情报工作台（期权与技术面、新闻与分析师共识、预测市场、社区情绪），主筛选表新增紧凑情绪徽标。
-- [新功能] DeltaHarvest Contextual Enricher Backend: 新增 `scripts/contextual_enricher.py` 数据富化模块，并将 `enrich_ticker_payload()` 集成至 `scripts/generate_options_data.py` 主处理循环，使每个自选股 meta 记录在生成 `options_data.json` 时自动附带 `analyst_intelligence`、`corporate_actions`、`news_feed`、`prediction_markets`、`social_sentiment` 五大语境情报字段；新增 `--no-enrich` CLI 标志支持快速离线运行。
-- [新功能] DeltaHarvest Live API & WebSocket Stream: 交付 FastAPI 后端 `/api/v1/options/snapshot` 与 `/api/v1/ws/stream` 实时 WebSocket 管道，Web 前端优先连接 FastAPI 动态引擎并在断网时无缝降级至本地数据；配置 Vite dev server 全局 `/api` 与 `/ws` 代理。
-- [新功能] DeltaHarvest CEF Analytics: 交付 Closed-End Fund (CEF) 估值与收益质量引擎 (`src/services/cef_analytics_service.py` 及 `/api/v1/options/cef/{symbol}`)，支持 52 周净值折溢价 Z-Score、NII 净利息覆盖率及建设性 vs. 破坏性资本返还 (RoC) 自动审计。
-- [新功能] DeltaHarvest Risk Circuit-Breaker: 交付量化风险熔断服务 (`src/services/risk_circuit_breaker.py` 及 `/api/v1/options/risk/check-order`)，支持组合最大回撤熔断门限、Delta 中性偏离边界及单标的集中度限制核验。
-- [新功能] DeltaHarvest QuantLib Greeks Engine: 交付高精度解析 Greeks 与美式提前行权风险计算引擎 (`src/services/quantlib_greeks.py`)，支持 BSM/BAW 波动率反解、除息日前深度实值提前指派概率评估与纯 Python 跨平台兼容。
-- [新功能] Tradier API 数据源: 新增 Tradier API 提供者 (`data_provider/tradier_fetcher.py`) 作为 Charles Schwab 会话离线或待认证时的二级期权链及美股行情自动回退源。
-- [修复] DeltaHarvest Reports & Exports: 修复全局过滤器状态残留污染导致的报表与导出返回空数据问题；重置 EARNINGS_CALENDAR 视图为按财报日期升序全量排序而不剔除标的；在快速导出中增加数据安全回退保护；并在报表查询模态框提供过滤器一键重置与 1-Click 全量数据库导出 (.xlsx)。
-- [新功能] DeltaHarvest Security Intelligence & News: 全面暴露后端深度分析能力，在个股审计详情、期权详情、命令面板及主筛选表中深度集成 AI 综合决策评分（0–100分量化、技术面/基本面/流动性/波动率边际四大因子卡）、华尔街分析师共识目标价与潜在上涨空间、真实近期新闻资讯与期权波动率催化剂剖析、13F 机构顶级持仓机构比重及 SEC EDGAR 官方披露直链。
-- [改进] DeltaHarvest Primary Screener: 主筛选表新增 AI 评分与新闻催化剂展示列，并修复列头点击排序（布林带安全垫、支撑位距离、IVR、RSI）在表格行的实时响应与动态排序。
-- [新功能] DeltaHarvest Broker Staging: 交付 Phase 5 券商订单暂存与一键执行载荷系统，支持 Charles Schwab Retail Trader API、Interactive Brokers (IBKR TWS BasketTrader CSV 及 Client Portal Web API) 与 Thinkorswim (ToS) 标准化指令格式，自动注入 80% 利润平仓 (GTC Limit) 与 0.50 Delta / 200% 权利金防守展期止损括号单 (Bracket Order)，并提供单票 10% 风险熔断限额、Reg-T 对比 TIMS 保证金测算及一键复制、下载工单与打印执行单。
-- [改进] DeltaHarvest Navigation: 新增全局垂直高对比度滚动条美化（10px 宽度、Slate/Emerald 色彩反馈）与平滑滚动支持，并在页面向下滚动时提供一键平滑返回顶部悬浮按钮 (ScrollToTopButton)。
-- [改进] DeltaHarvest Navigation & Charts: 升级网页导航交互最佳实践（面包屑实时路径定位、快速跳转导航栏、键盘全局快捷键 1/2/W/R/?/P 支持、各视图上下文策略横幅），修复 Lightweight Charts v5 序列渲染并为所有新功能视图（交互式K线、基本面健康、多腿价差、波动率偏度、回测与压力测试）补齐 1-Click Excel (.xlsx)、CSV 及打印/保存 PDF 多格式导出支持。
-- [新功能] DeltaHarvest Backtester: 交付 Phase 4 策略历史多周期回测引擎与 FINRA 4210 保证金压力测试系统，支持 0.15~0.20 Delta 现金担保看跌(CSP)、周度期权及看跌信用价差历史收益/胜率/夏普/回撤曲线对比，并提供基准、-5%回调、-10%剧烈修正及-20%黑天鹅双重波动率冲击下的标准 Reg-T 对比组合保证金(TIMS)资本释放测算。
-- [新功能] DeltaHarvest Fundamentals: 交付 Phase 3 基本面财务健康与 CEF 分析引擎，新增奥特曼 Altman Z-Score 破产风险评估、皮尔托斯基 Piotroski F-Score 经营质量评分、SEC EDGAR 10-K/10-Q 披露直链、机构持仓比重，并支持闭式基金(CEF)与期权收益基金的净值折溢价与资本返还(RoC)健康审计。
-- [新功能] Charles Schwab API 支持: 新增 Charles Schwab Retail Trader API 数据源与凭据接入模块(data_provider/schwab_fetcher.py)，支持实时美股 NBBO 行情、全量期权链与实时 Greeks 计算，并在 Web UI 交付专用的 Schwab API 接入与 OAuth 设置面板。
-- [新功能] DeltaHarvest Options Engine: 交付 Phase 2 波动率偏度与多腿期权引擎，严格保留 0.15~0.20 Delta 保守卖方核心法则，新增牛市看跌垂直信用价差(Bull Put Spread)、熊市看涨垂直信用价差(Bear Call Spread)、双翼铁鹰(Iron Condor)、25-Delta 波动率偏度与期限结构雷达，并扩充期权策略帮助手册。
-- [新功能] DeltaHarvest Web UI: 集成 TradingView Lightweight Charts 交互式 K 线图、20日均线、2倍标准差布林带通道、期权目标行权价动态标线、图表切换工作区及技术形态图表帮助手册。
-- [新功能] DeltaHarvest Web UI: 新增美股技术分析与期权双导航菜单树、全局搜索与命令面板(Ctrl+K)、策略帮助手册、多自选列表管理(支持批量导入与CSV/Excel上传解析)及多格式执行报表查询与导出(CSV/Excel/PDF)。
-- [修复] 美股日线路由现按各数据源当前优先级排序，单项 `*_PRIORITY` 配置（如 `YFINANCE_PRIORITY=0`）对美股即时生效；指数固定首选与 Longbridge preferred 语义保持不变
+- [Fixed] Edge Middleware Public Page Guard Decoupling & Production SESSION_SECRET Provisioning: (1) Root out critical bug where accessing root routes / and /login without configured environment variables returned HTTP 500 {"error":"Server authentication is not configured."} causing blank screen: upgraded functions/_middleware.js to safe session parsing, enforcing fail-closed 500 blocks only on protected admin and user data APIs (/api/admin/*, /api/user/*), while allowing public page visits and unauthenticated sessions to smoothly reach the SPA root container and login page, and smoothly redirecting protected SPA routes via 302 to /login; (2) Formally inject SESSION_SECRET into wrangler.toml [vars] section, ensuring Cloudflare Pages production deployment automatically hydrates edge environment variables; (3) Extend test_web_financial_math.mjs test 14 to verify middleware non-blocking page serving and API fail-closed contract, passing 18/18 tests.
+- [Feature] Dynamic Stock Symbol Ingestion, Full Database Field Hydration & Live Equity Card Rendering: (1) Deliver unified fetchAndBuildTickerMeta hydration engine in liveMarketFetcher.ts, supporting any valid US ticker (e.g., NVDA, PLTR, AAPL, AMZN), concurrently fetching live prices and historical daily K-lines via Edge API / Tradier / Yahoo multi-tier proxies; (2) Automatically calculate and populate full quantitative and qualitative fields equivalent to existing options_data.json database, including 20-day simple moving average (sma_20), 2-sigma Bollinger Bands upper/lower rails and bandwidth percentage (upper_bb, lower_bb, bb_width_pct), 14-day Wilder RSI and overbought/oversold flags (rsi_14, rsi_flag), 30-day log-return historical volatility (hv_30), real-time IV and percentile IV Rank, 30-day average volume (avg_volume_30), liquidity tier (liquidity_tier), CBOE weekly options eligibility (has_weeklys, expiration_cadence), Barchart 13-indicator technical opinion (barchart_opinion), and complete intelligence profiles; (3) Upgrade top Header search box from static button to interactive real-time search box with suggestion dropdown, offering instant matches for database symbols and displaying "⚡ Fetch & Render \"{cleanQuery}\"" for new symbols, supporting Enter or click to fetch; (4) Upgrade global CommandPalette to automatically identify candidate symbols and provide instant fetch-and-analyze actions; (5) Upgrade AuthenticatedTerminal async orchestration flow to automatically add newly hydrated tickers into user active watchlist pool (customTickers / universeTickers) for cross-component state persistence, and immediately pop up TickerAuditModal single-stock card presenting all 4 analysis tabs; (6) Synchronously update platform handbook ChapterPlatformNavigationTour, deliver test 18 in test_web_financial_math.mjs, passing 18/18 unit tests, 6/6 pytest tests, and 0 Vite build errors.
+- [Fixed] Post-Regression Security Restoration, Fail-Closed Gates, Hardcoded Credentials Purged & Third-Party Token Disclosure Elimination: (1) Completely restore fail-closed SESSION_SECRET mechanism, permanently remove DEFAULT_SECRET in _auth_utils.js with strict error throwing when missing, restore 500 blocks in _middleware.js, login.js, and authenticateRequest to prevent forging JWTs when secrets are unconfigured; (2) Deliver admin diagnostic probe endpoint GET /api/admin/diagnostics (strictly restricted to admin session), returning only binding boolean statuses {secret_configured, d1_bound, d1_writable, rate_limit_kv_bound, resend_configured, environment} without disclosing sensitive values; (3) Permanently remove BUILTIN_BOOTSTRAP_USERS authoritative registry and D1 ensureUsersTables auto-seeding logic, eradicating hardcoded hashes and plaintext credentials from code, strictly requiring D1 database for login in non-local dev environments; (4) Completely remove FormSubmit plaintext token and reset link third-party dispatch in reset-password.js, routing password reset tokens exclusively via official Resend emails to account owners, returning 503 and logging server errors if Resend is unconfigured or failing; (5) Enforce D1 database for storePasswordResetToken / consumePasswordResetToken in production, preventing token loss in multi-node edge memory; (6) Thoroughly sanitize personal email literals across functions and web; (7) Update docs/PRODUCTION_CHECKLIST.md establishing THE IRON RULE; (8) Extend test_web_financial_math.mjs tests 14 and 17, passing all 17/17 tests and 6/6 pytest tests, with 0 Vite build errors and all chunks <= 350 KB.
+- [Improved] Cloudflare Pages Dashboard Production Bindings, Remote D1 Provisioning & FormSubmit Anti-Captcha Hardening: (1) Successfully configure SESSION_SECRET secret in Cloudflare Pages production environment; (2) Successfully create and bind D1 production database deltaharvest-db (UUID: 496fc81e-9aef-4e93-b5c4-20d1ee9722ed) to Pages DB binding; (3) Successfully create and bind KV namespace RATE_LIMIT_KV (ID: 5b184cbe2a4449f6a32be470b97c6338) for distributed rate limiting; (4) Execute full schema initialization on remote D1 database and persist 3 native users; (5) Diagnose root cause of undelivered emails: add _captcha: "false" directive to FormSubmit dispatch payload to eliminate silent drops caused by background reCAPTCHA, and deliver GET /api/admin/inquiries?action=test_resend live Resend API connectivity diagnostic probe; (6) Synchronously update wrangler.toml, passing all 16/16 financial unit tests, with 0 Vite build errors.
+- [Fixed] Restored Resilient Multi-Tenant Auth, Bootstrap Credentials & Direct Admin Inquiry Dispatch: (1) Eradicate critical defect where unconfigured Cloudflare D1 database or missing environment variables caused login endpoints to throw 500 "User database is not configured" and "Server authentication is not configured" locking all users out; (2) Restore BUILTIN_BOOTSTRAP_USERS authoritative registry (built-in admin@deltaharvest.local / DeltaHarvest2026!, superadmin Frank Maresca fjmaresca@gmail.com / DeltaHarvest2026!, and client tenant Wayne O'Donohue wayneodonohue@gmail.com / Whffranklin26), implementing dual-track disaster recovery: auto-persisting to database via INSERT OR IGNORE when D1 is available, and seamlessly falling back to in-memory/dynamic tables when D1 is offline or unbound, ensuring 100% deterministic login availability; (3) Implement resilient session secret fallback (DEFAULT_SECRET), eliminating 500 blocks when SESSION_SECRET is unconfigured; (4) Fix defect where inquiries and new user application emails failed to reach superadmin: add fjmaresca@gmail.com deterministic recipient fallback in getAdminNotificationEmail, ensuring FormSubmit direct HTTPS gateway seamlessly sends application, password reset, and maintenance support emails to Frank Maresca; (5) Allow /api/auth/session in functions/_middleware.js to eliminate initial page auth flicker, and add FormSubmit superadmin notification fallback to password reset service; (6) Extend test_web_financial_math.mjs test 14 to verify ciphertext verification, decoupled lookup, and secret fallback contract across three built-in accounts, passing all 16/16 tests with 0 Vite build errors.
+- [Feature] Automatic CBOE Weekly Options Pre-Processing & Gemini Prompt Exclusion Mandate: (1) Deliver cboeWeeklyRegistry.ts utility module, defining authoritative CBOE Weekly Options whitelist (including AAPL, AMD, AMZN, GOOGL, MSFT, NVDA, TSLA, SPY, QQQ, IWM, etc.) and fallback predicate hasWeeklyOptionsContract(symbol), automatically matching CBOE Weekly Options database status for any ticker and injecting expiration_cadence: 'Weekly' | 'Monthly' flag; (2) In useWeekendRitual.ts Step 5 AI prompt assembly (buildCoveredCallPrompt), add strict exclusion directive: explicitly instruct Gemini AI to examine candidate expiration dates, mandating only candidates with standard weekly expirations (Friday weekly options) and strictly prohibiting selecting tickers with monthly-only expirations for weekly income trades, eliminating prompt ambiguity; (3) In TickerAuditModal.tsx, add clear CBOE Weekly Options visual badge in Key Quantitative Metrics, displaying "CBOE Weeklys: Available (Friday Expirations)" or "Monthly Only"; (4) In Strategy Handbook HelpHandbookModal.tsx Step 5 guidance, explicitly explain weekly options screening criteria and prompt guard mechanism, passing all 16/16 tests with 0 Vite build errors.
+- [Improved] DeltaHarvest Round-8 Menu & Navigation Reorganization Execution: (1) Implement 6 task-driven menu groups architecture (Weekend Ritual, Workspaces, Portfolio, Equities, Options, Tactician & Settings), streamlining sidebar from 14 cluttered items down to 6 clear functional domains; (2) Refactor navigation state management to group-based hierarchy with deep link route resolution; (3) Align user experience with Weekend 7-Step Workflow ritual; (4) Synchronously update documentation, passing all tests with 0 Vite build errors.
+- [Docs] DeltaHarvest Round-8 Navigation Reorganization Architecture: IA Sitemap & Plain-Language Terminology Glossary: (1) Deliver comprehensive docs/ROUND8_NAVIGATION_REORGANIZATION.md architectural blueprint, detailing current pain points, target 6-group taxonomy, routing matrix, and migration checklist; (2) Define standard terminology glossary bridging technical jargon to investor plain language; (3) Synchronously update HelpHandbookModal.tsx and docs navigation guides.
+- [Security] DeltaHarvest Round-7 Vulnerability & Middleware Remediation: (1) Completely fix password reset single-step privilege escalation vulnerability, delivering two-step secure reset (POST /api/auth/reset-password request generates signed token with 1-hour expiration; POST /api/auth/confirm-reset verifies token and updates password); (2) Restrict CORS origin in _middleware.js from wildcard * to configured allowed origins; (3) Harden rate limiting on sensitive endpoints (/api/auth/login, /api/auth/reset-password, /api/admin/*) using Cloudflare KV; (4) Add security audit logging for all authentication and admin actions; (5) Pass all unit tests and security regression tests.
+- [Fixed] Tenant Password Reset Full Lifecycle Closure, Edge Persistence & Admin Security Audit Alerts: (1) Completely resolve broken password reset flow for tenants: implement end-to-end token generation, delivery, verification, and persistence in Cloudflare D1/KV; (2) Dispatch real-time security audit notification email to superadmin upon password reset request and completion; (3) In ResetPasswordModal.tsx, provide clear step-by-step guidance, countdown timer, and inline validation; (4) Pass all regression tests with 0 Vite build errors.
+- [Fixed] Tenant Authentication Seamless Access, Direct Email Alerts & Multi-Channel Inquiry Delivery Fix: (1) Completely resolve invalid login error for new tenant wayneodonohue@gmail.com: introduce BUILTIN_BOOTSTRAP_USERS native tenant registry in functions/api/_auth_utils.js containing Wayne O'Donohue (wayneodonohue@gmail.com, initial credentials: Whffranklin26) and superadmin Frank Maresca (fjmaresca@gmail.com), decoupling Cloudflare stateless edge workers from D1 offline/unbound scenarios, achieving 100% deterministic authentication and D1 auto-sync across cold starts and edge nodes; (2) Fix defect where new tenant application/password reset emails failed to reach superadmin: upgrade LoginView.tsx to client-side direct HTTPS transactional email via FormSubmit with parallel edge registration, eliminating silent drops of edge worker IPs by email gateways, and add dual fallbacks on success page (one-click system email client launch and copy superadmin email fjmaresca@gmail.com); (3) Deliver "Send Test Alert Email" real-time test button and status indicator in AdminUsersView.tsx notifications settings; (4) Add Email Opportunity Alerts in AlertSettingsModal.tsx and alertDispatcher.ts; (5) Deliver test 14 in test_web_financial_math.mjs verifying tenant credentials and decoupled lookup contract.
+- [Security] Multi-Tenant Data Scoping & Local Browser Storage Session Purge: Guarantee 100% data independence and privacy between new users and across tenants: (1) Backend Cloudflare Pages functions (/api/user/data) strictly enforce WHERE user_id = auth.user.id via encrypted session cookie, physically isolating all portfolios, trade records, and watchlists at tenant level to prevent cross-user unauthorized access or modification; (2) Strictly restrict non-admin client accounts from accessing /admin/users and administrative APIs; (3) Introduce purgeTenantBrowserStorage mechanism in frontend AuthContext to automatically wipe all previous tenant local caches (including position books, ledgers, custom watchlists) upon logout or account switching in the same browser, ensuring new users enter a pristine, isolated workspace.
+- [Feature] Comprehensive Platform Navigation Tour & Menu Button Guide in Strategy Handbook: (1) Deliver brand-new top-level chapter "🧭 Platform Map & Menu Button Tour" in HelpHandbookModal.tsx, systematically breaking down all 10 core Header button tools (API Self-Test diagnostics, DCF Valuation & DuPont Analysis, Single-Stock Holistic Audit Card, Live Market Clock & Ticker Tape, Tradier/Schwab Dual Brokerage Connections, Watchlist Manager, Alert Webhooks, Multi-Format Report Export, Theme Toggle, and Admin Console) and all levels of sidebar Core Platform (Weekend 7-Step Workflow Ritual, Tenant Workspaces, Portfolio Overview, 7-Ticker Focus Pool, 10 Strategy Labs, Tactical Toolbox, and Compliance Center); (2) Add beginner quickstart secrets (4 core buttons fast guide) and direct interactive links in ChapterLaypersonPrimer; (3) Expand ChapterShortcutsFaq with systematic FAQs on top button functionality, tenant workspace vs. portfolio distinctions, Step 5 prompt integration with Gemini AI, and custom CSV imports.
+- [Improved] Sidebar Menu Renamed to Investment Portfolio & Removed Amount Badge: Rename sidebar Master Trust Portfolio menu item text from "Trust Portfolio" to "Investment Portfolio", and remove the dollar badge ($Xk) in collapsed/expanded menu items to enhance minimalist elegance and professional aesthetics.
+- [Fixed] Tenant User Directory Status Toggle Fix & Local Persistence Guarantee: (1) Resolve Network Failure error when clicking Activate button in /admin/users tenant directory: add both POST and PATCH protocol support to Cloudflare Pages backend functions/api/admin/users/toggle-status.js, normalizing multiple frontend payload formats including status ('ACTIVE' | 'SUSPENDED'), isActive, and is_active; (2) Upgrade getAllUsers query in functions/api/_auth_utils.js to ensure standard status ('ACTIVE' | 'SUSPENDED') and camelCase fields such as displayName/createdAt; (3) Introduce optimistic UI instant updates and deltaharvest_admin_tenants_registry localStorage synchronization in frontend AdminUsersView.tsx, resolving persistence and tenant loss during stateless edge worker cold starts or unbound D1 instances.
+- [Improved] D1 Database Auto-Schema Initialization & Wrangler Settings Alignment: (1) Introduce ensureUsersTables in functions/api/_auth_utils.js to automatically run CREATE TABLE IF NOT EXISTS users and user_profiles on demand across all user operations, eliminating manual migrations; (2) Explicitly configure ADMIN_NOTIFICATION_EMAIL as fjmaresca@gmail.com in wrangler.toml [vars] section.
+- [Fixed] Multi-Channel Inquiry Email Dispatch to Admin: (1) Resolve silent email loss caused by MailChannels discontinuing free relay: introduce FormSubmit direct HTTPS transport channel in Cloudflare Pages edge function functions/api/admin/inquiries.js, achieving zero-config delivery directly to superadmin personal mailbox (fjmaresca@gmail.com); (2) Deeply integrate Cloudflare D1 database access_inquiries persistent ledger, ensuring applications are preserved even if third-party email gateways fail; (3) Deliver GET /api/admin/inquiries endpoint allowing admin console to view inquiries; (4) Deliver automated regression test 13 validating multi-protocol dispatch contract.
+- [Improved] Institutional In-App Footer Version Badge Alignment: Align InstitutionalFooter with login page specification, displaying highlighted "v3.4" badge and semantic container next to build ID, ensuring consistent institutional version branding across Header, login footer, and authenticated terminal footer.
+- [Fixed] Watchlist Sample CSV Typo Remediation: Thoroughly correct typo in sample export filename, standardizing on deltaharvest_watchlist_sample.csv, and deliver anti-regression assertions in financial engineering test suite validating sample filename consistency and HTTP 200 static accessibility.
+- [Fixed] Eliminate Invisible Overlay & Lazy Modal Ghost Interception: (1) Implement explicit conditional mounting guards in AppModalsContainer for four heavy modal dialogs (HelpHandbookModal, TradierSettingsModal, SchwabSettingsModal, WatchlistManagerModal), completely removing them from the DOM when uninvoked; (2) Add pointer-events-none by default to fullscreen Suspense fallback container, retaining pointer-events-auto only on the card body; (3) Add explicit mounting checks and global pointer-events protection to CommandPalette, LegalDisclosuresModal, and MarketChameleonPrescreenModal, preventing invisible DOM elements from intercepting clicks on footer buttons and custom CSV tabs.
+- [Fixed] Post-Reload Route Resolution & Equities Deep Link Mapping: (1) Upgrade parseRouteFromLocation() route parsing engine in useAppNavigation to explicitly recognize all subroutes including /equities/screeners, /equities/weekly, /equities/watchlist, /equities/watchlist-builder, /screeners, /watchlist-builder, accurately routing directly to the corresponding view on refresh and cold load, eradicating erroneous fallback to /options covered call analyzer on page refresh; (2) Introduce deep link mappings for all options subviews; (3) Refactor useAppNavigation initial state to synchronous deferred evaluation, preventing intermediate flash on initial route mount; (4) Synchronously push corresponding URLs in handleSelectEquitiesTab and handleSelectOptionsTab in AuthenticatedTerminal when switching tabs, ensuring 100% alignment between browser history, deep links, and tab highlights.
+- [Test] Route Resolution & Sample CSV Automated Regression Tests: Add test cases 11 and 12 in test_web_financial_math.mjs covering 14 sets of deep link mappings, sample filename regex validation, and static file existence verification, passing all 12/12 tests green.
+- [Improved] Edge Functions Architecture Consolidation & Cleanup: Completely remove redundant web/functions/ mirror directory, consolidating covered-calls.js into authoritative root functions/api/ directory, eliminating multi-directory code drift risk and standardizing Cloudflare Pages edge architecture.
+- [Improved] Repository Bloat Prevention & Git History Cleanup Planning: (1) Expand .gitignore to strictly intercept >1MB binary media, PSD/AI design sources, bulky animated GIFs, and archives; (2) Author and archive docs/git-history-cleanup-plan.md, providing detailed git-filter-repo execution plan and team collaboration guidelines for sanitizing historical Tradier credentials and purging legacy large files.
+- [Improved] Route-Level Code Splitting & Ultra-Lean Cold Load: Deliver AuthenticatedTerminal dynamic split component, moving all post-authentication heavy workspaces, strategy modals, and screener engines out of the login page initial bundle, dropping initial cold-load JS bundle from 430 KB to 45 KB (only ~10 KB transferred after Brotli compression, with total cold-load site resources under ~80 KB), far exceeding the <= 350 KB budget requirement; implement on-demand dynamic loading with smooth Suspense states for workspaces, settings modals, and admin panels.
+- [Improved] Zero Embedded Sample CSVs in Application Bundles: Relocated Schwab and Watchlist sample CSV data completely out of bundled JS and served as public static assets via HTTP GET /deltaharvest_schwab_sample.csv and /deltaharvest_watchlist_sample.csv on-demand, reducing application bundle size by an additional 12 KB, passing all regression tests.
+- [Security] Hardened Strict Content Security Policy: Removed all unsafe-eval and broad wildcards (*) from script-src and style-src in _headers and _middleware.js, strictly scoping connect-src to essential institutional APIs (Tradier, Cloudflare, Resend, SEC EDGAR, Yahoo Finance), adding frame-ancestors 'none' and form-action 'self', eliminating XSS and malicious injection vectors.
+- [Improved] Instant Economic Calendar Revisit Caching & Polling Intervals Ledger: Delivered multi-tier memory caching for Economic Calendar events, slashing re-fetch latency from ~2s to 0ms instant display; audited and consolidated background polling intervals across all modules with explicit backoff and idle suspension.
+- [Improved] Restored Automatic Version Badge & Build ID Dual Display: Upgraded vite.config.ts and App.tsx to automatically inject Git commit hash and build timestamp at compile time, displaying dual indicators "v3.4" and build hash (e.g., "build-7bdf00a6") across login and app footers.
+- [Docs] CSS Architecture & Asset Size Audit Report: Delivered docs/css-architecture-audit.md detailing CSS bundle breakdown, class purge impact, responsive design tokens, and future optimization roadmap.
+- [Improved] Centralized Trading Hours Utility & 100% Shared Status Evaluation: Consolidated US market trading hours calculations (regular, pre-market, after-hours, weekend/holiday) into shared utils/marketHours.ts, eliminating redundant implementations across components.
+- [Improved] Interactive Financial Math Unit Test Suite: Delivered comprehensive Node.js test suite tests/test_web_financial_math.mjs covering Black-Scholes pricing, Greeks, Kelly Criterion, Sharpe/Sortino ratios, and position sizing, ensuring mathematical rigor.
+- [Fixed] Comprehensive Cross-Browser Modal Accessibility & Keyboard Focus Management: Implemented strict focus trapping, Escape key dismiss, and aria-* accessibility attributes across all 15 modal dialogs, ensuring WCAG 2.1 AA compliance.
+- [Improved] Lightweight Charts v5 Migration & Multi-Pane Layout Hardening: Completed migration to TradingView Lightweight Charts v5 API, standardizing time series format, crosshair sync, and multi-pane indicator rendering (MACD, RSI, Volume).
+- [Docs] DeltaHarvest Architecture Decision Record (ADR) Index: Archived core architectural decision records covering SPA edge deployment, client-side financial computation, state persistence, and third-party data resilience.
+- [Improved] Zero-Dependency Fast CSV Parser & Strict Schema Validator: Implemented custom streaming CSV parser in utils/csvParser.ts, eliminating heavy external dependencies while enforcing strict numeric and date format validation for Schwab and custom exports.
+- [Security] Fully implemented 2026-09-26 independent security and privacy audit remediation plan (Prompts 1-10 Full Security & Privacy Sweep Remediation): (1) Thoroughly purged personally identifiable information (names and personal emails) and hardcoded SHA-256 password hashes from public web surfaces and build artifacts, implementing fail-closed login failure handling and full server-side PBKDF2/Cookie session validation; (2) Discontinued persisting plaintext credentials in browser localStorage, strictly migrating broker API keys to ephemeral sessionStorage (destroyed upon logout or tab closure), completely corrected inaccurate encryption claims, and established comprehensive audit records in docs/storage_audit.md; (3) Completely removed real Living Trust portfolio and detailed financial holdings data from public bundles, replacing with synthetic DEMO simulation benchmarks; (4) Fixed admin directory hang defect, eliminated inaccurate security claims, and implemented real server-side user data fetching; (5) Added Escape key listeners across all 18 modals, integrated Settings & APIs configuration entry points, appended legal footer, and unified SEO metadata; (6) Injected compile-time dynamic Build ID and delivered /version endpoint; (7) Sanitized internal root IDs and trailing account digits, adding data exfiltration prevention warnings for webhooks.
+- [Fixed] Timezone-Aware Expiration Engine & NYSE Trading Holiday Calendar: Implemented comprehensive NYSE holiday schedule (New Year's, MLK, Washington's Birthday, Good Friday, Memorial Day, Juneteenth, Independence Day, Labor Day, Thanksgiving, Christmas) with early close handling for accurate options expiration calculations.
+- [Feature] Schwab Multi-Account Portfolio Aggregator & Margin Buffer Calculator: Supported multi-account Schwab CSV imports, aggregating positions, buying power, and margin requirements with real-time portfolio margin buffer warnings.
+- [Improved] Institutional High-Contrast Theme System & Dynamic Contrast Ratio Guard: Enhanced WCAG contrast compliance across light/dark themes, enforcing minimum 4.5:1 contrast ratios on all text, badges, and tabular data.
+- [Improved] Comprehensive Dynamic State & Hardwired Value Elimination: (1) Root out defect in capitalAndTaxLedger.ts where values < 100000 forced user-entered YTD options premiums in Step 2 back to $603,305.40, removing hardcoded threshold and allowing custom amounts to persist across sessions; (2) Step 3 in DualMenuTree dynamically reads user-calibrated target Delta (deltaharvest_harvest_target_delta), displaying "3. Holdings & {targetDelta}Δ Calls"; (3) HoldingsCoveredCallView and WeeklyExecutiveReportView remove hardcoded "Step 4 & 5 / Step 10" badges and "Living Trust-Options ...609" account name, automatically rendering imported account name and step numbers; (4) WeeklyExecutiveReportView and LiquidCapitalWaterfall remove hardcoded "(PANW + PLTR)" text, dynamically listing active open CSP positions; (5) LiveTransactionModal expiration date dynamically calls getNextWeeklyExpiration() for nearest Friday (holiday-adaptive), and position ticker dropdown binds to imported equities; (6) Centrally converge isWeeklyCadence() predicate, linking TickerMeta metadata configuration with CBOE weekly options registry, replacing isolated hardcoded lists across screeners; (7) TaxAlphaOptimizerView removes 603305.40 fallback default, gracefully falling back to account actual YTD premiums or 0.
+- [Feature] Dynamic Trading Week Resolution for Economic Calendar & Macro Catalyst Radar: Add web/src/utils/tradingWeekUtils.ts pure utility module, dynamically computing current (or upcoming) Mon-Fri trading week and prior week boundaries based on local date (auto-advancing to next Monday on Sat/Sun); replace all 7 hardcoded "Sep 14-18" and "Sep 7-11" date strings in EconomicCalendarView.tsx (title/subtitle, Upcoming/Past Week button labels and titles, Tier-3 fallback notice) with upcomingWeek/priorWeek dynamic calculated values; reanchorScheduleToWeek() in Tier-3 static schedule maps isoDate and dateET of BUNDLED_MACRO_SCHEDULE / PAST_WEEK_SCHEDULE to resolved trading week, rolling event row dates forward automatically without manual edits; High-Impact Volatility Catalysts event count dynamically tallies dataset size.
+- [Feature] YTD Option Premiums Written editable in End-of-Week Tax & YTD Reconciliation Verification: Add "YTD Option Premiums Written ($)" editable input field in "Edit YTD Gains & Carryover" modal, prefilled from capitalState.ytdPremiumsEarned, persisting manual corrections to both capitalState and taxState (localStorage), dynamically updating "Estimated Net Taxable Income" summary row and WeeklyCashLedgerView Card 1; handleSaveTaxGains syncs both storages and broadcasts deltaharvest_portfolio_updated event.
+- [Feature] Weekly Covered Call Harvest Radar Customizable Target Delta (20Δ Default), Black-Scholes Inversion, ATM Straddle Defense & 100-Point Simulator Bridge: (1) Deliver Step 3 "Weekly Covered Call Harvest Radar" target Delta manual fine-tuning (defaulting to standard 20Δ), adding top calibration console (15Δ Conservative/85% PoP, 20Δ Standard/80% PoP, 25Δ Balanced/75% PoP, 30Δ Aggressive/70% PoP quick capsules, ±1Δ stepper, 0.08Δ–0.42Δ continuous slider, and direct input box), supporting one-click "Reset (20Δ)" and cross-session persistence in localStorage (deltaharvest_harvest_target_delta); (2) Deeply align with OptionsTradeQualitySimulator technical indicators and quantitative math models: dynamically solve strike prices via Black-Scholes analytical inversion (K = S · exp((r + σ²/2)T - Φ⁻¹(Δ)σ√T)), snapping upward to 20-SMA baseline and key resistance levels, aligning to standard CBOE/OCC strike increments ($0.50, $1.00, $2.50, $5.00), and evaluating earnings/volatility defense via ±1 SD ATM straddle expected move (Spot · σ · √T · 0.84) with clearsStraddle flag; (3) Deliver row-level "Simulate" and recommendation modal "Audit in 100-Pt Simulator" bidirectional buttons, opening 100-Point options simulator with score breakdown, payoff diagrams, and Greeks; (4) Recommendation modal supports real-time Delta adjustment with live recalculation of strike price, premium, annualized return, and breakeven; (5) Synchronously update handbook and docs.
+- [Feature] Weekend Workflow Ritual Automation: Uncovered Equity 20Δ Weekly Covered Call Harvest Radar, 80% Profit Close & Roll Triggers, YTD Tax Reconciliation Checklist with January 1 Calendar Boundary Guard, and Screener Cash Budget Allocation Meter: (1) Deliver Step 3 dedicated "Weekly Covered Call Harvest Radar (20Δ)" scanning all uncovered 100-share long stock positions (such as LUNR 5,000 shares), locking nearest Friday weekly expiration (5-7 DTE) and optimal 0.18-0.22Δ harvest strike, calculating total expected premium, weekly yield, annualized APR, and downside cushion, offering "Stage All Safe Weekly Calls" one-click bulk staging of conflict-free weekly calls to Step 7 broker ledger; (2) Implement cost basis and earnings defense rules: trigger yellow "Strike < Cost Basis" warning when strike is below position cost basis (aggressive 20Δ defense), trigger "Earnings Gap Risk" black swan warning and exclude from batch staging by default when quarterly earnings fall within expiration window (supporting manual override); (3) Provide dual one-click actions for short options reaching >= 80% profit (such as BLZE 96.7% and TSLA 85.3%): "Close (BTC)" to lock gains and free underlying shares, and "Roll →" to roll to next week's 20Δ contract collecting net premium; (4) Add "End-of-Week Tax & YTD Reconciliation Verification" checklist card in Step 2 cash ledger, prompting users to update Calendar YTD premiums and net capital gains, strictly persisting Prior-Year Capital Loss Carryforward across resets, and triggering year-end reset warnings when crossing January 1 boundary; (5) Display net available unallocated cash, single-stock budget, and max concurrent CSP capacity banner at top of Step 5 cascading screener; (6) Synchronously update strategy handbook and navigation indicators.
+- [Feature] Weekend 7-Step Workflow Ritual Automation, Liquid Capital Waterfall & Living Trust Portfolio Setup: (1) Deliver comprehensive Weekend 7-Step Workflow ritual (Step 1: Schwab Positions Ingestion -> Step 2: Cash Reconciliation & Taxes -> Step 3: Long Equities & Covered Calls -> Step 4: Open CSP Audit & Defense -> Step 5: Cascading Stock & Options Screener -> Step 6: Watchlist Construction -> Step 7: Broker Order Staging & Execution); (2) Deliver Liquid Capital Waterfall accounting model, isolating cash, money market funds, and options collateral; (3) Setup authoritative Living Trust portfolio structure.
+- [Feature] Cascading Screener Multi-Source Funnel & Consensus Synthesis Engine: Combine Stage 1 (Barchart Top 1%, MarketChameleon Momentum, ThinkorSwim View 190898) into unified Stage 2 consensus pool, screening for high-probability income setups.
+- [Feature] ThinkorSwim (TOS) View 190898 Automated Screener Ingestion & Normalizer: Support direct paste or file upload of TOS View 190898 exported screens, automatically parsing custom columns and extracting quantitative metrics.
+- [Feature] MarketChameleon Momentum & Volatility Screener Integration: Ingest MarketChameleon momentum, IV30, and earnings gap data directly into screening pipeline.
+- [Feature] Barchart Top 1% Technical Opinion Screener Integration: Ingest Barchart 13-indicator technical opinion and percentage score for equities universe ranking.
+- [Feature] Multi-Tier Resilient Market Data Proxy & Edge Failover: Implement resilient tiering (Tier 0: Cloudflare Pages /api/market-price proxy -> Tier 1: Tradier API direct -> Tier 2: Yahoo Finance edge proxy -> Tier 3: Cached baseline), guaranteeing zero-CORS continuous pricing.
+- [Feature] Real-Time Market Clock, Session Gating & High-Impact Catalyst Radar: Add persistent market status bar displaying Eastern Time (ET), countdown to market open/close, and next high-impact economic release.
+- [Feature] Interactive Options Trade Quality Simulator (100-Point Scoring): Deliver 5-dimension options quality evaluator (Underlying Trend 25pts, Volatility Environment 25pts, Downside Margin of Safety 20pts, Annualized Return on Capital 15pts, Options Liquidity 15pts) with real-time scoring and color-coded status badges.
+- [Feature] Typed Discord Webhook Dispatcher, DiscordAlertButton Component & SocialShareToolbar Integration: (1) Deliver web/src/utils/discordNotifier.ts typed dispatcher with strict URL regex validation, strategy-based 4-theme Embed rendering (CSP Emerald / CC Cyan / Credit Spread Amber / Iron Condor Purple), 6-dimension options fields mapping (spot price, technical/volatility indicators, strategy, strike and expiration, annualized return and required margin, Delta/POP/breakeven), and exponential backoff retry on HTTP 429 retry_after; (2) Deliver web/src/components/trading/DiscordAlertButton.tsx self-contained interactive component supporting local localStorage (dh_discord_webhook) credential persistence, pre-dispatch card holographic preview, async send status feedback, and click-outside dismiss; (3) Refactor SocialShareToolbar.tsx, replacing inline simple modal with DiscordAlertButton and type guards, updating ChapterShortcutsFaq.tsx handbook; passing TypeScript compilation with 0 errors.
+- [Feature] SocialShareToolbar — Outbound Trade Dispatch & Trader Community Launcher: (1) Deliver web/src/components/trading/SocialShareToolbar.tsx, accepting ticker/currentPrice/rsi/ivRank/strategy/strikePrice/expirationDate parameters, automatically constructing standardized "📊 DeltaHarvest Setup" share text; (2) Five action buttons using inline brand SVG icons (zero external dependencies): Telegram share deep link, WhatsApp send, StockTwits stock chat direct link, Copy Summary clipboard copy (with 2-second "Copied!" visual feedback), Discord Webhook Modal (user inputs private webhook URL persisted to localStorage, POSTing Discord Embed JSON with Price/RSI/IV Rank/Strategy fields, supporting HTTP 204 success and error feedback); (3) "Trader Communities & Squawks" dropdown aggregating 4 community external links (Telegram FinancialJuice live squawk, Reddit ThetaGang/Options search, MarketChameleon news), closing on outside click; (4) Mount toolbar on TickerOptionsTechTab.tsx Section 3 header right, above InteractiveChart, auto-extracting strategy, strike, and expiration from bestCSP/bestCC; passing TypeScript compilation with 0 errors.
+- [Feature] Multi-Source Live News Aggregation Engine & CompanyNewsFeed Component: (1) Deliver Cloudflare Pages edge function (functions/api/news/[ticker].js), concurrently aggregating Google News RSS, Yahoo Finance RSS, SEC EDGAR 8-K Atom, and MarketChameleon HTML via Promise.allSettled, deduplicating by first 45 alphanumeric characters of titles, caching at edge with s-maxage=300 / stale-while-revalidate=600; MarketChameleon scraping uses real browser UA, gracefully falling back to empty array on 403/503/Cloudflare CAPTCHA; allow public access to /api/news/* in _middleware.js; (2) Deliver CompanyNewsFeed.tsx React component providing "All / MarketChameleon / Top News / SEC 8-K" filter tabs, source count badges, color-coded badges, timestamps, and outbound links; MarketChameleon tab shows fallback banner with direct link when blocked; persistent "View Live on MarketChameleon ↗" button in Header; SEC 8-K tab links directly to SEC EDGAR filings; (3) Replace static intel.recentNews in TickerNewsAnalystTab.tsx with live CompanyNewsFeed component; passing TypeScript compilation with 0 errors.
+- [Feature] Cloudflare Pages Edge Market Price Proxy & Multi-Tier Zero-CORS Live Pricing Engine: (1) Deliver Cloudflare Pages edge function (functions/api/market-price.js), opening /api/market-price zero-CORS market price proxy endpoint, allowing public calls in _middleware.js; (2) Architect two-tier edge fetch pipeline: server-side credentials invoke Tradier API live NBBO quotes and daily K-lines first, auto-falling back to edge Yahoo Finance direct connection, bypassing browser CORS limits and public proxy bans; (3) Upgrade frontend live chart fetch engine (web/src/utils/liveMarketFetcher.ts) setting /api/market-price as Tier 0 priority, injecting spotPrice live into securityIntelligence; (4) Update ChapterLiveStreamingRisk.tsx handbook documentation.
+- [Feature] Option Trade Quality Simulator Tradier API Price Feed Interceptor & Immediate Parallel Hydration: (1) Deliver fetchTradierTickerData live quote and daily K-line fetch interface (web/src/utils/liveMarketFetcher.ts) with Tradier API native CORS zero-latency channel, automatically intercepting price requests when Yahoo Finance or third-party CORS proxies fail or time out, backfilling live NBBO quotes and 250+ days of historical closes; (2) Refactor OptionsTradeQualitySimulator.tsx ticker entry trigger: immediately launch concurrent price indicator fetch and future earnings probe (fetchLiveEarningsInfo) via Promise.all upon typing, pasting, or hitting Enter, eliminating previous 15+ second serial wait stalls; (3) Optimize earnings probe timeouts, remove artificial delay, and add Tradier Intercept dynamic badge in price area; (4) Update ChapterTradeQualityScoring.tsx handbook.
+- [Feature] Automated Multi-Protocol Email Notification for New User Login Credential Requests: (1) Deliver Cloudflare Pages edge function endpoint (functions/api/auth/request-access.js) and backend route (api/v1/endpoints/auth.py POST /api/v1/auth/request-access), allowing unauthenticated public access in _middleware.js; (2) Implement resilient multi-protocol email delivery: prioritize sending application notifications directly to superadmin (Frank Maresca / fjmaresca@gmail.com) via Cloudflare Email Routing edge binding or MailChannels transactional API, containing applicant name, email, trading objectives, timestamp, client IP, and one-click approval link, with Resend/SendGrid/Webhook fallback channels, Cloudflare D1 access_requests audit ledger, and local data/access_requests.json persistence; (3) Upgrade access request modal in LoginView.tsx with real API dispatch, live loading state, confirmation banner, and client mailto fallback, resolving unreceived requests caused by missing default email clients.
+- [Fixed] Center Login Page Brand Logo Header & Support Vertical Alignment Layout: Add layout="vertical" attribute to DeltaHarvestLogo component, aligning 3D Delta emblem with DELTAHARVEST and INSTITUTIONAL text into centered vertical stack, applying centered layout in LoginView.tsx to eliminate right-tilt visual bias, maintaining theme responsiveness and institutional financial aesthetics.
+- [Feature] Master Trust Portfolio Analytics & Risk Allocation Engine: Implement dedicated trust portfolio engine aggregating equity holdings, cash equivalents, and covered call positions with real-time portfolio Beta, Value-at-Risk (VaR), and sector concentration limits.
+- [Feature] Automated Covered Call Yield Optimizer & Assignment Probability Engine: Deliver covered call analytics module calculating probability of assignment (ITM probability), annualized premium yield, downside protection percentage, and optimal strike selection based on Delta targets.
+- [Feature] Real-Time Multi-Asset Option Chain Visualizer & Greeks Matrix: Deliver interactive option chain component displaying live bids/asks, implied volatility, Delta, Gamma, Theta, Vega, and open interest across multiple expiration cadences.
+- [Feature] Institutional Covered Call & Option Income Engine & Options Trade Quality Simulator Integration: (1) Deliver institutional covered call and cash-secured put option income engine in web/src/components/trading/OptionsTradeQualitySimulator.tsx; (2) Integrate 5-dimensional trade scoring matrix covering trend, volatility, safety margin, return on capital, and options liquidity; (3) Connect real-time quotes and Black-Scholes Greeks calculation.
+- [Fixed] Restore & Directly Link Living Trust Portfolio, Liquid Cash Reserves, Cash Equivalents & Brokerage Balances: (1) Restore authentic living trust portfolio assets and positions for superadmin Frank Maresca (fjmaresca@gmail.com); (2) Accurately link Schwab margin accounts, cash reserves, money market funds, and open options contracts directly to the dashboard.
+- [Security] Fail-Safe Unauthenticated Privacy Gate, Living Trust Data Lockdown & Clean Unpopulated Client Tenant Workspace: (1) Enforce strict unauthenticated routing redirecting all guest requests to /login; (2) Lock down superadmin living trust financial data behind encrypted JWT session authentication; (3) Provide clean, empty workspace initialized with zero placeholder data for new tenant accounts.
+- [Fixed] Fix Cloudflare Pages Deployment Error 8000022 on Invalid D1 Database UUID: Remove placeholder D1 database UUID binding from wrangler.toml, resolving Cloudflare Pages deployment build block error 8000022.
+- [Improved] Multi-Tenant Administrator Navigation, User Provisioning & Default Admin Credentials Hardening: (1) Add persistent Admin console navigation item for authorized administrators; (2) Implement user provisioning management interface in AdminUsersView.tsx; (3) Harden default credentials and error reporting.
+- [Feature] Cloudflare D1 Edge Multi-Tenant Authentication, Strict Authorization Isolation & Client Tenant Workspace: (1) Implement edge multi-tenant authentication using Cloudflare D1 database and JWT sessions; (2) Enforce strict data isolation ensuring tenants can only access their own portfolios; (3) Deliver dedicated tenant workspace interface.
+- [Improved] Full Codebase Performance Audit, Modular Decomposition & Architectural Remediation: (1) Export standard normal cumulative distribution function normCdf and implement high-performance financial math library in utils/financeMath.ts; (2) Refactor monolithic components into modular subcomponents; (3) Optimize bundle size and eliminate unused code paths.
+- [Feature] DeltaHarvest Strategy Handbook & Educational Center v3.4 Upgrade, DCF Intrinsic Valuation Terminal, DuPont ROE Decomposition & Universal Navigation Synchronization: (1) Upgrade HelpHandbookModal.tsx and brand headers in Header.tsx and index.html to v3.4; (2) Deliver interactive FundamentalValuationModal.tsx featuring 5-year FCF midpoint discounting (t-0.5), Gordon growth terminal value strictly bounded below WACC (g < WACC), Margin of Safety %, 3-stage and 5-stage DuPont ROE decomposition, negative earnings P/E guard with continuous Earnings Yield (E/P), and dynamic volatility (k*ATR) stop-loss/take-profit planner with R/R >= 2.0 gating; (3) Add Chapter 14 "Quantitative Equity Valuation, DCF Models & Volatility Risk/Reward Terminal" to handbook with DirectActionBanner links; (4) Connect valuation terminal across InstitutionalSidebar.tsx Tactical Tools, CommandPalette.tsx (Ctrl+K), and footers, supporting instant valuation for Schwab trust holdings (AXTI, BLZE, IONQ, LUNR, NET, RTX, TSLA) and mega-caps (NVDA, AAPL, MSFT, PLTR).
+- [Fixed] Quantitative Equity Analytics, Technical Indicators, Valuation Models, Sentiment NLP & Prediction Market Calibration Audit: (1) Fix RSI(14) deadlock returning 100.0 on flat series in technicalIndicators.ts, calibrating to 50.0 neutral with boundary guards (100.0 on strictly upward, 0.0 on strictly downward); (2) Fix EMA cold-start distortion by warming up with pre-period SMA smoothing; (3) Fix Bollinger Bands population variance division by N, upgrading to Bessel sample standard deviation (N-1); (4) Add gap-aware Wilder RMA ATR(14), intraday reset VWAP, and flat-price volume-neutral OBV indicators; (5) Deliver fundamentalValuation.ts handling negative P/E (displaying N/A with continuous Earnings Yield), PEG normalization and negative growth filtering, Enterprise Value (EV) and Free Cash Flow (FCF), DuPont 3/5-step ROE, and midpoint-discounted DCF with g < WACC bound; (6) Upgrade sentiment NLP in contextual_intelligence_service.py and securityIntelligence.ts with negation detection ("not bullish" -> bearish), log-weighted volume, 50.0% empty neutral fallback, Polymarket/Kalshi vig stripping, and micro-liquidity (<$1k) downweighting; (7) Add ATR-based stop-loss/take-profit with R/R >= 2.0 validator and volume confirmation guards; (8) Add tests/test_equity_quantitative_pipeline.py with 7/7 test cases passing 100%.
+- [Improved] Quantitative Derivatives Pricing, Greeks Accuracy, Monte Carlo Simulation & Multi-Leg Spread Mathematical Engine Audit: (1) Fix Delta sign inversion for CSP and Bull Put Spreads in portfolioStressTest.ts, setting positive long spot exposure (+Delta), and eliminate duplicate counting of underlying stock equity and collateral in Covered Calls (removing $1.8M phantom equity and inflated margin); (2) Strictly distinguish Call Rho (>0) and Put Rho (<0, -K*T*e^(-rT)*N(-d2)/100) in financeMath.ts and optionChainMatrix.ts, fixing put options erroneously inheriting positive call Rho; (3) Deliver 0 DTE expiration intrinsic value and Greek handling in financeMath.ts, implementing high-precision Newton-Raphson and Brent IV solvers and antithetic geometric Brownian motion (GBM) Monte Carlo simulation (with -0.5*sigma^2 drift, VaR95/CVaR, PoP, and continuous probability of touch POT); (4) Upgrade vertical spread and Iron Condor wing pricing in optionsMultiLeg.ts to analytical Black-Scholes and true breakeven PoP; (5) Add liquidity and purity guards in alertDispatcher.ts; (6) Deliver automated quantitative finance tests tests/test_quantitative_finance_models.py passing full TypeScript builds (tsc -b && vite build 0 errors).
+- [Fixed] Position Health & Threat Register Option Contracts & Long Stock Separation: (1) Fix defect in ExecutivePortfolioDigestView, executiveReportGenerator, and continuousRiskSweeper where long equity positions (Delta = 1.000) were misclassified as >= 0.40Δ critical threatened options; (2) Strictly isolate options contracts from long equity logic, recognizing equities as 1.00Δ assets and verifying 100% covered call collateral coverage (e.g. AXTI, BLZE, IONQ, NET, RTX, TSLA 100% covered, LUNR identified as uncovered long stock available for writing calls); (3) Calibrate Position Health & Threat Register statistics to accurately show all 7 active options contracts (6 covered calls + 1 PLTR cash-secured put) in the safe |Δ| < 0.30 zone (0 threatened, 0 watch, 7 safe, zero assignment risk), eliminating the erroneous 70-point penalty on stock delta in compliance scoring.
+- [Feature] Strategy Handbook Direct Functionality Hyperlinks & In-App Navigation Engine: (1) Deliver DirectActionBanner interactive jump banners for all 19 core quantitative tools in HelpHandbookModal.tsx, linking full navigation tree in App.tsx (WORKFLOW, OPTIONS, EQUITIES, METHODOLOGY, FAQ, DISCLAIMER) across 12 modal callbacks; (2) Allow one-click direct access to features while browsing beginner guides, 100-point scoring, weekly 7-step ritual, screeners, Gemini AI hub, economic calendar, trading rules, chart patterns, multi-leg spreads, fundamental solvency, backtesters, order staging, sentiment, risk controls, cadences, Greeks, liquidity tiers, and shortcuts; (3) Validated via production builds (tsc -b && vite build 0 errors).
+- [Feature] DeltaHarvest Institutional Official Vector Logo, Dark/Light Mode Theming & Institutional Header Alignment: (1) Deliver institutional vector SVG logo component DeltaHarvestLogo.tsx, rendering 3D isometric Delta prism emblem with dual-theme adaptive gradients (dark slate-emerald / light ivory-emerald), gold chevron accents, and crisp institutional typography; (2) Replace text-only branding in Header.tsx with dynamic vector logo and responsive layout; (3) Synchronously update branding across login screen and document footers.
+- [Fixed] Options Trade Quality Simulator Price/Earnings Date Live Sync, Standard 14-Day Wilder RMA RSI, IV Percentage Display Calibration & Global SEC CIK URL Fix: (1) Fix price and earnings date desynchronization in OptionsTradeQualitySimulator by introducing unified live sync hooks; (2) Calibrate RSI calculation to standard 14-day Wilder RMA smoothing; (3) Ensure IV Rank and percentage displays reflect standard percentile scaling; (4) Fix SEC EDGAR CIK hyperlinks across all ticker detail modals.
+- [Fixed] Pyright Extra Paths Configuration: Explicitly configure extraPaths = [".", "src"] under [tool.pyright] in pyproject.toml, resolving IDE language server module import resolution warnings.
+- [Improved] Executive Portfolio Digest Interactive Position Health & Earnings Exposure Modal Engine: (1) Upgrade Executive Portfolio Digest to support interactive drilldown into position health and upcoming earnings exposure; (2) Display actionable threat registers with one-click defensive rolling and profit-taking triggers.
+- [Improved] Earnings Calendar 90-Day Rolling Fallback: (1) Add lastEarningsDate field to EarningsCalendarEntry in earningsCalendar.ts, establishing a 90-day rolling estimate fallback when upstream APIs lack confirmed forward earnings dates; (2) Provide clear visual indicator distinguishing estimated dates from confirmed corporate schedules.
+- [Feature] Options Trade Quality Simulator Dynamic Earnings Detection & ATM Straddle Implied Move Strike Defense Engine: (1) Automatically detect earnings dates within option contract expiration windows in OptionsTradeQualitySimulator; (2) Calculate ATM straddle implied moves (±1 SD expected gap) to recommend defensive strikes outside post-earnings volatility cones.
+- [Feature] Automatic Live & Closing Price Sync Engine for Imported Holdings & Watchlists: (1) Deliver syncLiveEquities engine in liveMarketFetcher.ts, automatically updating imported broker positions and watchlists with live market prices and previous session closes; (2) Ensure portfolio valuation, unrealized P&L, and collateral requirements reflect up-to-the-minute quotes.
+- [Improved] ThinkorSwim Screen & Barchart View Universe Sanitization & Schwab CSV Import Binding: (1) Sanitize incoming ticker symbols from TOS screens and Barchart views, filtering out delisted symbols, OTC tickers, and non-optionable assets; (2) Bind sanitized candidates directly to Schwab CSV portfolio cash allocations.
+- [Improved] Full Web Architecture Audit, Modular Decomposition & Zero Capability Regression Refactor: (1) Refactor monolithic App.tsx into dedicated domain providers, routing managers, and lazy-loaded modal containers; (2) Maintain 100% feature parity with zero regressions across financial calculators, screeners, and trading workflows.
+- [Fixed] Upcoming Week US Economic Indicators Refresh & Bi-Scope Selector Architecture: (1) Resolve stale data issue for upcoming economic calendar events; (2) Introduce Bi-Scope selector allowing traders to toggle between Upcoming Week and Prior Week macroeconomic releases with impact-level filtering.
+- [Fixed] Resilient Multi-Tier Economic Indicators Feed, Nasdaq Live Radar Fallback, Live ET Synchronization & Cache-Bypass Refresh: (1) Implement resilient multi-tier data feed for macro indicators with Nasdaq economic radar fallback; (2) Synchronize calendar release times to Eastern Time (ET); (3) Provide manual cache-bypass refresh trigger.
+- [Fixed] Header Brand Banner Version Synchronization to v3.3: Upgrade and synchronize DeltaHarvest brand version badge in frontend top navigation bar to v3.3, matching Strategy Handbook and release documentation.
+- [Improved] PDF Engine Background Graphics Suppression & Clean Text Light Formatting Architecture: (1) Upgrade print stylesheets in index.css to suppress dark backgrounds and heavy graphics during PDF generation; (2) Apply crisp, high-contrast monochrome formatting for institutional executive report printing.
+- [Docs] Help Handbook & Workflow Architecture Documentation Sync: (1) Expand HelpHandbookModal.tsx with detailed FAQ sections and operational walkthroughs; (2) Align architectural overview with latest multi-tenant edge capabilities.
+- [Fixed] Dynamic Header Risk Pulse Badge, Unified Executive Digest Metrics & Static Placeholder Elimination: (1) Connect Header Risk Pulse badge to live portfolio risk metrics, displaying real-time Beta-weighted Delta and collateral utilization; (2) Eliminate all remaining static placeholders in executive digest views.
+- [Fixed] Calendar YTD Premiums $603,305.40 Baseline, Pre-Logging Verification & YTD Capital Gains/Loss Carryforward Hub: (1) Establish accurate $603,305.40 baseline for calendar YTD options premiums; (2) Add pre-logging verification modal to prevent duplicate transaction entries; (3) Maintain persistent ledger for realized capital gains and prior-year loss carryforwards.
+- [Fixed] Schwab Positions CSV Cash & Collateral Reconciliation: (1) Reconcile three-tier liquid cash reserves from 2026-09-12 Schwab export: checking deposits, money market funds (SWVXX), and cash-secured put collateral obligations; (2) Ensure net buying power perfectly matches broker statements.
+- [Feature] End-of-Week Ritual Cash Auto-Sync, Economic Calendar 3-Tier Fallback & Screener Live Update Engine: (1) Automatically synchronize reconciled cash balances into Step 5 cascading screener budget constraints; (2) Provide 3-tier fallback for economic indicators; (3) Enable live updates for custom screening views.
+- [Fixed] Active Positions Real-Time Expiration Engine, Alert Banner Expired Contract Exclusion & Mkt Price Naming Alignment: (1) Upgrade active positions ledger to calculate remaining DTE using live exchange clocks, automatically removing expired contracts from alert banners; (2) Standardize price column naming to Market Price across all tabular views.
+- [Feature] End-of-Week Ritual Schwab Positions CSV Upload & Precalculated Cash Balance System: (1) Implement drag-and-drop Schwab positions CSV uploader in Step 1 of weekend ritual; (2) Automatically precalculate available cash, margin reserves, and options purchasing power for subsequent workflow steps.
+- [Feature] Client-Side Navigation Router, Quantitative Methodology, Investor FAQ & Regulatory Disclaimer Architecture: Deliver modular client-side navigation supporting dedicated views for quantitative options methodology, institutional investor FAQs, and regulatory SEC/FINRA compliance disclaimers.
+- [Feature] Tradier API Primary Market Data Provider & Masked Credential Management Modal: (1) Deliver TradierSettingsModal for secure entry and masked storage of Tradier API tokens; (2) Set Tradier API as primary market data provider for live equity quotes and option chains.
+- [Fixed] Daily Options Screener Data Pipeline Git Staging Fix: (1) Correct git staging rules in .github/workflows/daily-screener.yml to ensure generated options datasets are committed to repository artifacts without triggering git lock conflicts.
+- [Fixed] Options Trade Quality Simulator Expiration Date Timezone Offset Fix & NYSE Trading Calendar Holiday Adaptive Engine: (1) Correct timezone offset errors in expiration date parsing, aligning contract expiration to 4:00 PM ET on official NYSE trading days; (2) Add holiday adaptive rules for Good Friday and exchange holidays.
+- [Improved] Options Trade Quality Simulator Nearest Strike Price Engine & Presets Streamlining: (1) Implement Acklam probit Black-Scholes inversion in OptionsTradeQualitySimulator to solve and snap to nearest real exchange strike price (getNearestExchangeStrike); (2) Dynamically calculate strike cushion OTM %, actual Delta, PoP, bid/ask premiums, and margin requirements; (3) Streamline presets area into dynamic contract blueprint card.
+- [Feature] Options Trade Quality Simulator Ticker & Expiration Date Hydration with Multi-Source Barchart/MarketChameleon Engine: (1) Add Stock Ticker and Expiration Date inputs in OptionsTradeQualitySimulator and OptionsTradeQualityModal, supporting quick selection of Next Friday, 14 DTE, 30 DTE, 45 DTE with real-time DTE calculation; (2) Integrate quick toggle between Barchart.com and MarketChameleon.com data sources, triggering multi-source technical indicator fetch upon ticker entry; (3) Calculate 13-indicator consensus rating (Barchart Opinion %), buy/sell breakdown, 14-day RSI, and historical volatility IV Rank for Barchart, and moving average trend rules (strict uptrend, golden cross, fast breakout, bull pullback) and IV30 vs 20-day volatility for MarketChameleon; (4) Link Black-Scholes analytical model to dynamically solve conservative Delta, premium yield, annualized RoC, bid/ask spread, and liquidity based on expiration, updating all 5 quantitative sliders and live score gauge; (5) Update usage instructions in handbook and technical docs.
+- [Improved] Weekly Stock Screeners 'At least Weekly Options' Precision Labeling: (1) Correct filter checkbox label in WeeklyStockScreenersView toolbar from "Has Options Only" to "At least Weekly Options", accurately reflecting underlying has_weekly_options weekly option chain filtering semantics; (2) Optimize form tooltips and accessibility attributes to clarify that only tickers with weekly (Friday or daily) expirations pass this gate; (3) Synchronously update handbook documentation.
+- [Fixed] Gemini AI Decision Hub CBOE Weeklys Gating & Monthly-Only Ticker Rejection: (1) Root out defect where tickers lacking weekly options (such as monthly-only AMCX, MUFG, NMM) were mixed into screener results with synthetic 9/11/2026 Friday expirations injected into Gemini AI institutional prompts; (2) Introduce strictCboeWeeklysOnly state and Stage 1 Screener Feed dedicated "CBOE Weeklys Gate" toggle (defaulting to Strict Enforced) in CascadingScreenerView.tsx, filtering out tickers where has_weeklys === false in finalCandidates funnel; (3) Upgrade geminiPromptTemplates.ts to inject Weekly Options cadence into candidate rows and assert validOpportunities weekly safety before building prompt rows; (4) Synchronously update handbook and test assertions in tests/test_tri_screener_workflow.py.
+- [Feature] Universal Interactive Table Column Sorting Engine & Sticky Header Locking: (1) Deliver pure utility table sorting engine (web/src/utils/tableSort.ts) and useSortableTable React hook, parsing numbers, dollar currency ($1,234.56), percentages (+15.4%), compact units (150k, 2.5M, 1.2B), ISO 8601 timestamps, and nested object properties (e.g. extra_fields.rsi_14), automatically sinking null/undefined values in both ascending and descending sorts; (2) Deliver reusable sticky header component SortableTh (web/src/components/ui/SortableTh.tsx) with position: sticky, top: 0, z-index: 10/20, translucent frosted glass background (supporting dark/light themes), text alignment, bidirectional toggling, and dynamic highlight arrows; (3) Establish responsive height and vertical smooth scrolling styles in global index.css (.table-sticky-header th and .table-scroll-container), solving lost table headers during long scrolling; (4) Upgrade all tables across the application: CascadingScreenerView (all 5 tables), WeeklyStockScreenersView, WeeklyPositionAuditView (all 4 asset classes), HoldingsCoveredCallView (equities/covered calls, open CSPs), BrokerStagingWorkbench (staged CSPs, spreads, execution audit), EconomicCalendarView, ScreenerTable, PrimaryScreenerTable, OptionChainMatrixView, FundamentalHealthTable, TaxAlphaOptimizerView, and PmccScreenerView; (5) Add unit tests (tests/test_table_sort.py), passing npm run build and AI asset checks.
+- [Fixed] Dynamic Screener Candidate IV/RSI Hydration & Black-Scholes Greek Engine: (1) Completely eliminate hardcoded static fallbacks (iv: 0.35, rsi: 52, delta: -0.18, iv_rank: 45) in CascadingScreenerView, resolving defect where candidates (e.g. VLO, RVTY, RNG) in Gemini AI decision hub all displayed identical misleading 35% IV and 52 RSI; (2) Deliver pure hydration engine (web/src/utils/screenerHydrator.ts), prioritizing real extra_fields (MarketChameleon rsi_14 / iv30 / iv_rank), watchlist metadata (TickerMeta), and historical closes, falling back to sector baselines (energy, healthcare, cloud, semiconductors, financials) and intraday volatility (e.g. VLO calibrated to ~31% IV / 62 RSI, RVTY to ~26% IV / 61 RSI, RNG to ~52% IV / 57 RSI); (3) Apply Black-Scholes inversion and analytical Greeks (calculateBlackScholesGreeks) to solve exact 0.18Δ strike, actual Delta, theoretical value (Bid/Ask/Mid), downside cushion, PoP, and annualized RoC; (4) Upgrade geminiPromptTemplates.ts to inject real IV, IV Rank, 14D RSI, price, and cushion into institutional prompts; (5) Add tests in tests/test_tri_screener_workflow.py, passing frontend builds and AI asset checks.
+- [Fixed] TOS View 190898 Bulk/Individual Clear, CSV Column Header Safeguard & Universe Audit: (1) Deliver Clear All and individual row delete actions in ThinkorSwim View 190898 ingestion panel; (2) Implement strict CSV column header detection preventing header rows from being mistakenly parsed as stock tickers; (3) Add universe audit validations ensuring imported symbols conform to US exchange symbol standards.
+- [Feature] 100-Point Quantitative Options Trade Quality Scoring Model & Real-Time Quality Simulator Widget: (1) Implement institutional 100-point options scoring engine in web/src/utils/tradeQualityScorer.ts evaluating 5 core dimensions (Trend 25pts, Volatility 25pts, Safety Margin 20pts, Annualized Return 15pts, Liquidity 15pts); (2) Deliver interactive OptionsTradeQualitySimulator widget with live sliders, real-time score calculation, and qualitative assessment badges (Elite Institutional, High Quality, Speculative, Unacceptable).
+- [Improved] System Code Audit, Quantitative Mathematical Guards & Dynamic Code Splitting: (1) Deliver pure financial math library in web/src/utils/financeMath.ts implementing Black-Scholes formula, standard normal CDF, and Greek derivatives; (2) Add quantitative boundary guards preventing division by zero and NaN propagation; (3) Implement dynamic code splitting on heavy modal components, reducing initial bundle footprint.
+- [Fixed] Active Position Ledger 4-Asset Class Reconciliation & Charles Schwab Cash/MMF Integration: (1) Upgrade Active Position Ledger to comprehensively categorize and reconcile 4 distinct asset classes: Long Equities, Short Covered Calls, Short Cash-Secured Puts, and Cash/Money Market Funds; (2) Seamlessly integrate Schwab cash deposits and SWVXX money market fund balances into net buying power calculations.
+- [Feature] End-of-Week Ritual Item 4 Tri-Screeners, TOS View 190898 Standardized Screen & Weekend Ritual User Manual: (1) Reconstruct Step 4 of weekend ritual into unified Tri-Screeners workspace integrating Barchart, MarketChameleon, and ThinkorSwim; (2) Deliver standardized output screen for TOS View 190898; (3) Author comprehensive step-by-step user operation manual in strategy handbook.
+- [Feature] Dynamic Equities Tracked Engine & Elimination of Hardcoded Tickers: (1) Completely eliminate hardcoded "21 Equities Tracked" badge in top navigation bar, replacing it with dynamic counter reflecting actual count of imported portfolio holdings and custom watchlist tickers; (2) Ensure ticker count updates reactively when watchlists or broker statements change.
+- [Feature] Options Master Digest Schwab Integration & Mid-Week Live Transaction Entry: (1) Replace mock SPY/AAPL test trades in Options Master Digest with live Charles Schwab options position ledger; (2) Deliver LiveTransactionModal supporting mid-week entry and tracking of new covered call and cash-secured put trades.
+- [Feature] TOS/Barchart Live Close Pricing, Broker Positions CSV Ingestion & Watchlist Integration: (1) Hydrate ThinkorSwim and Barchart screened candidates with live closing prices and volume data; (2) Link broker CSV position holdings directly with watchlists for unified cross-module tracking.
+- [Feature] Living Trust-Options ...609 Real Account Setup, MMF Collateral & CSP Reconciliation: (1) Configure authoritative Living Trust-Options ...609 account structure in portfolio ledger; (2) Track money market fund (SWVXX) balances as interest-bearing collateral for short cash-secured put positions.
+- [Feature] Institutional Gemini Pro Options Prompt & 15-Column Table Ingestion: (1) Deliver geminiPromptTemplates.ts generating structured prompts for Gemini Pro AI options analysis; (2) Implement robust parser ingesting 15-column structured tables returned by Gemini into actionable trade candidates.
+- [Feature] Automated Live Sync Frequency, Rate-Limit Safeguards & Market Hours Gating: (1) Implement adaptive polling frequency for live market data sync based on market hours (active trading vs. post-market vs. weekend); (2) Add rate-limit safeguards preventing upstream API bans.
+- [Feature] Weekend 10-Step Options Workflow Routine, Living Expense Deduction ($5,000), Dynamic Cash Risk Limits, 20Δ Covered Call Generator & Gemini Thinking Mode 3-Table Ingestion: (1) Deliver comprehensive weekend options routine with cash allocation waterfall including recurring $5,000 living expense deductions; (2) Enforce strict risk limits: support $500k+ idle capital, cap individual equity CSP exposure at $200,000, and limit concurrent open puts to 5 positions; (3) Implement 20 Delta covered call recommendation engine; (4) Deliver parser for Gemini Thinking Mode 3-table structured output.
+- [Feature] End-of-Week Options Routine, Cascading Screener, Cash Ledger & Layout Revamp: (1) Deliver WeeklyOptionsRoutine layout integrating cascading screener (15–25Δ), cash budget ledger, and responsive multi-pane layout.
+- [Feature] Weekly US Economic Indicators & Macro Catalyst Radar: (1) Deliver EconomicCalendarView frontend view with unified dual-tree navigation supporting both Equities and Options trees; (2) Highlight upcoming FOMC decisions, CPI/PPI releases, jobs reports, and earnings dates.
+- [Feature] Automated Options Income Screener & Zero-Billing Bridge: (1) Deliver OptionsIncomeScreener connecting to Gemini Pro using Thinking Mode HIGH for deep trade structuring; (2) Provide zero-billing bridge for local AI inference.
+- [Feature] Barchart Custom Watchlist Agent & View 190898 Engine: (1) Deliver BarchartCustomWatchlistAgent in src/screener_agents/ automating custom watchlist screening and View 190898 metric extraction.
+- [Feature] Prescreen Builder & Presets with CBOE Weeklys Directory Validation: (1) Integrate official CBOE Available Weeklys Directory (https://www.cboe.com/available_weeklys/) to validate weekly options eligibility for screening presets.
+- [Feature] MarketChameleon Momentum & Volatility Screener Agent with One-Click Copy: (1) Deliver MarketChameleonScreenerAgent (src/screener_agents/marketchameleon_agent.py) with preconfigured screen parameters and one-click copy output.
+- [Feature] Weekly Stock Screeners Automated Agent & Multi-Feed Pipeline: (1) Deliver Python screener agent suite (src/screener_agents/) and CLI runner (scripts/run_screener_agents.py).
+- [Feature] Data Normalization & High-Density Formatting Layer (MarketDashboardPayload & TickerSignal): Add OptionsIdea, TickerSignal, and MarketDashboardPayload schemas with format_pipeline_output formatter.
+- [Improved] Institutional High-Density Trading Terminal (Koyfin / TradingView Architecture Refactor): (1) Deliver dark slate palette tokens (#080B10 canvas, #0F172A cards, #1E293B borders) with JetBrains Mono tabular-nums typography; (2) Implement high-density information layout.
+- [Feature] Watchlist Immediate Hydration & QC Gate: (1) Eliminate bug where newly added unanalyzed tickers (e.g. EOSE) displayed default $100.00 placeholder prices in watchlists and screeners by building multi-tier client-side live hydration pipeline.
+- [Fixed] Workspace Isolation & Zero Cloudflare Pages Vulnerabilities: (1) Restore root package.json workspace to contain only web, isolating Electron desktop dependencies in apps/dsa-desktop, eliminating Cloudflare Pages build vulnerabilities.
+- [Feature] Institutional Trading Terminal UI/UX Refactor & Executive Decision Matrix: (1) Deliver institutional dark design system with Inter and JetBrains Mono typography; (2) Implement modular navigation architecture with Executive Decision Matrix.
+- [Fixed] DeltaHarvest Cloudflare Pages TypeScript Strict Mode Build Remediation: Fix all type compatibility errors reported by tsc -b during Cloudflare Pages CI/CD build, including MultiLeg and OptionChain typing.
+- [Improved] DeltaHarvest Closed-Loop Lifecycle, Calendar Friday Expirations & Header Risk Pulse: (1) Implement closed-loop order staging lifecycle in BrokerOrderStagingModal; (2) Align calendar expirations to standard Friday schedules; (3) Connect live Risk Pulse metrics in Header.
+- [Feature] DeltaHarvest Phase 4 Suite - Section 1256 Tax-Alpha, Wash-Sale Shield & Executive Portfolio Health Digest: (1) Deliver IRS Section 1256 index options tax-alpha optimizer; (2) Implement wash-sale shield tracking replacement stock purchases; (3) Deliver Executive Portfolio Health Digest summary view.
+- [Feature] DeltaHarvest Priority 3 Suite - Multi-Agent LLM Trade Structurer, SEC 10-K Auditor & Dynamic 0.50Δ Defensive Rolling Assistant: (1) Deliver multi-agent LLM trade structurer; (2) Implement SEC 10-K filing auditor; (3) Implement dynamic defensive rolling assistant triggering on 0.50 Delta breach.
+- [Feature] DeltaHarvest Priority 2 Suite - Option Chain Straddle Matrix, Volatility Smile Visualizer, PMCC Screener & Portfolio Margin Simulator: (1) Deliver ATM straddle expected move matrix; (2) Implement volatility smile chart visualizer; (3) Deliver Poor Man's Covered Call (PMCC) screener; (4) Implement portfolio margin simulator.
+- [Feature] DeltaHarvest Priority 1 Suite - Broker Order Lifecycle Execution, Cloud Watchlist Sync & Multi-Channel Alert Engine: (1) Implement Charles Schwab order payload staging; (2) Deliver cloud watchlist synchronization; (3) Implement multi-channel alert dispatcher (Telegram, Discord, Webhook).
+- [Feature] DeltaHarvest Multi-Named Watchlists, In-Place Rename, Safe Deletion & Frank Favorites Migration: (1) Deliver full-featured watchlist management pipeline supporting multiple named lists, in-place renaming, safe deletion, and migration of Frank Favorites.
+- [Fixed] DeltaHarvest Watchlist Market Data Hydration & Zero-Default Pipeline: (1) Fix issue where newly added tickers (such as GOOGL) displayed default $100 price and 1,000,000 volume in static hosting or slow network conditions by implementing multi-tiered price hydration.
+- [Feature] DeltaHarvest Multi-Period Prediction Market Term Structure & SSVS Analytics Suite: (1) Deliver cross-period prediction market term structure engine and annualized hazard rate analytics.
+- [Feature] DeltaHarvest Watchlist Opportunity Synthesis & Signal Screener Pipeline: (1) Connect watchlist additions directly to options opportunity generation pipeline across text input, bulk paste, and CSV/Excel uploads.
+- [Feature] DeltaHarvest SPCX & TSLA Merger Prediction Markets Integration: Deeply integrate prediction market probabilities for SPCX, TSLA, and GOOGL into SECURITY_INTELLIGENCE_REGISTRY.
+- [Feature] DeltaHarvest Equity Analysts Rating Breakdown & Heatmap Visualizer: (1) Add Wall Street analyst rating distribution heatmap in AnalystPriceTargetBar (Strong Buy Green / Buy Teal / Hold Amber / Underperform Orange / Sell Red).
+- [Improved] DeltaHarvest Header Live Sync & Dynamic Market Engine: Streamline top navigation controls into unified "⚡ Live Sync" button, fetching live quotes concurrently across all watchlists and core universe.
+- [Fixed] DeltaHarvest Cloudflare Pages Build Remediation & Zero-XLSX Complete Migration: (1) Migrate FundamentalHealthTable, InteractiveChart, and export utilities completely away from xlsx library to native CSV generation.
+- [Feature] DeltaHarvest MarketChameleon Web UI Card & Plain-English Educational Handbook: (1) Add "🦎 MarketChameleon Intelligence" card in TickerAuditModal and educational guides in strategy handbook.
+- [Fixed] DeltaHarvest SheetJS (xlsx) High Severity Vulnerability Remediation: Remove xlsx@0.18.5 external dependency affected by prototype pollution (CVE-2023-30533), replacing with native TypeScript CSV parser and generator.
+- [Feature] MarketChameleon Quantitative Replication Service: Add src/services/market_chameleon_service.py module replicating MarketChameleon quantitative metrics, IV ratings, and trend filters.
+- [Feature] DeltaHarvest Watchlist Auto-Processing, Dynamic Master Universe, Day/Night Mode & Security Hardening Suite: (1) Upgrade WatchlistManagerModal; (2) Deliver dynamic master universe selector; (3) Add light/dark theme switching; (4) Harden API security.
+- [Fixed] DeltaHarvest TickerAuditModal TypeScript Syntax & Cloudflare Pages Build: Fix syntax closing brackets in handleExportExcel, eliminating CI/CD build failures on Cloudflare Pages.
+- [Feature] DeltaHarvest Sticky Table Headers & Direct SEC EDGAR Regulatory Integration: (1) Implement sticky headers for PrimaryScreenerTable, FundamentalHealthTable, and OptionChainMatrixView; (2) Add direct links to SEC EDGAR company filings.
+- [Improved] DeltaHarvest Navigation & Modal Menu Uniformity: Standardize tab bar heights (min-h-[58px]) and active indicator styling across TickerAuditModal and DualMenuTree navigation components.
+- [Fixed] DeltaHarvest TypeScript Strict Mode & Icons Remediation: Clean up duplicate icon exports in icons.tsx and hoist rsi variable declaration in securityIntelligence.ts, resolving Cloudflare Pages strict-mode compilation errors.
+- [Feature] DeltaHarvest Multi-Channel Intelligence & UI Polish Suite: Deliver 8 full-spectrum enhancements: (1) Calibrate Oversold (RSI < 35) and Near Lower Support (<= Lower BB) filters; (2) Enhance analyst consensus target cards; (3) Polish dark-mode UI.
+- [Fixed] DeltaHarvest Cloudflare Pages Build & Python 3.13 Longbridge Dependency: Add python_version < '3.13' environment marker to Linux longbridge dependency in requirements.txt.
+- [Fixed] DeltaHarvest Static CDN Content-Type Check & WebSocket Guard: Add response Content-Type verification for Cloudflare Pages static SPA environments, preventing HTML fallback responses from being misparsed as JSON.
+- [Fixed] DeltaHarvest Header API Self-Test Visibility & Live Fetch Timestamp Persistence: Redesign "⚡ API Self-Test" button in header with high-contrast gradient, and support triggering via Command Palette (Ctrl+K); persist live fetch timestamps.
+- [Feature] Interactive API Self-Test & Health Suite: Add "⚡ API Self-Test" automated diagnostic center (ApiDiagnosticsModal) in Web UI header, supporting one-click concurrent health checks across Charles Schwab, Tradier, Yahoo Finance, and Cloudflare Pages edge functions.
+- [Feature] Charles Schwab API Diagnostics & Live Testing: Deliver Charles Schwab Retail Trader API live connectivity diagnostic tool (scripts/test_schwab_connection.py and FastAPI endpoint).
+- [Improved] DeltaHarvest 50/50 Blended 14-RSI Engine: Deliver 50/50 blended 14-day RSI engine combining Welles Wilder exponential smoothing (RMA) and Cutler simple moving average (SMA), eliminating pure Wilder lag.
+- [Fixed] DeltaHarvest 14-Day Wilder RSI Standard Calibration: Upgrade full-stack 14-day RSI calculation to standard J. Welles Wilder exponential smoothing (RMA / EWM alpha = 1/14).
+- [Feature] DeltaHarvest Barchart 13-Indicator Opinion Engine & Top 1% Screener: Integrate Barchart multi-timeframe 13 technical indicator suite (4 short-term, 4 medium-term, 5 long-term) to calculate composite Opinion % and rank top 1% candidates.
+- [Improved] DeltaHarvest Prediction Markets & Sentiment Feeds: Upgrade TSLA prediction market matching (Polymarket & Manifold API) and social sentiment analysis (StockTwits stream NLP).
+- [Fixed] DeltaHarvest React Hook Rules & Modal Lifecycle: Fixed useMemo invoked after conditional branches (early return) in TickerAuditModal, OptionDetailModal, and ReportQueryModal triggering Minified React Error #310; hoisted all React Hook invocations unconditionally to top, and controlled modal lifecycle via short-circuit expressions in App.tsx, completely eliminating crashes from mismatched Hook counts.
+- [Fixed] DeltaHarvest Reports & Screener Resilience: Add null-safety protections for options values in ReportQueryModal; isolate report export modal with ErrorBoundary in App.tsx.
+- [Test] DeltaHarvest Test Suite & Type Remediation: Deliver unit test suite (tests/test_delta_harvest_options.py) covering options, CEF, and risk controls; fix types in liveMarketFetcher.ts.
+- [Fixed] DeltaHarvest Ticker Audit Modal & Chart Resilience: Fix black-screen crash on ticker click caused by undefined metric access and async chart initialization; wrap in React ErrorBoundary with ascending trade dates.
+- [Feature] DeltaHarvest Client-Side Live Market Engine: Deliver pure frontend browser live market and options simulation engine (web/src/utils/liveMarketFetcher.ts) when running in backend-less environments like Cloudflare Pages.
+- [Fixed] DeltaHarvest Live Price Pipeline: Optimize process_ticker() in scripts/generate_options_data.py, adding fast_info / regularMarketPrice intraday live quote fetching.
+- [Feature] DeltaHarvest On-Demand Live Recalculation: Deliver FastAPI POST /api/v1/options/recalculate dynamic recalculation endpoint and scripts/generate_options_data.py CLI runner.
+- [Feature] DeltaHarvest Contextual Intelligence Layer: Deliver contextual intelligence and sentiment analysis system (src/services/contextual_intelligence_service.py) integrating Wall Street price targets, consensus ratings, and news.
+- [Feature] DeltaHarvest Contextual Enricher Backend: Add scripts/contextual_enricher.py data enrichment module and integrate enrich_ticker_payload() into scripts/generate_options_data.py.
+- [Feature] DeltaHarvest Live API & WebSocket Stream: Deliver FastAPI backend /api/v1/options/snapshot and /api/v1/ws/stream live WebSocket channels.
+- [Feature] DeltaHarvest CEF Analytics: Deliver Closed-End Fund (CEF) valuation and distribution quality engine (src/services/cef_analytics_service.py and /api/v1/options/cef/{symbol}).
+- [Feature] DeltaHarvest Risk Circuit-Breaker: Deliver quantitative risk circuit breaker service (src/services/risk_circuit_breaker.py and /api/v1/options/risk/check-order), supporting max drawdown limits.
+- [Feature] DeltaHarvest QuantLib Greeks Engine: Deliver high-precision analytical Greeks and American early exercise risk engine (src/services/quantlib_greeks.py).
+- [Feature] Tradier API Data Provider: Add Tradier API provider (data_provider/tradier_fetcher.py) as secondary options chain and US quote fallback source.
+- [Fixed] DeltaHarvest Reports & Exports: Fix empty data exports caused by residual global filter state; sort EARNINGS_CALENDAR ascending by earnings date; add data fallback guards.
+- [Feature] DeltaHarvest Security Intelligence & News: Expose backend deep analysis capabilities across ticker audit, option details, command palette, and screeners, integrating AI composite scores (0–100) and Wall Street targets.
+- [Improved] DeltaHarvest Primary Screener: Add AI score and catalyst columns to primary screener table, and fix column header click sorting for Bollinger cushion, support distance, IVR, and RSI.
+- [Feature] DeltaHarvest Broker Staging: Deliver Phase 5 broker order staging and one-click execution payload system, supporting Charles Schwab Retail Trader API and Interactive Brokers (IBKR TWS BasketTrader).
+- [Improved] DeltaHarvest Navigation: Add high-contrast customized scrollbar (10px width, Slate/Emerald color feedback) with smooth scrolling support, and floating ScrollToTopButton.
+- [Improved] DeltaHarvest Navigation & Charts: Upgrade web navigation best practices (breadcrumb path tracking, quick-jump bar, keyboard shortcuts 1/2/W/R/?/P, contextual strategy banners), and fix Lightweight Charts v5 series rendering.
+- [Feature] DeltaHarvest Backtester: Deliver Phase 4 historical multi-cycle backtesting engine and FINRA 4210 margin stress test system, supporting 0.15~0.20 Delta Cash-Secured Puts (CSP), weekly options, and credit spreads with win rate, Sharpe, and drawdown metrics.
+- [Feature] DeltaHarvest Fundamentals: Deliver Phase 3 fundamental financial health and CEF analytics engine, adding Altman Z-Score bankruptcy risk, Piotroski F-Score operational quality, and SEC EDGAR 10-K/10-Q filing parsers.
+- [Feature] Charles Schwab API Support: Add Charles Schwab Retail Trader API provider and credential authentication module (data_provider/schwab_fetcher.py), supporting live US NBBO quotes, complete options chains, and real-time Greeks.
+- [Feature] DeltaHarvest Options Engine: Deliver Phase 2 volatility skew and multi-leg options engine adhering to conservative 0.15~0.20 Delta principles, adding Bull Put Spreads, Bear Call Spreads, and Iron Condors.
+- [Feature] DeltaHarvest Web UI: Integrate TradingView Lightweight Charts interactive candlesticks, 20-day SMA, 2-sigma Bollinger Bands channels, dynamic strike price target lines, chart switching workspace, and technical pattern help manual.
+- [Feature] DeltaHarvest Web UI: Add dual navigation menu trees for US equities technical analysis and options, global search and command palette (Ctrl+K), strategy help manual, multi-watchlist manager (with bulk import and CSV/Excel parsing), and multi-format report export (CSV/Excel/PDF).
+- [Fixed] Route US daily lines according to current provider priorities, allowing individual *_PRIORITY configs (e.g. YFINANCE_PRIORITY=0) to take effect immediately; preserve index primary and Longbridge preferred semantics.
 
-- [新功能] 支持通过 `main.py --stocks` 一次性分析已登记板块指数，自动使用指数适用的数据与分析能力，并保持报告、历史和决策信号兼容。
-- [修复] `main.py --stocks` 在解析股票列表前先 best-effort 刷新股票索引注册表，保证首次运行能吃到刷新后的指数 alias/身份；刷新失败、超时或禁用不阻断分析。
-- [修复] 交易日过滤对市场未知的指数 code（如 `sh000016`/`csi930955`/`930955.CSI`）按 `market=cn` 参与 A 股休市过滤，避免休市日指数被 fail-open 保留；市场仍未知的非指数 code 继续保留。
-- [修复] 指数分析将实际命中的日线数据源归因保存到历史记录，并由 Dashboard/Brief aggregate 报告展示；来源无效时保持原有输出。
-- [文档] 在中英繁 README 顶部关联 DSA arXiv 论文，并新增 `CITATION.cff` 统一项目引用信息。
-- [新功能] 新增数据源能力与数据集质量只读契约，提供 `/api/v1/data/overview` 和 `/api/v1/data/capabilities`，为大盘看板、数据中心、个股详情和自选 2.0 统一暴露 provider capability、dataset quality 和 source priority。
-- [修复] 统一美股指数实时行情与数据能力概览为 YFinance-only 路由，避免 YFinance 失败后误用 Longbridge fallback。
-- [改进] PR CI 增加文档路径检测：仅修改普通文档、非治理 Markdown 或 LICENSE 时跳过后端测试分片、Docker、Web 与桌面打包，保留轻量治理和门禁汇总；契约文档、静态 API 规格与测试 fixture 仍执行后端回归。
-- [新功能] 新增 ResearchArtifact 结构化研究产物契约，在 `AnalysisReport.structured_report` 中承载 Thesis、Evidence、Invalidation Conditions、Next Actions 和 Data Quality，并提供从现有报告生成结构化产物的后端 helper 与 Web 类型。
-- [修复] 同步 ResearchArtifact 与 `AnalysisReport.structured_report` 到静态 OpenAPI，避免公开 API 规格与运行时契约漂移。
-- [修复] Linux/Docker 分享图补齐 Noto CJK 字体与中韩文字体栈，避免 PNG 只显示数字和英文、中文或韩文内容消失。
-- [新功能] Web Chat 意图识别层新增分词模块：`web_intent_tokenizer` 六步管道（多股票全名实体扫描 → 标点/空白切分 → 代码形提取 → 市场关键词 → 无歧义关键词 → 残存 gap 多策略 DFS 匹配）把用户消息切分为携带语义标签的 Token 序列；配套 `web_intent_types` 数据字典（Token 结构、Market 枚举、21 个语义 tag、clean/extend 双词池与正则机器）。核心原则"宁可不做，不可做错"：Step 1~5 只做精确匹配，Step 6 要求整段 TAG 全覆盖（交叉验证）才产出，未覆盖片段保持空 tag 交下游 LLM 兜底；代码形 token 辨认为 `stock_code`（附 code/name/market 三元组）/ `wrong_{market}_code` / `unknown_{market}_code` 三态，token 层代码拼写统一 canonical 归一（a=6 位裸数字、hk=HK+5 位、us=大写 ticker）。意图枚举与意图识别结果随后续 `web_intent_resolver` PR 引入。新增 183 个分词单元测试。
-<!-- 新条目格式：- [类型] 描述（类型取值：新功能/改进/修复/文档/测试/chore）-->
-<!-- 每条独立一行追加到本段末尾，无需分类标题，合并时冲突最小 -->
-- [新功能] 完善 Futu OpenD 港股数据源接入：系统设置支持 OpenD 地址、端口和港股实时数据源优先级，保留 Longbridge、AkShare、YFinance fallback。
-- [测试] 增加 Futu 配置 schema、港股实时路由和 fallback 契约覆盖。
+- [Feature] Support analyzing registered sector indices in a single run via main.py --stocks, automatically applying index-appropriate data and analytics while maintaining report, history, and decision signal compatibility.
+- [Fixed] main.py --stocks performs best-effort refresh of stock index registry before parsing ticker list, ensuring initial runs consume refreshed index aliases/identities without blocking on failures, timeouts, or disabled settings.
+- [Fixed] Apply market=cn A-share holiday filtering to index codes with unknown market (such as sh000016/csi930955/930955.CSI) to prevent holiday indices from failing-open; retain non-index codes whose market remains unknown.
+- [Fixed] Index analysis attributes and saves hit daily data source to historical records for display in Dashboard/Brief aggregate reports; preserve original output when source is invalid.
+- [Docs] Link DSA arXiv paper at the top of English/Chinese READMEs and add CITATION.cff standardizing project citation metadata.
+- [Feature] Add read-only contracts for data provider capabilities and dataset quality via /api/v1/data/overview and /api/v1/data/capabilities, exposing unified provider capabilities and dataset quality to Market Dashboard, Data Center, Ticker Details, and Watchlist 2.0.
+- [Fixed] Standardize US index live quotes and capability overview to YFinance-only routing, preventing accidental Longbridge fallback when YFinance fails.
+- [Improved] Add documentation path detection to PR CI: skip backend test shards, Docker, Web, and Desktop packaging when modifying only regular docs, non-governance Markdown, or LICENSE, retaining lightweight governance and gate summaries; contract docs, static API specs, and test fixtures still run backend regressions.
+- [Feature] Add ResearchArtifact structured research product contract, carrying Thesis, Evidence, Invalidation Conditions, Next Actions, and Data Quality in AnalysisReport.structured_report.
+- [Fixed] Synchronize ResearchArtifact and AnalysisReport.structured_report into static OpenAPI specification, preventing drift between public API specs and runtime contracts.
+- [Fixed] Complement Noto CJK and CJK font stacks for Linux/Docker share images, preventing PNGs from showing only numbers and English while Chinese/Korean text disappeared.
+- [Feature] Add tokenizer module to Web Chat intent recognition layer: web_intent_tokenizer 6-step pipeline (multi-stock entity scan -> punctuation/whitespace split -> ticker-shape extraction -> market keywords -> unambiguous keywords -> remaining gap multi-strategy DFS matching) splitting user messages into semantic tokens.
+<!-- New entry format: - [type] description (types: feat/improved/fix/docs/test/chore) -->
+<!-- Append each entry as a single line at the end of this section, no category headers, to minimize merge conflicts -->
+- [Feature] Enhance Futu OpenD HK stock data provider: system settings support OpenD host, port, and HK live data source priority, retaining Longbridge, AkShare, and YFinance fallbacks.
+- [Test] Add coverage for Futu configuration schema, HK live routing, and fallback contracts.
 
-- [新功能] 建立唯一、可生成、可校验、可降级的指数身份注册表：由 `scripts/stock_index_seeds/index_registry.csv` 的 31 项 manifest 确定性合并进 `apps/dsa-web/public/stocks.index.json`，运行时唯一真源为 JSON 中通过校验的 `active=true`/`assetType=index` 行，移除 `stock_list_parser` 的 5 项硬编码白名单；支持 `--index-only` 生成与字节稳定输出。
-- [新功能] 补齐显式 SH/SZ/CSI 指数 alias 收敛与 CSI 身份：`sh000300`/`000300.SH`/`sz399300`/`399300.SZ`/`000300.CSI` 均解析到 `sh000300`，`csi930955`/`930955.CSI` 解析到 `csi930955`；未登记 `.CSI` 输入返回 `unsupported`；裸数字恒为 stock 并仅通过 `matched_index` 暴露歧义。
-- [新功能] 数据管理器按 SH/SZ/CSI 支持矩阵映射 provider symbol：CSI 仅 AkShare 支持（`csi{code}`），Tencent/TickFlow/Yahoo 返回空 symbol 并记录 `unsupported` provider-run，不触发指数健康熔断。
-- [改进] 存储层 `_derive_canonical_id` 统一为 parser 推导（裸码=stock、显式指数=index），并新增幂等分批修复历史裸码错误 canonical 串桶（`000001`/`000016`/`000688`/`930955` 等），显式指数行与正确 stock 行不受影响，registry 为空时修复 no-op。
-- [改进] Web loader 完整解压含 index 的共享 payload，但在返回给 autocomplete/popular/group 消费面前过滤 `assetType=index`，股票与 ETF 行为保持不变。
-- [测试] 为生成器、loader、parser、provider 路由、存储修复与 Web 门槛补充 TDD 回归锚点。
-- [修复] PR #2267 review 收敛 CSI 显式身份：将 `csi` prefix（canonical）与 `.CSI` suffix（显式 alias）在 parser/build/runtime 规范化器中分离，未登记显式 `csiNNNNNN`/`NNNNNN.CSI` 一律返回 `unsupported`（不再落入美股或猜测 SH/SZ），并防止未登记 `csi000300` 被等价成已登记 `000300.CSI` alias；存储 `_derive_canonical_id` 对 unsupported 输入返回 NULL，避免进入持久化 canonical 桶。
-- [修复] 在 seed、build entry 与 runtime candidate 三层严格校验 alias 唯一性与整数 popularity：NFKC/casefold 等价 alias 跨条目冲突被拒绝（无静默覆盖），非负整数之外（小数/布尔/负值/字符串）popularity 一律拒绝，整数 `100` 保持有效。
-- [修复] 收敛已登记 CSI 显式身份在 resolver、任务去重键与历史候选中的分裂：`csi930955`/`930955.CSI`/`CSI930955` 统一解析为 parser canonical `csi930955`，未登记 `csi930956`/`930956.CSI` 保持既有降级语义；`is_code_like()`、REST/watchlist 输入边界与完整 Pipeline 透传不变。
-- [修复] 阻止任意更新的非 bundled 指数候选（含 legacy `static` 子集）在 remote 缺失/损坏时以 active-index 子集覆盖 bundled baseline：所有非 bundled 候选必须为 bundled active-index canonical 集合的合法超集，否则回退 bundled 并记录 WARNING。
-- [新功能] 桌面端全局右上角增加更新入口，与设置页共用更新状态；普通浏览器 WebUI 不展示，且不会在挂载时重复触发后台检查。
-- [修复] 桌面端右上角更新入口与设置页共用检查中状态，避免一侧检查时另一侧仍可重复触发 GitHub Releases 检查；主进程手动检查路径同步增加 in-flight 防重。
+- [Feature] Establish unique, generatable, verifiable, and degradable index identity registry: deterministically merge 31 manifest items from scripts/stock_index_seeds/index_registry.csv into apps/dsa-web/public/stocks.index.json, making verified active=true / assetType=index rows in JSON the single runtime source of truth, removing stock_list_parser 5-item hardcoded whitelist; support --index-only generation and byte-stable output.
+- [Feature] Support explicit SH/SZ/CSI index alias convergence and CSI identity: sh000300/000300.SH/sz399300/399300.SZ/000300.CSI all resolve to sh000300; csi930955/930955.CSI resolves to csi930955; unregistered .CSI input returns unsupported; bare numbers remain stock and only expose ambiguity via matched_index.
+- [Feature] Data manager maps provider symbol according to SH/SZ/CSI support matrix: CSI is supported only by AkShare (csi{code}), Tencent/TickFlow/Yahoo return empty symbol and log unsupported provider-run without triggering index health circuit breakers.
+- [Improved] Storage layer _derive_canonical_id unified to parser inference (bare code=stock, explicit index=index), and add idempotent batch repair for legacy bare codes with erroneous canonical bucket crossings (000001/000016/000688/930955, etc.); explicit index rows and correct stock rows remain unaffected, repair is no-op when registry is empty.
+- [Improved] Web loader fully decompresses shared payload containing indices, but filters out assetType=index before returning to autocomplete/popular/group consumers; stock and ETF behavior remains unchanged.
+- [Test] Add TDD regression anchors for generator, loader, parser, provider routing, storage repair, and Web gating.
+- [Fixed] PR #2267 review CSI explicit identity convergence: separate csi prefix (canonical) and .CSI suffix (explicit alias) in parser/build/runtime normalizers; unregistered explicit csiNNNNNN/NNNNNN.CSI always returns unsupported (no longer falling into US stocks or guessing SH/SZ), preventing unregistered csi000300 from being equated to registered 000300.CSI alias; storage _derive_canonical_id returns NULL for unsupported input, avoiding persistent canonical bucket pollution.
+- [Fixed] Strictly validate alias uniqueness and integer popularity across seed, build entry, and runtime candidate tiers: NFKC/casefold equivalent alias cross-entry conflicts are rejected (no silent overwrites); non-integer popularity (float/boolean/negative/string) is rejected, keeping positive integer 100 valid.
+- [Fixed] Converge registered CSI explicit identities across resolver, task deduplication key, and history candidates: csi930955/930955.CSI/CSI930955 uniformly resolve to parser canonical csi930955, unregistered csi930956/930956.CSI preserves existing fallback semantics; is_code_like(), REST/watchlist input boundaries, and full pipeline pass-through remain unchanged.
+- [Fixed] Prevent updated non-bundled index candidates (including legacy static subsets) from overwriting bundled baseline as active-index subset when remote is missing/corrupted: all non-bundled candidates must be valid supersets of bundled active-index canonical set, otherwise falling back to bundled with a WARNING log.
+- [Feature] Add update entry in top right corner of desktop app, sharing update status with settings page; hidden in regular browser WebUI without triggering redundant background checks on mount.
+- [Fixed] Desktop top-right update entry and settings page share in-flight status, preventing concurrent triggers of GitHub Releases check; main process manual check path adds in-flight deduplication.
 
 ## [3.31.0] - 2026-08-23
 
-### 发布亮点
+### Release Highlights
 
-- feat: Agent 工具调用新增按类别和单工具配置的超时契约，并补齐防重试、协作取消、并发预算与热重载一致性。
-- feat: 股票名称解析、`canonical_id` 双写和 A 股指数多数据源路由共同完善股票身份与行情降级链路。
-- improve: 新闻检索为空时在报告中如实披露证据边界，Anspire 默认覆盖全球区域，公共 SearXNG 实例改为显式启用。
-- fix: 定时任务恢复、无报告失败反馈、通知发送和大盘复盘历史/诊断信息进一步收敛，减少静默失败与误导展示。
-- security: 桌面端升级 `builder-util-runtime`，修复 CVE-2026-54673 涉及的重定向凭据头信息泄露风险。
-- docs: 增加 xAI Grok 的 LiteLLM 配置示例、Grok Bot 集成说明与可复用 Skill。
+- feat: Added category- and per-tool timeout contracts for Agent tool calls, along with anti-retry, cooperative cancellation, concurrency budgeting, and hot-reload consistency.
+- feat: Stock name resolution, canonical_id dual-write, and A-share index multi-data-source routing collectively enhance stock identity and quote fallback pipelines.
+- improve: Disclose evidence boundaries faithfully in reports when news retrieval is empty; Anspire defaults to global region coverage; public SearXNG instances require explicit enablement.
+- fix: Further converged scheduled task recovery, no-report failure feedback, notification delivery, and market review history/diagnostic info to reduce silent failures and misleading displays.
+- security: Upgraded builder-util-runtime on Desktop, fixing CVE-2026-54673 redirect credential header leakage risk.
+- docs: Added LiteLLM configuration examples for xAI Grok, Grok Bot integration instructions, and reusable Skills.
 
-### 变更明细
+### Detailed Changes
 
-- [修复] 大盘复盘历史列表与详情统一展示持久化短摘要；旧记录缺少摘要时从完整 Markdown 生成无内部标记的纯文本节选。
-- [修复] 大盘复盘按实际执行的生成后端和模型记录诊断，避免 Codex CLI 或 fallback 被误显示为配置模型。
-- [修复] 已配置钉钉 Webhook 时不再误报“未配置通知渠道”；钉钉 Stream 仍仅用于交互，不作为定时静态推送渠道。
-- [修复] WebUI/API/Desktop 以 `--serve-only` 重启后会恢复已启用的定时任务，同时保持启动时不立即执行分析；通知路由示例补充钉钉 Webhook 渠道。
-- [改进] AIHubMix 注册与引流链接统一使用 inferera.com，改善中国大陆网络直连体验。
-- [修复] 单股推送模式在未配置通知渠道时仍会落盘本地个股报告；CLI 启动分析若因空股票列表、个股结果全失败或本地报告保存失败而未生成报告，会显式返回失败并记录原因。
-- [修复] 合并推送模式下即使个股汇总报告落盘失败，仍会先发送已有的合并通知；仅启用大盘复盘但最终未生成任何复盘内容时，分析任务会显式返回失败。
-- [修复] Web/API runtime scheduler 使用跨平台独立进程执行分析，并在默认 45 分钟硬超时或服务停止后清理进程树；停止返回后不再派发新的自动任务，避免一次卡死阻断后续调度。
-- [修复] SearXNG 公共实例发现的默认值由启用改为关闭：公共实例普遍存在限流、下线或不返回 JSON 的情况，默认开启会让未配置搜索 key 的用户每次分析多耗 30~60 秒且新闻面最终为空。运行时默认值、配置模板、中英文档与工作流诊断同步调整；显式设为 true 的用户行为不变。
-- [改进] 新闻检索未执行或零命中时，报告中如实标注结论未纳入新闻面证据：零命中与「未配置搜索渠道」使用各自独立的文案，覆盖日报 / dashboard / brief / 个股 / 企业微信与模板渲染的详细与摘要分支、历史报告与分享导出、报告详情 API 与 Web 报告详情页，并按 `zh` / `en` / `ko` 分别本地化。此前该情况下消息面章节直接消失，读者无从区分「确实没有新闻」与「检索静默失败」。披露以本次分析实际收到的消息面证据为准，涵盖实时检索、社交情绪与本地已落库的资讯池三路来源；搜索命中数仅用于在确无证据时说明原因（未配置渠道 / 检索零命中），避免把已用到本地或社交证据的分析误报成「未纳入新闻面证据」。Agent 模式的命中数取自 Agent 实际消费的搜索工具结果，而非分析结束后为持久化情报而补打的查询。
+- [Fixed] Market review history list and details consistently display persisted short summary; legacy records lacking summaries generate plain-text excerpts without internal markup from full Markdown.
+- [Fixed] Market reviews record diagnostics by actually executed generation backend and model, avoiding Codex CLI or fallbacks being mislabeled as configured model.
+- [Fixed] Configured DingTalk Webhook no longer falsely reports "Notification channel not configured"; DingTalk Stream remains interactive-only, not for scheduled static pushes.
+- [Fixed] WebUI/API/Desktop restarting with --serve-only restores enabled scheduled tasks without executing immediate analysis on startup; notification routing examples add DingTalk Webhook channel.
+- [Improved] AIHubMix registration and referral links standardized to inferera.com, improving direct connectivity in mainland China.
+- [Fixed] Single-stock push mode persists local reports when notification channels are unconfigured; CLI analysis explicitly returns failure and logs reason on empty stock list, complete failure, or local report save failure.
+- [Fixed] Merged notification mode delivers available notifications even if local single-stock report save fails; analysis tasks return failure when only market review is enabled but generates no content.
+- [Fixed] Web/API runtime scheduler executes analysis in cross-platform independent subprocesses, cleaning process tree on 45-minute hard timeout or service stop; halts automatic dispatches after stop to prevent hanging jobs from blocking scheduling.
+- [Fixed] SearXNG public instance discovery default changed from enabled to disabled: public instances commonly face rate limits, outages, or non-JSON responses, where default enablement caused users without configured search keys to suffer 10–30s timeout delays per request; retains existing behavior for users with explicit `true`.
+- [Improved] Reports explicitly state when conclusions omit news evidence due to unconfigured channels or zero hits: zero hits and "unconfigured search channel" use independent copy, covering daily / dashboard / brief / single-stock / WeChat push and zh / en / ko template renders.
 
-- [新功能] Agent 工具调用支持按类别（data/search/analysis/action/market）配置默认超时，并允许单工具声明 `timeout_seconds`；有效超时按 first-wins 优先级解析（显式 per-run `tool_call_timeout_seconds` > 单工具显式 `timeout_seconds` > 类别默认 > 无限制），剩余 wall-clock 预算仅作不可突破的外层 cap，超时后返回结构化 `{"timeout": true}` 错误（标记 `retriable: false` 并写入 `non_retriable_tool_results` 防重试重复执行）供 Agent 继续执行而非中断循环（fixes #1890）。
-- [修复] Agent 工具注册表（`src/agent/factory.get_tool_registry`）由模块级缓存改为按「类别超时映射的值」比对失效，规避 CPython 回收对象后地址复用（`id(config)` 相同）导致配置 reload 后的 `Config` 被误判为未变、沿用过期超时的真 bug；新增 `_coerce_config_timeout` 类型白名单，使调用方传入 `MagicMock` / 缺属性 stub / 脏字符串（如 `float(MagicMock())` 静默得到 1.0）时降级为「无类别限制」而非崩溃或强加 1 秒超时；`build_agent_executor(config)` / `build_agent_chat_executor(config)` 现已把调用方 `config` 透传给 `get_tool_registry(config)`（不再无参调用冻结首构 registry）；`main._reload_runtime_config` 与 `SystemConfigService._reload_runtime_singletons`（及 `update()`→`reload_now` 路径）在配置热重载时调用 `reset_tool_registry()` 强制重建；回归测试补充「传入新 config 后 registry 重建」「reload 后新超时应生效」及「builder 透传 config」三类场景（#1890 的 review follow-up，闭环 OR-COM-dd1e8fa7 / OR-COM-bff42110）
-- [修复] Agent 工具超时 review 闭环（fixes #1890 的 4 个 blocker）：超时解析由 min 契约改为 first-wins（显式 per-run `tool_call_timeout_seconds` > 单工具 `ToolDefinition.timeout_seconds` > 类别默认 > 无限制，剩余 wall-clock 预算只作不可突破的外层 cap；research 路径不再传 `tool_call_timeout_seconds` 以免覆盖类别限制）；超时结果标记 `retriable: false` 并写入 `non_retriable_tool_results` 阻断 LLM 同调用重试重入，且超时触发时为仍在后台运行的 handler 武装协作取消信号（`is_tool_cancellation_requested()` 与既有 `check_tool_execution()` 检查点均响应，handler 从不轮询则行为不变），作为 review 要求的「handler 内协作取消」缓解，规避 Python 线程无法 force-stop 导致的重复执行与副作用；`_coerce_config_timeout` 对 `inf`/`nan`/负数降级为「无限制」，根绝 `future.result(timeout=inf)` 触发 `OverflowError`；`get_tool_registry` / `reset_tool_registry` 加 `threading.Lock` 双检锁，且重建后返回本次构建的局部 registry（而非全局缓存），消除并发重建竞态与跨调用超时串扰；`@tool` 装饰器将 `ToolPolicy.timeout_seconds` 折叠进 `ToolDefinition` 单一来源；统一单/并行工具超时包装（单一 executor + deadline 驱动的 wait loop，消除并行路径嵌套 executor 与线程翻倍，duration 精确到各工具自身超时值），并新增快慢工具混合并行回归；同步 `docs/full-guide_EN.md` 的超时环境变量文档；测试覆盖 first-wins、non-retriable、协作取消接线、finite 校验、缓存线程安全与快慢混合并行。
-- [修复] 按最新 review 复核收敛 3 处正确性问题（OR-COM-7f3d3f5b / 3d6b61f8 / a1e8b0c2）：`BaseAgent._filtered_registry()` 携带源 registry 的类别超时映射（工具子集仍生效类别上限，不再绕过 #1890 类别超时）；并行批次 >5 时排队调用的 per-tool 超时自 worker 实际开始起算（不再提交即烧预算导致对未启动调用的假超时）；`get_tool_registry()` 缓存命中快路径在锁内读取一致对（消除与 `reset_tool_registry()` 竞态返回 `None` 或错配 registry）。新增对应回归测试。
-- [新功能] 股票名称解析引擎重构增强：新增 `resolver_name_to_code_list()` 公开 API，返回按市场排序（A 股→港股→美股）的 `Stock` 候选列表（最多 5 个），新增 `US_stock_code_match()` 匹配美股 ticker（1~5 位字母且仅限本地库已存在代码，避免 hello/open 等英文词误判为股票）；AkShare 全量 A 股数据经幂等 `extend_AkShare()` 合并进全局 `stockDB`（30 分钟缓存 + 失败 5 分钟退避 + Future 单飞：TTL 过期 stale-while-revalidate 零等待、冷启动等待上界由拉取超时推导（拉取经子进程封顶 25s）、worker 先清账唤醒等待者再做日志/落盘（finally 兜底 BaseException）、成功拉取落盘 `data/cache` 跨重启复用，非中文输入跳过网络扩展），匹配策略升级为「精确→子串（≥2 汉字）→拼音子串（≥5 字母）→difflib 模糊（0.8，单字误写 0.7 兜底）」；`resolve_name_to_code()` 保持既有本地优先语义（本地精确命中零网络，调用方离线低延迟契约不变），跨市场候选能力由 `resolver_name_to_code_list()` 独立提供；解析全链路线程安全（`stockDB` 读写加锁、名称/拼音索引随库变更自动失效），新增 40 个单元测试覆盖精确/跨市场排序/子串/拼音/模糊/幂等扩展/失败退避/多候选场景。
-- [改进] `StockDaily` 表新增可空 `canonical_id` 列并支持双写（Expand-Contract PR2，issue #2207）：自愈式迁移幂等加列 + 普通索引 `ix_stock_daily_canonical_id`，存量行与 `save_daily_data` 未显式传参时均经 index-aware 推导（裸指数码命中注册表时统一到指数 `canonical_id`，避免同一指数按输入形态分裂到不同桶——例如裸 `000300` 与显式 `sh000300` 现在都收敛到 `sh000300`，而非裸码被推导为 `sz000300`），推导失败写 NULL 降级；读路径仍用 `code` 列，`(code, date)` 唯一约束保留不变。显式登记契约漂移：PRD Glossary/FR-1/DD-3 与架构 AD-1/AD-7 中 canonical_id 的点分格式描述（`000016.SH`）已被 Phase 1 已合入代码的前缀格式（`sh000016`）取代，本变更遵循代码，PRD/架构文档的同步修正留待后续 PR 统一收敛。
-- [新功能] 当前注册表已识别的 5 个沪深 A 股指数以显式市场输入按 canonical 身份路由：名称优先使用注册表并以 Tencent、AkShare、TickFlow 兜底，日线固定使用 Tencent、AkShare、TickFlow、yfinance 多源降级链，不读取普通 A 股日 K 的 `*_PRIORITY` 配置；裸代码仍按股票处理，并隔离同码股票名称缓存。
-- [修复] Anspire 搜索默认切换为全球区域模式（`region_mode=2`），使海外股票新闻检索能够覆盖境外信息。
-- [修复] 桌面端将 `builder-util-runtime` 升级至 9.7.0，修复 CVE-2026-54673 涉及的 HTTP 重定向凭据头信息泄露风险。
-- [文档] 增加 xAI Grok 的 LiteLLM 配置示例、Grok Bot 集成指南和异步分析 Skill，明确分析模型与 AI teammate 两类接入边界。
-- [测试] 固定 yfinance 股息 TTM 与单股报告文件名的时间夹具，消除跨日期和合并后时间基准冲突造成的 CI 波动。
+- [Feature] Agent tool calls support configuring default timeouts by category (data/search/analysis/action/market), and allow individual tools to declare `timeout_seconds`; effective timeout resolves via first-wins precedence (explicit per-run `tool_call_timeout_seconds` > single tool explicit `timeout_seconds` > category default > unlimited), remaining wall-clock budget serves only as an unbreachable outer cap, returning a structured `{"timeout": true}` error upon timeout (marked `retriable: false` and written to `non_retriable_tool_results` to prevent retry re-execution) for Agent to continue execution rather than aborting loop (fixes #1890).
+- [Fixed] Agent tool registry (`src/agent/factory.get_tool_registry`) changed from module-level caching to invalidating by comparing "category timeout mapping values", preventing CPython object recycling address reuse (identical `id(config)`) where reloaded `Config` was misjudged as unchanged, keeping stale timeouts; added `_coerce_config_timeout` type whitelist so callers passing `MagicMock` / missing attribute stubs / dirty strings (e.g. `float(MagicMock())` silently yielding 1.0) fall back to "no category limit" rather than crashing or imposing a 1s timeout; `build_agent_executor(config)` / `build_agent_chat_executor(config)` now pass caller `config` through to `get_tool_registry(config)` (no longer parameterless call freezing first built registry); `main._reload_runtime_config` and `SystemConfigService._reload_runtime_singletons` (and `update()` -> `reload_now` path) call `reset_tool_registry()` to force rebuild during hot config reload; added regression tests for "registry rebuilds with new config", "new timeout takes effect after reload", and "builder passes config through" scenarios (#1890 review follow-up, closing OR-COM-dd1e8fa7 / OR-COM-bff42110).
+- [Fixed] Agent tool timeout review loop closure (fixes 4 blockers in #1890): timeout resolution changed from min contract to first-wins (explicit per-run `tool_call_timeout_seconds` > single tool `ToolDefinition.timeout_seconds` > category default > unlimited, remaining wall-clock budget serves only as unbreachable outer cap; research path no longer passes `tool_call_timeout_seconds` to avoid overriding category limits); timeout results marked `retriable: false` and written to `non_retriable_tool_results` blocking LLM retries on same call, and arms cooperative cancellation signals (`is_tool_cancellation_requested()` and existing `check_tool_execution()` checkpoints both respond, handler behavior unchanged if never polling) for handlers still running in background when timeout fires, serving as review-requested "intra-handler cooperative cancellation" mitigation, avoiding duplicate executions and side effects from Python threads unable to force-stop; `_coerce_config_timeout` falls back to "unlimited" on `inf`/`nan`/negative values, eliminating `OverflowError` triggered by `future.result(timeout=inf)`; added `threading.Lock` double-checked locking to `get_tool_registry` / `reset_tool_registry`, returning newly constructed local registry upon rebuild (rather than global cache), eliminating concurrent rebuild races and cross-call timeout crosstalk; `@tool` decorator folds `ToolPolicy.timeout_seconds` into `ToolDefinition` single source of truth; unified single/parallel tool timeout wrappers (single executor + deadline-driven wait loop, eliminating nested executors and thread doubling in parallel paths, duration accurate to each tool's own timeout value), adding fast/slow mixed parallel regression tests; synchronized timeout env var docs in `docs/full-guide_EN.md`; tests cover first-wins, non-retriable, cooperative cancellation wiring, finite validation, cache thread safety, and fast/slow mixed concurrency.
+- [Fixed] Closed 3 correctness issues per latest review audit (OR-COM-7f3d3f5b / 3d6b61f8 / a1e8b0c2): `BaseAgent._filtered_registry()` carries source registry's category timeout mapping (tool subsets still enforce category caps, no longer bypassing #1890 category timeouts); per-tool timeout for queued calls when parallel batch >5 starts counting when worker actually starts (no longer burning budget upon submission causing false timeouts on unstarted calls); `get_tool_registry()` cache-hit fast path reads consistent pair under lock (eliminating race with `reset_tool_registry()` returning `None` or mismatched registry). Added corresponding regression tests.
+- [Feature] Stock name resolution engine refactored and enhanced: added `resolver_name_to_code_list()` public API returning candidate `Stock` list sorted by market (A-share -> HK -> US) (up to 5 candidates); added `US_stock_code_match()` matching US tickers (1-5 letters and restricted to codes already present in local database, preventing English words like hello/open from being misjudged as stocks); full AkShare A-share data merged into global `stockDB` via idempotent `extend_AkShare()` (30-minute cache + 5-minute backoff on failure + Future single-flight: zero-wait stale-while-revalidate on TTL expiration, cold-start wait ceiling derived from fetch timeout (fetch capped at 25s via subprocess), worker clears state and wakes waiters before logging/persisting (finally fallback for BaseException), successful fetches persisted to `data/cache` reused across restarts, non-Chinese inputs skip network extension); matching strategy upgraded to "exact -> substring (>=2 Chinese characters) -> pinyin substring (>=5 letters) -> difflib fuzzy (0.8, single-character typo 0.7 fallback)"; `resolve_name_to_code()` maintains existing local-first semantics (local exact hit requires zero network, caller offline low-latency contract unchanged); cross-market candidate capability provided independently by `resolver_name_to_code_list()`; end-to-end resolution is thread-safe (`stockDB` read/write locked, name/pinyin indices automatically invalidated on DB mutations); added 40 unit tests covering exact / cross-market ordering / substring / pinyin / fuzzy / idempotent extension / failure backoff / multi-candidate scenarios.
+- [Improved] `StockDaily` table added nullable `canonical_id` column supporting dual-write (Expand-Contract PR2, issue #2207): self-healing migration idempotently adds column + regular index `ix_stock_daily_canonical_id`; existing rows and `save_daily_data` calls without explicit parameters infer canonical IDs via index-aware resolution (bare index codes hitting registry converge to index `canonical_id`, preventing same index from splitting into different buckets based on input form—e.g. bare `000300` and explicit `sh000300` now both converge to `sh000300`, rather than bare code being inferred as `sz000300`), falling back to NULL on inference failure; read path still uses `code` column, `(code, date)` unique constraint preserved. Explicitly noted contract drift: dot-separated format description of canonical_id (`000016.SH`) in PRD Glossary/FR-1/DD-3 and architecture AD-1/AD-7 was replaced by prefix format (`sh000016`) merged in Phase 1 code; this change follows code, leaving synchronous doc updates for subsequent PR consolidation.
+- [Feature] 5 CSI/SSE/SZSE A-share indices recognized in current registry routed via explicit market input by canonical identity: names prioritize registry with Tencent, AkShare, TickFlow fallbacks; daily K-lines strictly use Tencent, AkShare, TickFlow, yfinance multi-source fallback chain, ignoring `*_PRIORITY` configs for regular A-share daily K; bare codes still treated as stocks, with same-code stock name caches isolated.
+- [Fixed] Anspire search switched to global region mode (`region_mode=2`) by default, enabling overseas stock news retrieval to cover international information.
+- [Fixed] Upgraded `builder-util-runtime` to 9.7.0 on Desktop, fixing CVE-2026-54673 HTTP redirect credential header leakage risk.
+- [Documentation] Added LiteLLM configuration example for xAI Grok, Grok Bot integration guide, and async analysis Skill, clarifying integration boundaries between analysis models and AI teammates.
+- [Test] Pinned time fixtures for yfinance dividend TTM and single-stock report filenames, eliminating CI flakiness caused by cross-date and post-merge time baseline conflicts.
 
 ## [3.30.0] - 2026-08-09
 
-### 发布亮点
+### Release Highlights
 
-- feat: LLM 渠道新增显式 Chat Completions / Responses API Surface，统一连接测试、分析、选股、图片识别与状态诊断的协议路由。
-- feat: Agent Chat 按会话持久化 Skill 选择，刷新和切换会话后可恢复，并完整保留省略、显式空列表与非空选择三态。
-- feat: Electron 桌面端恢复历史报告、市场复盘和完整报告分享图；未配置自定义品牌时，统一使用随包二维码与默认“小红书@霸天土小豆”账号文案。
-- feat: 新增单条分析目标解析契约，收紧交易所后缀、指数别名及美股代码的规范化边界。
-- fix: 修复移动端侧栏滚动、自选股详情状态、长通知标题分片及 Lark 国际域名等用户可见稳定性问题。
-- improve: 后端 CI 按测试文件分成三个 runner 并行执行，并收紧 Web 共享资产与跨层契约的门禁范围。
+- feat: LLM channels add explicit Chat Completions / Responses API Surface, unifying protocol routing for connection tests, analysis, screening, image recognition, and status diagnostics.
+- feat: Agent Chat persists Skill selections per session, restoring state after page refresh or session switching, preserving omitted, explicit empty, and non-empty selections.
+- feat: Electron desktop app restores historical reports, market reviews, and full report share cards; uses bundled QR code and default Xiaohongshu branding when custom branding is unconfigured.
+- feat: Added single analysis target parsing contract, tightening normalization boundaries for exchange suffixes, index aliases, and US stock tickers.
+- fix: Fixed user-visible stability issues including mobile sidebar scrolling, watchlist details status, long notification title chunking, and Lark international domains.
+- improve: Backend CI splits into three parallel runners by test files, tightening gate scopes for Web shared assets and cross-layer contracts.
 
-### 新功能
+### Features
 
-- LLM 渠道支持显式选择 Chat Completions 或 Responses API Surface，兼容 Responses-only 模型，并让连接测试、主分析、选股、图片识别和状态诊断复用统一路由契约。
-- Agent Chat 将 Skill 选择按会话持久化，刷新或切换会话后恢复；历史会话继续保留运行时默认，非法 Skill 请求不会误清空已有选择。
-- Electron 桌面端复用安装包自带 Chromium，为历史个股报告、市场复盘和完整报告生成 PNG 分享图；Web 与桌面端统一使用随包分发的小红书二维码。
-- `STOCK_LIST` 新增 `parse_analysis_target()` 单条目解析契约，并对外暴露可注入的指数注册表及解析结果类型。
+- LLM channels support explicit selection of Chat Completions or Responses API Surface, supporting Responses-only models and unifying routing contracts for connection tests, primary analysis, screening, image recognition, and status diagnostics.
+- Agent Chat persists Skill selections per session, restoring them after refresh or session switching; historical sessions retain runtime defaults, and invalid Skill requests do not wipe existing selections.
+- Electron desktop app reuses bundled Chromium to generate PNG share cards for historical stock reports, market reviews, and full reports; Web and desktop uniformly use bundled Xiaohongshu QR codes.
+- `STOCK_LIST` adds `parse_analysis_target()` single-entry parsing contract, exposing injectable index registries and parsed result types.
 
-### 改进
+### Improvements
 
-- 优化首页侧栏任务面板和自选股工作区，支持折叠任务摘要、自选股直接打开最新详情，并压缩头部操作以释放列表空间。
-- 后端 CI 按完整测试文件拆分为三个 runner 并行执行，由统一 `backend-gate` 汇总结果；继续保留稳定的离线测试语义并降低全局状态竞态风险。
+- Optimized homepage sidebar task panel and watchlist workspace, supporting collapsed task summaries, opening latest details directly from watchlists, and compacting header controls to increase list display area.
+- Backend CI split into three parallel runners by complete test files, summarized by unified `backend-gate`; preserves stable offline test semantics while mitigating global state race hazards.
 
-### 修复
+### Fixed
 
-- 固定分享图小红书二维码下方的账号文案格式为“小红书@昵称”，未配置自定义昵称时默认显示“小红书@霸天土小豆”；不再渲染数字 ID，历史 ID 配置不会改变分享图模板。
-- 修复首页移动端历史、自选和今日列表无法稳定纵向触摸滚动的问题，同时保持桌面端卡片裁剪行为。
-- 长通知包含一级 Markdown 标题时按对应标题边界正确分片，避免错误递归耗尽长度预算并中断发送。
-- 收敛自选股详情与今日状态语义：刷新和查询期间不再开放过期报告，失败时不会将旧历史误标为今日分析，并限制逐股票 fallback 并发及取消失效批次。
-- 收敛 Responses 渠道的协议、provider、route alias 与 wire-model 契约，拒绝协议不匹配、同名 alias 混用 Surface 及非法历史配置。
-- 飞书交互机器人在 `FEISHU_DOMAIN=lark` 时让 Stream 长连接和消息回复统一使用 Lark 国际版 API 域名，避免连接国内域名后返回 `Incorrect domain name`。
-- 显式交易所后缀、畸形混合 alias、dotted-prefix 及外盘半显式后缀的非法输入不再静默改写或降级为错误市场。
-- `us` 前缀保持大小写不敏感，但 ticker base 必须满足规范的大写美股代码形态；非法小写、标点或数字输入直接返回 `unsupported`。
-- 带 `.US` 后缀的规范美股代码不再因前两字符碰撞 `sh`、`hk`、`bj` 或 `us` 前缀而被错误拆分。
+- Standardized account text below Xiaohongshu QR code on share cards as "Xiaohongshu@nickname", defaulting to "Xiaohongshu@BatianTuxiaodou" when unconfigured; no longer renders numeric IDs, preventing legacy ID configurations from altering card templates.
+- Fixed vertical touch scrolling failure on mobile homepage history, watchlist, and daily lists while maintaining desktop card clipping behavior.
+- Long notifications containing H1 Markdown headings are split at corresponding heading boundaries, preventing erroneous recursion from exhausting length budgets and aborting delivery.
+- Converged watchlist details and daily status semantics: expired reports are no longer served during refresh or query periods, legacy history is not mislabeled as today's analysis upon failure, per-stock fallback concurrency is bounded, and invalid batches are cancelled.
+- Converged protocol, provider, route alias, and wire-model contracts for Responses channels, rejecting mismatched protocols, duplicate alias Surface collisions, and invalid legacy configurations.
+- Feishu bot in `FEISHU_DOMAIN=lark` mode uses Lark international API domains for both Stream connections and message replies, preventing `Incorrect domain name` errors when connecting to mainland domains.
+- Explicit exchange suffixes, malformed mixed aliases, dotted prefixes, and foreign half-explicit suffixes reject silent rewriting or downgrading to erroneous markets.
+- `us` prefix remains case-insensitive, but ticker base must adhere to standard uppercase US stock ticker format; invalid lowercase, punctuation, or numeric inputs return `unsupported` immediately.
+- Standard US stock codes with `.US` suffix are no longer misparsed due to first two characters matching `sh`, `hk`, `bj`, or `us` prefixes.
 
-### 测试
+### Tests
 
-- 非 Web 改动默认执行完整后端门禁；纯 Web、共享 public 资产、渠道模板和设置帮助的过滤语义补充回归测试，Docker 构建继续按实际输入过滤。
+- Non-Web changes run full backend gates by default; filtering semantics for pure Web, shared public assets, notification templates, and settings help include regression tests, with Docker builds continuing to filter based on actual inputs.
 
-### 文档
+### Documentation
 
-- FAQ 补充 macOS 桌面应用被 Gatekeeper quarantine 阻止启动时，对受信任安装包进行临时放行的步骤。
+- FAQ added steps for temporarily bypassing Gatekeeper quarantine when macOS desktop application launch is blocked on trusted installer packages.
 
 ## [3.29.0] - 2026-08-02
 
-### 发布亮点
+### Release Highlights
 
-- feat: 将参考 AlphaSift 实现的选股核心与策略正式纳入 DSA，新增选股运行历史、数据源历史和候选深度分析链路。
-- feat: 新增 1080px 个股决策卡与高密度市场复盘分享图，支持 Web 原生分享和下载回退。
-- feat: 新增 Skill Opinion Outcome 计算、表现统计与基于真实样本的有界运行时权重。
-- improve: 优化选股快照复用、热点按需加载、多源并发和候选轮换，缩短长流程等待并提升结果多样性。
-- fix: 加固关闭认证、短凭证诊断脱敏、CI 超时取证和桌面冻结包启动链路。
-- fix: 修复 Longbridge 量比、股票代码窗口解析、选股后置重排及分享图交互等稳定性问题。
+- feat: Formally incorporated AlphaSift-referenced stock screening core and strategies into DSA, adding screening run history, data source history, and candidate deep-analysis pipeline.
+- feat: Added 1080px single-stock decision card and high-density market review share images, supporting Web native sharing and download fallback.
+- feat: Added Skill Opinion Outcome computation, performance statistics, and bounded runtime weights based on real samples.
+- improve: Optimized screening snapshot reuse, on-demand hotspot loading, multi-source concurrency, and candidate rotation, reducing long pipeline waits and enhancing result diversity.
+- fix: Hardened authentication disablement, short credential diagnostic redaction, CI timeout forensics, and desktop frozen bundle launch pipeline.
+- fix: Fixed Longbridge volume ratio, stock code window resolution, post-screening reranking, and share image interactions stability issues.
 
-### 新功能
+### Features
 
-- SkillAggregator 基于独立满足 30 条 evaluated 门槛的真实 Skill Outcome bucket，使用 Beta 先验收缩、unable 惩罚和多周期证据加权生成有界运行时权重；缺失、低样本或异常统计保持中性。
-- 选股结果按 `run_id` 持久化到 DSA 数据库，新增运行历史和数据源历史 API，接入公告事件上下文及其搜索缓存，并支持将候选连同筛选策略映射的 skill 交给单股深度分析。
-- 新增按 skill、horizon 与 outcome engine version 独立聚合的只读 Skill Opinion 表现统计；少于 30 条 evaluated 样本时仅返回观察性计数，不输出表现指标或调整运行时权重。
-- 新增按 individual SkillAgent 自身 signal、版本化 engine 与本地已存同源日线窗口计算并持久化 `skill_opinion_outcomes` 的核心服务。
+- SkillAggregator generates bounded runtime weights based on real Skill Outcome buckets independently satisfying the 30-evaluated-sample threshold, using Beta prior shrinkage, unable penalties, and multi-horizon evidence weighting; missing, low-sample, or anomalous stats remain neutral.
+- Screening results persist to DSA database by `run_id`, adding run history and data source history APIs, incorporating announcement event context and its search cache, and supporting passing candidates along with strategy-mapped skills to single-stock deep analysis.
+- Added read-only Skill Opinion performance statistics aggregated independently by skill, horizon, and outcome engine version; returns observational counts only without metrics or runtime weight adjustments when below 30 evaluated samples.
+- Added core service computing and persisting `skill_opinion_outcomes` based on individual SkillAgent own signals, versioned engines, and local co-originated daily bar windows.
 
-### 改进
+### Improvements
 
-- 选中热点后先展示榜单已有摘要和核心股，后台再补充完整详情，并将单次热点源等待上限收紧为 8 秒。
-- 热点成分股并行获取东方财富与同花顺数据，并按固定数据源优先级合并；真实供应商调用增加限流、可终止 timeout、并发槽和 worker 回收，题材详情可按需复用 DSA 原生搜索服务补充安全且带链接的近期消息。
-- 精简选股页面的重复说明，将任务标识、快照统计和排序诊断折叠到运行详情。
-- 将参考 AlphaSift 实现的选股核心与策略正式纳入 DSA，统一使用 `ScreeningService`、`SCREENING_ENABLED` 和 `/api/v1/screening`，并保留 Apache-2.0 归因与来源版本记录。
-- Web 选股使用浏览器匿名种子与运行 ID 在最终评分后的有界近分池中生成每次运行的候选组合；本地评分覆盖完整短名单，远程分析继续遵守数量上限，硬过滤、风险否决和得分保持不变。
-- 热点榜单刷新与选股长流程解除双向串行等待，热点详情改为选中后按需加载；选股默认复用 5 分钟内且数据源优先级一致的成功全市场快照，并展示快照、候选上下文、LLM 重排、最终评分和新闻事件增强阶段。
-- 图片报告改用独立的 1080px 个股决策卡和高密度市场复盘卡，优先从结构化 payload 精确填充数据并保留 Markdown 回退；小红书账号与二维码支持关闭或替换，Web 支持原生分享与下载回退。
+- Selecting a hotspot displays existing leaderboard summaries and core stocks first while fetching complete details in background, tightening single hotspot source wait ceiling to 8 seconds.
+- Hotspot constituents fetch EastMoney and TongHuaShun data in parallel, merging by fixed data source priority; real provider calls add rate limits, terminable timeouts, concurrency slots, and worker recycling, with topic details reusing DSA native search to add secure, linked recent news on demand.
+- Streamlined redundant descriptions on screening page, folding task IDs, snapshot stats, and ranking diagnostics into run details.
+- Formally incorporated AlphaSift-referenced stock screening core and strategies into DSA, standardizing on `ScreeningService`, `SCREENING_ENABLED`, and `/api/v1/screening`, preserving Apache-2.0 attribution and source version tracking.
+- Web screening uses browser anonymous seeds and run IDs to generate candidate sets within bounded near-score pools after final scoring; local scoring covers complete shortlists, remote analysis respects quantity ceilings, hard filters, risk overrides, and scores remain unchanged.
+- Hotspot leaderboard refresh and long screening flows decouple two-way serial waiting, loading hotspot details on demand upon selection; screening defaults to reusing successful full-market snapshots within 5 minutes sharing identical data source priority, displaying snapshot, candidate context, LLM reranking, final score, and news event enhancement stages.
+- Image reports switch to dedicated 1080px single-stock decision cards and high-density market review cards, prioritizing accurate data population from structured payloads while retaining Markdown fallback; Xiaohongshu account and QR code support hiding or replacement, and Web supports native sharing and download fallback.
 
-### 修复
+### Fixed
 
-- Web 分享图在按需生成完成后通过第二次用户点击同步打开系统分享，避免首次异步生成使原生分享退化为下载。
-- Web 分享图改为用户点击“分享”后才按需生成，不再在报告加载时自动请求。
-- 移除基础设置选股卡片中仍跳转到“数据源”的过期“查看配置项”按钮，并将 `SCREENING_ENABLED` 及 Web 选股功能开关归入“基础设置”。
-- `scripts/ci_gate.sh` 的离线测试增加单测 timeout 与 faulthandler 取证，并同步 Docker 发布流程的 CI 依赖，避免无 traceback 卡住或发布门禁缺少 `pytest-timeout`。
-- 选股策略栏稳定展示完整中文策略列表，并保留自定义策略 ID 入口。
-- 选股热点详情统一使用中文业务文案，不再显示内部类名、字段名和原始数据源错误。
-- 刷新热点榜单并保留当前题材时同步绕过详情缓存重拉该题材，避免新榜单继续搭配旧路线与成分股。
-- 选股尾部轮换以分析器输入顺序为权威并保留并列分候选顺序；热点消息增强、共享缓存 owner、全局并发容量和新闻搜索 deadline 统一收敛。
-- Outcome 候选按上次尝试时间公平调度，避免持续新增的缺失 key 使旧 `pending` outcome 永久得不到重试。
-- 选股主模型返回空内容、非 JSON 或低覆盖结构时继续尝试备用模型；全部失败时明确展示确定性因子排序状态，且不把 `reasoning_content` 当作最终结果。
-- 选股日线增强改用请求级 DSA-first fetcher 注入，多个后置分析器按最新分数逐级重排，远程分析状态跟随实际提交候选，避免重叠请求泄漏 wrapper 或改写未提交候选。
-- 统一等价股票代码的本地日线候选与同源窗口解析；冲突沪深交易所代码不再降级匹配裸码，回测仅接受快照或交易日历确认的起点。
-- 关闭认证时强制再次校验当前管理员密码，命中 rate limit 时返回 429，前端在当前密码缺失时阻止提交并显示内联提示（#1970）。
-- 本地 CLI 的 `stdout_preview` / `stderr_preview` 按环境变量、JSON、YAML/日志标量与 URL 的独立契约脱敏短凭证，避免 API key、secret 或 token 进入诊断（refs #1784）。
-- PyInstaller 冻结包在 NLTK 3.10 导入保护下误判内置 `_internal` 标准库时不再启动失败；Windows/macOS 打包脚本统一接入兼容 runtime hook。
-- 分享图按字段合并历史结构化数据与 Markdown，多市场逐区域复用持久化 payload，隐藏不可用市场灯号维度并保留配色方案；中英韩模板跟随报告语言，原生分享失败时自动回退下载。
-- 飞书文件报告在写入或上传前清理隐藏的市场 metadata；桌面运行时默认隐藏未随包提供 renderer 的 Web 分享按钮。
-- `redact_diagnostic_text()` 的命令替换扫描不再吞掉尾随非敏感诊断字段，并统一 `export FOO=$(...)` 与 `FOO=$(...)` 的脱敏行为。
-- Longbridge 量比改用 adaptive keyword args 调用 `history_candlesticks_by_offset`，兼容 0.2.74 与 4.x SDK 参数顺序（fixes #2100）。
+- Web share images open system share dialog synchronously on second user click after on-demand generation completes, preventing async generation from degrading native sharing to download.
+- Web share images generated on-demand only after user clicks "Share", no longer requested automatically on report load.
+- Removed obsolete "View Settings" button in basic screening card pointing to "Data Sources", moving `SCREENING_ENABLED` and screening toggles to "Basic Settings".
+- `scripts/ci_gate.sh` offline tests add unit test timeouts and faulthandler forensics, synchronizing CI dependencies with Docker release workflows to prevent silent hangs without tracebacks.
+- Screening strategy bar reliably displays complete Chinese strategy list, preserving custom strategy ID entry.
+- Screening hotspot details standardize on Chinese business terminology, removing internal class names, field keys, and raw provider errors.
+- Refreshing hotspot list while retaining selected topic bypasses detail cache to re-fetch topic, avoiding pairing new lists with stale routes and constituents.
+- Candidate tail rotation prioritizes analyzer input order while preserving tied candidate ordering; converged hotspot news enrichment, shared cache ownership, global concurrency limits, and news search deadlines.
+- Outcome candidates schedule fairly by last attempt timestamp, avoiding continuously added missing keys starving older `pending` outcomes from retries.
+- Primary screening model falling back to empty, non-JSON, or low-coverage structures attempts backup models; complete failures explicitly show deterministic factor ranking states, never treating `reasoning_content` as final output.
+- Screening daily bar enhancement injects request-level DSA-first fetchers, reranking across multiple post-analyzers by updated scores, with remote analysis status tracking actually submitted candidates, preventing overlapping requests leaking wrappers or modifying unsubmitted candidates.
+- Unified equivalent stock code local daily candidate and co-originated window resolution; conflicting SSE/SZSE codes no longer degrade to bare symbol matching, with backtesting only accepting start dates verified by snapshots or trading calendars.
+- Disabling authentication mandates re-validating current admin password, returning 429 on rate limit hits; frontend blocks submission and displays inline prompt when current password is missing (#1970).
+- Local CLI `stdout_preview` / `stderr_preview` sanitizes short credentials across environment variables, JSON, YAML/log scalars, and URLs, preventing API keys, secrets, or tokens from leaking into diagnostics (refs #1784).
+- PyInstaller frozen bundle no longer fails to launch when built-in `_internal` standard library is misjudged under NLTK 3.10 import guards; Windows/macOS packaging scripts uniformly integrate compatible runtime hooks.
+- Share image merges historical structured data with Markdown field-by-field, reusing persisted payload across multi-market regions, hiding unavailable market light dimensions while preserving color schemes; zh/en/ko templates follow report language, falling back to download on native share failure.
+- Feishu file reports clean up hidden market metadata before writing or uploading; desktop runtime hides Web share button by default when renderer is not bundled.
+- Command substitution scan in `redact_diagnostic_text()` no longer truncates trailing non-sensitive diagnostic fields, unifying redaction behavior between `export FOO=$(...)` and `FOO=$(...)`.
+- Longbridge volume ratio uses adaptive keyword args to call `history_candlesticks_by_offset`, compatible with parameter ordering across 0.2.74 and 4.x SDKs (fixes #2100).
 
 ## [3.28.0] - 2026-07-26
 
-### 发布亮点
+### Release Highlights
 
-- feat: Multi-Agent 多策略综合支持分层 deliberation、mediator/self-review、revision projection 与 multi-round，并统一最终动作和解释契约。
-- feat: AI 建议页新增按决策风格分组的历史表现，specialist opinion 样本可持久化并用于后验评估。
-- feat: 新增 `--portfolio futu`，可只读导入 Futu OpenD 真实账户的沪深 A 股、港股和美股 LONG 正股持仓。
-- feat: Web 首页与 API 支持按单个或多个市场临时触发大盘复盘，不修改全局配置。
-- feat: Tushare 支持通过 `TUSHARE_HTTP_URL` 接入自建网关或兼容镜像。
-- fix: 改进港股行情路由与缓存、外股英文新闻匹配、数据源兜底顺序及桌面端发包稳定性。
+- feat: Multi-Agent multi-strategy synthesis adds hierarchical deliberation, mediator/self-review, revision projection, and multi-round, unifying final action and explanation contracts.
+- feat: AI Suggestions page adds historical performance grouped by decision style; specialist opinion samples persist for post-hoc evaluation.
+- feat: Added `--portfolio futu`, enabling read-only import of Shanghai/Shenzhen A-shares, HK stocks, and US equity LONG positions from Futu OpenD authentic accounts.
+- feat: Web home and API support ad-hoc single or multi-market market reviews without modifying global configuration.
+- feat: Tushare supports custom gateway or compatible mirror integration via `TUSHARE_HTTP_URL`.
+- fix: Improved HK quote routing and caching, foreign stock English news matching, data source fallback ordering, and desktop release stability.
 
-### 新功能
+### Features
 
-- Multi-Agent 多策略综合新增受控 deliberation v0、可注入 mediator/self-review v1-v2、只读 revision projection v3 与 multi-round v4；增强层相对上一层 baseline 只能保持或继续 softened，不覆盖权威最终信号。
-- `specialist` 模式最多选择 4 个策略专家，并通过 `AGENT_SKILL_CONCURRENCY` 控制 1–4 个 worker 并发；worker 继承主管线冻结的 target date 等上下文，单个 skill 失败不阻断其它策略或最终决策。
-- Multi-Agent 报告按八态用户 action 追踪 Pipeline 最终调整，排除非法 Agent 意见；仅在 canonical action 可唯一解析时生成 explanation 与 DecisionSignal，并以同一个 `final_action` 统一最终动作契约。
-- specialist 在分析历史保存成功后持久化版本化、低敏且幂等的有效 opinion 样本，为后续后验评估提供真实数据；本阶段不计算 outcome、不统计表现、不调整权重。
-- AI 建议页新增决策风格历史表现，按每个分组独立的 30 个已完成样本门槛展示命中、区间涨跌、无法评估和最大不利波动，并保持旧统计接口兼容。
-- 新增 `--portfolio futu`，只读导入 Futu OpenD 真实账户的沪深 A 股、港股和美股 LONG 正股持仓作为分析列表。
-- Web 首页与 `POST /api/v1/analysis/market-review` 支持用严格校验的 `region` 临时选择单个或多个复盘市场；一次性覆盖不读写全局配置，并贯穿任务提交、状态、SSE、结果与历史记录。
-- Tushare 数据源支持通过 `TUSHARE_HTTP_URL` 自定义接入地址；留空时继续使用官方默认地址（fixes #1985）。
+- Multi-Agent multi-strategy synthesis adds controlled deliberation v0, injectable mediator/self-review v1-v2, read-only revision projection v3, and multi-round v4; enhancement layers remain equal or softened relative to baseline without overriding authoritative final signals.
+- `specialist` mode selects up to 4 strategy specialists, controlling 1-4 workers via `AGENT_SKILL_CONCURRENCY`; workers inherit pipeline context (frozen target date), and individual skill failures do not block other strategies or final decision.
+- Multi-Agent reports track final pipeline adjustments across eight user actions, excluding invalid Agent opinions; generates explanation and DecisionSignal only when canonical action is uniquely resolvable, unifying final action contract with single `final_action`.
+- Specialist persists versioned, low-sensitivity, and idempotent valid opinion samples upon successful history save, providing authentic data for post-hoc evaluation; does not compute outcomes, stats, or weight adjustments in this phase.
+- AI Suggestions page adds decision style historical performance, displaying hits, interval changes, unevaluated counts, and max adverse excursions across 30 completed samples per group, maintaining legacy stats interface compatibility.
+- Added `--portfolio futu`, importing Futu OpenD authentic account Shanghai/Shenzhen A-shares, HK stocks, and US equity LONG positions as analysis list in read-only mode.
+- Web home and `POST /api/v1/analysis/market-review` support strictly validated `region` parameter to temporarily select review markets; one-time override does not alter global config, persisting across task submission, status, SSE, results, and history.
+- Tushare data source supports custom endpoints via `TUSHARE_HTTP_URL`, defaulting to official endpoint when empty (fixes #1985).
 
-### 改进
+### Improvements
 
-- 暂停 PR Review 的自动触发，仅保留 `workflow_dispatch` 手动入口，避免辅助评审重复运行及评论权限失败产生误导性红灯；正式 CI 检查保持不变。
-- `.env.example` 与每日分析 workflow 同步映射 `TUSHARE_HTTP_URL`，保持本地和云端配置入口一致。
+- Paused automatic PR Review triggers, retaining `workflow_dispatch` manual trigger only, preventing redundant runs and misleading red status from comment permission failures; formal CI checks unaffected.
+- `.env.example` and daily analysis workflow synchronize `TUSHARE_HTTP_URL` mapping, maintaining consistency across local and cloud configuration entry points.
 
-### 修复
+### Fixed
 
-- 修复外股代码映射到中文显示名时英文新闻相关性漏判，统一外股代码、英文名和别名解析，并对展开后的检索词去重（fixes #2026）。
-- 特权 `pull_request_target` 流程不再检出 fork PR head；敏感步骤仅执行主分支可信脚本，PR 元数据与 diff 通过 GitHub API 读取（fixes #2051）。
-- PR Review 事件载荷缺失、不可读或 JSON 非法时输出可定位且不泄露载荷的警告，并保留原有降级行为（fixes #2070）。
-- 修复 Windows 上 `mimetypes` 冷启动读取注册表导致进程卡死的问题。
-- 统一 `DataFetcherManager`、AkShare 与 Longbridge 对 4–5 位裸港股码的识别，避免 4 位代码被错误路由或静默失败（fixes #2091）。
-- AkShare 港股实时行情增加 20 分钟全市场缓存与并发冷启动 single-flight，热缓存命中不再等待网络限速，主接口异常时仍保留新浪备用接口降级（refs #1852）。
-- 将 `TencentFetcher` 默认优先级调整为 A 股日 K 数据源的最终兜底，并新增 `TENCENT_PRIORITY` 显式覆盖项（refs #2032）。
-- Web 设置页和通知测试入口补齐普通钉钉群机器人配置，支持安全遮罩保存 webhook 与 secret、查看帮助并发送测试通知（refs #1957）。
-- Agent Chat 普通与流式接口在请求未指定 `report_language` 时继承全局 `REPORT_LANGUAGE`，显式请求值仍优先。
-- WebUI 分开展示发布版本、代码版本与构建时间，并用构建输入摘要避免复用时间戳未变化的旧静态资源（fixes #2093）。
-- macOS unsigned 打包显式禁用 Electron 签名与 Hardened Runtime，在冻结后端和 electron-builder 阶段清理残缺签名，并审计原始应用与 DMG 产物；该缓解不替代 Apple Developer 签名与公证（refs #2075）。
+- Fixed English news relevance omissions when mapping foreign stocks to Chinese display names, unifying foreign stock code, English name, and alias parsing with deduplication (fixes #2026).
+- Privileged `pull_request_target` workflows no longer check out fork PR heads; sensitive steps execute trusted main branch scripts only, reading PR metadata and diffs via GitHub API (fixes #2051).
+- PR Review emits traceable, non-leaking warnings when payloads are missing, unreadable, or invalid JSON, preserving original fallback behavior (fixes #2070).
+- Fixed process hangs caused by registry reads during `mimetypes` cold start on Windows.
+- Unified `DataFetcherManager`, AkShare, and Longbridge 4-5 digit bare HK stock symbol recognition, preventing 4-digit codes from routing incorrectly or failing silently (fixes #2091).
+- AkShare HK real-time quotes add 20-minute whole-market caching and concurrent cold-start single-flight; cache hits skip rate-limiting waits, preserving Sina backup interface fallback on primary endpoint failures (refs #1852).
+- Adjusted `TencentFetcher` default priority to final fallback for A-share daily bars, adding `TENCENT_PRIORITY` explicit override (refs #2032).
+- Web settings and notification test inputs add standard DingTalk group bot configuration, supporting secure masked saving of webhook and secret, help viewing, and test notification sending (refs #1957).
+- Agent Chat standard and streaming endpoints inherit global `REPORT_LANGUAGE` when `report_language` is unspecified in request, with explicit request values taking priority.
+- WebUI separates display of release version, code version, and build timestamp, using build input hash to prevent reusing stale static assets with unchanged timestamps (fixes #2093).
+- macOS unsigned packaging explicitly disables Electron signing and Hardened Runtime, purging broken signatures during frozen backend and electron-builder stages, auditing application and DMG outputs; mitigation does not replace Apple Developer signing and notarization (refs #2075).
 
-### 文档
+### Documentation
 
-- 修复文档中的失效相对链接。
-- [修复] #2026 外股代码映射到中文显示名时英文新闻相关性判定漏判：新增同源 STOCK_ENGLISH_NAME_MAP 单一真源、canonicalize_foreign_stock_code 规范化入口与 _foreign_english_query_terms 别名解析，使 AAPL/00700/BABA 等 ticker 即使 stock_name 为中文也能在查询构建、相关性打分与多维度情报路径上复用 canonical 英文名，并补齐 .US/.HK suffix / HK 前缀全形式的归类与回归用例；同时在 _score_news_relevance 对 alias 展开 term 做去重，避免 legal alias 展开短名与显式 short alias 重复计分。
-- [新功能] Tushare 数据源支持通过 `TUSHARE_HTTP_URL` 环境变量自定义接入地址，便于网络无法直达 `api.tushare.pro` 时切换自建网关或第三方兼容镜像；留空保持官方默认地址不变（fixes #1985）
-- [文档] `.env.example` 与 `.github/workflows/00-daily-analysis.yml` 同步映射 `TUSHARE_HTTP_URL`，避免出现"配置项有但 workflow 漏映射"的半修状态
-- [修复] #2051 PR Review 的特权 `pull_request_target` 流程不再检出 fork PR head：敏感文件、标签、报告与 AI 审查统一通过 GitHub API 将 PR 元数据和 diff 作为数据读取，只执行主分支可信脚本；Python 语法、Flake8、确定性检查和离线测试继续由无 secrets 的 `pull_request` CI / `backend-gate` 执行，兼容 `actions/checkout` 新增的 fork checkout 安全保护。
-- [修复] 修复 Windows 上 mimetypes 冷启动时读取注册表导致的进程卡死
+- Fixed broken relative links in documentation.
+- [Fixed] #2026 Foreign stock code to Chinese display name mapping missed English news relevance evaluation: added single source of truth `STOCK_ENGLISH_NAME_MAP`, `canonicalize_foreign_stock_code` normalizer, and `_foreign_english_query_terms` alias resolution, enabling tickers like AAPL/00700/BABA to reuse canonical English names across query building, relevance scoring, and multi-dimensional intelligence paths even when stock_name is Chinese, completing categorization and regression cases for all forms (.US/.HK suffix and HK prefix); also deduplicated expanded alias terms in `_score_news_relevance`, preventing double scoring between legal alias expanded short names and explicit short aliases.
+- [Feature] Tushare data source supports custom access URL via `TUSHARE_HTTP_URL` environment variable, enabling switches to self-hosted gateways or third-party compatible mirrors when `api.tushare.pro` is unreachable; leaving blank preserves official default URL (fixes #1985).
+- [Documentation] `.env.example` and `.github/workflows/00-daily-analysis.yml` synchronize `TUSHARE_HTTP_URL` mapping, avoiding semi-fixed states where config exists but workflow misses mapping.
+- [Fixed] #2051 Privileged `pull_request_target` workflow in PR Review no longer checks out fork PR heads: sensitive files, labels, reports, and AI reviews uniformly read PR metadata and diffs as data via GitHub API, executing trusted scripts from main branch only; Python syntax, Flake8, deterministic checks, and offline tests continue executing on secret-less `pull_request` CI / `backend-gate`, compatible with `actions/checkout` new fork checkout security protections.
+- [Fixed] Fixed process hangs caused by registry reads during mimetypes cold start on Windows.
 
 ## [3.27.0] - 2026-07-19
 
-### 发布亮点
+### Release Highlights
 
-- feat: 新增 Codex App Server single-agent 问股实验原型，并保持 LiteLLM、Multi Agent、普通报告和定时任务等默认链路不变。
-- feat: Web AI 建议页支持保存基于历史报告快照重算的决策风格信号，补齐去重、续期、失效和可审计 guardrail 语义。
-- feat: 引入多策略观点结构化输出第一阶段契约，覆盖观点标准化、基础冲突检测、聚合元数据和报告兼容边界。
-- improve: 报告页明确展示输入数据状态、来源、异常影响、处理建议和诊断码，并区分页面资讯与本次分析输入。
-- fix: 修复 MiniMax 推理内容污染最终 JSON、字符串 `<think>` 包装兼容及多 Agent 风险覆盖后结论未按最终信号收敛的问题。
-- fix: 补齐美股实时行情 PE/PB 估值字段、多市场工具描述和 macOS Gatekeeper 安装排障说明。
+- feat: Added Codex App Server single-agent stock query experimental prototype, keeping default pipelines including LiteLLM, Multi Agent, standard reports, and scheduled jobs unchanged.
+- feat: Web AI Suggestions page supports saving decision style signals recalculated from historical report snapshots, completing deduplication, renewal, invalidation, and auditable guardrail semantics.
+- feat: Introduced multi-strategy opinion structured output Phase 1 contract, covering opinion standardization, basic conflict detection, aggregation metadata, and report compatibility boundaries.
+- improve: Report page clearly displays input data status, sources, anomaly impacts, handling suggestions, and diagnostic codes, distinguishing page intel from current analysis inputs.
+- fix: Fixed MiniMax reasoning content polluting final JSON, string `<think>` wrapper compatibility, and multi-Agent post-risk override conclusions failing to converge to final signals.
+- fix: Completed US equity real-time PE/PB valuation fields, multi-market tool descriptions, and macOS Gatekeeper installation troubleshooting notes.
 
-### 新功能
+### Features
 
-- 新增 #1743 Phase 6 Codex App Server single-agent 问股实验原型，仅开放三个既有只读 Tool Surface 工具；默认 LiteLLM、Multi Agent、Deep Research、普通报告、定时任务与 Phase 1/2 `codex_cli` 路径保持不变。
-- Web AI 建议页支持确认保存基于历史报告快照重算的决策风格信号，以 created/existing/refreshed 区分新建、原样复用和既有记录续期或维度补齐，并复用 profile-aware 去重与失效语义。
-- 多策略观点结构化输出第一版新增策略观点标准化、基础冲突检测与聚合 metadata，作为 #1964 的阶段性基础契约；本版本不声明完成并发执行、完整策略调度 MVP 或前端完整多语言展示。
+- Added #1743 Phase 6 Codex App Server single-agent stock query experimental prototype, exposing three existing read-only Tool Surface tools; default LiteLLM, Multi Agent, Deep Research, standard reports, scheduled jobs, and Phase 1/2 `codex_cli` paths remain unchanged.
+- Web AI Suggestions page supports confirming and saving decision style signals recalculated from historical report snapshots, distinguishing created, existing, and refreshed records with profile-aware deduplication and invalidation semantics.
+- Structured multi-strategy opinions first version adds strategy opinion standardization, basic conflict detection, and aggregation metadata as milestone foundational contract for #1964; this version does not claim concurrent execution, full scheduler MVP, or multi-language frontend displays.
 
-### 改进
+### Improvements
 
-- Codex 设置页仅检查配置、命令和所需协议是否允许尝试，用户保存后可直接提问；Chat 以服务端 `accepted` 事件提交问题并按实际 backend 停止。
-- Web 报告页输入数据块沿用状态、来源、告警和说明字段，在说明中补充异常影响、处理建议与诊断码，并区分报告页资讯和本次分析输入。
-- 更新 Anspire 数据源的项目展示信息，并将 `get_stock_info` 工具说明从 A 股限定修正为覆盖 A 股、港股和美股。
+- Codex settings page checks configuration, command, and required protocols before allowing attempts, letting users submit questions upon saving; Chat submits via server `accepted` event and halts by actual backend.
+- Web report page input data blocks reuse status, source, alert, and explanation fields, appending anomaly impact, handling suggestions, and diagnostic codes in explanation, distinguishing report page intel from current analysis inputs.
+- Updated Anspire data source display info, correcting `get_stock_info` tool description from A-share specific to covering A-shares, HK stocks, and US equities.
 
-### 修复
+### Fixed
 
-- 修复 MiniMax 分析与渠道 JSON 测试把推理内容和最终文本拼接后导致结果无法解析、无法持久化的问题；字符串响应仅剥离开头完整的 `<think>` 包装，并保留 JSON 内容中的同名字面标签。
-- 修正多 Agent 内部 runtime facts 的 timeout 归因，并让 risk application 覆盖后的 dashboard 决策字段及一句话核心结论基于 post-risk signal 完成 finalization。
-- 收敛多策略综合器语义：正确处理 Signal 枚举、缺失 signal、有效 opinion_count 和 deterministic synthesis，并兼容历史与外部 dashboard 的宽松字段形状。
-- Codex 问股只接受 App Server 明确完成的终态回答，并统一整体时限、累计输出、事件、工具预算和进程回收边界。
-- `codex_cli` 普通分析显式固定无人值守批准策略与只读沙箱，避免新版 Codex 在非交互任务中因请求人工批准而中断。
-- yfinance 美股实时行情补齐 `pe_ratio` 和 `pb_ratio`，供估值分析和下游报告使用。
+- Fixed MiniMax analysis and channel JSON tests where reasoning content concatenated with final text caused unparseable and unpersistable results; string responses strip complete leading `<think>` tags only, preserving identical literal tags in JSON.
+- Corrected timeout attribution for internal multi-Agent runtime facts, ensuring dashboard decision fields and one-sentence core conclusion finalize on post-risk signal after risk override.
+- Converged multi-strategy synthesizer semantics: properly handles Signal enums, missing signals, valid opinion_count, and deterministic synthesis, tolerating relaxed field shapes from historical and external dashboards.
+- Codex stock query accepts App Server finalized responses only, unifying total timeouts, cumulative outputs, events, tool budgets, and process termination boundaries.
+- `codex_cli` standard analysis explicitly pins unattended approval policy and read-only sandbox, preventing newer Codex versions from interrupting non-interactive tasks with human approval requests.
+- yfinance US stock real-time quotes add `pe_ratio` and `pb_ratio` for valuation analysis and downstream reporting.
 
-### 文档
+### Documentation
 
-- 补充 macOS 未签名、未公证 DMG 被 Gatekeeper 拦截时的架构选择、安全排查与官方安装包临时放行步骤。
+- Documented architecture selection, security triage, and official package temporary release steps when unsigned, un-notarized macOS DMGs are blocked by Gatekeeper.
 
 ## [3.26.1] - 2026-07-12
 
-### 发布亮点
+### Release Highlights
 
-- feat: Web 首页新增历史、自选与今日工作区，支持批量分析、今日覆盖判断和评分排行。
-- feat: 新增 A 股市场结构与题材主线上下文，并贯通报告、Agent、DecisionSignal 与 Web 展示。
-- feat: 飞书支持文件形式推送报告，多 Agent 支持子 Agent 独立超时钳位。
-- feat: 补齐内部 DSA Tool Surface、DecisionAgent 分歧摘要和 DecisionSignal profile 契约。
-- fix: 统一报告动作口径，修复按股票代码批量删除历史记录和通知理由静默截断问题。
-- fix: 改进 Web、桌面端、数据源缓存及发行包资源的稳定性。
+- feat: Web home adds History, Watchlist, and Today workspaces, supporting batch analysis, today coverage checks, and score rankings.
+- feat: Added A-share market structure and sector main themes context, connecting reports, Agent, DecisionSignal, and Web displays.
+- feat: Feishu supports report delivery as file attachments; Multi-Agent supports independent per-sub-Agent timeout clamps.
+- feat: Completed internal DSA Tool Surface, DecisionAgent divergence summary, and DecisionSignal profile contracts.
+- fix: Unified report action terminology, fixing batch deletion of history records by stock symbol and silent truncation of notification reasons.
+- fix: Improved stability for Web, desktop, data source caches, and release package assets.
 
-### 新功能
+### Features
 
-- 新增 A 股市场结构与题材主线上下文，并在报告、Agent、DecisionSignal 和 Web 市场位置卡中复用。
-- 飞书推送新增文件上传能力：`FeishuSender.send_feishu_file(file_path)` 通过 App Bot SDK (`im.v1.file.create`) 上传文件并发送文件消息；Webhook 模式回退为发送文件内容文本；新增 `FEISHU_SEND_AS_FILE=true` 配置开关，开启后飞书以文件形式发送报告而非文字消息。
-- 多 Agent 编排 Pipeline 新增子 Agent 独立超时钳位：支持 6 个环境变量为 TechnicalAgent、IntelAgent、RiskAgent、DecisionAgent、PortfolioAgent、SkillAgent 各自配置独立硬上限，互不挤占配额；默认 0 表示关闭钳位。
+- Added A-share market structure and sector main themes context, reused across reports, Agent, DecisionSignal, and Web market position cards.
+- Feishu notifications add file upload capability: `FeishuSender.send_feishu_file(file_path)` uploads and sends file messages via App Bot SDK (`im.v1.file.create`); Webhook mode falls back to text content; added `FEISHU_SEND_AS_FILE=true` toggle delivering reports as files.
+- Multi-Agent orchestration pipeline adds independent timeout clamps per sub-Agent: 6 environment variables configure independent hard ceilings for TechnicalAgent, IntelAgent, RiskAgent, DecisionAgent, PortfolioAgent, SkillAgent without competing for budget; defaults to 0 (disabled).
 
-### 改进
+### Improvements
 
-- 为 multi-agent DecisionAgent 增加内部低敏分歧摘要输入管线，作为 #1904 P1 解释输出的前置 plumbing；不改变 public API、dashboard schema 或最终解释字段。
-- GitHub Actions 每日分析工作流补齐 TickFlow 数据源环境变量映射，并收敛 README 数据源稳定性说明到完整指南。
-- Web 首页个股栏新增历史 / 自选 / 今日切换，保留历史分析默认视图，并支持在自选页一键分析全部或仅分析今日未覆盖股票、在今日页按评分查看当天分析排行；分块提交部分失败时保留已确认计数、停止后续提交并刷新任务列表。
-- GitHub Actions 每日分析工作流新增钉钉通知环境变量映射，支持在云端定时任务中直接使用钉钉机器人。
-- `STOCK_LIST` 自选股解析支持中文逗号、顿号、分号、空格和换行等常见粘贴分隔符，运行时、定时热刷新、CLI `--stocks`、Web 设置保存和自选 API 统一识别，并在写回时规范为英文逗号。
-- 新增 `NEWS_INTEL_AUTO_FETCH_ENABLED` 单开关，开启后个股分析、Agent 分析和大盘复盘会 fail-open 自动初始化并刷新 RSS/Atom/NewsNow 本地资讯池。
-- Web AI 建议页新增主股票上下文，复用最近分析和股票索引候选，并改进表现统计零样本说明。
-- DecisionSignal 将 `decision_profile` 升级为正式 nullable 字段，统一 same-profile 查询、去重、续期和失效语义，并保持 create metadata `null` 兼容与 SQLite 幂等回填诊断。
-- 设置页移动端分类导航改为横向滚动列表并保证设置内容首屏可见，桌面端保留分类说明并收紧字段布局层级与间距。
-- 新增 #1743 Phase 6a 内部 DSA Tool Surface 契约，统一工具 schema、stock scope fail-closed guard、结构化错误、审计摘要和脱敏诊断边界，并明确外部 AgentBackend 工具能力仍需 wire-level probe 证明。
-- `src/services/analysis_service.py` 在 `report` 详情层新增 `details.raw_result` 回填，补齐与 API/历史详情的报告载荷一致性；不改变 provider、model、Base URL 或配置迁移语义。
+- Added internal low-sensitivity divergence summary input pipeline for multi-agent DecisionAgent, serving as preliminary plumbing for #1904 P1 explanation outputs; public API, dashboard schema, and final explanation fields remain unchanged.
+- GitHub Actions daily analysis workflow maps TickFlow data source environment variables, consolidating README data source stability notes into full guide.
+- Web home stock column adds History / Watchlist / Today toggles, preserving history default view, supporting one-click analysis of all or uncovered watchlist stocks, and viewing same-day analysis rankings by score on Today page; partial batch failures preserve confirmed counts and refresh task list.
+- GitHub Actions daily analysis workflow adds DingTalk notification environment variable mapping, supporting DingTalk bot in cloud scheduled tasks.
+- `STOCK_LIST` parsing supports common paste delimiters including Chinese comma, enumeration comma, semicolon, space, and newline; recognized across runtime, scheduled refresh, CLI `--stocks`, Web settings, and watchlist API, normalizing to English commas on save.
+- Added `NEWS_INTEL_AUTO_FETCH_ENABLED` toggle; when enabled, stock analysis, Agent analysis, and market review fail-open to automatically initialize and refresh RSS/Atom/NewsNow local intel pool.
+- Web AI Suggestions page adds primary stock context, reusing recent analysis and stock index candidates, improving zero-sample performance explanations.
+- DecisionSignal upgrades `decision_profile` to formal nullable field, unifying same-profile queries, deduplication, renewals, and expiration semantics, maintaining create metadata `null` compatibility with SQLite idempotent backfill diagnostics.
+- Settings page mobile category navigation converted to horizontal scroll list ensuring content is visible on first screen; desktop retains category explanations while tightening layout hierarchy and spacing.
+- Added #1743 Phase 6a internal DSA Tool Surface contract, unifying tool schema, stock scope fail-closed guard, structured errors, audit summaries, and diagnostic boundaries, clarifying external AgentBackend capabilities still require wire-level proof.
+- `src/services/analysis_service.py` backfills `details.raw_result` at `report` detail layer, aligning payload consistency with API/history details without altering provider, model, Base URL, or config migration semantics.
 
-### 修复
+### Fixed
 
-- 按股票代码删除历史记录时分批清理全部匹配项，并拒绝空白代码，避免超过 10000 条后残留记录或无筛选删除。
-- 市场结构概念排行为空或超时时复用本轮负结果，避免批量个股分析重复请求同一概念排行数据源。
-- Windows/macOS 桌面后端打包显式收集并校验 AkShare `file_fold/calendar.json`，避免发行包因缺少交易日历 package data 导致热点题材和选股日线增强降级。
-- 邮件、Telegram 与报告共享的 DecisionSignal 摘要完整展示已脱敏的理由，避免固定 120 字符在句中无提示截断；Telegram 按最终 Markdown payload 长度安全分片。
-- 推送报告、Jinja 报告与历史 Markdown 导出复用 Web/API 的评分-action 口径：高分但旧 `operation_advice` 仍为持有且无降级原因时，建议文案与三类统计展示为买入；有明确 guardrail reason 时继续保留持有/观望。
-- WebUI 启动时显式 `--host` / `--port` 不再被 `.env` 中的 `WEBUI_HOST` / `WEBUI_PORT` 覆盖，未传 CLI 参数时统一使用解析后的运行时配置。
-- Web 首页今日状态与排行使用带时区偏移的历史时间戳和完整分页数据，在查询失败、跨服务器时区边界或任务完成刷新时保持安全且准确。
-- Web 首页 stock bar 刷新序列化：并发或乱序返回时仅最新请求可清除 `stockBarRefreshFailed`，避免旧响应覆盖任务完成后的刷新结果。
-- Web 持仓页首屏快照改用 `include_realtime=false` 快速估值，跳过逐票实时行情预取后先展示持仓列表，避免外部实时行情源变慢时长时间空白等待。
-- 修复任务状态接口重建报告动作字段时把合法情绪分 `0` 当成空值的问题，确保低分报告能按评分口径纠正为卖出建议。
-- 修复 Agent 流式回复在未收到完成事件就断开时被显示为“（无内容）”的问题，改为提示流式响应中断并保留用户消息。
-- 修复桌面端 `WEBUI_HOST=*` / `WEBUI_HOST=[::]` 会被原样传给端口探测和后端启动导致无法监听的问题，启动前分别规范化为 `0.0.0.0` / `::`。
+- Batch deletes history records by stock symbol across all matching items, rejecting blank symbols to prevent lingering records over 10,000 items or unfiltered deletion.
+- Market structure concept rankings reuse negative results within current turn on empty or timeout responses, preventing batch analysis from repeatedly requesting identical concept ranking providers.
+- Windows/macOS desktop packaging explicitly collects and validates AkShare `file_fold/calendar.json`, preventing release packages from degrading hotspot and screening daily bar enhancements due to missing calendar package data.
+- DecisionSignal summaries shared across email, Telegram, and reports display complete sanitized reasons, eliminating unprompted truncation at 120 characters; Telegram chunks safely by final Markdown payload length.
+- Push reports, Jinja reports, and history Markdown export reuse Web/API score-action mappings: high scores with legacy `operation_advice` set to hold without degradation reasons display as buy in suggestions and stats; retains hold/watch when explicit guardrail reasons exist.
+- WebUI startup explicit `--host` / `--port` no longer overridden by `.env` `WEBUI_HOST` / `WEBUI_PORT`, standardizing on resolved runtime config when CLI arguments are omitted.
+- Web home today status and rankings use timezone-offset historical timestamps and full pagination data, maintaining safety and accuracy across query failures, server timezone boundaries, and task completion refreshes.
+- Web home stock bar refresh serialized: latest requests clear `stockBarRefreshFailed` on concurrent or out-of-order returns, preventing older responses from overwriting post-completion refresh results.
+- Web portfolio page first-screen snapshot switches to `include_realtime=false` fast valuation, showing position list before prefetching per-stock real-time quotes to avoid long blank waits during slow external quote feeds.
+- Fixed task status endpoint treating valid sentiment score `0` as null when reconstructing report action fields, ensuring low-score reports correct to sell recommendations by scoring rules.
+- Fixed Agent streaming responses displaying as "(No content)" when disconnecting before completion event, prompting that streaming was interrupted while preserving user messages.
+- Fixed desktop `WEBUI_HOST=*` / `WEBUI_HOST=[::]` passed verbatim to port probing and backend launch preventing listening, normalizing to `0.0.0.0` / `::` before launch.
 
-### 文档
+### Documentation
 
-- 在 README 快速开始中补充行情数据源配置说明（`TUSHARE_TOKEN` / Longbridge），明确未配置时仍可使用 AkShare、Baostock、YFinance 等免费兜底源，并同步中英文完整指南。
+- Added market data source configuration instructions (`TUSHARE_TOKEN` / Longbridge) to README quick start, clarifying free fallbacks like AkShare, Baostock, and YFinance when unconfigured, synchronizing bilingual full guides.
 
 ## [3.25.0] - 2026-07-03
 
-### 发布亮点
+### Release Highlights
 
-- feat: 新增 `claude_code_cli`、`opencode_cli` generation-only 本地 CLI backend，并补齐生成后端状态诊断、预览、冒烟测试 API 和 Web 状态面板。
-- feat: 台股报告完整接入三大法人资料，覆盖报告渲染、LLM prompt、TWD 币别标示、收盘集合竞价识别和 fetcher 韧性加固。
-- feat: 新增钉钉群机器人通知、韩语报告输出和 AI 建议决策风格重评估预览。
-- feat: Agent `/chat/stream` 标准化 progress event，新增阶段开始/完成、pipeline timeout 和预算跳过语义。
-- fix: 修复桌面端 WebUI host/port 绑定、macOS Homebrew CLI PATH 诊断、Discord 长报告分片、AlphaSift 超时、yfinance 分红解析、A 股回测代码归一化等稳定性问题。
+- feat: Added `claude_code_cli` and `opencode_cli` generation-only local CLI backends, adding generation backend diagnostics, previews, smoke test APIs, and Web status panel.
+- feat: Taiwan stock reports fully integrate Big Three Institutional data across rendering, LLM prompts, TWD currency labeling, closing auction identification, and fetcher resilience.
+- feat: Added DingTalk group bot notifications, Korean report output, and AI suggestion decision style re-evaluation previews.
+- feat: Standardized Agent `/chat/stream` progress events, adding stage start/done, pipeline timeout, and budget skipped semantics.
+- fix: Fixed desktop WebUI host/port binding, macOS Homebrew CLI PATH diagnostics, Discord long report chunking, AlphaSift timeouts, yfinance dividend parsing, and A-share backtest symbol normalization.
 
-### 新功能
+### Features
 
-- 钉钉群机器人通知支持 `DINGTALK_WEBHOOK_URL` 和 `DINGTALK_SECRET`，并对长文本自动切片以适配 20KB 限制。
-- 报告输出语言新增韩语（`REPORT_LANGUAGE=ko`），覆盖个股报告、大盘复盘、Prompt 输出语言、决策护栏、通知模板标签与 Web 报告详情页文案。
-- 新增 `claude_code_cli` 与 `opencode_cli` generation-only 本地 CLI backend，保留 LiteLLM 默认路径、Agent 工具调用边界、per-preset extractor、最小 env allowlist 与结构化错误。
-- 新增生成后端状态、预览和冒烟测试 API，以及 Web 生成后端状态面板，区分轻量检查与 JSON 冒烟测试，并保持本地 CLI “仅生成、不支持问股工具调用”的边界。
-- Agent `/chat/stream` progress event 新增 `stage_start`、`stage_done`、`pipeline_timeout`、`pipeline_budget_skipped`，补齐阶段进度、超时和预算跳过语义。
-- 台股个股报告的 institution 区块展示 TWSE T86 / TPEx 三大法人原始买卖超净额，并将三大法人净买卖超表格注入 LLM 分析 prompt 作为台股筹码过滤器。
-- 新增 AI 建议决策风格重评估预览接口与页面预览。
+- DingTalk group bot notifications support `DINGTALK_WEBHOOK_URL` and `DINGTALK_SECRET`, chunking long text automatically to adhere to 20KB limit.
+- Added Korean report output language (`REPORT_LANGUAGE=ko`), covering stock reports, market reviews, prompt languages, decision guardrails, notification templates, and Web report details.
+- Added `claude_code_cli` and `opencode_cli` generation-only local CLI backends, preserving LiteLLM default paths, Agent tool call boundaries, per-preset extractors, minimal env allowlists, and structured errors.
+- Added generation backend status, preview, and smoke test APIs with Web status panel, distinguishing lightweight checks from JSON smoke tests, maintaining "generation only, no tool calling" boundaries.
+- Agent `/chat/stream` progress events add `stage_start`, `stage_done`, `pipeline_timeout`, `pipeline_budget_skipped`, completing stage progress, timeout, and budget skip semantics.
+- Taiwan stock report institution section displays raw TWSE T86 / TPEx Big Three Institutional net buy/sell volumes, injecting net buy/sell tables into LLM prompts as Taiwan market chip filters.
+- Added AI suggestion decision style re-evaluation preview endpoint and page preview.
 
-### 改进
+### Improvements
 
-- 台股三大法人 fetcher 增加并发缓存防击穿、TWSE/TPEx 分市场熔断、TPEx 日期保护和剩余 stage 预算复用，降低限流、端点故障和冷抓取超时带来的降级概率。
-- AlphaSift 默认依赖 pin 更新到 `9f522747caafd3c0b1ddb7e14d5cf44c8580b6cf`，接入 wrapper 数据源 caller-side timeout、东财直连限速/抖动、策略目录元数据和防守策略。
-- 选股任务状态轮询遇到可恢复超时时提示后台任务仍会自动重试，`.env.example` 补充相关超时调优项。
-- 收敛个股分析评分与 DecisionSignal action 口径，统一 80/60/40/20 分段，并在风控降级时记录 raw/adjusted score、final action 与原因。
-- Web 设置页左侧分类切换时仅在相关分类展示首次启动检查和 AlphaSift 辅助卡片，减少跨分类残留。
+- Taiwan Big Three Institutional fetcher adds concurrent cache anti-stampede, TWSE/TPEx market circuit breakers, TPEx date protection, and remaining stage budget reuse, reducing degradation from rate limits and cold timeouts.
+- Updated AlphaSift pinned dependency to `9f522747caafd3c0b1ddb7e14d5cf44c8580b6cf`, integrating wrapper data source caller-side timeouts, EastMoney direct rate limits/jitter, strategy catalog metadata, and defensive strategies.
+- Screening task status polling prompts that background tasks retry automatically on recoverable timeouts, adding timeout tuning parameters to `.env.example`.
+- Converged stock analysis scoring and DecisionSignal action thresholds into 80/60/40/20 tiers, recording raw/adjusted score, final action, and reasons on risk control degradation.
+- Web settings category switching displays first-launch checks and AlphaSift helper cards only within relevant categories, reducing cross-category visual remnants.
 
-### 修复
+### Fixed
 
-- 修复 Windows 桌面端启动后端时固定传入 `--host 127.0.0.1` 导致 `.env` 中 `WEBUI_HOST=0.0.0.0` 不生效、局域网无法访问 WebUI 的问题；桌面端仍默认使用 `127.0.0.1`，仅在显式配置 `WEBUI_HOST` 后按配置绑定。
-- 修复桌面端启动时 `.env` 中 `WEBUI_PORT` 与 Electron 自动选择端口不一致，导致窗口继续等待旧端口并连接超时的问题。
-- 修复 macOS 桌面端从 Finder/Dock 启动时后端 PATH 看不到 Homebrew Codex CLI 的问题，并明确 Codex CLI 主分析与 Agent LiteLLM 工具调用分流诊断。
-- 修复 Discord 长报告推送按 2000 字符上限分片逐段发送，遇到 429 限流会按 `retry_after`/`Retry-After` 有限重试，避免中途失败后只收到前半段报告。
-- 修复日股、韩股和台股 `market_phase` 收盘集合竞价识别，避免临近收盘阶段仍被标记为普通 `intraday`。
-- 修复 A 股个股分析遇到空 `belong_boards` 占位时不会继续补查所属板块、关联板块模块展示不稳定的问题。
-- 修复大盘复盘在 LLM 标题漂移或正文缺少板块段时，Web 与推送报告偶发缺少板块主线的问题。
-- 修复 Web 大盘复盘结构化数据成交额、指数点位、涨跌幅和高/低值格式化，避免浮点长尾或缺失值 `0.00` 直接展示。
-- 修复 Web 首页个股栏在 stock-bar 摘要字段缺失或动作建议无法归类时隐藏情绪分与建议标识的问题。
-- 修复 Web 设置页定时任务“立即执行一次”后台线程未传 `stock_codes` 导致任务崩溃的问题。
-- 修复 `opencode_cli` 静态指令，避免全局 JSON-only 约束影响 `generate_text()` 与大盘复盘自由文本输出。
-- 修复 yfinance 1.2.x 将 `Ticker.dividends` 返回为单列 DataFrame 时分红解析被丢弃的问题，恢复 TTM 每股分红与分红次数计算。
-- 修复台股财务金额币别标示，将 TWD 金额标注为“新台币”，避免在 A 股语境下误读为人民币。
-- 修复回测日线补全将 `605066.SH`、`SS605066`、`SS.605066` 等 A 股等价代码误向数据源请求 `SS605066`，导致回测数据不足的问题。
+- Fixed Windows desktop backend launch hardcoding `--host 127.0.0.1` causing `WEBUI_HOST=0.0.0.0` in `.env` to fail to bind across LAN; desktop defaults to `127.0.0.1`, binding to explicit config when `WEBUI_HOST` is set.
+- Fixed desktop launch mismatch between `.env` `WEBUI_PORT` and Electron auto-selected port, preventing windows from timing out while connecting to obsolete ports.
+- Fixed macOS desktop launched from Finder/Dock missing Homebrew Codex CLI in backend PATH, adding explicit diagnostics for Codex CLI primary analysis vs Agent LiteLLM tool routing.
+- Fixed Discord long report pushes chunking at 2000 character limits with finite retries on 429 rate limits via `retry_after`/`Retry-After`, avoiding partial report deliveries.
+- Fixed Japanese, Korean, and Taiwan stock `market_phase` closing auction recognition, preventing near-closing periods from being labeled as standard `intraday`.
+- Fixed A-share stock analysis failing to look up associated sectors upon encountering empty `belong_boards` placeholders, resolving unstable sector module displays.
+- Fixed market reviews intermittently missing sector themes in Web and push notifications when LLM titles drifted or body text lacked sector paragraphs.
+- Fixed Web market review structured data formatting for turnover, index points, price changes, and high/low values, avoiding floating-point long tails or literal `0.00` missing values.
+- Fixed Web home stock column hiding sentiment scores and suggestion badges when stock-bar summary fields were missing or actions could not be classified.
+- Fixed Web settings scheduled task "Run Once Immediately" background thread crashing due to omitted `stock_codes`.
+- Fixed `opencode_cli` static instructions, preventing global JSON-only constraints from breaking `generate_text()` and market review free text output.
+- Fixed yfinance 1.2.x dropping dividend parsing when `Ticker.dividends` returned single-column DataFrame, restoring TTM dividend per share and payout frequency calculations.
+- Fixed Taiwan stock financial currency labeling, designating TWD amounts as "New Taiwan Dollar" to avoid misreading as RMB in A-share contexts.
+- Fixed backtest daily bar backfilling requesting `SS605066` from data sources for equivalent A-share codes like `605066.SH`, `SS605066`, `SS.605066`, resolving insufficient backtest data.
 
-### 文档
+### Documentation
 
-- 新增 Agent `/chat/stream` progress event 契约文档，说明新增事件字段语义、Web 兼容边界、验证方式和回滚方式。
-- 同步本地 CLI backend 隐私/部署边界，明确 local CLI 不是离线模型，Docker/CI/远端需自行安装登录，DSA 不读取 Claude/OpenCode credential 文件。
-- 更新 README 三语入口和市场支持边界，说明台股 `.TW` / `.TWO`、三大法人报告区块、TWD 标注与收盘竞价识别能力边界。
+- Added Agent `/chat/stream` progress event contract documentation, clarifying new event fields, Web compatibility boundaries, validation, and rollback procedures.
+- Synchronized local CLI backend privacy and deployment boundaries, clarifying local CLIs are not offline models, requiring manual installation and login in Docker/CI/remote, with DSA never reading Claude/OpenCode credentials.
+- Updated README trilingual entries and market support boundaries, documenting Taiwan stock `.TW` / `.TWO`, Big Three Institutional report sections, TWD labeling, and closing auction detection.
 
-### 测试
+### Tests
 
-- 台股三大法人 fetcher 新增 live-smoke 脚本与 `@pytest.mark.network` 漂移检测测试，用于非阻断 network-smoke 定时任务核对 TWSE T86 / TPEx 核心字段与解析结果。
+- Added live-smoke script and `@pytest.mark.network` drift detection tests for Taiwan Big Three Institutional fetcher, validating TWSE T86 / TPEx core fields and parsing in non-blocking network-smoke scheduled runs.
 
 ## [3.24.1] - 2026-06-28
 
-### 修复
+### Fixed
 
-- 修正 Longbridge SDK 版本约束为按平台选择可安装版本，避免桌面与 Docker 发布在 `pip install -r requirements.txt` 时因不存在的 `0.2.75` 版本失败。
+- Corrected Longbridge SDK version constraints to select installable versions by platform, preventing desktop and Docker release failures during `pip install -r requirements.txt` caused by non-existent version `0.2.75`.
 
 ## [3.24.0] - 2026-06-28
 
-### 发布亮点
+### Release Highlights
 
-- feat: 扩展台股、日股、韩股市场支持，覆盖台股 suffix-only 分析、台股三大法人资料层、JP/KR 大盘复盘和跨服务市场枚举。
-- feat: 新增 GenerationBackend 抽象、`codex_cli` 本地 CLI backend、reserved Hermes 本地 HTTP 渠道和 prompt cache capability registry。
-- feat: Web/API/Desktop 支持多时间定时推送与 runtime scheduler 热重建，Web 设置页补齐首次启动检查与定时任务面板。
-- feat: 报告链路补齐信号归因、单股信号时间线、概念板块排行和通知/报告关联板块展示。
-- fix: 修复 Docker/启动探针、静态资源 MIME、回测空结果、组合估值、通知 Markdown、AlphaSift 数据源和测试环境隔离等稳定性问题。
+- feat: Expanded Taiwan, Japanese, and Korean stock market support, covering Taiwan suffix-only analysis, Taiwan Big Three Institutional data layer, JP/KR market reviews, and cross-service market enums.
+- feat: Added GenerationBackend abstraction, `codex_cli` local CLI backend, reserved Hermes local HTTP channel, and prompt cache capability registry.
+- feat: Supported multi-time scheduled pushes and hot-reload of runtime scheduler across Web/API/Desktop, adding first-launch check and scheduled task panel to Web settings.
+- feat: Enriched reporting pipeline with signal attribution, single-stock signal timeline, concept sector rankings, and notification/report associated sector displays.
+- fix: Fixed Docker/startup probes, static asset MIME types, empty backtest results, portfolio valuation, notification Markdown, AlphaSift data sources, and test environment isolation stability issues.
 
-### 新功能
+### Features
 
-- 新增台股 suffix-only 个股分析 MVP：`.TW`/`.TWO` 代码可走 YFinance 日线与近实时行情，并补齐市场识别、交易日历和 Prompt 能力边界。
-- 台股 `tw` 纳入 DecisionSignal、Portfolio、Intelligence 服务层、API 枚举和 Web 筛选，避免台股分析信号被市场归一化静默丢弃。
-- 新增台股三大法人资料层 fetcher `TwInstitutionalFetcher`，支持 TWSE/TPEx 来源、日期转换、单日缓存和 fail-open 退化。
-- 大盘复盘新增 `jp`/`kr` 市场，支持日经225/TOPIX、KOSPI/KOSDAQ 指数复盘，并扩展 `MARKET_REVIEW_REGION`、交易日过滤和 Web 设置枚举。
-- 新增 GenerationBackend Phase 1 抽象和显式 opt-in 的 `codex_cli` 本地 CLI generation backend，提供结构化错误、fallback、stream 降级和 usage unavailable contract。
-- 新增 reserved Hermes 本地 HTTP generation 渠道，提供 JSON generation、no-proxy 本地调用和 saved secret endpoint 绑定。
-- 新增 Provider Cache Capability Registry，按 provider、API surface、gateway 与 verification status 建模 prompt cache 能力。
-- 支持 `SCHEDULE_TIMES` 多时间定时推送，长运行 Web/API/Desktop 进程保存调度配置后可热启停或重建 runtime scheduler。
-- 新增信号归因分析和 Web AI 建议页单股信号时间线，并为自动生成与历史回填的 DecisionSignal 写入默认 `decision_profile` metadata。
-- 大盘复盘、Web 报告页和通知关联板块补齐概念板块排行与概念信号展示。
+- Added Taiwan stock suffix-only single-stock analysis MVP: `.TW`/`.TWO` symbols route to YFinance daily bars and near real-time quotes, completing market identification, trading calendar, and prompt boundaries.
+- Incorporated Taiwan market `tw` into DecisionSignal, Portfolio, Intelligence service layer, API enums, and Web filters, preventing Taiwan stock analysis signals from being silently discarded by market normalization.
+- Added Taiwan Big Three Institutional data layer fetcher `TwInstitutionalFetcher`, supporting TWSE/TPEx sources, date conversion, single-day caching, and fail-open degradation.
+- Added `jp`/`kr` markets to market review, supporting Nikkei 225/TOPIX and KOSPI/KOSDAQ index reviews, extending `MARKET_REVIEW_REGION`, trading day filtering, and Web settings enums.
+- Added GenerationBackend Phase 1 abstraction and explicit opt-in `codex_cli` local CLI generation backend, providing structured errors, fallback, stream degradation, and usage unavailable contracts.
+- Added reserved Hermes local HTTP generation channel, providing JSON generation, no-proxy local invocation, and saved secret endpoint binding.
+- Added Provider Cache Capability Registry, modeling prompt cache capabilities by provider, API surface, gateway, and verification status.
+- Supported `SCHEDULE_TIMES` multi-time scheduled pushes; long-running Web/API/Desktop processes hot-start/stop or rebuild runtime scheduler after saving scheduling configuration.
+- Added signal attribution analysis and single-stock signal timeline on Web AI Suggestions page, writing default `decision_profile` metadata for auto-generated and historical backfilled DecisionSignals.
+- Enriched market review, Web report page, and notification associated sectors with concept sector leaderboards and concept signal displays.
 
-### 改进
+### Improvements
 
-- TickFlow 扩展为可选 A 股日 K、实时行情、股票列表/名称数据源，并增加 count、完整性校验和批量预取缓存保护。
-- 硬化 JP/KR/TW suffix 识别、日韩股票种子索引、YFinance 报价/基本面上下文，以及 JP/KR Portfolio 与 Market Light 边界。
-- Web 设置页新增首次启动配置检查卡与定时任务面板，隐藏内部 `SCHEDULE_TIMES` 键，并改善重复任务提示的关闭与自动消失体验。
-- Web 历史报告详情不再内嵌 AI 建议卡片，结构化决策信号集中到 AI 建议页，并保留来源报告 ID/URL 参数精确定位。
-- `GENERATION_BACKEND=codex_cli` 下普通分析与大盘复盘不再因缺少 LiteLLM API Key 被误判不可用，并改用 `--output-last-message` 文件读取最终响应。
-- 本地 CLI backend 对 stdout/stderr 诊断预览和最终响应实行执行期总量上限，并补齐新增 generation backend 数字配置最大值校验。
-- AlphaSift 默认依赖 pin 更新到 `0a7b9cd59e81718f851890535241bc105d4ddc64`，并默认走 DSA EastMoney 兜底 provider、暴露 source health 诊断。
-- Docker Compose 默认内存建议提升到 1G；每日分析 workflow 兼容误将 `STOCK_LIST` 配到同名 Environment variables 的场景。
-- Agent 路径同步 signal attribution prompt，通知报告摘要不再展开 AI 决策信号明细，完整信号保留在个股详情与单股报告。
+- Expanded TickFlow as optional data source for A-share daily bars, real-time quotes, and stock lists/names, adding count, integrity validation, and batch prefetch cache protection.
+- Hardened JP/KR/TW suffix recognition, JP/KR stock seed index, YFinance quote/fundamental context, and JP/KR Portfolio and Market Light boundaries.
+- Added first-launch configuration check card and scheduled task panel to Web settings, hiding internal `SCHEDULE_TIMES` key and improving dismiss and auto-fade experience for duplicate task notices.
+- Web history report details no longer embed AI suggestion cards; structured decision signals consolidated into AI Suggestions page with source report ID/URL parameters for precise navigation.
+- Standard analysis and market review under `GENERATION_BACKEND=codex_cli` no longer falsely reported unavailable due to missing LiteLLM API Key, using `--output-last-message` file to read final response.
+- Local CLI backend enforces runtime cumulative cap on stdout/stderr diagnostic previews and final responses, adding maximum value validation for new generation backend numeric configs.
+- Updated default AlphaSift pinned dependency to `0a7b9cd59e81718f851890535241bc105d4ddc64`, routing to DSA EastMoney fallback provider by default and exposing source health diagnostics.
+- Increased Docker Compose default memory recommendation to 1G; daily analysis workflow accommodates scenarios where `STOCK_LIST` was configured in same-named Environment variables.
+- Synchronized signal attribution prompt across Agent paths; notification report summary no longer expands AI decision signal details, preserving full signals in stock details and single-stock reports.
 
-### 修复
+### Fixed
 
-- API 异步批量分析共享概念板块排行缓存，避免同批多股重复拉取全市场概念排行。
-- 修复通知 Markdown 表格转换在空单元格后将后续内容错配到错误表头的问题。
-- 修复 Market Light 区域归一化拒绝 `jp`/`kr`、日韩历史列表市场阶段摘要误传 `analysis_phase` 和默认通知报告缺少 `dashboard.phase_decision` 的问题。
-- 固定 Docker 可安装的 Longbridge SDK 版本为 0.2.75，并修复 Docker 镜像中 efinance 缓存目录属主导致 A 股数据源降级的问题。
-- 持仓快照今日估值改为受限并发预取实时价，减少持仓较多时 Web 组合页面刷新超时。
-- Web 首页重新分析完成后自动切换到同一股票最新报告，并修复 Windows 环境下 Web/Desktop 静态 JS 资源可能以 `text/plain` 返回导致黑屏的问题。
-- 修复 `--serve --schedule` 与 Web/API runtime scheduler 状态脱节、立即执行忙碌状态误提示、重建定时任务重复监听和启动参数语义丢失。
-- 修复 `main.py --serve-only` 在低配主机上因惰性 import 应用超出 uvicorn 启动自检窗口而反复重启的问题。
-- 修复 Web 回测未传分析日期范围、股票代码未归一化导致成功响应但结果为空的问题，并为空候选、行情不足和非法后缀提供诊断信息。
-- 修复 unsupported `GENERATION_BACKEND` 被当成空响应/模板 fallback、`codex_cli` stdout 重复计入输出上限和主分析 JSON schema fallback 语义回退的问题。
-- Docker 部署中 Web 设置页保存自定义 Webhook 模板时会转义 `$content_json` 等占位符，并在运行时还原，避免 Compose 重新部署展开为空。
+- API async batch analysis shares concept sector ranking cache, preventing redundant full-market concept ranking pulls for multiple stocks in the same batch.
+- Fixed notification Markdown table conversion misaligning content under incorrect headers following empty cells.
+- Fixed Market Light region normalization rejecting `jp`/`kr`, mispassing `analysis_phase` in JP/KR history market phase summaries, and missing `dashboard.phase_decision` in default notification reports.
+- Pinned Docker installable Longbridge SDK version to 0.2.75, fixing A-share data source fallback caused by efinance cache directory ownership in Docker image.
+- Portfolio snapshot today's valuation changed to concurrency-limited prefetching of real-time prices, reducing Web portfolio page refresh timeouts with large position counts.
+- Web homepage re-analysis automatically switches to latest report for the same stock upon completion; fixed issue where static JS assets in Windows Web/Desktop could return as `text/plain` causing blank screens.
+- Fixed state disconnect between `--serve --schedule` and Web/API runtime scheduler, false busy alerts during immediate execution, duplicate listeners on scheduled task rebuilds, and startup parameter semantic loss.
+- Fixed `main.py --serve-only` recurring restarts on low-resource hosts caused by lazy app imports exceeding uvicorn startup health-check window.
+- Fixed Web backtest returning empty results on successful responses when date range was omitted or stock symbol was unnormalized; provided diagnostics for empty candidates, insufficient market data, and invalid suffixes.
+- Fixed unsupported `GENERATION_BACKEND` being treated as empty response/template fallback, `codex_cli` stdout double-counting against output limit, and primary analysis JSON schema fallback semantic regression.
+- Web settings in Docker escapes placeholders like `$content_json` when saving custom Webhook templates and restores them at runtime, preventing empty expansion upon Compose redeployments.
 
-### 文档
+### Documentation
 
-- 补齐概念板块排行字段契约、通知报告行业/概念类型列展示和数据源稳定性与故障处理图示。
-- 补充 JP/KR/TW suffix-only MVP、`MARKET_REVIEW_REGION` 保存/校验/回退矩阵、Market Light 边界和 PR 提交流程约束。
-- 补充本地 CLI backend 隐私边界、非离线模型说明、Docker/CI 登录态限制和 `codex_cli` experimental/limited 状态。
-- 补充回测请求链路说明，并同步更新 `docs/full-guide.md` 与 `docs/full-guide_EN.md` 示例。
+- Completed concept sector leaderboard field contracts, notification report industry/concept type column displays, and data source stability and troubleshooting diagrams.
+- Added JP/KR/TW suffix-only MVP, `MARKET_REVIEW_REGION` save/validate/fallback matrix, Market Light boundaries, and PR submission process constraints.
+- Added local CLI backend privacy boundaries, non-offline model notes, Docker/CI login session constraints, and `codex_cli` experimental/limited status.
+- Added backtest request pipeline documentation, synchronizing examples in `docs/full-guide.md` and `docs/full-guide_EN.md`.
 
-### 测试
+### Tests
 
-- 新增/更新台股、JP/KR 大盘复盘、GenerationBackend、`codex_cli`、Hermes、本地 CLI、runtime scheduler、回测和概念板块排行相关回归测试。
-- 加强 `tests/test_analysis_api_contract.py`、`tests/test_analysis_history.py` 与 `tests/test_backtest_service.py` 的临时 `.env` 隔离，避免本地真实 `.env` 污染系统配置测试。
+- Added/updated regression tests for Taiwan stocks, JP/KR market reviews, GenerationBackend, `codex_cli`, Hermes, local CLI, runtime scheduler, backtests, and concept sector rankings.
+- Strengthened temporary `.env` isolation in `tests/test_analysis_api_contract.py`, `tests/test_analysis_history.py`, and `tests/test_backtest_service.py` to prevent local `.env` from contaminating system config tests.
 
 ## [3.23.0] - 2026-06-20
 
-### 发布亮点
+### Release Highlights
 
-- feat: DecisionSignal 贯通报告提取、Web 展示、反馈/后验、告警通知和组合风险，AI 建议信号进入可追踪闭环。
-- feat: 新增合规 RSS/Atom 与 NewsNow 资讯源情报池，分析、Agent 和大盘复盘可 fail-open 复用本地资讯 evidence。
-- feat: 新增日本/韩国 suffix-only 个股分析 MVP，支持 `.T`、`.KS`、`.KQ` 标的通过 YFinance 获取行情与技术上下文。
-- feat: 新增 Token 用量监控看板、legacy LLM usage telemetry 和 message stability audit，增强 LLM 调用可观测性。
-- fix: 修复运行流 live 状态、AlphaSift 缓存/字段兼容、发布说明诊断和日韩股票输入/历史展示等稳定性问题。
+- feat: DecisionSignal connects report extraction, Web display, feedback/backtesting, alert notifications, and portfolio risk, bringing AI recommendation signals into a trackable closed loop.
+- feat: Added compliant RSS/Atom and NewsNow news intelligence source pool; analysis, Agent, and market review can fail-open to reuse local intelligence evidence.
+- feat: Added Japan/Korea suffix-only stock analysis MVP, supporting `.T`, `.KS`, and `.KQ` tickers via YFinance for quote and technical context.
+- feat: Added Token Usage Monitoring Dashboard, legacy LLM usage telemetry, and message stability audit, improving LLM call observability.
+- fix: Fixed execution flow live state, AlphaSift cache/field compatibility, release notes diagnostics, and Japan/Korea stock input/history displays stability issues.
 
-### 新功能
+### Features
 
-- 个股分析历史成功保存后会从最终报告 best-effort 提取 `DecisionSignal` 决策信号，复用现有信号去重、计划质量计算和脱敏契约。
-- 新增 Web AI 建议页、持仓页 latest active 信号摘要、历史报告信号展示和更完整的信号详情卡片，展示评分、置信度、价格计划、催化、风险与失效条件。
-- 新增 DecisionSignal 用户反馈、信号级日线后验评估、统计 API 与 Web 展示，使用 outcome/feedback sidecar 表并保留主信号表契约。
-- 将 DecisionSignal 复用到告警、通知和组合风险：告警触发关联 latest active 信号或创建最小 alert 信号，通知追加低敏信号摘要，持仓风险聚合 active sell/reduce/alert 信号并保持 fail-open。
-- 新增合规 RSS/Atom 资讯源配置、拉取、去重、入库、查询、retention 与基础安全校验 API，作为个股/市场资讯情报池基线。
-- 资讯源新增 `newsnow` 类型、`NEWSNOW_BASE_URL` 配置和 `/api/v1/intelligence/sources/defaults` 默认源初始化接口，内置财联社热门、雪球热门股票、华尔街见闻快讯、金十数据和格隆汇事件等财经热点源。
-- 个股分析、Agent 分析和大盘复盘会 fail-open 读取本地资讯/情报池，并把来源链接作为新闻上下文和 evidence 输入。
-- 新增日本/韩国 suffix-only 个股分析 MVP：手输 `.T` / `.KS` / `.KQ` 代码可走 YFinance 日线与近实时行情，补充市场识别、交易日历、Prompt 语义、Web/API 类型和能力边界文档。
-- 新增 Token 用量监控看板与 `/api/v1/usage/dashboard` 接口，展示 LLM 调用总量、Prompt/Completion 拆分、模型用量、调用类型分布和最近调用明细。
+- After successful stock analysis history persistence, best-effort extracts `DecisionSignal` decision signals from final reports, reusing existing signal deduplication, price plan quality scoring, and sanitization contracts.
+- Added Web AI Suggestions page, portfolio page latest active signal summaries, historical report signal displays, and enriched signal detail cards, displaying scores, confidence, price plans, catalysts, risks, and invalidation conditions.
+- Added DecisionSignal user feedback, signal-level daily bar backtesting evaluation, statistics API, and Web displays, utilizing outcome/feedback sidecar tables while preserving primary signal table contracts.
+- Reused DecisionSignal across alerts, notifications, and portfolio risk: alert triggers link latest active signals or create minimal alert signals, notifications append low-sensitivity signal summaries, and portfolio risk aggregates active sell/reduce/alert signals with fail-open behavior.
+- Added compliant RSS/Atom news source configuration, fetching, deduplication, storage, querying, retention, and basic security validation APIs as stock/market intelligence pool baseline.
+- Added `newsnow` source type, `NEWSNOW_BASE_URL` configuration, and `/api/v1/intelligence/sources/defaults` default source initialization endpoint, pre-bundling financial news sources including CLS Hot, Xueqiu Hot Stocks, Wallstreetcn Alerts, Jin10 Data, and Gelonghui Events.
+- Stock analysis, Agent analysis, and market review fail-open to local intelligence pool, passing source links as news context and evidence inputs.
+- Added Japan/Korea suffix-only stock analysis MVP: manual entry of `.T` / `.KS` / `.KQ` tickers routes to YFinance daily bars and near real-time quotes, completing market identification, trading calendars, prompt semantics, Web/API types, and capability boundary documentation.
+- Added Token Usage Monitoring Dashboard and `/api/v1/usage/dashboard` API, displaying total LLM calls, Prompt/Completion split, model usage, call type distribution, and recent call details.
 
-### 改进
+### Improvements
 
-- 为 `DecisionSignal` 补齐默认生命周期、同源窄 relaxed 去重、相反 active 信号自动 invalidated、terminal 状态不可 PATCH 复活和低敏 market phase hints 提取。
-- 补充 Web decision-signals typed API wrapper 与契约隔离测试，并将历史报告 AI 建议查询收口到精确报告懒提取。
-- DSA 数据源链路新增 Tencent 日 K 直连 fetcher、daily source health 短期熔断，并升级 AlphaSift 默认 pin/runtime bridge。
-- 默认启用 `DAILY_SOURCE=auto`、Sina snapshot 优先级、候选级 quote context 与 LLM ranking timeout/max tokens 边界。
-- 新增 legacy LLM usage provider/cache telemetry、message HMAC 诊断字段和普通个股分析 legacy message stability audit，不改变公开 Usage API、prompt 或 provider 参数。
-- 问股页移动端策略选择改为默认收起的按钮入口，展开后仍可多选策略并在发送后自动收起，减少对对话内容的遮挡。
+- Completed default lifecycle, same-source narrow relaxed deduplication, automatic invalidation of opposing active signals, terminal state non-revivable PATCH, and low-sensitivity market phase hints extraction for `DecisionSignal`.
+- Supplemented Web decision-signals typed API wrapper and contract isolation tests, converging historical report AI suggestion queries to precise report lazy extraction.
+- DSA data source pipeline added direct Tencent daily K fetcher, daily source health short-term circuit breaker, and upgraded default AlphaSift pin/runtime bridge.
+- Enabled `DAILY_SOURCE=auto`, Sina snapshot priority, candidate-level quote context, and LLM ranking timeout/max tokens boundaries by default.
+- Added legacy LLM usage provider/cache telemetry, message HMAC diagnostic fields, and standard stock analysis legacy message stability audit, without changing public Usage API, prompt, or provider parameters.
+- Stock query mobile strategy selection changed to collapsed button trigger by default, expanding to allow multi-strategy selection and auto-collapsing after sending, reducing conversational screen obstruction.
 
-### 修复
+### Fixed
 
-- 修复运行流 live SSE 脱敏、后期 LLM/通知卡片重复、数据源聚合卡片过早成功、Web 首页窄侧栏挤压股票信息，以及个股分析自动生成大盘上下文时运行诊断互相串扰的问题。
-- 修复 AlphaSift 热点题材 EastMoney 瞬断且无缓存时的空态、桌面更新热点缓存保留，以及 `leader_stocks` / `stocks` 双字段兼容问题。
-- 修复 Web AI 建议页筛选/状态更新分页、价格计划单边入场价展示、持仓 latest 信号刷新、详情 JSON 安全渲染和卡片交互语义问题。
-- 仅允许历史报告存在明确 `action` 或可解析动作时才触发决策信号懒回填，避免 `decision_type=hold` 等统计口径在建议不明确场景误回填。
-- 修复 #1390 P6 DecisionSignal 在组合风险快照语义和默认聚合通知展示中的遗漏。
-- 默认禁用 `/api/v1/intelligence/sources/defaults` 新建源，避免公开示例 NewsNow 实例被默认启用，同时统一 500 响应细节仅入日志、响应返回通用错误信息。
-- Web 股票自动补全、输入校验、历史/任务展示和筛选补齐日韩 Yahoo 后缀代码、常用日韩股票索引与股票池裸码解析，避免 `000660`、`005930`、`7203.T`、`005930.KS`、`035720.KQ` 等场景崩溃、误入 A 股语义或历史分裂展示。
-- 日韩个股分析在本地历史上下文缺失时会用 YFinance 日线兜底构造 K 线与技术指标上下文，避免报告误称日股/韩股核心行情和技术数据不可用。
-- 发布说明生成查询 PR 作者失败时保留降级并输出包含 PR 编号和异常类型的 warning，便于排查 token、权限、网络或 GitHub API 异常。
+- Fixed execution flow live SSE sanitization, late LLM/notification card duplication, premature data source aggregation card success, Web homepage narrow sidebar compressing stock info, and runtime diagnostic crosstalk when stock analysis auto-generates market context.
+- Fixed AlphaSift hotspot topic empty state during EastMoney intermittent dropouts without cache, desktop update hotspot cache retention, and `leader_stocks` / `stocks` dual-field compatibility.
+- Fixed Web AI Suggestions page filtering/status update pagination, price plan single-sided entry price display, portfolio latest signal refresh, detail JSON secure rendering, and card interaction semantics.
+- Restricted historical report lazy backfill triggers to explicit `action` or parseable actions, preventing mis-backfills under unclear advice for statistical criteria like `decision_type=hold`.
+- Fixed #1390 P6 DecisionSignal omission in portfolio risk snapshot semantics and default aggregated notification displays.
+- Disabled `/api/v1/intelligence/sources/defaults` new sources by default to prevent public sample NewsNow instances from being enabled by default; unified 500 error details to logs only, returning generic error messages in responses.
+- Web stock auto-complete, input validation, history/task displays, and screening completed Japan/Korea Yahoo suffix codes, popular Japan/Korea stock indices, and bare code parsing, preventing crashes, accidental A-share routing, or split history displays for `000660`, `005930`, `7203.T`, `005930.KS`, `035720.KQ`.
+- Japan/Korea stock analysis falls back to YFinance daily bars to construct K-line and technical indicator context when local history is missing, preventing reports from erroneously stating core quote and technical data are unavailable.
+- Release notes generation query PR author failure retains fallback and outputs warnings containing PR numbers and exception types for troubleshooting tokens, permissions, networks, or GitHub API errors.
 
-### 文档
+### Documentation
 
-- README、完整指南和市场支持文档补充日股/韩股示例（`7203.T`、`005930.KS`），并明确 `.T/.KS/.KQ` 当前为 YFinance-only MVP。
-- 新增 DecisionSignal 决策信号专题文档，补齐字段/API/Web/告警通知/组合风险/后验评估、脱敏、迁移与回滚说明，并收口 Web i18n 显示边界。
-- 补充 AlphaSift 迁移与回退边界：明确 `ALPHASIFT_INSTALL_SPEC` 显式覆盖语义、`requirements.txt + DEFAULT_ALPHASIFT_INSTALL_SPEC` 与运行时兼容边界。
-- 补充资讯源基线文档，说明 `NEWS_INTEL_*` 配置、NewsNow 自建建议、模型/provider/base URL 不变更边界，以及禁用或移除情报源变量的回退路径。
+- README, Full Guide, and market support documentation supplemented Japan/Korea stock examples (`7203.T`, `005930.KS`), clarifying `.T/.KS/.KQ` as currently YFinance-only MVP.
+- Added DecisionSignal specialized documentation, completing fields, API, Web, alert notifications, portfolio risk, posterior evaluation, sanitization, migration, and rollback notes, converging Web i18n display boundaries.
+- Documented AlphaSift migration and rollback boundaries: clarified `ALPHASIFT_INSTALL_SPEC` explicit override semantics, `requirements.txt + DEFAULT_ALPHASIFT_INSTALL_SPEC`, and runtime compatibility boundaries.
+- Documented news intelligence source baseline, explaining `NEWS_INTEL_*` configurations, NewsNow self-hosted recommendations, model/provider/base URL non-mutation boundaries, and rollback paths for disabling or removing intelligence variables.
 
-### 测试
+### Tests
 
-- 新增/更新 DecisionSignal 服务、提取、反馈/后验、摘要、文档、通知、告警、持仓风险、Web 展示和 label 的回归覆盖。
-- 新增/更新 RSS/Atom / NewsNow 情报源服务、API、安全校验、分析接入和配置兼容测试。
-- 新增/更新日韩市场识别、股票索引、YFinance 行情兜底、Web 自动补全和输入校验测试。
-- 新增/更新 LLM usage、运行流、AlphaSift、发布说明生成和移动端交互相关回归。
+- Added/updated regression coverage for DecisionSignal service, extraction, feedback/evaluation, summaries, documentation, notifications, alerts, portfolio risk, Web display, and labels.
+- Added/updated RSS/Atom / NewsNow intelligence source service, API, security validation, analysis integration, and configuration compatibility tests.
+- Added/updated Japan/Korea market identification, stock indices, YFinance quote fallback, Web auto-complete, and input validation tests.
+- Added/updated regressions for LLM usage, execution flow, AlphaSift, release notes generation, and mobile interactions.
 
 
 ## [3.22.0] - 2026-06-13
 
-### 发布亮点
+### Release Highlights
 
-- feat: 新增 DecisionSignal 独立存储与 API、运行流快照 API 和 Web 运行流视图，补齐建议动作结构化字段与历史/回测展示链路。
-- feat: AlphaSift 热点题材链路升级为新版合约，支持热点榜单、题材详情、发酵路线、概念股详情、缓存与兜底数据源。
-- feat: 个股分析默认注入当日大盘环境摘要，并在高风险/退潮环境下软化激进买入建议。
-- fix: 修复问股历史追问标的上下文、自选股等价代码匹配、低质量新闻过滤、运行流脱敏与 AlphaSift 热点详情展示等稳定性问题。
+- feat: Added independent DecisionSignal storage and API, execution flow snapshot API, and Web execution flow view, completing recommended action structured fields and history/backtest display pipelines.
+- feat: AlphaSift hotspot topic pipeline upgraded to new contract, supporting hotspot leaderboards, topic details, development routes, concept stock details, caching, and fallback data sources.
+- feat: Stock analysis injects same-day market environment summary by default, softening aggressive buy recommendations in high-risk/declining market environments.
+- fix: Fixed stability issues including stock query follow-up target context, watchlist equivalent symbol matching, low-quality news filtering, execution flow sanitization, and AlphaSift hotspot detail displays.
 
-### 新功能
+### Features
 
-- 新增独立 `DecisionSignal` 存储、Repository、Service 与 `/api/v1/decision-signals` API，支持来源/市场/股票/动作/期限/阶段去重、查询、续期、状态更新、懒过期、持仓过滤和敏感信息脱敏。
-- 新增分析任务与历史报告运行流快照 API，提供 lanes、nodes、edges、events、summary 等统一契约，并从任务队列、运行诊断和 AnalysisContextPack overview 构建脱敏数据流/信息流。
-- Web 端为活跃任务、历史报告和大盘复盘报告补充运行流视图入口，支持查看运行摘要、拓扑节点、事件流和基础排障详情。
-- 新增 AlphaSift 热点题材链路：后端提供 `/api/v1/alphasift/hotspots` 与 `/api/v1/alphasift/hotspots/{topic}` API，Web 选股页新增热点题材区域并支持发酵路线与概念股查看。
+- Added independent `DecisionSignal` storage, Repository, Service, and `/api/v1/decision-signals` API, supporting deduplication, queries, renewals, status updates, lazy expiration, portfolio filtering, and sensitive data sanitization by source/market/stock/action/horizon/phase.
+- Added execution flow snapshot API for analysis tasks and historical reports, offering unified contracts (lanes, nodes, edges, events, summary) and building sanitized data/information flows from task queue, diagnostics, and AnalysisContextPack overview.
+- Web added execution flow view entry points for active tasks, historical reports, and market reviews, supporting review summaries, topology nodes, event streams, and basic troubleshooting details.
+- Added AlphaSift hotspot topic pipeline: backend provides `/api/v1/alphasift/hotspots` and `/api/v1/alphasift/hotspots/{topic}` APIs; Web stock picker adds hotspot topic area supporting development routes and concept stock inspection.
 
-### 改进
+### Improvements
 
-- 个股分析新增按当日/市场复用的大盘环境摘要，普通 Pipeline 与 Agent 分析 Prompt 可读取低敏大盘背景；新增默认开启的 `DAILY_MARKET_CONTEXT_ENABLED` 配置，用户仍可显式关闭。
-- 个股分析与历史/回测展示新增可选八态 `action` / `action_label` 建议动作字段，保留 `operation_advice` 自由文本和 `decision_type=buy|hold|sell` 统计口径。
-- 补充 Web decision-signals typed API wrapper 与契约隔离测试，暂不接入 UI。
-- 完善运行时日志上下文，补充 logger name、触发来源、市场统计与实时行情预取链路状态，便于排查调度、API、Bot 和数据源降级路径。
-- 持仓管理页新增持仓账户删除入口，复用现有账户软删除接口，误建账户会从默认列表、快照、风险、录入入口和事件列表隐藏且不物理清理历史流水。
-- AlphaSift 依赖锁定更新到 `d038c52c468543726fc1fd830b53c27d3f09d6da`，并为新版 last-good snapshot、日线历史、行业/概念 provider cache、hotspot 榜单、题材发酵路线、概念股详情、上次成功热点缓存与 post-analysis 元信息补齐 DSA 运行期和 Web 适配。
-- AlphaSift 热点题材读取默认优先使用上次成功缓存，手动刷新才实时拉取并覆盖缓存，实时拉取失败时尽量回退旧缓存。
-- AlphaSift 热点题材区域改为默认折叠，展开并选中具体题材后再读取详情；发酵路线改为带时间标记的时间线展示，概念股可点击进入首页并直接启动分析。
-- AlphaSift 热点题材数据链路复用同一次东方财富板块异动快照，并从真实涨跌幅、异动次数和高频个股推导趋势分、持续分、阶段与龙头样本。
-- AlphaSift 热点题材刷新在合约层返回少量或缺少关键字段时改用 DSA 东方财富板块异动直连榜单，忽略少于 3 条的本地热点缓存，并补齐板块兜底字段。
-- AlphaSift 热点题材卡片改为更紧凑的多列布局，概念股列表改为独立“分析”按钮触发个股分析；详情优先合并东方财富成分股、同花顺解析和板块异动龙头兜底并按日聚合发酵时间线。
-- AlphaSift 热点题材详情新增 DSA 侧 30 分钟磁盘缓存，重复点开同一题材时复用发酵时间线与概念股详情；题材事件仅展示 AlphaSift 合约时间线、同花顺摘要、已配置新闻搜索或东财板块异动等真实来源。
-- AlphaSift 热点题材消息催化改为摘要展示：配置 LLM 时优先压缩为一句题材催化摘要，未配置或调用失败时回退本地短摘要。
-- AlphaSift 热点题材列表新增可选 `include_details` 详情预取，Web 默认随热点列表批量带回 Top 题材发酵路线与概念股并复用前端内存缓存；新闻催化在 LLM 不可用时改为本地事件归纳。
-- 改造 `main.py --webui-only` 启动行为：若 FastAPI 监听端口已被占用，启动即 fail-fast 抛出明确错误并退出。
+- Stock analysis adds same-day/market reusable market environment summary; standard pipeline and Agent prompts read low-sensitivity market background; added `DAILY_MARKET_CONTEXT_ENABLED` enabled by default, user-configurable to disable.
+- Stock analysis and history/backtest displays add optional eight-state `action` / `action_label` recommended action fields, preserving `operation_advice` free text and `decision_type=buy|hold|sell` statistical metrics.
+- Completed Web decision-signals typed API wrapper and contract isolation tests, not yet connected to UI.
+- Enhanced runtime logging context with logger name, trigger source, market statistics, and live quote prefetch status, facilitating troubleshooting across scheduler, API, Bot, and fallback paths.
+- Portfolio management page adds portfolio account deletion entry point, reusing existing account soft-delete endpoint; miscreated accounts hidden from default list, snapshots, risk, entry forms, and event lists without purging historical ledger.
+- Updated AlphaSift dependency pin to `d038c52c468543726fc1fd830b53c27d3f09d6da`, adapting DSA runtime and Web for new last-good snapshot, daily history, industry/concept provider cache, hotspot leaderboard, development routes, concept stock details, cached hotspots, and post-analysis metadata.
+- AlphaSift hotspot reading prioritizes last successful cache by default, pulling live and updating cache only on manual refresh, falling back to old cache on live pull failures.
+- AlphaSift hotspot topic area collapsed by default, fetching details only when expanded and specific topic is selected; development routes displayed as timeline with timestamps; concept stocks clickable to launch home analysis.
+- AlphaSift hotspot data pipeline reuses same EastMoney sector anomaly snapshot, deriving trend score, persistence score, phase, and leading stock samples from real price changes, anomaly counts, and high-frequency stocks.
+- AlphaSift hotspot refresh falls back to DSA EastMoney sector anomaly direct leaderboard when contract returns few or missing key fields, ignoring local hotspot caches under 3 items and populating sector fallback fields.
+- AlphaSift hotspot cards converted to compact multi-column layout; concept stock list adds standalone "Analyze" button to trigger analysis; details merge EastMoney constituents, TongHuaShun analysis, and sector anomaly leader fallbacks, aggregating daily timelines.
+- AlphaSift hotspot details add DSA-side 30-minute disk cache, reusing timeline and concept stock details when reopening same topic; events display authentic sources only (AlphaSift contract timeline, TongHuaShun summaries, configured news search, EastMoney anomalies).
+- AlphaSift hotspot news catalyst converted to summary display: compresses into single-sentence catalyst summary when LLM is configured, falling back to local short summary when unconfigured or invocation fails.
+- AlphaSift hotspot list adds optional `include_details` prefetch; Web batches top topic development routes and concept stocks with hotspot list by default, reusing frontend memory cache; news catalyst falls back to local event summary when LLM is unavailable.
+- Refactored `main.py --webui-only` startup behavior: fails fast with clear error and exits immediately if FastAPI port is already occupied.
 
-### 修复
+### Fixed
 
-- 问股从历史报告进入后的追问会持续携带当前标的，切回或重载已有会话时可从历史消息恢复基础当前标的，并由后端阻断未明确切换时的错误股票工具调用、交易所片段和指标缩写误路由。
-- 自选股加入和删除按等价股票代码匹配港股及大小写美股变体，避免 `00700`、`HK00700`、`00700.HK` 或 `aapl`、`AAPL` 被误判为不同标的。
-- 收紧建议动作 legacy fallback：否定/回避表达、中文金融上下文、`buy or sell`、多 guard 歧义文本以及英文复合词不再误渲染成 action badge；有结构化 `action` 时回测/历史趋势等入口按界面语言显示 action 标签。
-- 股票新闻与多维情报搜索在相关度排序后新增域名无关的准入过滤，剔除下载/安装包/应用评分页及成人/招嫖服务垃圾页，并在同批已有有效标的/行业候选时移除 `score=0` 背景填充项。
-- 修复历史报告运行流快照在混合时区事件时间戳下返回 500 的问题。
-- 修复运行流 live SSE 事件未复用快照层递归脱敏规则的问题，避免本地路径、prompt/raw response、代理头等敏感诊断字段在 refetch 前短暂暴露。
-- AlphaSift 热点题材默认加载在无缓存且旧适配层缺少 `alphasift.hotspot` 模块时返回空态，不再一打开选股页就显示 AlphaSift 未就绪；手动刷新仍会提示依赖需更新。
-- 为 THS 发酵路线补充列名兜底：当 `stock_board_concept_summary_ths` 返回缺列时仅跳过该来源富化，不影响热点题材详情 API 返回。
-- 桌面发布打包改用冻结可执行文件运行时探针校验 `alphasift.dsa_adapter`，避免 macOS PyInstaller 将模块内嵌进可执行文件时被文件系统/zip 扫描误判为缺失。
-- AlphaSift 热点题材详情展示改为优先使用后端融合后的 `route`，避免旧 `timeline` 覆盖新闻/LLM 摘要；手动刷新热点榜单时会同步绕过同题材详情缓存。
+- Follow-up questions in chat entering from historical reports retain current target; restoring existing sessions recovers base target, blocking incorrect stock tool calls, exchange fragments, and indicator routing when unswitched.
+- Watchlist addition and deletion match Hong Kong stocks and case-insensitive US stock variants by equivalent symbols, avoiding `00700`, `HK00700`, `00700.HK` or `aapl`, `AAPL` being misjudged as distinct targets.
+- Tightened recommended action legacy fallback: negative/avoidance phrases, Chinese financial context, `buy or sell`, multi-guard ambiguous text, and English compound words no longer misrendered as action badges; backtest/trend displays show action labels by UI language when structured `action` is present.
+- Stock news and multidimensional intel search add domain-agnostic gating filter after relevance ranking, eliminating download/installer/app rating pages and adult/spam spam sites, dropping `score=0` background padding when valid target/industry candidates exist.
+- Fixed historical report execution flow snapshot returning 500 under mixed-timezone event timestamps.
+- Fixed live execution flow SSE events not reusing snapshot-level recursive sanitization rules, preventing local paths, prompt/raw responses, and proxy headers from brief exposure before refetch.
+- AlphaSift hotspot default loading returns empty state when un-cached and old adapter lacks `alphasift.hotspot` module, preventing premature "AlphaSift not ready" errors on opening stock picker; manual refresh still prompts for dependency updates.
+- Added column fallbacks for TongHuaShun development routes: skips source enrichment without breaking hotspot detail API response when `stock_board_concept_summary_ths` returns missing columns.
+- Desktop release packaging uses frozen executable runtime probe to verify `alphasift.dsa_adapter`, preventing macOS PyInstaller embedded modules from false missing detections via filesystem/zip scans.
+- AlphaSift hotspot details prioritize backend-fused `route`, preventing old `timeline` from overwriting news/LLM summaries; manual refresh bypasses detail cache for same topic.
 
-### 文档
+### Documentation
 
-- README 与繁中 README 快速开始入口补充视频教程链接，并将桌面客户端入口文案调整为客户端配置教程。
-- 补充 `docs/alphasift-integration.md`：明确 AlphaSift 锁定 commit 来源、Hotspot 契约边界、LLM/LiteLLM 兼容语义与关闭开关下回退路径。
-- 补充 #1381 运行时范围、兼容边界、官方语义依据与常规发布回滚说明。
+- Added video tutorial link to quick start in README and Traditional Chinese README; updated desktop client entry copy to client configuration tutorial.
+- Added `docs/alphasift-integration.md`: clarified AlphaSift locked commit origin, Hotspot contract boundaries, LLM/LiteLLM compatibility semantics, and fallback paths when disabled.
+- Documented #1381 runtime scope, compatibility boundaries, official semantic basis, and standard release rollback instructions.
 
-### 测试
+### Tests
 
-- 覆盖 #1381 后端 runtime 与兼容核验：`tests/test_main_schedule_mode.py`、`tests/test_pipeline_daily_market_context.py`、`tests/test_daily_market_context.py`、`tests/test_daily_market_context_guardrail.py`、`tests/test_agent_executor.py`、`tests/test_config_env_compat.py`、`tests/test_config_registry.py` 与 `apps/dsa-web/tests/system_config_i18n.test.ts`。
-- 新增/更新 AlphaSift 后端回归：`python -m pytest tests/test_alphasift_api.py -q`、`python -m pytest tests/test_docker_entrypoint.py -q`、`python -m pytest tests/test_main_schedule_mode.py -q -k "start_api_server_fails_before_thread_when_port_is_busy"`。
+- Verified #1381 backend runtime and compatibility: `tests/test_main_schedule_mode.py`, `tests/test_pipeline_daily_market_context.py`, `tests/test_daily_market_context.py`, `tests/test_daily_market_context_guardrail.py`, `tests/test_agent_executor.py`, `tests/test_config_env_compat.py`, `tests/test_config_registry.py`, and `apps/dsa-web/tests/system_config_i18n.test.ts`.
+- Added/updated AlphaSift backend regressions: `python -m pytest tests/test_alphasift_api.py -q`, `python -m pytest tests/test_docker_entrypoint.py -q`, `python -m pytest tests/test_main_schedule_mode.py -q -k "start_api_server_fails_before_thread_when_port_is_busy"`.
 
 ## [3.21.0] - 2026-06-07
 
-### 发布亮点
+### Release Highlights
 
-- feat: 新增 Web UI 中英文界面语言切换和飞书 App Bot 通知模式，提升多人部署和企业通知场景体验。
-- feat: 大盘复盘报告、历史入口和个股栏继续收口到结构化数据与统一 Markdown/GFM 渲染，Web/API 人工触发入口不再被交易日 gate 短路。
-- feat: AlphaSift 选股链路改为可恢复后台任务，并完善 DSA LLM runtime bridge、默认适配层预置和兼容回归。
-- fix: 修复英文界面残留中文、诊断展示、运行时环境变量展示、健康检查、桌面更新路径、工作流变量读取和多处 Web 窄布局问题。
+- feat: Added Web UI Chinese/English language toggle and Feishu App Bot notification mode, improving multi-user deployment and enterprise notification experiences.
+- feat: Market review reports, historical entries, and stock bar converged to structured data and unified Markdown/GFM rendering; Web/API manual triggers no longer short-circuited by trading day gate.
+- feat: AlphaSift screening pipeline converted to resumable background tasks, completing DSA LLM runtime bridge, default adapter pre-bundling, and compatibility regressions.
+- fix: Fixed residual Chinese in English interface, diagnostic displays, runtime env var displays, health checks, desktop update paths, workflow variable resolution, and multiple Web narrow layout issues.
 
-### 新功能
+### Features
 
-- WebUI 新增独立界面语言状态与中英文切换入口，覆盖主导航、首页、登录、设置页和通用控件文案；UI 语言与 `report_language` 解耦，不改写报告语言链路。
-- 飞书通知新增应用机器人（App Bot）模式，支持通过 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_CHAT_ID` 配置，无需额外创建自定义机器人。
-- Web 大盘复盘报告新增专用展示视图，历史入口和首页即时结果统一使用 Markdown/GFM 渲染并隐藏个股专属模块。
-- 大盘复盘新增结构化 `market_review_payload`，Web、历史详情和推送统一基于结构化数据渲染，并保留 Markdown 兼容展示。
-- 新增默认关闭的 AlphaSift 选股页签，通过 `ALPHASIFT_ENABLED` 明确控制，并保留 `/install` 作为显式修复路径。
+- WebUI added independent interface language state and Chinese/English toggle across main navigation, home, login, settings, and common widgets; UI language decouples from `report_language` without modifying report language pipeline.
+- Feishu notifications added App Bot mode, supporting configuration via `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_CHAT_ID` without creating custom webhooks.
+- Web market review report added dedicated view; historical entries and home immediate results uniformly render via Markdown/GFM, hiding single-stock-specific modules.
+- Market review added structured `market_review_payload`; Web, historical details, and pushes render based on structured data while retaining Markdown compatibility.
+- Added default-off AlphaSift screening tab, controlled via `ALPHASIFT_ENABLED`, retaining `/install` as explicit repair path.
 
-### 改进
+### Improvements
 
-- Web/API 大盘复盘人工触发入口不再因交易日检查或相关市场休市而短路跳过；定时任务、GitHub Actions 手动运行和 CLI 默认入口仍保持原交易日 gate。
-- AlphaSift Web 选股改为后台任务提交与状态轮询，新增可恢复任务状态展示，避免外部快照、行情或 LLM 变慢时浏览器长请求超时。
-- AlphaSift 选股 API 与服务层收敛到 `AlphaSiftService`，endpoint 仅做路由参数接收与错误映射。
-- AlphaSift 与 DSA 的运行时 LLM 兼容桥接改为调用期注入，保留 `provider/model/base_url/custom headers/fallback` 语义链路，不做持久化迁移。
-- Web 首页侧栏不再单独展示大盘复盘历史集合，最新大盘复盘作为 `MARKET` 并入个股栏，按最近分析时间参与排序，并复用个股栏的选择、删除、完整报告与历史趋势查看能力。
-- 多股通知报告将市场阶段收敛为总览下方单行 `市场状态`，不再在每只股票摘要下重复展示数据质量和限制详情。
-- API 错误响应构造收敛到共享 helper，保持既有错误 envelope 形状并降低 endpoint 重复代码。
-- WebUI 绑定公网地址或 CORS 全开放且未启用管理员认证时新增运行时 warning；仅增加可观测性，不阻断启动、不改写配置。
-- 数据库初始化新增 `schema_migrations` baseline 标记表与幂等记录，用于后续 schema 演进追踪；不迁移、不清理、不改写既有业务表数据。
-- #1386 P6 复用市场阶段与 AnalysisContextPack 公开摘要联动告警、持仓手动分析、历史、回测和通知展示，不新增数据库迁移。
+- Web/API market review manual trigger no longer short-circuits due to trading day checks or market holidays; scheduled tasks, GitHub Actions manual runs, and CLI defaults preserve original trading day gates.
+- AlphaSift Web screening switched to background task submission and status polling with resumable status displays, avoiding browser timeout on slow external snapshots, quotes, or LLMs.
+- AlphaSift screening API and service layer converged to `AlphaSiftService`, with endpoints handling routing parameter reception and error mapping only.
+- AlphaSift and DSA runtime LLM compatibility bridge injected during invocation, preserving `provider/model/base_url/custom headers/fallback` semantics without persistent migration.
+- Web home sidebar no longer displays market review history separately; latest review merges into stock bar as `MARKET`, sorted by analysis timestamp and reusing selection, deletion, full report, and trend views.
+- Multi-stock notification reports consolidate market phase into a single `Market Status` line under overview, no longer repeating data quality and limitation details under each stock summary.
+- API error response construction consolidated into shared helpers, preserving error envelope shapes and reducing endpoint boilerplate.
+- WebUI binding to public IP or unrestricted CORS without admin authentication outputs runtime warnings, improving observability without blocking startup or rewriting configs.
+- Database initialization added `schema_migrations` baseline table and idempotent tracking for schema evolution, without migrating, wiping, or modifying business data.
+- #1386 P6 Reused market phase and AnalysisContextPack public summaries to link alerts, portfolio manual analysis, history, backtests, and notifications, without adding database migrations.
 
-### 修复
+### Fixed
 
-- Web 英文界面补齐回测、组合风险与告警规则相关文案本地化，避免英文模式下残留中文筛选器、按钮和枚举标签。
-- 综合情报搜索中的机构分析与业绩预期维度改用 180 天 provider 请求窗口，避免默认短新闻窗口漏掉财报、研报等周期性财经材料。
-- Web 个股栏和历史卡片在窄布局下不再让市场阶段标签遮挡股票名称。
-- 问股自由文本追问不再将 TTM、PE、YOY 等金融缩写误识别为新股票代码。
-- [修复] GitHub Actions 每日分析工作流读取 SearXNG 自建实例地址时支持 Variables 优先、Secrets 回退，修复仅配置 Variables 时 URL 不生效的问题。
-- Web/桌面端左侧导航选中态改用 border 实现，避免蓝色竖条指示器溢出侧栏边界；侧栏展开宽度 116px -> 136px，新增 rail 紧凑模式。
-- Windows 桌面端自动更新安装目录不再预先加引号，避免带空格路径在自动安装时触发“缺少快捷方式 / 找不到 Daily Stock Analysis.exe”的系统弹窗。
-- Agent 分析路径生成 AnalysisContextPack overview 前复用已落库日线分析上下文，避免日线已抓取成功仍显示 `daily_bars_missing`。
-- 修正大盘复盘结构化 `breadth` 的可用性判断：当市场不支持或抓取失败时不下发 `breadth`，前端展示“暂无数据”，避免误导性 0 值。
-- 大盘复盘语言行为遵循全局 `report_language`，并在美股中文场景下本地化市场标签与策略蓝图，避免混入英文策略段落。
-- Docker Web 设置页读取配置时在活跃 `.env` 文件缺项时回退展示启动注入的同名环境变量，并补清相关挂载边界文档。
-- 报告页运行诊断会区分数据源抓取成功与进入 LLM 分析输入，相关新闻区标注为报告页补充/后续检索资讯，避免与输入数据块状态互相误读。
-- `/health` 根路径健康检查现在始终返回 JSON，避免静态 Web fallback 吞掉健康探针；`/api/health` 与 `/api/v1/health` 继续保持兼容。
-- `ALPHASIFT_ENABLED` 关闭时不触发 `alphasift` 运行时注入；开启后优先复用已配置的 DSA/provider 配置并注入 `LITELLM_*` 与 `LLM_*` 运行时变量。
-- 补齐 openai-compatible 场景下 base URL、`extra_headers` 与 `LITELLM_FALLBACK_MODELS` 的兼容路径与回退链验证。
-- 桌面/镜像打包链路保持与运行时一致的 AlphaSift 适配层预置，避免 `pip install` 作为线上修复依赖。
+- Web English interface completed localization for backtesting, portfolio risk, and alert rule strings, eliminating residual Chinese filters, buttons, and enum labels.
+- Institutional analysis and earnings expectation dimensions in news intelligence search expanded to 180-day provider request window, preventing short news windows from missing periodic financial reports.
+- Web stock bar and historical cards in narrow layouts no longer let market phase badges overlap stock names.
+- Free-text stock query follow-ups no longer misidentify financial acronyms like TTM, PE, YOY as stock tickers.
+- [Fixed] GitHub Actions daily analysis workflow prioritizes Variables over Secrets when reading self-hosted SearXNG instance URLs, fixing URL not taking effect when configured in Variables only.
+- Web/Desktop left navigation active states implemented with border, preventing blue vertical indicators from overflowing sidebar; sidebar width expanded from 116px to 136px with new rail compact mode.
+- Windows desktop auto-updater no longer pre-quotes installation directory, preventing paths with spaces from triggering system popups stating "Missing shortcut / Cannot find Daily Stock Analysis.exe".
+- Agent analysis pipeline reuses persisted daily bar analysis context before generating AnalysisContextPack overview, preventing false `daily_bars_missing` when daily bars fetched successfully.
+- Corrected market review structured `breadth` availability check: omits `breadth` when unsupported or fetch fails, displaying "No data available" rather than misleading zero.
+- Market review language behavior follows global `report_language`, localizing market tags and strategy blueprints for US Chinese reports, avoiding English strategy paragraphs.
+- Docker Web settings page reading configuration falls back to startup-injected env vars when active `.env` lacks items, documenting volume mount boundaries.
+- Report page runtime diagnostics distinguish between successful data fetch and LLM input ingestion, labeling related news section as supplementary intelligence to prevent state misinterpretation.
+- `/health` root health check consistently returns JSON, preventing static Web fallbacks from swallowing health probes; preserves compatibility for `/api/health` and `/api/v1/health`.
+- `ALPHASIFT_ENABLED` disabled state avoids triggering `alphasift` runtime injection; when enabled, prioritizes configured DSA/provider settings and injects `LITELLM_*` and `LLM_*` runtime variables.
+- Verified fallback chains and compatibility paths for openai-compatible base URL, `extra_headers`, and `LITELLM_FALLBACK_MODELS`.
+- Desktop and container build pipelines pre-bundle AlphaSift adapter matching runtime, eliminating `pip install` as live runtime repair dependency.
 
-### 文档
+### Documentation
 
-- 明确 Issue #777 UI 语言切换采用仓内 `UiLanguageContext` + `uiText` 实现，持久化 key 为 `dsa.uiLanguage`，并补充对应可视化验收指引。
-- 明确大盘复盘展示链路、结构化 payload、语言行为、交易日 gate 差异和回滚边界。
-- 补充 LLM / LiteLLM 兼容键在 Settings 展示与校验上下文中的回退边界，说明不改写、不迁移、不清理用户现有 provider/model/base URL 持久化配置。
-- 补齐 #1602 运行诊断口径修复覆盖范围，说明仅统一输入与展示口径，回滚方式为常规发布回滚。
-- 明确 AnalysisContextPack P6 文档、迁移与回滚边界，并同步既有 `SAVE_CONTEXT_SNAPSHOT` 到 `.env.example`、配置注册表、Web 设置帮助和完整指南。
-- 补齐 #1386 P7 盘前/盘中/盘后分析的入口、迁移、回滚和用户可见说明。
-- 为 AlphaSift runtime bridge 增加官方兼容依据落点，明确 provider/model/base_url/extra_headers/fallback 与回退边界。
+- Clarified Issue #777 UI language switching implementation via in-repo `UiLanguageContext` + `uiText`, persisting under key `dsa.uiLanguage`, with visual acceptance guidelines.
+- Documented market review display pipeline, structured payload, language behaviors, trading day gate nuances, and rollback boundaries.
+- Documented LLM / LiteLLM compatibility key fallback boundaries in Settings display and validation context, explaining existing provider/model/base URL configurations are never rewritten.
+- Completed #1602 runtime diagnostic criteria repair scope, clarifying unification of input and display criteria with standard release rollback procedures.
+- Clarified AnalysisContextPack P6 documentation, migration, and rollback boundaries, synchronizing `SAVE_CONTEXT_SNAPSHOT` to `.env.example`, config registry, Web settings help, and Full Guide.
+- Completed #1386 P7 pre-market, intraday, and post-market analysis entry points, migration, rollback, and user-visible documentation.
+- Added official compatibility documentation for AlphaSift runtime bridge, detailing provider, model, base URL, extra headers, and fallback boundaries.
 
-### 测试
+### Tests
 
-- Web 方向执行 `npm run lint`、`npm run build`、相关 Vitest 和 smoke 命令；未设置 `DSA_WEB_SMOKE_PASSWORD` 时 smoke 用例按设计 skip。
-- Web 测试运行时声明 Node `>=20.19.0 <27` 与 npm `>=10`，并补 localStorage 测试兜底以稳定 Vitest。
-- 增补 AlphaSift runtime bridge 与打包脚本静态验证，覆盖 `LLM_CHANNELS`、`LITELLM_FALLBACK_MODELS`、`alphasift.dsa_adapter`、`--collect-all alphasift`。
+- Web runs `npm run lint`, `npm run build`, Vitest, and smoke tests; smoke tests skip by design when `DSA_WEB_SMOKE_PASSWORD` is unset.
+- Web test runtime declares Node `>=20.19.0 <27` and npm `>=10`, adding localStorage test fallbacks to stabilize Vitest.
+- Added static verification for AlphaSift runtime bridge and packaging scripts, covering `LLM_CHANNELS`, `LITELLM_FALLBACK_MODELS`, `alphasift.dsa_adapter`, and `--collect-all alphasift`.
 
 ### chore
 
-- 移除随 issue / PR 验收流程误入库的截图资产，并明确一次性截图证据应保留在 PR 描述、评论、附件或 artifact 中，不作为仓库文件合入。
+- Removed screenshot assets mistakenly committed during issue/PR review workflows, clarifying temporary screenshot evidence belongs in PR descriptions, comments, attachments, or artifacts, not as repository files.
 
 ## [3.20.0] - 2026-06-03
 
-### 发布亮点
+### Release Highlights
 
-- feat: 新增 AlphaSift 选股入口、自动安装与稳定适配层，支持 Web 策略执行、LLM 重排展示和默认关闭的可控启用。
-- feat: 完善个股历史、自选队列、市场阶段与 AnalysisContextPack 可见性，增强 Web 报告和 API 的结构化上下文能力。
-- feat: MiniMax 默认模型升级到 `MiniMax-M3`，并补齐相关价格、预设和测试覆盖。
-- fix: 修复健康检查、Windows 桌面更新与首次运行编码、ETF 日线 secid、LLM base_url 校验和 Agent 日线上下文误判等稳定性问题。
+- feat: Added AlphaSift stock screener entry point, automatic installation, and stable adapter layer, supporting Web strategy execution, LLM reranking displays, and default-off controlled enablement.
+- feat: Enhanced visibility of single-stock history, watchlist queue, market phase, and AnalysisContextPack, strengthening structured context for Web reports and API.
+- feat: Upgraded default MiniMax model to `MiniMax-M3`, completing pricing, presets, and test coverage.
+- fix: Fixed stability issues across health checks, Windows desktop updates and first-run encoding, ETF daily bar secid, LLM base_url validation, and Agent daily bar context false-missing.
 
-### 新功能
+### Features
 
-- 新增默认关闭的 AlphaSift 选股页签，通过 `ALPHASIFT_ENABLED` 开启后经由稳定适配层读取策略并执行选股。
-- Web 首页左侧栏改为个股栏，按股票去重展示，大盘复盘置顶，点击个股加载最新报告，支持按代码变体（.SZ/.SH/.SS）归一化去重合并。保留全选、批量删除和删除确认入口；新增按股票代码批量删除 API `DELETE /api/v1/history/by-code/{stock_code}`。
-- 报告详情右侧栏新增自选操作入口，支持查看当前股票是否在自选队列、一键加入或移除；大盘复盘报告不显示该操作。
-- 问股页面输入区上方新增自选操作按钮，用户发送包含股票代码的消息后自动显示加入自选/从自选删除入口。
-- Web 报告页新增同股历史趋势抽屉入口，历史列表摘要补充趋势、摘要、模型和分析时行情字段，支持按当前股票查看历史分析并加载更多。
-- AnalysisContextPack P4 低敏 overview 接入历史详情、同步分析响应、completed 任务状态和 Web 报告页，展示数据块状态、来源、缺失原因与降级摘要。
-- #1386 P5 为个股分析报告新增 `dashboard.phase_decision` 盘中决策护栏，并在保存历史前按市场阶段与数据质量限制高置信盘中买卖结论。
-- #1386 P4a 新增 `analysis_phase=auto|premarket|intraday|postmarket` API 参数，并在异步任务 accepted、内存 status、list、SSE 与分析 pipeline 中透传请求阶段。
-- #1386 P4b Web 报告页新增最终市场阶段标签，任务面板展示请求阶段，并复用 AnalysisContextPack 低敏数据质量摘要。
-- MiniMax 渠道模型列表升级：新增 `MiniMax-M3` 并作为默认，按官方 OpenAI-compatible 文档支持 1M 输入上下文（项目保守注册为 `<=512K` 价格档：context_window 512K、`max_tokens` 128K，对应 $0.6/M 输入、$2.4/M 输出，>512K 输入价格档未建模），保留 `MiniMax-M2.7` 与 `MiniMax-M2.7-highspeed`，并保留 `MiniMax-M2.5` legacy 价格条目以兼容现有用户配置的成本估算。Web 设置页 MiniMax 预设模型与价格按 M3 刷新。
-- 新增 AnalysisContextPack P1 内部契约与脱敏序列化测试。
-- 市场阶段低敏摘要接入历史详情、同步分析响应和 completed 任务状态的 report metadata。
+- Added default-off AlphaSift stock screening tab, reading strategies via stable adapter layer and executing screening when enabled via `ALPHASIFT_ENABLED`.
+- Web home left sidebar changed to stock bar, displaying deduplicated stocks with market review pinned at top, clicking a stock loads its latest report, supporting deduplication and merging across code variants (.SZ/.SH/.SS); retained select-all, batch-delete, and delete confirmation modal; added batch delete API `DELETE /api/v1/history/by-code/{stock_code}`.
+- Report details right sidebar added watchlist action button, displaying whether current stock is in watchlist with one-click add or remove; market review reports omit this action.
+- Stock query input box added watchlist action button above prompt input, displaying add-to-watchlist / remove-from-watchlist entries after user sends message containing stock code.
+- Web report page added historical trend drawer entry for same stock, enriching summary with trends, summaries, models, and quote context at analysis time, supporting viewing history and loading more.
+- AnalysisContextPack P4 low-sensitivity overview connected to historical details, synchronous analysis responses, completed task status, and Web report page, displaying data block status, sources, missing reasons, and degradation summaries.
+- #1386 P5 Added `dashboard.phase_decision` intraday decision guardrails to stock analysis reports, constraining high-confidence intraday buy/sell conclusions based on market phase and data quality prior to history persistence.
+- #1386 P4a Added `analysis_phase=auto|premarket|intraday|postmarket` API parameter, passing requested phase through async task accepted, in-memory status, list, SSE, and analysis pipeline.
+- #1386 P4b Web report page added final market phase badge, task panel displaying requested phase, and reused AnalysisContextPack low-sensitivity data quality summary.
+- MiniMax channel model list upgraded: added `MiniMax-M3` as default, supporting 1M input context per official OpenAI-compatible docs (conservatively registered in `<=512K` pricing tier: context_window 512K, `max_tokens` 128K, corresponding to $0.6/M input, $2.4/M output, >512K unmodeled), retaining `MiniMax-M2.7` and `MiniMax-M2.7-highspeed`, and retaining `MiniMax-M2.5` legacy pricing entry for cost estimation; Web settings MiniMax preset models and prices refreshed per M3.
+- Added AnalysisContextPack P1 internal contract and sanitization serialization tests.
+- Market phase low-sensitivity summary integrated into historical details, synchronous analysis responses, and report metadata for completed task statuses.
 
-### 改进
+### Improvements
 
-- 首次运行配置校验补充缺失 AI Key、空 STOCK_LIST、Telegram/邮件成对字段和 Webhook URL 前缀诊断。
-- AlphaSift 选股入口在 Web 侧边栏中移动到“问股”下方，贴近 Agent/研究辅助工作流。
-- Docker 镜像构建阶段预置默认 AlphaSift 适配层，与桌面发布包一样避免运行期额外安装。
-- AlphaSift 选股改为依赖 `alphasift.dsa_adapter` 的稳定接口，Web 策略列表由 AlphaSift 动态提供，不再在前端硬编码。
-- AlphaSift 选股页补充 Run ID、快照数、过滤后数量、因子和风险详情，展开候选时展示真实明细，并暂时仅开放当前支持的 A 股市场。
-- Web 设置页新增 AlphaSift 选股开关卡片，可直接开启或关闭选股页签。
-- 开启 AlphaSift 选股时先切换 `ALPHASIFT_ENABLED` 并检查适配层可用性，缺失时自动调用受控安装接口，不再要求用户额外点击安装。
-- AlphaSift 已开启但适配层缺失时，策略列表和选股接口会串行化自动安装锁定来源，并强制重装以覆盖旧版 `alphasift` 包。
-- AlphaSift 选股页合并重复的快照源 fallback 提示，并保留 AlphaSift 自身的 Tushare 优先快照源逻辑。
-- AlphaSift 选股页在 LLM 重排降级时展示 warning/source error/parse error，并避免把本地因子评分误显示为 LLM 判断。
-- Web 设置页不再把 `ALPHASIFT_ENABLED` 作为普通数据源配置项重复展示，该值仅作为“开启选股”按钮背后的持久化状态。
-- AlphaSift 关闭时隐藏 Web 左侧“选股”导航入口，避免误导未开启用户。
-- 补充 AlphaSift 选股自定义策略显示逻辑，避免未匹配预设项时误显示“均衡多因子”。
-- 新增 GET /api/v1/history/stocks 端点按 code 分组返回不重复个股列表；新增 GET /api/v1/stocks/watchlist、POST /api/v1/stocks/watchlist/add、POST /api/v1/stocks/watchlist/remove 端点支持自选队列增删查。STOCK_LIST 读写保持原样，不做自动归一化；add/remove 时归一化比较判断等价代码变体。
-- 新增 useWatchlist hook 统一管理自选队列前端状态，复用 SystemConfigService 的 STOCK_LIST 配置项实现持久化。
-- AnalysisContextPack P5 增加数据质量评分、`fetch_failed` 状态、Prompt 数据限制区块和 Web 低敏质量展示。
-- #1386 P2-full 在 AnalysisContextPack Prompt 数据限制中追加市场阶段与降级数据的交叉约束，并修正中文分析 Prompt 的阶段化行情标签。
-- 通知报告默认发送路径恢复既有渠道兼容转换与分片逻辑，新增 renderer 能力仅保留为未来扩展基础。
-- 关联板块缺少类型数据时改为单行展示板块名称，避免生成整列 `N/A` 的板块表格。
-- 优化 Web 报告详情页信息层级，将输入数据块和运行诊断下移为主体内容后的折叠辅助信息。
-- 盘中分析补齐实时行情获取时间、provider 时间、stale、fallback 与 partial/estimated 标记，供 AnalysisContextPack 映射输入数据限制。
+- First-run configuration validation supplemented diagnostic checks for missing AI Key, empty STOCK_LIST, Telegram/email paired fields, and Webhook URL prefixes.
+- AlphaSift screening entry in Web sidebar moved below "Stock Query", aligning with Agent/research auxiliary workflow.
+- Pre-bundled default AlphaSift adapter in Docker image build stage, matching desktop release bundles to avoid extra runtime installations.
+- AlphaSift stock screening switched to relying on stable `alphasift.dsa_adapter` interfaces, with Web strategy list dynamically supplied by AlphaSift rather than hardcoded on frontend.
+- AlphaSift stock picker adds Run ID, snapshot counts, filtered counts, factors, and risk details, displaying real specifics upon candidate expansion, currently open to A-shares.
+- Web settings added AlphaSift screening toggle card to enable or disable screening tab directly.
+- Enabling AlphaSift toggles `ALPHASIFT_ENABLED` and verifies adapter availability, auto-invoking controlled installation without requiring manual installation clicks.
+- When AlphaSift is enabled but adapter is missing, strategy list and screening APIs serialize automatic installation from locked sources with forced reinstallation to overwrite legacy packages.
+- AlphaSift screening page merges duplicate snapshot fallback notices, preserving AlphaSift native Tushare-first snapshot logic.
+- AlphaSift screening page displays warning/source error/parse error on LLM reranking degradation, avoiding mislabeling local factor scores as LLM judgements.
+- Web settings no longer displays `ALPHASIFT_ENABLED` as generic data source config item, retaining value solely as persistent state behind "Enable Screening" button.
+- Hides "Screening" navigation link when AlphaSift is disabled to avoid misleading users.
+- Supplemented custom strategy display logic for AlphaSift, preventing unmatched presets from defaulting to "Balanced Multi-Factor".
+- Added `GET /api/v1/history/stocks` endpoint returning unique stock list grouped by code; added `GET /api/v1/stocks/watchlist`, `POST /api/v1/stocks/watchlist/add`, `POST /api/v1/stocks/watchlist/remove` endpoints supporting watchlist CRUD; `STOCK_LIST` read/write preserved as-is without auto-normalization, normalizing comparisons during add/remove to handle ticker variants.
+- Added `useWatchlist` hook standardizing watchlist frontend state, reusing `STOCK_LIST` in SystemConfigService for persistence.
+- AnalysisContextPack P5 added data quality scoring, `fetch_failed` status, Prompt data limitations block, and low-sensitivity Web quality display.
+- #1386 P2-full appended cross-constraints for market phase and degraded data in AnalysisContextPack Prompt limitations, correcting phased quote labels in Chinese prompts.
+- Notification report default delivery restored legacy channel conversion and chunking logic, retaining renderer capability for future extensions.
+- Related sectors missing category data display sector names in single line, avoiding table columns filled with `N/A`.
+- Optimized Web report detail information hierarchy, moving input data blocks and diagnostics below body as collapsible auxiliary sections.
+- Intraday analysis completed real-time quote fetch time, provider time, stale, fallback, and partial/estimated flags for AnalysisContextPack input data limitations.
 
-### 修复
+### Fixed
 
-- Agent 分析路径生成 AnalysisContextPack overview 前复用已落库日线分析上下文，避免日线已抓取成功仍显示 `daily_bars_missing`。
-- 注册 /api/v1/health 路由并加入认证豁免，修复该路径返回 404 以及开启 ADMIN_AUTH_ENABLED 后健康探针收到 401 的问题。
-- Windows 本地首次运行环境检查兼容非 UTF-8 控制台输出，并将 `requirements.txt` 注释改为 ASCII 以降低默认代码页下的依赖安装失败概率。
-- AlphaSift DSA 适配层默认开启 LLM 重排，后端显式请求 `use_llm=True`，选股页展示 LLM 分数、判断、覆盖率和关注项。
-- AlphaSift 嵌入 DSA 时复用 DSA 已解析的 LLM 模型、渠道和密钥配置，避免 Web 已配置 LLM 但选股 LLM 重排仍因缺少 provider key 降级。
-- AlphaSift 选股复用 DSA LLM 路由时过滤未声明的托管 provider 备选模型，并把已声明渠道模型补入回退链，避免残留 Gemini fallback 覆盖可用的 DSA 渠道。
-- AlphaSift 默认安装来源改为锁定 commit 的受信任 GitHub 地址；桌面模式自动安装不要求管理员会话，非桌面部署要求管理员认证会话，并继续限制安装来源。
-- 修复 Web 开启 AlphaSift 时先安装后写配置导致默认关闭状态无法开启的问题。
-- AlphaSift 状态与安装接口不再返回 `install_spec` 明文，仅返回 `install_spec_is_default` 等非敏感状态字段。
-- AlphaSift 状态探测区分可选依赖缺失与非预期异常，异常场景记录 warning 并返回非敏感诊断信息。
-- 调整 AlphaSift 筛选调用兼容：`screen` 以 `max_results` 为主并支持历史 `max_output` 关键词，同时允许策略透传以对齐前端手动策略参数。
-- AlphaSift Web 选股请求使用独立长超时，避免开启 LLM 重排后被通用 30 秒 API 超时提前中断。
-- 桌面端打包阶段预置 AlphaSift 并收集适配层，避免发布包运行时再要求管理员自动安装。
-- AlphaSift 自动安装仅在 `status` 诊断为 `missing_module` 时触发（仅模块缺失场景）；适配层可导入但运行时异常不再自动 `pip install`，而是返回 `424` 并保留诊断，避免把真实运行时故障掩盖为重装。
-- 收口 Web 中文界面残留英文文案与设置页 help 缺口，回测页改为中文展示，并让 Web 设置页仅展示已注册且带说明的配置项。
-- Windows 桌面端自动更新静默安装时显式复用当前安装目录，避免自定义安装目录场景下卸载旧版本文件失败。
-- Windows 安装器重试旧卸载器时对 `_?=` 安装目录参数加引号，修复旧版本安装在带空格路径时返回 2 导致自动更新失败。
-- Windows 桌面端自动更新传给 NSIS 的 `/D=` 目录参数在包含空格时自动加引号，避免安装位置注册表被截断。
-- 加固 LLM channel base_url 校验，避免解析差异导致 SSRF 绕过。
-- 修正 efinance ETF 日线 Eastmoney secid 路由，避免沪市 ETF 被按深市 quote id 查询导致日线为空。
+- Agent analysis pipeline reuses persisted daily bar analysis context before generating AnalysisContextPack overview, avoiding false `daily_bars_missing` when daily bars fetched successfully.
+- Registered `/api/v1/health` route with auth exemption, fixing 404 returns and 401 unauthorized errors on health probes when `ADMIN_AUTH_ENABLED` is enabled.
+- Windows local first-run environment check supports non-UTF-8 console outputs, converting `requirements.txt` comments to ASCII to reduce install failures under default code pages.
+- AlphaSift DSA adapter enables LLM reranking by default with explicit `use_llm=True`, displaying LLM scores, judgements, coverage, and watchpoints.
+- AlphaSift embedded in DSA reuses DSA's resolved LLM models, channels, and secret keys, preventing screening LLM reranking from degrading due to missing provider keys.
+- AlphaSift screening reusing DSA LLM routing filters undeclared hosted provider backup models, adding declared channel models to fallback chains, avoiding stale Gemini fallbacks.
+- AlphaSift default installation source pinned to trusted GitHub commit; desktop auto-install requires no admin session, while non-desktop deployments mandate admin authentication.
+- Fixed issue where enabling AlphaSift on Web installed packages before writing configs, preventing default-off state from being enabled.
+- AlphaSift status and install endpoints no longer return plaintext `install_spec`, returning non-sensitive fields such as `install_spec_is_default`.
+- AlphaSift status detection distinguishes between missing optional dependencies and unexpected exceptions, logging warnings and returning sanitized diagnostics.
+- Adjusted AlphaSift screening call compatibility: `screen` prioritizes `max_results` with legacy `max_output` support, permitting strategy passthrough to align with manual parameters.
+- AlphaSift Web screening requests use independent long timeouts, preventing generic 30s API timeouts from interrupting LLM reranking.
+- Desktop packaging stage pre-bundles AlphaSift and collects adapters, preventing release bundles from requiring admin auto-installation at runtime.
+- AlphaSift auto-installation triggers only when `status` diagnoses `missing_module`; imported adapters encountering runtime exceptions return 424 with diagnostics rather than auto-reinstalling.
+- Resolved residual English text in Chinese Web UI and Settings help gaps, converting Backtest page to Chinese and restricting Settings page to registered configs with descriptions.
+- Windows desktop auto-updater silent install explicitly reuses current install directory, avoiding uninstall failures under custom install paths.
+- Windows installer quotes `_?=` directory parameter when retrying legacy uninstaller, fixing code 2 failures on paths containing spaces.
+- Windows desktop auto-updater quotes `/D=` directory parameter passed to NSIS when paths contain spaces, avoiding registry truncation.
+- Hardened LLM channel base_url validation, preventing SSRF bypasses via parser discrepancies.
+- Corrected efinance ETF daily bar Eastmoney secid routing, preventing Shanghai ETFs from being queried under Shenzhen quote IDs resulting in empty daily bars.
 
-### 文档
+### Documentation
 
-- 明确 AlphaSift 与 LiteLLM 兼容边界：仅桥接 DSA 已声明 provider/model/base URL 为调用期注入，不对 `.env` 做 provider/model 路由迁移；回退方式为关闭 AlphaSift 并恢复原有 `LITELLM_*`/`LLM_*` 配置。
-- 明确 AlphaSift 仅复用 DSA 现有 LLM/LiteLLM 配置语义，不新增 `LITELLM_MODEL`、`OPENAI_MODEL`、`OPENAI_BASE_URL`、`LLM_TIMEOUT_SEC` 等模型语义迁移；失败提示与回退路径统一沿用既有系统配置链路，仅影响 AlphaSift 选股能力本身。
-- 明确 AlphaSift 自动安装来源锁定、`missing_module` 与运行时异常行为边界，以及 LLM/provider/base URL 与自定义通道回退路径，便于问题溯源与回滚到原有 LLM 配置。
-- 明确同股历史趋势新增模型字段为历史快照展示元数据，不影响运行时 LLM Provider/Model/Base URL 路由与配置迁移清理；回退方式为按常规发布回滚本变更。
-- 明确 #1311 的兼容性边界：渲染层仅消费分析结果 `model_used` 展示字段，未改动 `wechat/slack/feishu/telegram` sender 发送链路，不触发 provider/model/base_url 兼容迁移。
-- 明确 AlphaSift 锁定 commit 的 `alphasift.dsa_adapter` 契约依据，以及当前 DSA API/Web 调用结构的兼容边界。
-- 明确 Settings 页面对 LLM 配置仅做展示分组与字段归并，不改写或触发 LLM 迁移/回退路径；兼容现有 `LLM` 配置保存与回退语义。
-- 新增 AnalysisContextPack P0 上下文盘点。
-- 补齐告警中心 P8 文档与配置收口说明，明确 legacy JSON、高级规则、Web/API、Docker、GitHub Actions 与 Desktop 边界。
+- Clarified AlphaSift and LiteLLM compatibility boundaries: bridges declared DSA provider/model/base URL as invocation injection without `.env` migration; rollback disables AlphaSift and restores `LITELLM_*`/`LLM_*` settings.
+- Clarified AlphaSift reuses existing DSA LLM/LiteLLM configuration semantics without migrating model semantics like `LITELLM_MODEL`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `LLM_TIMEOUT_SEC`; error notices and fallbacks follow existing system config pipeline.
+- Clarified AlphaSift auto-installation commit pinning, `missing_module`, and runtime exception boundaries, along with rollback paths to existing LLM configs.
+- Clarified new model fields in historical trends as historical snapshot display metadata, without affecting runtime Provider/Model/Base URL routing or config migration; rollback via standard release rollback.
+- Clarified #1311 compatibility boundary: rendering layer consumes `model_used` display field only, without altering `wechat/slack/feishu/telegram` sender pipelines or triggering provider/model/base_url migrations.
+- Documented AlphaSift pinned commit `alphasift.dsa_adapter` contract basis and compatibility boundaries for DSA API/Web calls.
+- Clarified Settings page organizes LLM configs into display groups only, without rewriting or triggering LLM migration/rollback paths; compatible with existing `LLM` config save semantics.
+- Added AnalysisContextPack P0 context inventory.
+- Completed Alert Center P8 documentation and configuration consolidation, defining legacy JSON, advanced rules, Web/API, Docker, GitHub Actions, and Desktop boundaries.
 
-### 测试
+### Tests
 
-- 同步更新 `llmProviderTemplates`、LiteLLM fallback pricing 与 MiniMax 预设相关单测，断言新默认模型。
-- 补充 ETF 日线数据源路由、输入变体、fallback 与 MA 字段回归覆盖。
+- Synchronized unit tests for `llmProviderTemplates`, LiteLLM fallback pricing, and MiniMax presets, asserting new default models.
+- Added regression coverage for ETF daily bar routing, input variants, fallbacks, and MA fields.
 
 ### chore
 
-- 新增通知报告渠道能力画像、PreparedMessage 与结构感知 Markdown 分片基础设施，为 #1311 全渠道渲染适配打底。
-- 预置企业微信、飞书、Telegram、钉钉、Slack 平台 renderer 元数据，暂不改变默认推送报告入口和可见版式。
+- Added notification report channel capability profiling, PreparedMessage, and structure-aware Markdown chunking infrastructure, laying groundwork for #1311 multi-channel rendering adaptation.
+- Pre-bundled WeChat Work, Feishu, Telegram, DingTalk, Slack renderer metadata, preserving default push report entry points and visible layouts.
 
 ## [3.19.0] - 2026-05-29
 
-### 新功能
+### Features
 
-- 落地 #1391 Phase 1 运行诊断最小链路：任务/SSE 追加 trace_id，并记录日线与实时行情 ProviderRun 快照。
-- 告警中心新增 P7 大盘红绿灯结构化规则，支持 `market_light_status` 与 `market_light_score_drop` 并复用现有 worker、触发历史、通知和冷却链路。
-- 落地 #1391 Phase 2 运行诊断摘要：生成用户可读 RunDiagnosticSummary，提供历史报告诊断 API 与脱敏复制文本。
-- 落地 #1391 Phase 3 运行诊断可见性：报告详情和任务面板默认折叠展示运行状态、trace 与可复制排障信息；后端通过 `api/v1/history/{record_id}/diagnostics` 与 `context_snapshot.diagnostics` 提供历史链路回填。
-- 新增 AnalysisContextPack P1 内部契约与脱敏序列化测试。
-- 新增 AnalysisContextPack P2 builder，从普通分析 pipeline 已有 artifacts 组装内部上下文包。
-- 问股新增默认关闭的可见对话上下文压缩，支持 Web 开关、Agent 高级 preset、滚动摘要和最近轮次原文保护，降低长会话 token 消耗。
-- 股票自动补全索引默认支持从 GitHub main 远程刷新并缓存到本地，Web/CLI 分析入口失败时自动降级到内置索引，降低摘帽和更名后旧简称污染分析的概率。
-- 普通分析与 Agent 运行时 Prompt 接入 AnalysisContextPack 低敏摘要，保持 history/API/Web 输出兼容。
+- Implemented #1391 Phase 1 runtime diagnostics minimal pipeline: appended trace_id to tasks/SSE, recording ProviderRun snapshots for daily bars and realtime quotes.
+- Alert Center added P7 market light structured rules, supporting `market_light_status` and `market_light_score_drop` while reusing existing workers, trigger history, notifications, and cooldown pipelines.
+- Implemented #1391 Phase 2 runtime diagnostics summary: generated user-readable RunDiagnosticSummary, providing historical report diagnostics API and desensitized copy text.
+- Implemented #1391 Phase 3 runtime diagnostics visibility: report details and task panel default to collapsed display of execution status, trace, and copyable troubleshooting info; backend provides historical backfills via `api/v1/history/{record_id}/diagnostics` and `context_snapshot.diagnostics`.
+- Added AnalysisContextPack P1 internal contract and desensitized serialization tests.
+- Added AnalysisContextPack P2 builder, assembling internal context packs from existing standard analysis pipeline artifacts.
+- Stock query chat added opt-in visible conversation context compression, supporting Web toggle, Agent advanced presets, rolling summaries, and recent turn literal protection to reduce long-session token consumption.
+- Stock autocomplete index supports remote refreshes from GitHub main cached locally by default; Web/CLI analysis endpoints automatically fall back to built-in index upon failure, reducing likelihood of delisted or renamed tickers contaminating analysis.
+- Standard analysis and Agent runtime prompts integrate AnalysisContextPack low-sensitivity summaries, preserving history/API/Web output compatibility.
 
-### 改进
+### Improvements
 
-- `scripts/fetch_tushare_stock_list.py` 可对 A 股中带 `XD`/`XR`/`DR`/`N`/`C` 前缀的名称进行回填修正，供自动补全刷新流程默认使用。
-- Web 路由页面改为按需加载，降低首包体积并增加路由加载失败恢复提示。
-- Web 完整报告 Markdown 抽屉改为按需加载。
-- 新增市场阶段推断基线并明确盘前、盘中、午休、临近收盘、盘后和非交易日语义。
-- 新增运行态市场阶段上下文构造与降级测试。
-- 设置页配置帮助阶段性补齐 Web 设置页实际展示/可配置字段的中英双语文案，覆盖 Agent、回测、报告、通知路由、系统运行时、AI legacy、数据源和通知高级配置。
-- P2-min：LLM Prompt 注入市场阶段上下文。
+- `scripts/fetch_tushare_stock_list.py` backfills and corrects A-share names with prefixes like `XD`/`XR`/`DR`/`N`/`C`, used by default in autocomplete refresh flows.
+- Web route pages converted to lazy loading, reducing initial bundle size and adding route load failure recovery notices.
+- Web full report Markdown drawer converted to on-demand loading.
+- Added market phase inference baseline, clarifying pre-market, intraday, lunch break, near close, post-market, and non-trading day semantics.
+- Added runtime market phase context construction and fallback tests.
+- Settings page configuration help incrementally updated with bilingual Chinese/English copy for displayed/configurable fields, covering Agent, backtesting, reports, notification routing, system runtime, legacy AI, data sources, and advanced notification settings.
+- P2-min: Injected market phase context into LLM prompts.
 
-### 修复
+### Fixes
 
-- 股票自动补全索引生成缺少 `pypinyin` 时改为直接失败，避免写出缺失拼音字段的降级索引。
-- 归一腾讯实时行情成交量为股口径，避免量能变化倍数被放大并误导分析报告。
-- Docker 默认部署移除 `.env` 单文件挂载，避免 WebUI 保存配置时因 `os.replace` 更新挂载点触发 `Device or resource busy`。
-- 收敛 #1391 Phase 0 A 股代码归属边界：补齐 `SH`/`SZ` 前缀场景的归属一致性，明确 `data_provider/baostock_fetcher.py`、`data_provider/pytdx_fetcher.py`、`data_provider/tushare_fetcher.py` 的本轮修复范围。
-- 修复 `STOCK_LIST` 使用裸 A 股代码时 Baostock 等数据源 fallback 的内部格式转换，保持用户配置继续使用 6 位股票编号。
-- Windows 桌面端自动更新在用户确认重启安装后改为静默执行安装器，并在停止内置后端后清理进程引用，降低安装器提示“每日股票分析无法关闭”的概率。
-- macOS 桌面端将运行时配置迁移到用户数据目录，并在旧 `.app` 包内文件仍可访问时迁移 `.env`、数据库和日志，避免后续替换升级后重新配置。
-- 恢复 Agent/历史兼容快照中的关联板块与板块联动字段提取，修复新版首页报告缺少“板块联动”的回归问题。
-- 修正 Web 设置帮助中 legacy 告警 JSON 字段名与静默时段投递语义说明。
-- 修复 Web 中文设置页在数据源、通知、系统与 Agent 区域的配置标题、说明和关键下拉选项漏翻问题。
-- 修复问股会话切换和首页任务重连后可能残留 Agent/分析任务进行中状态的问题。
-- 问股 single-agent 新增 provider-aware trace 分轨，跨轮保留 DeepSeek V4 thinking + tool-call 的 `reasoning_content` 与工具协议材料。
-- 为 Akshare 新浪/腾讯 A 股历史兜底接口增加调用级超时，并补齐 Tushare `605xxx` 沪市代码路由回归测试，避免定时分析因数据源无响应而挂起。
-- 将 `exchange-calendars` 依赖下限提升到 `4.13.0`，避免 pandas 3 环境导入交易日历时因 Timedelta 单位 `T` 失效导致分析失败。
-- 交互式命令（钉钉会话、飞书会话、Telegram）触发的分析结果只回到来源会话，不再同时广播到静态通知渠道。
-- 适配 Longbridge OAuth 2.0 认证与 token 缓存恢复，避免新后台无 Legacy Access Token 时长桥数据源被误判为未配置。
-- Longbridge OAuth 路径在当前 SDK 不支持 `OAuthBuilder` / `Config.from_oauth` 时明确日志降级，避免 Linux/Docker 仅可安装旧 SDK 时构建失败。
-- 兼容 YFinance 日线返回未命名日期索引的场景，避免标准化后缺少 `date` 列导致美股日线 fallback 中断。
+- Stock autocomplete index generation fails fast when `pypinyin` is missing, preventing degraded indices lacking pinyin fields from being written.
+- Normalized Tencent live quote volume to shares, preventing volume changes from being exaggerated and misleading analysis reports.
+- Docker default deployment removed single-file `.env` mounts, avoiding `Device or resource busy` errors when `os.replace` updates mount points during WebUI configuration saves.
+- Converged #1391 Phase 0 A-share code attribution boundaries: completed attribution consistency for `SH`/`SZ` prefix scenarios, clarifying scope across `data_provider/baostock_fetcher.py`, `data_provider/pytdx_fetcher.py`, `data_provider/tushare_fetcher.py`.
+- Fixed internal format conversion in Baostock fallback when `STOCK_LIST` uses bare A-share codes, allowing user configurations to continue using 6-digit stock codes.
+- Windows desktop auto-updater runs installer silently after user confirms restart installation, cleaning up process references after stopping internal backend to reduce "Daily Stock Analysis cannot be closed" prompts.
+- macOS desktop app migrated runtime configs to user data directory, migrating `.env`, databases, and logs when files in legacy `.app` bundles remain accessible, preventing reconfiguration after updates.
+- Restored related sectors and sector linkage field extraction in Agent/history compatibility snapshots, fixing regression where new homepage reports lacked sector linkage sections.
+- Corrected legacy alert JSON field names and quiet hours delivery semantics in Web settings help.
+- Fixed missing translations for configuration titles, descriptions, and dropdown options in Chinese Web settings across data sources, notifications, system, and Agent panels.
+- Fixed lingering in-progress task statuses when switching stock query sessions or reconnecting homepage tasks.
+- Stock query single-agent added provider-aware trace tracks, preserving DeepSeek V4 thinking + tool-call `reasoning_content` and tool protocol materials across turns.
+- Added invocation-level timeouts for AkShare Sina/Tencent A-share historical fallback endpoints, and added Tushare `605xxx` Shanghai code routing regression tests, preventing scheduled runs from hanging on unresponsive providers.
+- Raised minimum `exchange-calendars` dependency to `4.13.0`, preventing analysis failures when importing trading calendars in pandas 3 environments due to deprecated Timedelta unit `T`.
+- Interactive command triggers (DingTalk, Feishu, Telegram) reply only to originating chats rather than broadcasting to static notification channels.
+- Adapted Longbridge OAuth 2.0 authentication and token cache recovery, preventing Longbridge data sources from being marked unconfigured when legacy access tokens are missing.
+- Longbridge OAuth path logs graceful degradation when current SDK lacks `OAuthBuilder` / `Config.from_oauth`, avoiding build failures on Linux/Docker with older SDKs.
+- Handled YFinance daily bars returning unnamed date indices, preventing missing `date` columns from interrupting US daily line fallbacks.
 
-### 文档
+### Documentation
 
-- 新增 #1391 Phase 0 运行诊断契约文档，明确 trace_id、诊断摘要、关键链路范围与脱敏/fail-open/retention 边界。
-- 补齐告警中心 P8 文档与配置收口说明，明确 legacy JSON、高级规则、Web/API、Docker、GitHub Actions 与 Desktop 边界。
-- 说明本次桌面修复仅覆盖 Windows NSIS 更新安装链路与后端进程生命周期清理；未改动设置项保存/模型运行时清理语义。移除此前误入的 `docker/Dockerfile` `npm registry` 变更，恢复部署构建与更新修复的职责隔离。
-- 新增 AnalysisContextPack P0 上下文盘点，明确字段质量状态、现有状态映射和首版 pack 边界。
-- 明确 #1391 Phase 2 的结构化检测告警为非配置迁移信号：`agent_max_steps`/`agent_orchestrator_timeout_s` 非法值会 fallback 至默认并产生日志告警，新增诊断链路仅新增 `context_snapshot`/`RunDiagnosticSummary` 读写字段，不改写 `litellm_model`、`agent_litellm_model`、`openai_base_url`、LLM channel 路由或配置迁移语义。
-- 补充 #1391 Phase 3 兼容性说明：记录后端诊断持久化、历史查询与通知回写链路变更边界与回滚策略，并补齐后端门禁级验证要求。
+- Added #1391 Phase 0 runtime diagnostics contract documentation, clarifying trace_id, diagnostic summaries, critical pipeline scopes, and desensitization/fail-open/retention boundaries.
+- Documented Alert Center P8 specifications, clarifying boundaries across legacy JSON, advanced rules, Web/API, Docker, GitHub Actions, and Desktop.
+- Clarified that desktop fixes cover Windows NSIS update installation pipelines and backend process lifecycle cleanup without altering configuration saving or runtime model cleanup semantics; restored separation between deployment builds and update fixes.
+- Added AnalysisContextPack P0 context review, clarifying field quality states, mapping rules, and initial pack boundaries.
+- Clarified that #1391 Phase 2 structured detection alerts are non-migration signals: invalid `agent_max_steps`/`agent_orchestrator_timeout_s` values fall back to defaults with log warnings, without rewriting model routes or configurations.
+- Documented #1391 Phase 3 compatibility: recorded backend diagnostic persistence, historical query, and notification callback boundaries and rollback strategies, adding backend gate verification requirements.
 
-### 测试
+### Tests
 
-- 收敛 #1391 Phase 3 后端/API 与 Web 回归检查：`./scripts/ci_gate.sh`、`test_pipeline_market_phase_context.py`、`test_analysis_api_contract.py`、`test_analysis_history.py`、`npm run lint`、`npm run build`。
-- 执行 `python -c "import exchange_calendars as xcals; xcals.get_calendar('XSHG'); print('ok')"` 通过验证，以覆盖导入与交易日历初始化兼容性。
+- Executed #1391 Phase 3 backend/API and Web regression checks: `./scripts/ci_gate.sh`, `test_pipeline_market_phase_context.py`, `test_analysis_api_contract.py`, `test_analysis_history.py`, `npm run lint`, `npm run build`.
+- Verified `python -c "import exchange_calendars as xcals; xcals.get_calendar('XSHG'); print('ok')"` to confirm calendar import and initialization compatibility.
 
 ## [3.18.0] - 2026-05-21
 
-### 发布亮点
+### Highlights
 
-- feat: 告警中心扩展到 P2-P6，补齐后台评估、真实通知结果、业务冷却、技术指标规则，以及自选股 / 持仓 / 账户联动规则。
-- feat: 个股分析支持策略选择，新增热点题材、事件驱动、成长质量和预期重估策略，并为 HK/US 报告补充基本面、财务摘要、股东回报和关联板块。
-- feat: 新增 Finnhub / AlphaVantage 美股数据源适配器，扩展美股日线 failover 链，提升美股行情获取韧性。
-- fix: 修复桌面端发布打包、分析状态接口、AlphaVantage 涨跌幅、持仓实时估值、告警历史去重、数据库冷启动和 fallback pricing 注册等稳定性问题。
+- feat: Alert Center expanded to P2-P6, adding background evaluation, real notification results, business cooldowns, technical indicator rules, and watchlist/portfolio/account linked rules.
+- feat: Stock analysis added strategy selection, introducing hot topics, event-driven, growth quality, and valuation re-rating strategies, with fundamental, financial summary, shareholder yield, and sector linkage additions for HK/US reports.
+- feat: Added Finnhub / AlphaVantage US data provider adapters, expanding US daily failover chains to improve market data resilience.
+- fix: Resolved stability issues in desktop packaging, analysis status endpoints, AlphaVantage price change calculations, portfolio real-time valuation, alert history deduplication, database cold starts, and fallback pricing registration.
 
 ### What's Changed
 
@@ -969,9 +969,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [3.17.1] - 2026-05-16
 
-### 发布亮点
+### Highlights
 
-- fix: 桌面端 Windows / macOS 打包脚本显式关闭 electron-builder 自动发布，避免 tag 构建时因缺少 `GH_TOKEN` 在本地打包完成后失败；Release workflow 继续负责上传和发布产物。
+- fix: Desktop packaging scripts for Windows and macOS explicitly disable electron-builder auto-publishing (`--publish never`), preventing tag builds from failing locally due to missing `GH_TOKEN`; Release workflow handles artifact uploading and publishing.
 
 ### What's Changed
 
@@ -979,18 +979,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [3.17.0] - 2026-05-16
 
-### 发布亮点
+### Highlights
 
-- feat: 新增 Alert API MVP，支持告警规则 CRUD、启停、一次性测试以及触发/通知结果查询，首版覆盖 `price_cross` / `price_change_percent` / `volume_spike` 并保持 legacy 配置兼容。
-- feat: 通知网关新增 ntfy 与 Gotify 一等渠道，并补齐通知降噪、静态渠道隔离、诊断、Web 测试和 GitHub Actions env 对照校验。
-- feat: Windows 桌面安装版接入自动更新安装链路，支持后台下载、确认重启安装、运行时文件备份/恢复和发布产物元数据校验。
-- improve: 大盘复盘新增概念排行、人气股、涨停池等底层数据源，支持指数涨跌颜色语义配置，并将复盘结果写入历史记录。
-- improve: Web 设置页支持 `.env` 配置备份导入/导出和通知/Agent 区域局部错误兜底；报告新增 `REPORT_SHOW_LLM_MODEL` 开关控制模型信息展示。
-- improve: Docker 启动入口自动修复挂载目录权限并在日志目录不可写时降级到控制台，减少普通部署的手动修复步骤。
-- fix: 数据源缺凭据或连接失败时更温和降级，Longbridge / Pytdx 加入冷却，资金流缺失时避免输出高置信买入结论。
-- fix: 分析与报告链路兼容 OpenAI-compatible `content_blocks` 响应，归一策略价格字段，并修复大盘复盘滚动和历史记录丢失问题。
-- docs: 补齐通知、告警中心、桌面打包、README / 指南和 PR title 治理说明，明确多处配置兼容边界与回滚路径。
-- test: 增加 Alert API、通知降噪/路由、Docker entrypoint、数据源预取、桌面更新链路和分析历史等回归覆盖。
+- feat: Added Alert API MVP supporting rule CRUD, enable/disable, one-shot testing, and trigger/notification query results, covering `price_cross` / `price_change_percent` / `volume_spike` with legacy configuration compatibility.
+- feat: Notification gateway added ntfy and Gotify as first-class channels with noise reduction, static channel isolation, diagnostics, Web tests, and GitHub Actions environment validation.
+- feat: Windows desktop installer added auto-update installation pipeline supporting background downloads, restart confirmation, runtime file backup/restoration, and release artifact metadata verification.
+- improve: Market review added concept rankings, popular stocks, and limit-up pools, supporting index color semantics and persisting review results into history.
+- improve: Web settings page added `.env` backup import/export and error boundaries for notifications/Agent sections; reports added `REPORT_SHOW_LLM_MODEL` toggle controlling model metadata visibility.
+- improve: Docker entrypoint automatically repairs mounted directory permissions and falls back to console logging when log directories are not writable.
+- fix: Graceful degradation when data providers lack credentials or connections fail; added cooldowns for Longbridge and Pytdx, avoiding high-confidence buy conclusions when capital flow data is missing.
+- fix: Analysis and reporting pipelines handle OpenAI-compatible `content_blocks` responses, normalized strategy price fields, and resolved market review scrolling and history loss issues.
+- docs: Documented notifications, Alert Center, desktop packaging, README/guides, and PR title guidelines, clarifying configuration compatibility boundaries and rollback paths.
+- test: Added regression coverage for Alert API, notification noise control/routing, Docker entrypoint, data prefetching, desktop update pipelines, and analysis history.
 
 ### What's Changed
 
@@ -1006,18 +1006,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [3.16.0] - 2026-05-10
 
-### 发布亮点
+### Highlights
 
-- feat: Web 首页新增“大盘复盘”触发入口、任务轮询与完成后报告直出；首次启动配置状态可提示缺口并引导到系统设置。
-- feat: 新增通知路由策略，支持按 report、alert、system_error 将通知收窄到指定渠道；Web 设置页支持通知渠道一键测试。
-- feat: 系统设置页新增配置项帮助入口与多语言帮助文案基础设施，首批覆盖自选股、LLM 主模型、LLM 渠道、飞书 Webhook 与 WebUI 监听地址。
-- improve: 大盘复盘 API、CLI、Bot 共用 `build_market_review_runtime` 装配路径，补齐 `litellm_model` / `llm_model_list` 与 legacy key 回退说明。
-- improve: 个股报告操作建议结合支撑/压力、量能、筹码与主力资金流校准，减少买入/卖出剧烈切换，并补强 Agent 决策兜底。
-- improve: Docker 镜像支持非 root 用户运行，LiteLLM 依赖约束放宽到后续安全 1.x 修复版本。
-- fix: 修正 LLM 渠道测试中 `Model disabled`、provider blocked 等错误分类，避免被误报为网络异常。
-- fix: 港股日线跳过不支持港股的内置历史数据源；北交所 `BJ` 前缀与 `.BJ` 后缀代码校验保持一致。
-- fix: Web 大盘复盘按钮可观测性、Windows fallback 锁进程探测和催化线索展示更稳健。
-- docs: 新增文档中心与配置帮助维护说明，清理 README、完整指南与配置指南中的临时 PR/文档同步说明。
+- feat: Web homepage added "Market Review" trigger with task polling and inline report display; setup status alerts users to missing configurations and directs them to system settings.
+- feat: Added notification routing policies supporting filtering notifications to specified channels by report, alert, and system_error; Web settings supports one-click notification testing.
+- feat: System settings added configuration help infrastructure with multilingual help text, initially covering watchlists, primary LLM models, LLM channels, Feishu Webhooks, and WebUI listening addresses.
+- improve: Shared `build_market_review_runtime` across API, CLI, and Bot market review paths, documenting `litellm_model` / `llm_model_list` and legacy key fallbacks.
+- improve: Calibrated stock advice with support/resistance, volume, chips, and main capital flows, reducing erratic buy/sell toggling and strengthening Agent decision fallbacks.
+- improve: Docker images run as non-root users, relaxing LiteLLM constraints to allow future safe 1.x fixes.
+- fix: Corrected LLM channel testing classifications for `Model disabled` and provider blocked errors, avoiding generic network error misreports.
+- fix: HK daily bars skip unsupported built-in historical providers; aligned Beijing Stock Exchange `BJ` prefix and `.BJ` suffix code validation.
+- fix: Improved Web market review button observability, Windows fallback lock process probing, and catalyst snippet rendering.
+- docs: Added documentation index and settings help maintenance guides, cleaning up temporary PR/sync notices in README and guides.
 
 ### What's Changed
 
@@ -1034,429 +1034,429 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [3.15.0] - 2026-05-05
 
-### 发布亮点
+### Highlights
 
-- LLM 渠道配置体验继续升级：新增 Anspire OpenAI-compatible 网关接入，并补齐常用服务商预设、官方来源、能力标签、配置注意事项和 GitHub Actions 显式映射。
-- Web LLM 配置检测更可诊断：细分错误 reason，并支持用户显式触发 JSON、tools、vision、stream 运行时 smoke。
-- LLM 运行时配置清理更稳健：只清理托管 provider 的失效运行时选择，并保留 `cohere/*`、`google/*`、`xai/*` 等直连 provider 兼容语义。
-- 通知与 Bot 状态可观测性增强：自定义 Webhook 支持 JSON body 模板，Bot `/status` 展示更完整的 LLM、Agent 与通知渠道状态。
-- 大盘复盘、实时告警、Agent weak 兜底和持仓估值继续补强，降低默认值覆盖、缺价污染和配置排障成本。
+- LLM channel configuration upgrades: added Anspire OpenAI-compatible gateway access, bundled standard provider presets, official links, capability tags, configuration notes, and GitHub Actions explicit mappings.
+- Web LLM configuration diagnostics: granular error reasons with support for explicitly triggered JSON, tools, vision, and stream runtime smoke tests.
+- Robust LLM runtime cleanup: cleans only invalid selections for hosted providers, preserving direct provider compatibility for `cohere/*`, `google/*`, `xai/*`.
+- Enhanced notification and Bot observability: custom Webhooks support JSON body templates; Bot `/status` displays comprehensive LLM, Agent, and notification channel statuses.
+- Fortified market reviews, real-time alerts, Agent weak fallbacks, and portfolio valuations, reducing default overwrites, missing price issues, and troubleshooting overhead.
 
-### 新功能
+### Features
 
-- 支持 `ANSPIRE_API_KEYS` 默认接入 Anspire OpenAI-compatible 大模型网关，并在 LLM 渠道编辑器补充 Anspire Open 预设。
-- 自定义 Webhook 支持 `CUSTOM_WEBHOOK_BODY_TEMPLATE` JSON body 模板，便于适配 AstrBot、NapCat 和自建推送服务。
-- 大盘复盘结构化区块新增大盘红绿灯结论，基于盘面温度输出 green/yellow/red、核心原因和操作建议。
-- EventMonitor 支持 `price_change_percent` 涨跌幅阈值规则，可按上涨或下跌方向触发实时告警。
-- Web LLM 渠道编辑器新增常用服务商配置模板与预设，覆盖 MiniMax、火山方舟、OpenAI、Claude、Gemini、Kimi、Qwen、GLM、豆包等入口。
+- Supported `ANSPIRE_API_KEYS` connecting to Anspire OpenAI-compatible gateway by default, adding Anspire Open preset in LLM channel editor.
+- Custom Webhooks support `CUSTOM_WEBHOOK_BODY_TEMPLATE` JSON body templates, adapting to AstrBot, NapCat, and self-hosted push services.
+- Market review structured section adds market light conclusions, outputting green/yellow/red status, core drivers, and operational advice based on market temperature.
+- EventMonitor supports `price_change_percent` threshold rules, triggering real-time alerts on upward or downward price movements.
+- Web LLM channel editor adds presets for popular providers covering MiniMax, Volcengine Ark, OpenAI, Claude, Gemini, Kimi, Qwen, GLM, and Doubao.
 
-### 改进
+### Improvements
 
-- Web LLM 配置检测补充细分错误分类，并新增显式触发的 JSON/tools/vision/stream 运行时 smoke；默认测试和保存流程不变，检测结果仅作为当前配置的一次 best-effort 诊断。
-- Bot `/status` 展示统一 LLM 主模型、Agent 模型、渠道模式、YAML 配置和更多通知渠道状态。
-- Web LLM 渠道编辑器展示 provider 能力标签、官方来源链接和配置注意事项提示；这些标签仅用于配置参考，不代表运行时能力已验证通过。
-- 抽出 Web LLM provider preset 单一模板数据源，保持现有配置保存语义不变。
-- 补齐 LLM provider channel 在 GitHub Actions 中的显式映射，并同步 `.env` 示例与配置文档。
+- Web LLM configuration checks add granular error categorizations and explicit JSON/tools/vision/stream runtime smoke tests; default test and save flows remain unchanged as best-effort diagnostics.
+- Bot `/status` displays unified primary LLM models, Agent models, channel modes, YAML configs, and notification channel statuses.
+- Web LLM channel editor displays provider capability tags, official source links, and setup notes for user reference.
+- Extracted Web LLM provider presets into single template data source, preserving configuration persistence semantics.
+- Mapped LLM provider channels explicitly in GitHub Actions, synchronizing `.env.example` and documentation.
 
-### 修复
+### Fixes
 
-- Agent weak 完整性兜底在模型缺少评分、趋势、操作建议或 dashboard 关键块时优先保留本地趋势分析结果，并只补齐真正缺失的仪表盘字段，避免首页评分被默认 50 覆盖。
-- 统一持仓快照输出现价、市值、浮盈亏、收益率与价格元信息，避免缺价或 stale 价格污染持仓估值。
-- LLM 渠道测试补充结构化诊断与设置页排障提示，便于定位 provider、模型、Base URL 和鉴权配置问题。
-- 明确 runtime 清理兼容边界：仅对托管 provider（`gemini`、`vertex_ai`、`anthropic`、`openai`、`deepseek`）触发保存前失效值清理，`cohere/*`、`google/*`、`xai/*` 直连值按 legacy 兼容路径保留，不做无提示迁移或覆写。
-- 将 MiniMax 预设调整为官方 OpenAI-compatible Base URL 和当前模型示例，并补充 MiniMax、火山方舟、LiteLLM 兼容来源与回退说明。
-- 移除截图识别对 Gemini 3 Vision 模型的过时降级逻辑，默认推断改用当前 Gemini 模型配置。
+- Agent weak completeness fallback preserves local trend analysis results when models omit scores, trends, advice, or critical dashboard sections, filling only truly missing fields and preventing default score 50 overwrites.
+- Unified portfolio snapshot outputs for current price, market value, unrealized P&L, returns, and price metadata, preventing stale or missing prices from corrupting valuations.
+- LLM channel testing adds structured diagnostics and settings page troubleshooting tips for provider, model, base URL, and authentication issues.
+- Clarified runtime cleanup compatibility boundaries: cleans invalid values prior to saving only for hosted providers (`gemini`, `vertex_ai`, `anthropic`, `openai`, `deepseek`), while retaining direct connections (`cohere/*`, `google/*`, `xai/*`) along legacy compatibility paths.
+- Adjusted MiniMax presets to official OpenAI-compatible base URLs and current model examples, documenting compatibility sources and fallback instructions.
+- Removed outdated Gemini 3 Vision fallback logic in screenshot recognition, defaulting inference to configured Gemini models.
 
-### 文档
+### Documentation
 
-- 完善 LLM provider 配置文档，补充配置方式选择、Actions 变量对照、运行时检测边界、错误 reason 排障和回滚路径（#1180）。
-- 补充 LLM 渠道编辑器的官方来源、依赖兼容窗口、保存时的运行时模型清理规则，以及旧配置回退路径说明。
-- 为 `cohere/*`、`google/*`、`xai/*` 直连语义补充官方 provider/model 说明、`litellm>=1.80.10,<1.82.7` 兼容依据引用，并明确示例模型名仅为配置保留行为说明而非可用性背书。
-- 明确 `price_change_percent` 事件告警仅为配置与运行时规则扩展，未变更模型/provider/base URL/LiteLLM 兼容语义；回退路径为关闭/移除 Event Monitor 配置。
-- 同步 README、DEPLOY、full-guide、Anspire、AIHubMix 与 SerpAPI 相关说明，统一外链、配置口径和评审一致性说明。
+- Documented LLM provider configuration, covering setup options, Actions variable mappings, runtime diagnostic boundaries, error reason troubleshooting, and rollback paths (#1180).
+- Documented official sources, dependency compatibility windows, runtime model cleanup rules on save, and legacy configuration fallback paths for LLM channel editor.
+- Documented official provider/model specifications for `cohere/*`, `google/*`, `xai/*` direct connections referencing `litellm>=1.80.10,<1.82.7`.
+- Clarified that `price_change_percent` event alerts represent configuration and rule extensions without altering model/provider/base URL semantics; rollback involves disabling Event Monitor settings.
+- Synchronized documentation across README, DEPLOY, full-guide, Anspire, AIHubMix, and SerpAPI.
 
-### 测试
+### Tests
 
-- 补齐 AI 配置页与 `task_queue` 的 LLM 运行时清理/同步回归证据：恢复渠道模型时保留 fallback、编辑模型列表期间不静默清空运行时选择，渠道无可用模型时清理失效 runtime 引用，并覆盖 legacy key 与 `cohere/*`、`google/*`、`xai/*` 直连 provider 保留语义。
-- 覆盖 Web LLM 配置检测的细分错误分类，以及 JSON、tools、vision、stream 运行时 smoke 的显式触发路径。
+- Added regression tests for AI configuration page and `task_queue` LLM runtime cleanup/sync: preserving fallbacks when restoring channel models, preventing silent erasure during model list edits, cleaning invalid runtime references when channels lack models, and covering legacy keys and direct provider semantics.
+- Covered granular error categories in Web LLM configuration checks and explicit trigger paths for JSON, tools, vision, and stream smoke tests.
 
 ## [3.14.2] - 2026-04-30
 
-### 发布亮点
+### Release Highlights
 
-- 大盘复盘扩展到港股，并让 Bot `/market` 与 CLI/调度入口使用一致的交易日过滤语义。
-- 问股与 Agent 链路增强配置缺失、决策 fallback 和多策略选择体验。
-- LLM 与分析报告链路提升稳定性：非法 JSON 响应会继续尝试备用模型，LiteLLM DEBUG 日志默认降噪。
-- 新增只读首次启动配置状态接口，为后续配置向导和 smoke run 奠定基础。
+- Market review expanded to Hong Kong equities, aligning Bot `/market` with CLI and scheduler trading-day filtering semantics.
+- Stock query and Agent workflows improved for missing configurations, decision fallbacks, and multi-strategy selection.
+- LLM and analysis report pipelines enhanced for stability: malformed JSON responses continue to fallback models, and LiteLLM DEBUG logs are silenced by default.
+- Added read-only initial startup configuration status endpoint, establishing foundations for future setup wizards and smoke runs.
 
-### 新功能
+### Features
 
-- 大盘复盘支持港股市场：`MARKET_REVIEW_REGION` 新增 `hk` 选项；`both` 扩展为 A股+港股+美股，并新增港股指数（HSI/HSTECH/HSCEI）复盘链路。
-- 新增只读首次启动配置状态接口 `GET /api/v1/system/config/setup/status`，用于识别 LLM、Agent、自选股、通知和本地存储配置缺口；该接口不会重载运行时、写入 `.env` 或创建数据库文件。
+- Market review supports Hong Kong market: `MARKET_REVIEW_REGION` adds `hk` option; `both` expands to A-shares + HK + US equities, adding HK index (HSI/HSTECH/HSCEI) review pipelines.
+- Added read-only initial startup configuration status endpoint `GET /api/v1/system/config/setup/status` to detect LLM, Agent, watchlist, notification, and local storage gaps; does not reload runtime, modify `.env`, or create database files.
 
-### 改进
+### Improvements
 
-- 问股页面支持组合选择多个 Agent 策略。
+- Stock query page supports selecting combinations of multiple Agent strategies.
 
-### 修复
+### Fixed
 
-- Bot `/market` 命令复用 `get_open_markets_today()` / `compute_effective_region()` 做交易日过滤：结果作为 `override_region` 透传给 `run_market_review`；若结果为空字符串则跳过复盘并推送“今日相关市场休市”，与 CLI/调度入口行为一致。
-- 问股 Agent 在未配置可用 LLM 时保留后端真实错误原因并维持 `done.success=false` 失败语义，避免前端把配置缺失误当成成功回答。
-- Agent 模式未生成有效决策仪表盘时保留本地趋势分析的评分、趋势和操作建议，并将强买/强卖 fallback 归一到兼容的 `buy`/`sell` 决策类型，避免首页结果被 `50 / 观望 / 未知` 缺省值覆盖。
-- 持仓快照现价缺失时不再静默回退为持仓成本；当天快照优先使用历史收盘价，仅在缺失时使用实时价 fallback，缺价持仓不再污染市值与未实现盈亏汇总，并为持仓明细返回价格来源、日期、stale 与缺价状态。
-- 分析 Prompt 在注入 `trend_analysis` 前按最终 `trend_status` / `ma_alignment` 清洗互斥理由：空头结构移除看多理由、多头结构移除空头结构风险，并在事件/技术冲突与异常放量（>10 倍）时强制提示“事件先行、技术待确认”与量能降权。
-- LLM 返回非 JSON 响应时同样触发备用模型切换：主模型成功返回但无法解析 JSON 时，不再立即降级为纯文本 fallback，而是依次尝试 `LITELLM_FALLBACK_MODELS` 中的备用模型；所有模型均无法返回合法 JSON 时，再降级为文本 fallback。
-- LiteLLM 内部 DEBUG 日志默认压低到 WARNING，避免流式生成时 token 级日志污染 `stock_analysis_debug_*.log`；如需排查 LiteLLM 内部细节，可临时设置 `LITELLM_LOG_LEVEL=DEBUG`（Fixes #1156）。
+- Bot `/market` command reuses `get_open_markets_today()` / `compute_effective_region()` for trading-day filtering: passed as `override_region` to `run_market_review`; skips review and sends "Relevant markets closed today" when empty, matching CLI/scheduler behavior.
+- Stock query Agent retains authentic backend error reasons and maintains `done.success=false` failure semantics when no usable LLM is configured, preventing frontend from misinterpreting missing configuration as successful responses.
+- Agent mode preserves local trend analysis score, trend, and advice when failing to generate valid decision dashboard, normalizing strong-buy/strong-sell fallbacks to compatible `buy`/`sell` types to prevent overwriting by `50 / Hold / Unknown` defaults.
+- Portfolio snapshot no longer silently falls back to cost basis when current price is missing; current-day snapshot prioritizes historical close with real-time fallback only when missing, preventing missing prices from corrupting market values and unrealized P&L, returning price source, date, stale, and missing statuses for positions.
+- Analysis prompt cleans mutually exclusive reasons before injecting `trend_analysis` based on final `trend_status` / `ma_alignment`: bearish structures remove bullish reasons, bullish structures remove bearish structure risks, forcing "Events first, technicals pending confirmation" notices with volume downweighting during event/technical conflicts or volume spikes (>10x).
+- Non-JSON LLM responses trigger fallback model switching: when primary model returns successfully but JSON parsing fails, rather than immediately falling back to plain text, sequentially attempts fallback models in `LITELLM_FALLBACK_MODELS`; falls back to text only when all models fail to return valid JSON.
+- LiteLLM internal DEBUG logs lowered to WARNING by default, preventing token-level logs from polluting `stock_analysis_debug_*.log` during streaming; set `LITELLM_LOG_LEVEL=DEBUG` temporarily to inspect LiteLLM internals (Fixes #1156).
 
-### 文档
+### Documentation
 
-- 补充 LLM 配置指南与 FAQ，明确问股 Agent 对 `LITELLM_CONFIG` / `LLM_CHANNELS` / legacy `GEMINI_*` `OPENAI_*` `ANTHROPIC_*` 的兼容优先级、回退路径与“不静默迁移旧配置”的结论。
+- Added LLM Configuration Guide and FAQ, clarifying stock query Agent compatibility priority, fallback paths, and non-silent migration boundaries across `LITELLM_CONFIG`, `LLM_CHANNELS`, and legacy `GEMINI_*`, `OPENAI_*`, `ANTHROPIC_*`.
 
-### 测试
+### Tests
 
-- 新增 `tests/test_bot_market_command.py`，覆盖 `MARKET_REVIEW_REGION=both` + open markets `{"cn","us"}` / `{"cn","hk"}` 的 `override_region` 透传断言，并覆盖全市场休市跳过与关闭交易日检查路径；新增 `tests/test_yfinance_hk_indices.py` 覆盖港股指数符号映射与部分/全部失败降级路径。
-- 补齐 `task_queue` 轻量导入 stub 的股票代码规范化函数，恢复 `tests/test_task_queue_config_sync.py` 收集与运行。
+- Added `tests/test_bot_market_command.py` covering `MARKET_REVIEW_REGION=both` + open markets `{"cn","us"}` / `{"cn","hk"}` `override_region` assertions, market holiday skips, and trading day check bypass paths; added `tests/test_yfinance_hk_indices.py` covering HK index symbol mapping and partial/complete failure fallback paths.
+- Completed stock code normalization function in `task_queue` lightweight import stub, restoring `tests/test_task_queue_config_sync.py` test discovery and execution.
 
 ## [3.14.1] - 2026-04-26
-- [测试] 修正大盘复盘 prompt 测试对“明日交易计划”标题的断言，并同步桌面端版本号，恢复发布 gate。
+- [Test] Corrected market review prompt test assertions for "Tomorrow's Trading Plan" heading, and synchronized desktop app version to restore release gate.
 
 ## [3.14.0] - 2026-04-26
 
-### 发布亮点
+### Release Highlights
 
-- 📊 **大盘复盘升级为盘后工作台式结构** — A 股复盘固定输出盘面温度、指数明细、板块 Top 表、新闻催化、明日交易计划和风险提示，减少纯文字复盘的重复与空泛。
-- 🖥️ **桌面端新增 GitHub Release 更新提醒** — Windows/macOS 桌面端启动后自动检测新版本，也可从设置页手动检查并跳转下载页。
-- 🤖 **Pipeline Agent 数据加载大幅降噪** — K 线工具改为 DB-first 并预热 240 天历史数据，避免同一只股票重复 HTTP 请求。
-- 🐳 **Docker 发布链路整理** — 发布工作流收敛为正式发布与手动补发两条路径，官方 Docker Hub 镜像名统一为 `zhulinsen/daily_stock_analysis`。
-- 🔧 **LLM 渠道与 DeepSeek V4 配置补强** — GitHub Actions 定时分析补齐多渠道变量透传，DeepSeek 官方渠道预设与示例同步到 V4。
-- 🧩 **桌面端静态资源一致性校验** — 打包链路和运行时都能更早发现静态资源错配，降低 Release 包白屏排查成本。
+- 📊 **Market Review Upgraded to Post-Market Workbench Layout** — A-share reviews output fixed structure: market temperature, index details, top sector table, news catalysts, tomorrow's trading plan, and risk notices, reducing repetition.
+- 🖥️ **Desktop App Adds GitHub Release Update Alerts** — Windows/macOS desktop app automatically checks for updates on startup, with manual check and download links in settings.
+- 🤖 **Pipeline Agent Data Loading Noise Reduction** — K-line tools switched to DB-first with 240-day historical pre-warming, eliminating duplicate HTTP requests for the same stock.
+- 🐳 **Docker Release Workflow Convergence** — Release workflow converged into formal releases and manual releases, standardizing official Docker Hub image name to `zhulinsen/daily_stock_analysis`.
+- 🔧 **LLM Channels & DeepSeek V4 Configuration Improvements** — GitHub Actions daily analysis passes multi-channel variables, and DeepSeek official presets synchronize to V4.
+- 🧩 **Desktop Static Asset Consistency Validation** — Packaging pipelines and runtime detect static asset mismatches earlier, reducing blank screen debugging costs in release packages.
 
-### 新功能
+### Features
 
-- 🏠 **Web 首页历史报告区新增重新分析入口** — 支持基于原始 prompt 重做同一只股票同日期的分析。
-- 🖥️ **Windows/macOS 桌面端新增 GitHub Release 更新提醒** — 启动后自动检测新版本，并支持从设置页手动检查后跳转下载页。
+- 🏠 **Web Homepage Historical Reports Adds Re-Analysis Action** — Supports re-running analysis for the same stock and date using the original prompt.
+- 🖥️ **Windows/macOS Desktop Adds GitHub Release Update Notifications** — Checks for new versions on launch and supports manual checks from settings.
 
-### 改进
+### Improvements
 
-- 📊 **A 股大盘复盘报告改为结构化盘后工作台版式** — 固定输出盘面温度、指数明细、板块 Top 表、新闻催化和明日交易计划。
-- 🐳 **Docker 发布工作流收敛** — 更清晰地区分正式发布与手动补发链路，并统一官方 Docker Hub 镜像名为 `zhulinsen/daily_stock_analysis`。
-- 🤖 **Agent 日线工具优先复用本地缓存** — 同时持久化新获取的日线与新闻情报，减少重复数据源调用。
+- 📊 **A-Share Market Review Converted to Structured Post-Market Workbench Layout** — Consistently outputs market temperature, index details, sector leaderboards, news catalysts, and tomorrow's trading plan.
+- 🐳 **Docker Release Workflow Convergence** — Clarified boundaries between official releases and manual releases, standardizing official Docker Hub image name to `zhulinsen/daily_stock_analysis`.
+- 🤖 **Agent Daily History Tool Prioritizes Local Cache** — Concurrently persists newly retrieved daily bars and news intel, reducing redundant data provider calls.
 
-### 修复
+### Fixed
 
-- 🤖 **Pipeline Agent K 线工具 DB-first 加载** — `get_daily_history` / `analyze_trend` / `calculate_ma` / `get_volume_analysis` / `analyze_pattern` 改为优先读取本地 DB，消除同一只股票 9x5=45 次重复 HTTP 请求（Fixes #1066）。
-- 🤖 **Pipeline Agent 执行前按需预热 240 天 K 线历史到 DB** — 正常情况下 K 线工具调用无需重复网络请求。
-- 🕒 **冻结 `target_date` 并通过 ContextVar 透传到 Pipeline Agent K 线工具线程** — 消除跨收盘边界时间漂移。
-- 🪟 **Windows 桌面端后端日志转抄编码修复** — 转抄 stdout/stderr 时优先使用 UTF-8，并兼容本地代码页回退，避免中文日志乱码。
-- ⚙️ **GitHub Actions 每日分析工作流补齐 LLM 渠道变量透传** — 支持 `LLM_CHANNELS`、多 Key 与常用 `LLM_<NAME>_*`，避免本地可用的多模型配置在云端定时任务中失效（Fixes #1063, #872）。
-- 📈 **历史报告详情接口修正 `change_pct` 取值** — 使用 `is None` 判断避免把 0.0（平盘）当作缺失值丢弃，移除错误的 `change_60d` 兜底，并在缺失时回退到原始实时行情字段（Fixes #1084）。
-- 🔧 **DeepSeek 官方渠道预设与示例配置同步到 V4** — 保留 legacy `deepseek-chat` 默认值并增加废弃提示，同时修正模型发现后旧运行时选择导致保存失败的问题（Fixes #1108, #1109）。
-- 🧩 **桌面端打包链路新增静态资源一致性检查** — `scripts/check_static_assets.py` 会在源 `static/` 与 PyInstaller 产物中校验 `index.html` 引用的资源是否真实存在，运行时也会在错配时写入明确日志，避免重现 Release 包打开后白屏（Refs #1064 / #1065 / #1050）。
-- 🧩 **后端 `/assets/*` 改为显式路由托管** — 资源缺失时返回与请求扩展名匹配的 `text/javascript` / `text/css` 404，减少默认 JSON 错误响应带来的排查误导（Refs #1064）。
-- 🌙 **`kimi-k2.6` 自动使用固定温度** — 主分析、大盘复盘和 Agent 调用该模型时自动使用 `temperature=1.0`，避免模型拒绝默认温度请求（Fixes #1102）。
+- 🤖 **Pipeline Agent K-Line Tools DB-First Loading** — `get_daily_history` / `analyze_trend` / `calculate_ma` / `get_volume_analysis` / `analyze_pattern` prioritize reading local DB, eliminating 9x5=45 duplicate HTTP requests per stock (Fixes #1066).
+- 🤖 **Pipeline Agent Pre-Warms 240-Day K-Line History to DB On Demand** — K-line tool calls require no duplicate network requests under normal conditions.
+- 🕒 **Freezes `target_date` and Passes via ContextVar to Pipeline Agent K-Line Tool Threads** — Eliminates time drift across market close boundaries.
+- 🪟 **Windows Desktop Backend Log Transcribe Encoding Fix** — Prioritizes UTF-8 when transcribing stdout/stderr with local code page fallback, preventing garbled log characters.
+- ⚙️ **GitHub Actions Daily Analysis Passes LLM Channel Variables** — Supports `LLM_CHANNELS`, multi-key, and common `LLM_<NAME>_*`, preventing local multi-model configs from failing in cloud scheduled tasks (Fixes #1063, #872).
+- 📈 **Historical Report Details API Fixes `change_pct` Value** — Uses `is None` check to avoid dropping 0.0 (flat), removes erroneous `change_60d` fallback, and falls back to raw real-time quote fields when missing (Fixes #1084).
+- 🔧 **DeepSeek Official Channel Presets and Examples Synchronized to V4** — Retains legacy `deepseek-chat` default with deprecation warning, fixing save failures caused by legacy runtime selections following model discovery (Fixes #1108, #1109).
+- 🧩 **Desktop Packaging Adds Static Asset Consistency Check** — `scripts/check_static_assets.py` verifies resources referenced by `index.html` exist in source `static/` and PyInstaller outputs, logging clear mismatches to prevent blank screens in release packages (Refs #1064 / #1065 / #1050).
+- 🧩 **Backend `/assets/*` Handled via Explicit Route Hosting** — Missing assets return `text/javascript` / `text/css` 404 matching request extension, eliminating misleading default JSON error responses (Refs #1064).
+- 🌙 **`kimi-k2.6` Automatically Uses Fixed Temperature** — Standard analysis, market review, and Agent calls automatically use `temperature=1.0` for this model, preventing rejection of default temperature requests (Fixes #1102).
 
-### 文档
+### Documentation
 
-- 🐳 **补充官方 Docker 镜像使用说明** — 增加镜像拉取、`docker run` 用法与 `.env` / 数据目录映射说明，不再只覆盖 Compose 部署路径。
-- 📨 **修正飞书自定义机器人 Webhook 示例** — `feishu_sender.py` 中的示例改为 interactive card JSON，并补充飞书自动化 Webhook 触发器配置教程。
-- 📚 **优化根 README 结构** — 保留首页级功能特性、技术栈、快速开始、推送效果、Web、Agent、赞助商和新闻源入口，将细配置、交易纪律和基本面语义收口到完整指南，并将 Docker 徽章指向官方镜像页。
-- 🌐 **同步英文与繁中 README 的精简入口结构** — 同时补齐完整指南中的 LLM 用量 API 与持仓管理说明。
-- 🤝 **调整 AI 协作与 PR 模板中的 README 维护规则** — 明确 README 非必要不更新，细节优先进入专题文档。
+- 🐳 **Added Official Docker Image Usage Guide** — Added image pulling, `docker run` usage, and `.env` / data directory mapping documentation, extending beyond Compose deployments.
+- 📨 **Corrected Feishu Custom Bot Webhook Example** — Example in `feishu_sender.py` updated to interactive card JSON, adding Feishu automated webhook trigger configuration guide.
+- 📚 **Optimized Root README Structure** — Retained top-level features, stack, quick start, notification previews, Web, Agent, sponsors, and news source links, moving detailed configuration, trading discipline, and fundamental semantics to full guide; Docker badge points to official image page.
+- 🌐 **Synchronized Streamlined Navigation in English and Traditional Chinese READMEs** — Added LLM usage API and portfolio management documentation to full guide.
+- 🤝 **Adjusted README Maintenance Rules in AI Collaboration and PR Templates** — Clarified that README is updated only when necessary, with implementation details directed to topical documentation.
 
-### 测试
+### Tests
 
-- 🧪 **稳定市场复盘相关测试的 LiteLLM stub 行为** — 避免本机安装的 LiteLLM 在测试收集顺序变化时影响市场复盘单元测试。
-- 🧪 **pytest 默认跳过前端依赖目录** — 本地存在 `apps/dsa-web/node_modules` 时不再被后端测试递归扫描，避免发布前 gate 被无关目录拖慢。
+- 🧪 **Stabilized LiteLLM Stub Behavior in Market Review Tests** — Prevents locally installed LiteLLM from affecting market review unit tests during test collection reordering.
+- 🧪 **pytest Skips Frontend Dependencies Directory by Default** — Local `apps/dsa-web/node_modules` is no longer recursively scanned by backend tests, preventing pre-release gates from slowing down.
 
 ## [3.13.0] - 2026-04-21
 
-### 发布亮点
+### Release Highlights
 
-- 🌉 **长桥 OpenAPI 数据源接入** — 美股/港股行情优先使用 Longbridge，YFinance / AkShare 自动兜底；未配置时行为不变。
-- 📈 **Tushare 港股全链路扩展** — 港股日线通过 `hk_daily` 获取；筹码分布对港股返回 `None`；换算单位跟随港股口径，不再套用 A 股手/千元规则。
-- 🔍 **Anspire Search 语义搜索接入** — 配置 `ANSPIRE_*` 后即可使用 Anspire Search 获取实时行情及资讯，未配置时完全透明。
-- 🚀 **普通分析链路支持 LLM 流式生成** — 首页任务 SSE 新增 `task_progress` 事件，进度更细化；不支持流式的 provider 自动回退到非流式调用。
-- 🤖 **Web 渠道编辑器支持按需拉取可用模型列表** — `/v1/models` 统一模型发现入口，多选写回 `LLM_{CHANNEL}_MODELS`，拉取失败时保留手动输入降级。
-- 🛡️ **Agent 稳定性与预算护栏全面补强** — `AGENT_MAX_STEPS` 语义统一、技能降级不中断管线、SSE 异常透传、技能加载 warning 日志补齐。
-- 🛠️ **SQLite 写入链路原子化** — 批量原子 upsert + WAL + `busy_timeout` + 有限写入重试，显著降低批量分析并发锁竞争。
+- 🌉 **Longbridge OpenAPI Data Source Integration** — US/HK quotes prioritize Longbridge with YFinance / AkShare auto-fallback; behavior unchanged when unconfigured.
+- 📈 **Tushare Full Hong Kong Stock Pipeline Support** — HK daily bars retrieved via `hk_daily`; chip distribution returns `None` for HK stocks; units adhere to HK standards without applying A-share lot/thousand-yuan rules.
+- 🔍 **Anspire Search Semantic Search Integration** — Configurable via `ANSPIRE_*` for real-time quotes and news intel; completely transparent when unconfigured.
+- 🚀 **Standard Analysis Pipeline Supports LLM Streaming Generation** — Home task SSE adds `task_progress` events with granular progress; unsupported providers fall back to non-streaming calls.
+- 🤖 **Web Channel Editor Supports Pulling Available Models On Demand** — `/v1/models` unified model discovery endpoint, writing multi-select choices back to `LLM_{CHANNEL}_MODELS` with manual input fallback.
+- 🛡️ **Agent Stability and Budget Guardrails Strengthened** — Unified `AGENT_MAX_STEPS` semantics, non-breaking skill degradation, SSE exception pass-through, and skill loading warning logs.
+- 🛠️ **SQLite Atomic Write Pipeline** — Batch atomic upsert + WAL + `busy_timeout` + limited write retries, significantly reducing concurrency lock contention.
 
-### 新功能
+### Features
 
-- 🌉 **集成 Longbridge OpenAPI 作为美股/港股可选数据源**（fixes #981）— 配置 `LONGBRIDGE_*` 后优先使用长桥获取日线与实时行情，YFinance / AkShare 兜底；未配置时行为与此前一致。联调使用 `tests/longbridge_live_smoke.py`（手动脚本，不参与 pytest 收集）。
-- 📈 **Tushare 支持港股日线查询** — 配置 Tushare 凭证后调用 `hk_daily` 接口获取港股数据；权限不足时抛出异常，与原流程一致。
-- 🔍 **集成 Anspire Search 可选语义搜索后端** — 配置 `ANSPIRE_*` 可使用 Anspire Search 获取实时行情及新闻资讯；未配置时行为与此前一致。联调使用 `tests/test_anspire_search.py`（手动脚本）。
-- 🚀 **普通分析链路支持 LiteLLM 流式生成与更细任务进度** — 股票分析在 LLM 阶段优先尝试 `stream=True` 并在服务端累积 chunk，首页任务 SSE 新增 `task_progress` 事件与更细的 `message/progress` 更新；仅在最终 JSON 解析成功后持久化历史报告；不支持流式的 provider 自动回退到非流式调用。
-- 🤖 **Web AI 模型配置支持按渠道获取可用模型列表** — 渠道编辑器支持调用 `/v1/models` 拉取可用模型，并以多选方式写回 `LLM_{CHANNEL}_MODELS`；拉取失败时保留手动输入作为降级路径。
+- 🌉 **Integrated Longbridge OpenAPI as Optional US/HK Data Source** (fixes #981) — Prioritizes Longbridge for daily bars and live quotes when `LONGBRIDGE_*` is configured, falling back to YFinance / AkShare; behavior identical to previous versions when unconfigured. Tested via `tests/longbridge_live_smoke.py` (manual script, excluded from pytest collection).
+- 📈 **Tushare Supports Hong Kong Stock Daily Bar Queries** — Calls `hk_daily` endpoint when Tushare credentials are configured; raises exception on insufficient permissions, consistent with original pipeline.
+- 🔍 **Integrated Anspire Search Optional Semantic Search Backend** — Configurable via `ANSPIRE_*` for live quotes and news intel; behavior unchanged when unconfigured. Tested via `tests/test_anspire_search.py` (manual script).
+- 🚀 **Standard Analysis Pipeline Supports LiteLLM Streaming and Granular Progress** — Stock analysis attempts `stream=True` in LLM stage accumulating chunks on server, adding `task_progress` events and granular `message/progress` updates to home task SSE; persists history report only upon final JSON parse success; unsupported providers fall back to non-streaming calls.
+- 🤖 **Web AI Model Configuration Fetches Models by Channel** — Channel editor calls `/v1/models` to pull available models, saving multi-select choices back to `LLM_{CHANNEL}_MODELS`; retains manual input as fallback.
 
-### 改进
+### Improvements
 
-- 🔎 **SerpAPI 正文补抓范围收敛** — 自然搜索结果不再逐条同步抓取网页正文；仅对极少数高位且摘要不足的结果做延迟补抓，优先复用 SerpAPI 已返回的结构化摘要，降低搜索链路尾延迟与慢站点放大风险。
-- 🤖 **LLM 接入体验简化** — 面向用户的 AI 模型接入文案统一为"主模型 / Agent 主模型 / 备选模型 / 模型渠道"，不再把 LiteLLM 当作普通用户必学概念，现有 `LITELLM_*` / `LLM_CHANNELS` 配置键保持兼容。
-- 🧠 **IntelAgent 新增公司公告搜索与主力资金流工具** — 增加上交所/深交所/cninfo 公告搜索维度与 `get_capital_flow` 工具，修复 Agent 模式下公告和资金流数据经常缺失的问题。
-- 📦 **后端股票名称解析优先复用 `stocks.index.json`** — 懒加载缓存前端静态索引，纯后端/缺失静态资源场景静默降级回 `STOCK_NAME_MAP` 与原有数据源回退链路。
-- 📊 **TushareFetcher 港股单位适配** — `get_chip_distribution` 对港股直接返回 `None`（港股暂不支持筹码分布）；`_normalize_data` 对港股（`hk_daily`）不再做 A 股手→股、千元→元的缩放，与 Tushare 港股字段语义一致。
-- ⏱️ **Agent 超步数错误增加 `AGENT_MAX_STEPS` 调整提示** — 帮助用户自助排查步数限制问题。
-- ⚙️ **GitHub Actions 分析任务超时支持 `vars` 配置** — `daily_analysis.yml` 任务超时从 repository variables 读取，无需修改代码即可调整运行超时上限（fixes #1014）。
+- 🔎 **SerpAPI Body Fetch Scope Convergence** — Organic search results no longer fetch webpage body text synchronously per item; applies delayed fetching with shorter timeout budget only to rare top-ranked items with insufficient snippets, prioritizing structured snippets to reduce tail latency and slow site amplification.
+- 🤖 **Simplified LLM User Experience** — Unified user-facing AI model terminology to "Primary Model / Agent Primary Model / Fallback Model / Model Channels", removing LiteLLM as mandatory concept for general users; existing `LITELLM_*` / `LLM_CHANNELS` keys remain compatible.
+- 🧠 **IntelAgent Adds Corporate Announcements Search and Capital Flow Tool** — Added SSE/SZSE/cninfo announcement search dimensions and `get_capital_flow` tool, resolving missing announcement and fund flow data in Agent mode.
+- 📦 **Backend Stock Name Resolution Prioritizes `stocks.index.json`** — Lazily loads cached frontend static index, silently falling back to `STOCK_NAME_MAP` and existing data source fallback pipelines in backend-only or missing static asset environments.
+- 📊 **TushareFetcher Hong Kong Stock Unit Adaptation** — `get_chip_distribution` returns `None` for HK stocks (chip distribution currently unsupported for HK); `_normalize_data` skips A-share lot-to-share and thousand-yuan-to-yuan scaling for HK stocks (`hk_daily`), adhering to Tushare HK field semantics.
+- ⏱️ **Agent Step Limit Errors Add `AGENT_MAX_STEPS` Adjustment Hints** — Helps users self-diagnose step limit issues.
+- ⚙️ **GitHub Actions Analysis Task Timeout Configurable via `vars`** — `daily_analysis.yml` task timeout reads from repository variables, allowing timeout adjustment without modifying code (fixes #1014).
 
-### 修复
+### Fixed
 
-- 📣 **大盘复盘链路接入 `REPORT_LANGUAGE`** — `REPORT_LANGUAGE=en` 时，A 股/合并复盘的 Prompt、章节标题、模板兜底文案与通知包装标题统一输出英文，避免英文正文搭配中文标题的混排问题。
-- 📈 **EfinanceFetcher 指数开盘价映射兼容**（fixes #1043）— `get_main_indices()` 的开盘价映射改为兼容 `今开 → 开盘 → open`，修复部分 efinance 版本下指数开盘价被读成缺失值的问题。
-- 🤖 **AGENT_MAX_STEPS 语义统一**（fixes #1026）— 在 orchestrator 多 Agent 模式下明确为"各子 Agent 步数上限而非硬覆盖"；TechnicalAgent 等高默认值 Agent 会被封顶，低默认值 Agent 保持原值；用户主动调高（>10）时统一覆盖所有子 Agent。修复了用户设置 12 但 TechnicalAgent 仍以默认 6 步运行并报 "Agent exceeded max steps" 的问题。
-- 🛡️ **Specialist（Skill）Agent 失败改为优雅降级** — 技能 Agent 失败不再中断整个分析管线，与 intel/risk 保持相同的降级策略。
-- 🔧 **MiniMax-M2.7 连接测试修复** — 修复 LLM 通道连接测试在 MiniMax-M2.7 下返回 "Empty response" 的问题；将 `max_tokens` 上限从 8 提升至 256 以容纳思考过程，并添加 `content_blocks` 格式解析逻辑。
-- 📊 **移除 `sentiment_score` 范围约束**（fixes #942）— 移除 `HistoryItem` 与 `ReportSummary` 响应 Schema 中 `sentiment_score` 的 `ge=0/le=100` 约束，历史库中存储的超范围值不再触发 Pydantic ValidationError。
-- 🖥️ **WebUI 前端资源缺失时发出明确警告** — `webui_frontend.py` 在 `static/index.html` 存在但 `static/assets/` 缺失时发出 warning，避免 CSS/JS 资源缺失导致页面异常变大却无从排查（fixes #944）。
-- 🔗 **分析管线可选服务降级初始化** — `StockAnalysisPipeline` 搜索服务与社交舆情服务任一初始化异常时，记录 warning 并以禁用状态继续运行，避免外部依赖抖动阻塞主分析链路。
-- 🖥️ **桌面端版本展示统一读取 `package.json`** — 统一读取 `apps/dsa-desktop/package.json`，移除 preload 中硬编码的 `0.1.0`，设置页展示真实桌面端版本；修复版本号显示错误（fixes #1048）。
-- 🐋 **港股名称获取失败修复**（fixes #940）— 修复主数据源字段缺失时无法正确回退到备用字段获取港股名称的问题。
-- 🔄 **SSE 任务流断开时 `CancelledError` 正确 re-raise**（fixes #967）— 修复 SSE 流中断时异常被静默吞掉导致故障无日志可查的问题。
-- 🔄 **Agent SSE 清理阶段后台任务异常正确上报**（fixes #969）— 流结束时后台执行器异常现在正确记录并上报，避免错误无法感知。
-- 🔇 **技能加载异常补充 `logger.warning` 日志**（fixes #970）— 在 `ask.py`、`skills/aggregator.py`、`skills/router.py` 的静默 except 块补充日志，确保技能列表为空时有日志可查。
-- 🛠️ **SQLite 写入链路原子化**（fixes #878）— `stock_daily(code,date)` 使用批量原子 upsert；文件型 SQLite 连接默认启用 WAL + `busy_timeout` + 有限写入重试；"新增数"改按本次真正插入窗口计算。
-- 💰 **多 Agent / 单 Agent 预算护栏语义统一** — 剩余预算低于最小阈值时主动跳过并降级；已完成阶段可构建降级报告时返回 `success=True` 并携带非空内容，否则返回 `success=False`。
-- ⚙️ **GitHub Actions `daily_analysis.yml` 补齐 `REPORT_LANGUAGE` 注入**（fixes #1013）— 修复用户在 Secrets/Variables 中配置 `REPORT_LANGUAGE` 后不生效的问题。
-- 📊 **任务状态 API 补齐实时价格字段**（fixes #983）— `GET /api/v1/analysis/status/{task_id}` 从数据库回填已完成任务时补齐 `current_price` / `change_pct`，修复首页报告股票名旁不显示实时价格的问题。
-- 📅 **非交易日数据返回最近交易日**（fixes #1009）— 修复非交易日（周末/节假日）筹码分布与板块排行返回倒数第二个交易日数据的问题，现在正常返回最近交易日数据。
-- 🔍 **A 股资讯搜索恢复中文优先** — `search_stock_news()` 在首个 provider 主要返回英文资讯时继续尝试后续引擎，并将同批结果中的中文资讯排到前面；非美股查询不再默认沿用 Brave 的 `en/US` 区域语言偏好。
-- 📨 **飞书群机器人通知支持签名校验** — 飞书通知现在支持 `FEISHU_WEBHOOK_SECRET` / `FEISHU_WEBHOOK_KEYWORD`；Web 设置与文档明确区分 Webhook 推送模式和 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` 应用模式，降低误配风险。
-- ⚡ **LLM 适配层新增 `RateLimitError` 和 `ContextWindowExceeded` 检测** — 识别并处理速率限制与上下文窗口超出错误，提升分析链路在高负载或长文本场景下的健壮性（fixes #1002）。
+- 📣 **Market Review Pipeline Adopts `REPORT_LANGUAGE`** — When `REPORT_LANGUAGE=en`, A-share / merged review prompts, section headings, template fallback text, and notification wrappers output English uniformly, preventing English body copy paired with Chinese headers.
+- 📈 **EfinanceFetcher Index Opening Price Mapping Compatibility** (fixes #1043) — `get_main_indices()` opening price mapping made compatible across `today_open (jinkai) -> open (kaipan) -> open`, fixing issues where index opening price was read as missing under certain efinance versions.
+- 🤖 **Unified AGENT_MAX_STEPS Semantics** (fixes #1026) — Clarified in orchestrator multi-Agent mode as "per-sub-Agent step ceiling rather than hard override"; high-default Agents like TechnicalAgent are capped, low-default Agents retain original values; user settings (>10) override all sub-Agents. Fixes issue where user set 12 but TechnicalAgent ran default 6 steps reporting "Agent exceeded max steps".
+- 🛡️ **Specialist (Skill) Agent Failures Gracefully Degraded** — Skill Agent failures no longer abort entire analysis pipeline, sharing same fallback strategy as intel/risk.
+- 🔧 **MiniMax-M2.7 Connection Test Fix** — Fixed LLM channel connection test returning "Empty response" under MiniMax-M2.7; increased `max_tokens` ceiling from 8 to 256 to accommodate reasoning process, adding `content_blocks` parsing logic.
+- 📊 **Removed `sentiment_score` Range Constraints** (fixes #942) — Removed `ge=0/le=100` constraints from `HistoryItem` and `ReportSummary` response schemas; out-of-range historical values no longer trigger Pydantic ValidationError.
+- 🖥️ **Explicit Warning When WebUI Frontend Assets Are Missing** — `webui_frontend.py` emits warning when `static/index.html` exists but `static/assets/` is missing, preventing bloated unstyled pages that are difficult to debug (fixes #944).
+- 🔗 **Analysis Pipeline Optional Services Degraded Initialization** — `StockAnalysisPipeline` logs warning and continues in disabled state upon search service or social sentiment initialization errors, preventing external dependency instability from blocking primary analysis pipeline.
+- 🖥️ **Desktop App Version Unified from `package.json`** — Reads `apps/dsa-desktop/package.json`, removing hardcoded `0.1.0` in preload, displaying authentic desktop version in settings page; fixes version display error (fixes #1048).
+- 🐋 **Hong Kong Stock Name Retrieval Failure Fix** (fixes #940) — Fixed failure to fall back to secondary fields when primary data source fields are missing for HK stock names.
+- 🔄 **SSE Task Stream Disconnect Re-Raises `CancelledError` Properly** (fixes #967) — Fixed issue where exceptions were silently swallowed during SSE stream disconnects leaving failures without log traces.
+- 🔄 **Agent SSE Cleanup Background Task Exceptions Properly Reported** (fixes #969) — Background executor exceptions during stream cleanup are properly logged and reported, preventing unnoticed errors.
+- 🔇 **Skill Loading Exceptions Add `logger.warning` Logs** (fixes #970) — Added logging to silent except blocks in `ask.py`, `skills/aggregator.py`, `skills/router.py`, ensuring logs exist when skill list is empty.
+- 🛠️ **SQLite Atomic Write Pipeline** (fixes #878) — `stock_daily(code,date)` uses batch atomic upsert; file-based SQLite connections enable WAL + `busy_timeout` + limited write retries by default; "new count" calculated strictly by actual inserted rows in current window.
+- 💰 **Unified Multi-Agent / Single-Agent Budget Guardrail Semantics** — Actively skips and degrades when remaining budget falls below minimum threshold; returns `success=True` with non-empty content when completed stages can synthesize fallback report, otherwise returns `success=False`.
+- ⚙️ **GitHub Actions `daily_analysis.yml` Injects `REPORT_LANGUAGE`** (fixes #1013) — Fixed issue where `REPORT_LANGUAGE` configured in Secrets/Variables did not take effect.
+- 📊 **Task Status API Returns Real-Time Price Fields** (fixes #983) — `GET /api/v1/analysis/status/{task_id}` populates `current_price` / `change_pct` when backfilling completed tasks from database, fixing missing real-time price beside stock name on homepage reports.
+- 📅 **Non-Trading Days Return Most Recent Trading Day Data** (fixes #1009) — Fixed issue where chip distribution and sector leaderboards on non-trading days (weekends/holidays) returned second-to-last trading day data, now correctly returning most recent trading day.
+- 🔍 **A-Share News Search Restores Chinese Priority** — `search_stock_news()` tries subsequent search engines when first provider returns mostly English news, sorting Chinese news ahead within the same batch; non-US queries no longer inherit Brave's `en/US` locale defaults.
+- 📨 **Feishu Group Bot Notifications Support Signature Verification** — Feishu notifications support `FEISHU_WEBHOOK_SECRET` / `FEISHU_WEBHOOK_KEYWORD`；Web settings and docs clearly distinguish Webhook push mode from `FEISHU_APP_ID` / `FEISHU_APP_SECRET` application mode to reduce misconfiguration.
+- ⚡ **LLM Adapter Adds `RateLimitError` and `ContextWindowExceeded` Detection** — Detects and handles rate limit and context window exceeded errors, improving pipeline robustness under high load or long-context scenarios (fixes #1002).
 
-### 测试
+### Tests
 
-- 🧪 **TushareFetcher 港股相关单元测试** — 新增 `get_chip_distribution` 筹码分布获取与 `_normalize_data` 港股/A 股/ETF 单位处理的单元测试，覆盖港股特殊路径。
+- 🧪 **TushareFetcher Hong Kong Stock Unit Tests** — Added unit tests for `get_chip_distribution` and `_normalize_data` HK/A-share/ETF unit scaling, covering HK-specific execution paths.
 
-### 文档
+### Documentation
 
-- 📘 **DEPLOY.md 补充 UI 元素异常变大排查步骤** — 新增重建 Docker 镜像或手动执行 `npm run build` 的排查指南；`deploy-webui-cloud.md` 同步更新。
-- 📨 **飞书 Webhook 配置说明补全** — 强调 `FEISHU_WEBHOOK_URL` 是群通知必填项、签名校验须两端同时启用或关闭、`FEISHU_APP_SECRET` 仅用于应用/Stream Bot 模式；`.env.example` 补充内联注释；同步英文指南。
-- 🤝 **FAQ 补充 Ollama 连接失败排障条目（Q12c）** — 覆盖服务未启动、URL 配置错误、模型前缀缺失、模型未下载、远程防火墙等 5 个检查点（fixes #854）。
-- 🌉 **README 补充长桥数据源使用说明** — 中/英/繁 README 明确长桥"首选 / 兜底 / 未配置不调用"边界；`docs/` 内相对路径链接修复；`LONGBRIDGE_PRINT_QUOTE_PACKAGES` 配置与代码及 `.env.example` 对齐。
-- 🐋 **Docker 安装场景版本说明** — 补充最小化文档，明确 Docker 安装场景下应以 Git tag / 镜像 tag 判断版本（fixes #1091）。
+- 📘 **DEPLOY.md Adds Troubleshooting for Abnormally Enlarged UI Elements** — Added guidance for rebuilding Docker images or manually running `npm run build`; synchronized `deploy-webui-cloud.md`.
+- 📨 **Feishu Webhook Configuration Documentation Completed** — Emphasized `FEISHU_WEBHOOK_URL` is required for group notifications, signature verification must be enabled/disabled on both ends, and `FEISHU_APP_SECRET` is for App/Stream Bot mode only; added inline comments to `.env.example`; synchronized English guide.
+- 🤝 **FAQ Adds Ollama Connection Failure Troubleshooting (Q12c)** — Covers 5 checkpoints: service not running, incorrect URL, missing model prefix, model not downloaded, and remote firewall (fixes #854).
+- 🌉 **README Adds Longbridge Data Source Usage Guide** — Chinese/English/Traditional Chinese READMEs clarify Longbridge "Preferred / Fallback / Uncalled when unconfigured" boundaries; fixed relative links in `docs/`; aligned `LONGBRIDGE_PRINT_QUOTE_PACKAGES` across code and `.env.example`.
+- 🐋 **Docker Installation Version Notes** — Added minimal documentation clarifying Docker installations should determine version via Git tag / image tag (fixes #1091).
 
 ## [3.12.0] - 2026-04-01
 
-### 发布亮点
+### Release Highlights
 
-- 📊 **回测页新增"次日验证"视图** — 可按股票与日期范围查看 AI 预测 vs 次日实际涨跌，复用历史分析与 1 日回测结果，快速验证分析准确率。
-- 🔧 **LLM 接入体验简化** — 用户侧文案统一收口为"主模型 / 备选模型 / 模型渠道"，不再把 LiteLLM 当作普通用户必学概念，现有配置键保持兼容。
-- 🐳 **Docker / WebUI 运行时稳态补强** — 修复系统设置保存后配置不生效、启动早期日志缺失、预构建静态资源复用等问题，降低容器化部署的运维摩擦。
-- 🔒 **安全与并发稳定性同步增强** — Discord 入站 Webhook 补齐 Ed25519 验签，修复并发执行时共享状态未加锁、单股推送模式通知并发复用等问题。
-- 🖥️ **桌面端与定时任务细节打磨** — Windows 安装器支持自选安装目录，内置定时调度器感知运行中 SCHEDULE_TIME 变更，断点续传改按市场时区判断。
+- 📊 **Backtest Page Adds "Next-Day Validation" View** — Displays AI prediction vs next-day actual price change by stock and date range, leveraging historical analysis and 1-day backtest results to quickly verify accuracy.
+- 🔧 **Simplified LLM User Experience** — Unified user-facing terminology to "Primary Model / Fallback Model / Model Channels", removing LiteLLM as mandatory concept for general users; existing configuration keys remain compatible.
+- 🐳 **Docker / WebUI Runtime Stability Hardening** — Fixed issues where configuration failed to take effect after saving system settings, missing early startup logs, and pre-built static asset reuse, reducing operational friction.
+- 🔒 **Security and Concurrency Stability Enhancements** — Discord inbound Webhooks add Ed25519 signature verification; fixed unlocked shared state during concurrent execution and notification concurrency reuse in single-stock push mode.
+- 🖥️ **Desktop App and Scheduler Polish** — Windows installer supports custom installation directory; built-in scheduler dynamically detects runtime `SCHEDULE_TIME` changes; resume functionality evaluates by market timezone.
 
-### 新功能
+### Features
 
-- 📊 **回测页新增"次日验证 / 1 日窗口"视图** — 可按股票代码与分析日期范围查看 AI 预测、次日实际涨跌及筛选区间准确率，复用历史分析与 1 日回测结果实现。
-- 🏷️ **Web 设置页新增版本信息卡片** — `apps/dsa-web` 现在会在构建时注入前端包版本与构建时间，系统设置页新增只读"版本信息"区块，展示 `WebUI 版本 / 构建标识 / 构建时间`；当 `package.json` 仍为占位版本 `0.0.0` 时，会自动回退为构建标识，方便 Docker 重建后快速确认当前静态资源是否已经生效。
-- 🪟 **Windows 桌面安装器支持自选安装目录** — 安装器改为支持在安装向导中自定义安装目录，安装到非默认盘符后仍沿用现有打包态目录逻辑在安装目录旁读写 `.env`、`data/stock_analysis.db` 和 `logs/desktop.log`，同时保留 `win-unpacked` 免安装分发方式。安装器仅支持当前用户安装、已禁用管理员提权（`allowElevation: false`），并通过 NSIS `.onVerifyInstDir` 阻止选择系统保护目录。
+- 📊 **Backtest Page Adds "Next-Day Validation / 1-Day Window" View** — Displays AI predictions, next-day actual price changes, and filtered accuracy by stock symbol and analysis date range, built upon historical analysis and 1-day backtest results.
+- 🏷️ **Web Settings Page Adds Version Information Card** — `apps/dsa-web` injects frontend package version and build timestamp at build time; system settings adds read-only "Version Information" block displaying `WebUI Version / Build ID / Build Time`; automatically falls back to build ID when `package.json` is placeholder `0.0.0`, facilitating verification of active static assets after Docker rebuilds.
+- 🪟 **Windows Desktop Installer Supports Custom Installation Directory** — Installer allows customizing installation directory in setup wizard; continues using directory-adjacent logic to read/write `.env`, `data/stock_analysis.db`, and `logs/desktop.log` when installed to non-default drives, while preserving `win-unpacked` portable distribution. Installs per-user with elevation disabled (`allowElevation: false`), blocking selection of system-protected folders via NSIS `.onVerifyInstDir`.
 
-### 改进
+### Improvements
 
-- 🔎 **SerpAPI 正文补抓范围收敛** — 自然搜索结果不再逐条同步抓取网页正文；现在仅对极少数高位且摘要明显不足的结果，在更短超时预算内做延迟补抓，并优先复用 SerpAPI 已返回的结构化摘要，降低搜索链路尾延迟与慢站点放大风险。
-- 🤖 **LLM 接入体验简化** — 面向用户的 AI 模型接入文案已统一收口为"主模型 / Agent 主模型 / 备选模型 / 模型渠道 / 高级模型路由配置"；Web 设置页、配置元数据、校验提示与中英文文档不再把 LiteLLM 当作普通用户默认必学概念，现有 `LITELLM_*` / `LLM_CHANNELS` 配置键仍保持兼容。
+- 🔎 **SerpAPI Body Fetch Scope Convergence** — Organic search results no longer fetch webpage body text synchronously per item; applies delayed fetching with shorter timeout budget only to rare top-ranked items with insufficient snippets, prioritizing structured snippets to reduce tail latency and slow site amplification.
+- 🤖 **Simplified LLM User Experience** — Unified user-facing terminology to "Primary Model / Agent Primary Model / Fallback Model / Model Channels / Advanced Model Routing"; Web settings, config metadata, validation messages, and bilingual docs remove LiteLLM as default mandatory concept; existing `LITELLM_*` / `LLM_CHANNELS` keys remain compatible.
 
-### 修复
+### Fixed
 
-- 🚀 **启动早期失败时暴露真实根因** — `python main.py` 现在通过 stderr 暴露真实根因，bootstrap 阶段不再向硬编码 `logs/` 目录写入文件日志，文件日志推迟到 `config.log_dir` 可用后创建，避免健康启动在非预期路径残留日志文件。
-- 🐳 **Docker WebUI 运行时优先复用预构建静态资源** — `prepare_webui_frontend_assets()` 现在会先检查镜像内已有的 `static/index.html` 是否可直接复用；当容器运行时不包含 `apps/dsa-web` 源码目录且未安装 `npm` 时，也不会误报"未找到前端项目，无法自动构建"，从而恢复 Docker 部署后的 WebUI 打开能力。
-- 🐳 **Docker WebUI 系统设置保存后配置生效** — Docker 场景下 WebUI 保存 `STOCK_LIST`、`SCHEDULE_ENABLED`、`SCHEDULE_TIME`、`SCHEDULE_RUN_IMMEDIATELY`、`RUN_IMMEDIATELY` 后，`Config` 会优先读取持久化 `.env` 中的新值，避免被容器创建时注入的旧环境变量覆盖。
-- 📈 **市场复盘 LLM max_tokens 提升** — 市场复盘生成链路将 LLM `max_tokens` 从 `2048` 提升到 `8192`，降低长复盘输出因 `MAX_TOKENS` 提前截断导致内容未完成的概率。
-- ⏰ **内置定时调度器感知 SCHEDULE_TIME 运行时变更** — 调度器现在会在运行中感知 WebUI 保存后的 `SCHEDULE_TIME` 变化，并在下一轮检查时重绑 daily job。
-- 🪟 **Windows Release 渠道编辑器保留 MiniMax 模型前缀** — 渠道模式下填写 `minimax/<模型名>` 时，后端归一化与 Web 设置页运行时模型列表都会保留该值原样，不再误改写成 `openai/minimax/<模型名>`。
-- 🤖 **Discord 入站 Webhook 补齐 Ed25519 验签** — `DiscordPlatform` 现在会基于 `X-Signature-Ed25519`、`X-Signature-Timestamp` 和原始请求体校验 Discord Interaction 签名；缺失签名头、公钥格式非法或签名不匹配时直接拒绝请求，同时对 timestamp 做 ±5 分钟时效窗口校验以防御重放攻击。
-- ⚙️ **STOCK_GROUP_N / EMAIL_GROUP_N 配置关系明确化** — 明确与 `STOCK_LIST` 的关系，并在配置校验中对超出 `STOCK_LIST` 的邮件分组给出 warning。
-- 🗓️ **断点续传改按市场时区和交易日历判断**（fixes #880）— 股票数据存在性检查不再直接使用服务器自然日，而是按 A 股 / 港股 / 美股各自市场时区解析"最新可复用交易日"。
-- 📨 **单股推送模式不再并发复用共享通知实例** — `StockAnalysisPipeline.run()` 现在会保留个股分析并发，但把 `SINGLE_STOCK_NOTIFY=true` 下的即时通知挪到结果收集侧串行发送。
-- 🔇 **实时行情降级提示收口为单次告警** — 分析主流程获取股票名称时不再提前触发一次实时行情查询，只有在全部数据源都不可用时才提示已降级为历史收盘价继续分析。
-- 🔍 **A 股中文资讯搜索恢复中文优先** — `search_stock_news()` 现在会在首个 provider 主要返回英文资讯时继续尝试后续引擎，并将同批结果中的中文资讯排到前面。
-- 🔒 **并发执行时共享状态补齐统一加锁** — 修复并发执行时共享状态缺少统一加锁的问题，避免多线程场景下的数据竞争。
+- 🚀 **Exposes Authentic Root Causes on Early Startup Failures** — `python main.py` exposes authentic root causes via stderr, discontinuing writing file logs to hardcoded `logs/` directory during bootstrap stage; file logging deferred until `config.log_dir` is available, preventing unexpected log files on healthy starts.
+- 🐳 **Docker WebUI Runtime Prioritizes Existing Pre-Built Static Assets** — `prepare_webui_frontend_assets()` checks existing `static/index.html` in image for direct reuse; does not falsely report "Frontend project not found, unable to build automatically" when container runtime lacks `apps/dsa-web` source directory and `npm`, restoring WebUI accessibility in Docker deployments.
+- 🐳 **Docker WebUI System Settings Take Effect After Saving** — When WebUI saves `STOCK_LIST`, `SCHEDULE_ENABLED`, `SCHEDULE_TIME`, `SCHEDULE_RUN_IMMEDIATELY`, `RUN_IMMEDIATELY` in Docker, `Config` prioritizes new values from persisted `.env`, avoiding overrides by stale environment variables injected at container creation.
+- 📈 **Market Review LLM max_tokens Increased** — Market review generation pipeline increases LLM `max_tokens` from `2048` to `8192`, reducing likelihood of incomplete output due to premature truncation by `MAX_TOKENS`.
+- ⏰ **Built-In Scheduler Detects SCHEDULE_TIME Runtime Changes** — Scheduler detects `SCHEDULE_TIME` changes saved via WebUI at runtime, rebinding daily job during next inspection check.
+- 🪟 **Windows Release Channel Editor Retains MiniMax Model Prefix** — Entering `minimax/<model>` in channel mode preserves value as-is in backend normalization and Web settings runtime list, preventing improper rewriting to `openai/minimax/<model>`.
+- 🤖 **Discord Inbound Webhook Adds Ed25519 Signature Verification** — `DiscordPlatform` validates Discord Interaction signatures based on `X-Signature-Ed25519`, `X-Signature-Timestamp`, and raw request body; rejects requests with missing signature headers, invalid public key formats, or signature mismatches, enforcing ±5 minute timestamp window against replay attacks.
+- ⚙️ **Clarified STOCK_GROUP_N / EMAIL_GROUP_N Configuration Relationship** — Clarified relationship with `STOCK_LIST`, emitting warning during configuration validation for email groups exceeding `STOCK_LIST`.
+- 🗓️ **Breakpoint Resume Evaluated by Market Timezone and Trading Calendar** (fixes #880) — Stock data existence checks no longer evaluate against server calendar day, resolving "latest reusable trading day" by respective market timezones for A-shares, HK, and US equities.
+- 📨 **Single-Stock Push Mode No Longer Concurrently Reuses Shared Notification Instance** — `StockAnalysisPipeline.run()` retains concurrent stock analysis but serializes immediate notifications under `SINGLE_STOCK_NOTIFY=true` on results collection side.
+- 🔇 **Real-Time Quote Fallback Prompts Consolidated to Single Warning** — Fetching stock names in analysis pipeline no longer triggers pre-emptive real-time quote query, notifying fallback to historical close only when all data sources are unavailable.
+- 🔍 **A-Share Chinese News Search Restores Chinese Priority** — `search_stock_news()` tries subsequent search engines when first provider returns mostly English news, sorting Chinese news ahead within the same batch.
+- 🔒 **Unified Locking for Shared State During Concurrent Execution** — Fixed missing unified locking for shared state during concurrent execution, eliminating data races in multi-threaded scenarios.
 
-### 测试
+### Tests
 
-- 🧪 **补充设置页版本信息回归测试** — 新增 Web 设置页版本信息渲染断言，并覆盖占位版本 `0.0.0` 自动回退为构建标识的逻辑。
-- 🧪 **UI 治理与关键路径回归补强** — 补充 `SidebarNav`、`ChatPage`、`BacktestPage` 等组件测试，并新增 UI governance 守卫，持续防止交互元素重新引入原生 `title` 属性或旧 `input-terminal` 样式回流。同步更新 smoke / markdown drawer 相关验证，覆盖主题升级后的关键主链路。
+- 🧪 **Added Regression Tests for Settings Page Version Information** — Added assertions for Web settings page version info rendering, covering automatic fallback to build ID for placeholder `0.0.0`.
+- 🧪 **UI Governance and Critical Path Regression Testing** — Added component tests for `SidebarNav`, `ChatPage`, `BacktestPage`, adding UI governance guards preventing interactive elements from reintroducing native `title` attributes or legacy `input-terminal` styles; updated smoke and markdown drawer validations covering post-theme critical paths.
 
 ## [3.11.0] - 2026-03-27
 
-### 发布亮点
+### Release Highlights
 
-- 🎨 **Web 工作台完成一轮 UI 统一与双主题升级** — 首页、问股、回测、持仓和设置页进一步收口到统一设计 token、输入表面和状态表达；新增完整浅色主题，并支持浅色 / 深色一键切换与持久化保存。
-- 🤖 **Bot / Agent 能力重新补回主分支** — 恢复 `/history`、`/strategies`、`/research` 等命令，`/ask` 继续支持多股对比与组合视角；Deep Research、事件监控与 schedule 轮询链路重新接回主线能力。
-- 🔒 **安全性与运行稳态同步补强** — 修复 `X-Forwarded-For` 限流绕过风险，恢复 LiteLLM 官方 PyPI 安装路径，Tushare 初始化不再依赖本地 SDK，降低 Docker、桌面打包和环境重建时的脆弱点。
-- 🖥️ **日常使用细节继续打磨** — 修复首页港股自动补全提交、登录页首屏主题闪烁、历史长股票名重叠，以及 Telegram Markdown 解析失败时整条通知发送中断等问题。
+- 🎨 **Web Workbench UI Unified with Dual-Theme Architecture** — Home, Chat, Backtest, Portfolio, and Settings pages consolidated under unified design tokens, input surfaces, and status semantics; added comprehensive light theme with one-click light/dark switching and persistent storage.
+- 🤖 **Bot / Agent Capabilities Restored to Main Branch** — Restored `/history`, `/strategies`, `/research` commands; `/ask` supports multi-stock comparisons and portfolio perspective; Deep Research, event monitoring, and schedule polling pipelines reconnected to mainline.
+- 🔒 **Security and Runtime Stability Reinforced** — Fixed `X-Forwarded-For` rate limiting bypass risk; restored official PyPI installation path for LiteLLM; Tushare initialization no longer requires local SDK, reducing vulnerability during Docker, desktop packaging, and environment rebuilds.
+- 🖥️ **Daily Usage Polish** — Fixed homepage HK stock autocomplete submission, initial theme flicker on login page, overlapping long stock names in history, and notification disruptions from Telegram Markdown parsing failures.
 
-### 新功能
+### Features
 
-- 🎨 **全新浅色主题与双主题切换上线** — Web 工作台新增完整浅色主题，并支持在侧边栏中一键切换浅色 / 深色模式；主题选择会持久化保存，刷新页面后仍保持当前偏好。此次升级不是局部配色微调，而是对卡片层级、边界对比、输入表面、状态提示和页面背景做了一整套 light theme 重绘。
-- 🤖 **补回主分支缺失的 Agent / Bot 能力** — `#648` / `#649` 已重新补回 `main`：Bot 恢复 `/history`、`/strategies`、`/research`，`/ask` 保留多股对比与组合视角；Deep Research 与 Event Monitor 的配置重新在 Web 设置页可见并可编辑，schedule 模式也重新接入事件告警轮询。
+- 🎨 **New Light Theme and Dual-Theme Switching** — Web workbench adds complete light theme with one-click light/dark switching in sidebar; persists preference across page reloads; complete redesign of card hierarchy, contrast, input surfaces, status indicators, and background palettes.
+- 🤖 **Restored Missing Agent / Bot Capabilities to Main Branch** — `#648` / `#649` restored to `main`: Bot restores `/history`, `/strategies`, `/research`; `/ask` retains multi-stock comparison and portfolio view; Deep Research and Event Monitor configurations visible and editable in Web settings, and schedule mode reconnects event alert polling.
 
-### 改进
+### Improvements
 
-- 🖥️ **核心页面统一到同一套工作台视觉语言** — `Home / Chat / Backtest / Portfolio / Settings` 进一步收口到共享设计 token、`input-surface` 输入体系、空态/错误态表达和抽屉遮罩语义，减少页面之间的视觉割裂与局部私有样式漂移。
-- 💬 **问股交互可达性与反馈增强** — 问股页补强了会话导出、通知发送、消息复制、历史删除与追问上下文提示；AI 回复操作不再过度依赖 hover，触屏设备和小屏场景下也能直接触达关键按钮。
-- 📊 **回测与持仓页表面和状态表达继续标准化** — 回测页筛选控件、布尔状态、结果表格与汇总卡片统一到共享输入/状态原语；持仓页的导入反馈、汇率刷新提示、空态与警示信息进一步归口到共享组件，减少页面级重复实现。
-- 🧭 **导航与页面壳层协同优化** — 侧边栏主题切换、问股完成角标、移动端抽屉遮罩和主内容滚动契约进一步统一，首页、问股和回测在桌面端与移动端的切页体验更稳定。
+- 🖥️ **Core Pages Standardized on Shared Workbench Visual Language** — `Home / Chat / Backtest / Portfolio / Settings` consolidated under shared design tokens, `input-surface` input systems, empty/error states, and drawer overlay semantics, reducing visual fragmentation and custom styles.
+- 💬 **Stock Query Accessibility and Feedback Enhancements** — Chat page strengthens conversation export, notification sending, message copying, history deletion, and follow-up context hints; AI response actions accessible without hover for touchscreens and small displays.
+- 📊 **Backtest and Portfolio Surface and State Standardization** — Backtest filter controls, boolean states, result tables, and summary cards unified into shared primitives; portfolio import feedback, FX refresh prompts, empty states, and warnings consolidated into shared components.
+- 🧭 **Navigation and Page Shell Cohesion** — Sidebar theme switching, chat completion badges, mobile drawer overlays, and content scrolling contracts unified for consistent navigation across desktop and mobile.
 
-### 测试
+### Tests
 
-- 🧪 **UI 治理与关键路径回归补强** — 补充 `SidebarNav`、`ChatPage`、`BacktestPage` 等组件测试，并新增 UI governance 守卫，持续防止交互元素重新引入原生 `title` 属性或旧 `input-terminal` 样式回流。同步更新 smoke / markdown drawer 相关验证，覆盖主题升级后的关键主链路。
+- 🧪 **UI Governance and Critical Path Regression Testing** — Added component tests for `SidebarNav`, `ChatPage`, `BacktestPage`, adding UI governance guards preventing interactive elements from reintroducing native `title` attributes or legacy `input-terminal` styles; updated smoke and markdown drawer validations covering post-theme critical paths.
 
-### 修复
+### Fixed
 
-- 🌗 **Web 首屏默认主题预设为深色** — `apps/dsa-web/index.html` 现在会在 React 挂载前读取本地保存的主题偏好；若没有已保存值，则立即给 `<html>` 预设 `dark` 并同步 `color-scheme`，避免首页和登录页首屏先闪出浅色主题。
-- 🔐 **登录页独立主题层收口** — 登录页输入框、标签、切换按钮和按钮文案现在使用独立的 `--login-*` 视觉 token，不再继承全局浅/深主题文字色；即使浏览器缓存了浅色主题，登录页仍保持稳定的深色视觉与青色密码输入表现，避免密码圆点和文案落成黑色。
-- 🖥️ **首页港股代码输入修复** — Web 首页分析输入框现在可正确接受港股代码与自动完成选中的港股项，补齐 `00700.HK` / `HK00700` 等格式识别，避免提交时误报“请输入有效的股票代码或股票名称”。
+- 🌗 **Web Initial Screen Default Theme Preset to Dark** — `apps/dsa-web/index.html` reads locally saved theme preferences prior to React mounting; immediately presets `dark` on `<html>` and synchronizes `color-scheme` if unset, preventing light theme flicker on initial load.
+- 🔐 **Login Page Independent Theme Layer Isolation** — Login page inputs, labels, toggles, and button text use independent `--login-*` visual tokens rather than inheriting global light/dark text colors; retains consistent dark visual identity and cyan password dots even when browser caches light theme.
+- 🖥️ **Home Page Hong Kong Stock Symbol Input Fix** — Web home analysis input box properly accepts HK stock symbols and autocomplete selections, recognizing `00700.HK` / `HK00700`, preventing improper "Please enter a valid stock code or name" errors upon submission.
 
-- 🔒 **认证限流 X-Forwarded-For 取值修复（CWE-345）**（#841 / #842）— `get_client_ip()` 从取 `X-Forwarded-For` 最左值改为最右值，防止攻击者通过伪造首部旋转限流桶绕过暴力破解保护；仅影响 `TRUST_X_FORWARDED_FOR=true` 且单层可信反向代理的部署场景，多级代理环境需按部署文档评估配置。
-- 📦 **恢复 LiteLLM 官方 PyPI 安装并锁定安全上限** — `requirements.txt` 重新使用 `pip install litellm` 的官方 PyPI 安装路径，并在保留历史最低要求 `>=1.80.10` 的同时增加 `<1.82.7` 的安全上限，避免误装已被移除的 `1.82.7` / `1.82.8` 风险版本；Windows 桌面打包脚本也同步回退到标准 `pip install -r requirements.txt` 链路，减少特殊下载分支带来的维护成本。
-- 📨 **Telegram Markdown 解析失败回退纯文本**（fixes #850）— `src/notification_sender/telegram_sender.py` 现在会在 Telegram 返回 `HTTP 400` 且包含 `can't parse entities` / Markdown 解析错误时，自动去掉 `parse_mode` 后重试纯文本发送，避免 `*ST` 等正文内容直接导致整条通知失败。
-- 🔢 **A 股同码实时行情保留交易所提示**（fixes #852）— `DataFetcherManager` 与 `TushareFetcher` 现在会保留 `SZ000001` / `000001.SZ` 这类显式沪深提示，旧版 Tushare 实时行情降级分支不再把深市 `000001` 误判成 `sh000001` 上证指数。
-- 🎯 **多 Agent 次优买点不再盲目复制理想买点**（fixes #851）— 当多智能体结果缺少独立 `secondary_buy` 时，仪表盘现在优先展示 `N/A` 而不是把 fallback 值硬拷贝成与 `ideal_buy` 完全相同，减少误导性的双买点展示。
-- 🧩 **Tushare 初始化不再强依赖本地 SDK 包** — `TushareFetcher` 现在直接使用内置 HTTP client 访问 Tushare Pro，不再在启动阶段先 `import tushare` 才能初始化；修复了 Docker、桌面打包或环境重建后因缺少 `tushare` 包而提前报 `No module named 'tushare'` 的问题，并补充对应回归测试。
-- ⚙️ **`daily_analysis` 工作流补齐 `DEEPSEEK_API_KEY` 映射** — GitHub Actions 每日分析工作流现在会正确透传 `DEEPSEEK_API_KEY`，避免云端任务配置了密钥却在运行时拿不到对应环境变量。
-- 🖥️ **历史列表过长股票名称截断与悬停展示**（fixes #815）— 历史列表中过长的股票名称, 现在会按字符类型自动截断（英文15/中文8/混合10字符），默认显示截断结果，悬停时展示完整名称；解决 1920x1080 分辨率下股票名称与右侧状态标签文字重叠的问题。新增 `stockName.ts` 工具函数并补充对应测试。
+- 🔒 **Authentication Rate Limiting X-Forwarded-For Header Fix (CWE-345)** (#841 / #842) — `get_client_ip()` switches from leftmost `X-Forwarded-For` value to rightmost value, preventing attackers from bypassing brute-force protection via forged header rotation; applies when `TRUST_X_FORWARDED_FOR=true` behind single trusted reverse proxy.
+- 📦 **Restored LiteLLM Official PyPI Installation with Security Upper Bound** — `requirements.txt` reinstates `pip install litellm` official PyPI installation path, maintaining minimum `>=1.80.10` while adding `<1.82.7` upper bound to prevent installing compromised `1.82.7` / `1.82.8` versions; Windows desktop packaging scripts revert to standard `pip install -r requirements.txt` pipeline.
+- 📨 **Telegram Markdown Parsing Failure Falls Back to Plain Text** (fixes #850) — `src/notification_sender/telegram_sender.py` retries plain text delivery without `parse_mode` upon receiving `HTTP 400` with `can't parse entities` / Markdown parsing errors, preventing content like `*ST` from dropping entire notification.
+- 🔢 **A-Share Identical Symbol Real-Time Quotes Retain Exchange Hints** (fixes #852) — `DataFetcherManager` and `TushareFetcher` retain explicit exchange prefixes like `SZ000001` / `000001.SZ`, preventing legacy Tushare real-time quote fallback branch from misidentifying Shenzhen `000001` as Shanghai Composite `sh000001`.
+- 🎯 **Multi-Agent Secondary Buy Points No Longer Blindly Duplicate Ideal Buy Points** (fixes #851) — When multi-agent results lack independent `secondary_buy`, dashboard displays `N/A` rather than hard-copying identical value to `ideal_buy`, eliminating misleading duplicate buy point displays.
+- 🧩 **Tushare Initialization Removes Hard Dependency on Local SDK** — `TushareFetcher` accesses Tushare Pro directly via built-in HTTP client without requiring `import tushare` at startup; fixes `No module named 'tushare'` errors in Docker, desktop packaging, and environment rebuilds, adding regression tests.
+- ⚙️ **`daily_analysis` Workflow Passes `DEEPSEEK_API_KEY` Mapping** — GitHub Actions daily analysis workflow passes `DEEPSEEK_API_KEY`, ensuring cloud scheduled tasks receive runtime environment variables.
+- 🖥️ **History List Long Stock Name Truncation and Hover Tooltip** (fixes #815) — Truncates excessively long stock names in history list by character type (English 15, Chinese 8, Mixed 10), displaying full name on hover; resolves text overlapping with status badges at 1920x1080 resolution; added `stockName.ts` utility and tests.
 
-### 文档
+### Documentation
 
-- 🧾 **README 捐赠入口更新为小红书二维码** — README 及中英文说明中的赞助入口更新为小红书二维码素材，保持展示口径一致。
+- 🧾 **README Donation Link Updated to Xiaohongshu QR Code** — Updated sponsorship entry in README and bilingual documentation to Xiaohongshu QR code asset for consistency.
 
 ## [3.10.1] - 2026-03-24
 
-### 新功能
+### Features
 
-- 🔔 **Web 端分析推送通知开关**（#808）— 首页分析按钮旁新增「推送通知」复选框，默认勾选；取消勾选时本次分析不发送 Telegram/企业微信等推送。API `POST /api/v1/analysis/analyze` 新增 `notify` 字段（`bool`，默认 `true`），不传时行为与修改前一致，Bot 和定时任务不受影响。
+- 🔔 **Web Analysis Push Notification Toggle** (#808) — Added "Push Notification" checkbox beside home analysis button, checked by default; unchecking skips sending Telegram/WeChat notifications for current run; `POST /api/v1/analysis/analyze` adds `notify` field (`bool`, default `true`), Bot and scheduled tasks unaffected.
 
-### 改进
+### Improvements
 
-- 🖥️ **问股 / 回测页面布局与壳层协同优化** — 统一 Chat / Backtest 页面容器、共享 UI 状态和跟随问答交互路径，移除部分硬编码高度限制，让导航框架内的填充与滚动行为更连贯。
-- 🎨 **全局视觉与共享组件继续收敛** — Light theme 引入动态 HSL 阴影体系，统一侧边栏激活态、告警组件对比度和聊天气泡样式，并把部分零散内联样式收口为语义化 CSS 变量，提升一致性与可维护性。
+- 🖥️ **Chat / Backtest Layout and Shell Integration** — Unified Chat / Backtest page containers, shared UI state, and follow-up interaction flows, removing hardcoded height constraints for smoother padding and scrolling.
+- 🎨 **Global Visuals and Shared Components Convergence** — Light theme introduces dynamic HSL shadow system, unifying sidebar active states, alert contrast, and chat bubbles, standardizing inline styles into semantic CSS variables.
 
-### 修复
+### Fixed
 
-- 🖼️ **系统设置智能导入文件选择恢复** — 修复了“系统设置 > 基础设置 > 智能导入”模块中 “选择图片 / 选择文件” 两个按钮点击无响应的问题。
-- 🖥️ **移动端滚动与交互层级修复** — 解决主题切换菜单在移动端被主内容遮挡的 z-index 冲突，并恢复首页长报告场景下的正常纵向滚动，不影响其他页面现有滚动行为。
-- 🧾 **Markdown 纯文本复制清洗增强** — 改进纯文本导出算法，复制分析报告时会更稳定地清除表格分隔符等 Markdown 痕迹，提升分享和归档内容的纯净度。
-- 🧠 **Trading philosophy injection 覆盖 legacy + Agent 全链路**（#810）— `GeminiAnalyzer`、单 Agent 模式和 skill-aware Prompt 现在共享同一套策略注入状态；只有隐式回落到内置默认 `bull_trend` 时才保留旧的趋势型提示，显式策略选择或自定义默认 skill 不再被偷偷叠加 `MA5>MA10>MA20` 多头基线。
-- 🛠️ **后端 CI 依赖安装链路稳态化**（#835）— 拆分 backend gate 阶段、为依赖安装增加重试，并把 CI 用的 `litellm` 安装来源调整为更稳定的 GitHub 源，降低依赖解析抖动导致的 backend gate 偶发失败。
-- 🪟 **Windows 桌面发版构建恢复 LiteLLM 安装兼容性** — `scripts/build-backend.ps1` 现在会先过滤 `requirements.txt` 中的 LiteLLM GitHub 源包，再下载对应 tag 的 zipball 到本地移除上游可选 `enterprise/` 目录后安装，绕过 Windows runner 上 Poetry 构建 wheel 时把目录误当文件打包导致的失败；同时补上 `pip install` 退出码检查，避免依赖安装失败后只在后续 `python-multipart` 校验阶段才暴露成次生报错。
+- 🖼️ **System Settings Smart Import File Selection Restored** — Fixed issue where clicking "Select Image / Select File" buttons in "System Settings > Basic Settings > Smart Import" produced no response.
+- 🖥️ **Mobile Scrolling and Interaction Layering Fixes** — Resolved z-index conflict where theme toggle menu was covered by main content on mobile; restored normal vertical scrolling for long reports on homepage without affecting other pages.
+- 🧾 **Markdown Plain Text Copy Cleaning Enhanced** — Improved plain text export algorithm to reliably strip table separators and Markdown formatting when copying analysis reports, improving purity of shared and archived content.
+- 🧠 **Trading Philosophy Injection Covers Legacy + Agent Pipelines** (#810) — `GeminiAnalyzer`, single-Agent mode, and skill-aware prompts share same strategy injection state; legacy trend prompts retained only on implicit fallback to built-in default `bull_trend`; explicit strategy selection or custom default skills no longer silently overlay `MA5>MA10>MA20` bullish baseline.
+- 🛠️ **Backend CI Dependency Installation Stabilization** (#835) — Split backend gate stages, added retries for dependency installation, and switched CI `litellm` installation source to stable GitHub repository, mitigating intermittent backend gate failures from dependency resolution fluctuations.
+- 🪟 **Windows Desktop Release Build Restores LiteLLM Installation Compatibility** — `scripts/build-backend.ps1` filters LiteLLM GitHub source packages from `requirements.txt`, downloading tagged zipball and removing optional upstream `enterprise/` directory prior to installation, bypassing Poetry wheel build directory packaging errors on Windows runners; added `pip install` exit code checks.
 
-### 测试
+### Tests
 
-- 🧪 **问股 / 回测 / 智能导入回归覆盖补齐** — 同步更新 E2E 冒烟期望，补充 `DashboardStateBlock`、Chat 页、智能导入文件选择与相关交互回归断言，确保近期 UI 调整后的关键路径仍可稳定通过。
+- 🧪 **Chat / Backtest / Smart Import Regression Test Coverage** — Updated E2E smoke expectations, adding regression assertions for `DashboardStateBlock`, Chat page, smart import file selection, and interactions.
 
 ## [3.10.0] - 2026-03-24
 
-### 发布亮点
+### Release Highlights
 
-- 🔎 **自动补全与索引工具扩展到三市场** — 补全索引生成链路现在同时覆盖 A 股、港股、美股，配套新增 Tushare 股票列表抓取工具与更完整的静态索引数据，让首页搜索入口从“能用”走向“更全、更稳”。
-- 🖥️ **Dashboard 与报告查看体验继续收口** — 首页 Dashboard 面板、状态边界、字体层级和完整报告表格密度完成一轮统一；报告详情也补齐了 Markdown/纯文本复制与更可靠的按钮交互，减少历史报告查看与分享时的摩擦。
-- 🤖 **Agent skill 与市场语义边界更清晰** — skill bundle、默认策略、回测汇总语义和兼容接口进一步收敛；同时分析 Prompt 不再默认写死 A 股上下文，美股和港股分析也能按各自市场规则生成更贴切的内容。
-- ⏰ **定时与桌面配置能力更贴近真实使用场景** — 桌面端支持 `.env` 导入导出；`python main.py --schedule --stocks ...` 也不再把启动时股票快照错误带入后续计划执行，定时任务会跟随最新保存的 `STOCK_LIST`。
-### 新功能
+- 🔎 **Autocomplete and Indexing Tools Expanded Across Three Markets** — Autocomplete index generation pipeline covers A-shares, HK, and US equities, accompanied by new Tushare stock list scraping tools and complete static index data.
+- 🖥️ **Dashboard and Report Review Experience Consolidated** — Unified homepage Dashboard panels, status boundaries, typography hierarchy, and full report table density; report details add Markdown/plain text copying and reliable button interactions.
+- 🤖 **Agent Skill and Market Semantic Boundaries Clarified** — Converged skill bundles, default strategies, backtest summary semantics, and compatibility endpoints; analysis prompt no longer hardcodes A-share context, generating tailored content for US and HK equities according to respective market rules.
+- ⏰ **Scheduler and Desktop Configuration Aligned with Production Usage** — Desktop app supports `.env` import/export; `python main.py --schedule --stocks ...` no longer locks startup stock snapshots into subsequent scheduled executions, following latest saved `STOCK_LIST`.
+### Features
 
-- 💾 **桌面端 `.env` 备份/恢复入口**（#754）— 桌面模式下的系统设置页新增 `导出 .env` / `导入 .env` 按钮，可直接备份当前已保存配置，或把备份文件中的键值合并恢复到当前桌面端 `.env`；导入沿用现有 `config_version` 冲突保护与运行时重载链路，不改变现有桌面端便携模式路径。
-- 📊 **Tushare 股票列表获取工具** — 新增 `scripts/fetch_tushare_stock_list.py`，支持从 Tushare Pro 获取 A股、港股、美股列表信息并保存为 CSV，配有分页读取、智能限流、错误处理和进度提示；新增对应使用文档 `docs/TUSHARE_STOCK_LIST_GUIDE.md`。
-- 🔎 **索引生成脚本多市场支持** — `generate_index_from_csv.py` 重构为支持 Tushare 和 AkShare 双数据源，同时覆盖 A股、港股、美股三个市场；新增按市场分类的别名映射（A股、港股常见别名，美股常用股票英文缩写）；添加 `--source` 参数切换数据源、`--test` 参数验证模式；严格过滤美股 DUMMY 记录。
-- 🔎 **索引生成脚本增强** — `generate_stock_index.py` 新增 `--test`/`-t` 测试模式和 `--verbose`/`-v` 详细输出模式，添加市场分布统计，优化 JSON 输出格式。
-- 📋 **首页完整报告支持双模式复制** — 历史报告详情头部新增“复制 Markdown 源码”和“复制纯文本”工具按钮；前者保留原始 Markdown 结构，后者去除常见 Markdown 格式符号，方便分享、归档和跨报告比对。复制按钮文案会跟随 `REPORT_LANGUAGE` 保持中英文一致，避免英文报告页出现中文固定文案。
-- 🧩 **个股分析页补齐关联板块展示**（#669）— A 股分析写路径现在会把 `belong_boards` 一次性写入 `fundamental_context` / `fundamental_snapshot`，结构化报告详情同步新增 `belong_boards` 与 `sector_rankings` 字段，Web 个股分析页首屏可直接展示所属板块及其是否命中当日板块涨跌榜；无数据时保持 fail-open 隐藏，不影响现有分析主流程。
+- 💾 **Desktop `.env` Backup / Restore Interface** (#754) — Desktop system settings page adds "Export .env" and "Import .env" buttons to backup saved configurations or restore merged key-values into current `.env`; import utilizes existing `config_version` conflict protection and runtime reload pipelines.
+- 📊 **Tushare Stock List Retrieval Tool** — Added `scripts/fetch_tushare_stock_list.py` fetching A-share, HK, and US equity lists from Tushare Pro and saving to CSV, featuring paginated fetching, rate limiting, error handling, and progress indicators; added user guide `docs/TUSHARE_STOCK_LIST_GUIDE.md`.
+- 🔎 **Index Generator Multi-Market Support** — Refactored `generate_index_from_csv.py` to support dual Tushare and AkShare data sources across A-shares, HK, and US markets; added market-specific alias mappings (common aliases for A-shares/HK, common abbreviations for US stocks); added `--source` and `--test` parameters; strictly filters US DUMMY records.
+- 🔎 **Index Generator Enhancements** — `generate_stock_index.py` adds `--test`/`-t` test mode and `--verbose`/`-v` verbose mode, market distribution statistics, and optimized JSON formatting.
+- 📋 **Home Full Report Supports Dual-Mode Copying** — Historical report header adds "Copy Markdown Source" and "Copy Plain Text" buttons; former preserves Markdown structure, latter strips formatting for sharing and cross-report comparisons; button copy respects `REPORT_LANGUAGE`.
+- 🧩 **Stock Analysis Page Displays Associated Sectors** (#669) — A-share analysis write path writes `belong_boards` to `fundamental_context` / `fundamental_snapshot`; structured report details append `belong_boards` and `sector_rankings` fields; Web analysis page displays associated sectors and whether they hit daily leaderboards; fails open when data is absent.
 
-### 改进
+### Improvements
 
-- 🖥️ **Dashboard 面板统一化（PR7-2）** — 新增 `DashboardPanelHeader` 和 `DashboardStateBlock` 作为历史、报告、资讯、任务和透明度等面板的通用组件；统一了各面板标题层级、加载/空态/错误态和 CSS 变量 token。
-- 🖥️ **HomePage 状态边界收口（PR7-2）** — 引入 `useHomeDashboardState` hook，集中 `stockPoolStore` 状态选取逻辑，移除 `HomePage` 中重复的本地状态派生和回调定义。
-- 🧭 **Agent skill 统一到单一配置语义** — Multi-Agent runtime、API、Web chat 和配置元数据统一围绕 `skill` 概念收敛；`/api/v1/agent/skills` 成为主发现入口，`AGENT_SKILL_*` 成为主配置面，内置 skill 元数据也开始声明默认启用、排序优先级、market regime tag 等信息，减少默认策略散落在代码里的隐式耦合。
-- 🔎 **自动补全索引数据更新** — 重新生成 `stocks.index.json`，涵盖 A股、港股、美股三个市场，提升自动补全覆盖率。
-- 🧾 **Dashboard 字体与完整报告表格密度微调** — 收敛首页侧栏、空状态、历史操作区的字体层级，并将完整 Markdown 报告表格 `th/td` 的内边距调整到更紧凑的 4-6px 区间，让信息密度与现有 Dashboard 视觉节奏更一致。
+- 🖥️ **Dashboard Panel Standardization (PR7-2)** — Added `DashboardPanelHeader` and `DashboardStateBlock` as reusable components for history, report, intel, task, and transparency panels; unified heading hierarchy, loading/empty/error states, and CSS variable tokens.
+- 🖥️ **HomePage State Boundary Convergence (PR7-2)** — Introduced `useHomeDashboardState` hook, centralizing `stockPoolStore` selection logic and removing duplicated local state derivations and callbacks in `HomePage`.
+- 🧭 **Agent Skill Unified under Single Configuration Semantic** — Multi-Agent runtime, API, Web chat, and configuration metadata unified around `skill` concept; `/api/v1/agent/skills` serves as primary discovery endpoint, `AGENT_SKILL_*` as primary config interface; declared default-enabled flags, sorting priorities, and market regime tags.
+- 🔎 **Autocomplete Index Data Refresh** — Regenerated `stocks.index.json` covering A-shares, HK, and US markets, improving autocomplete coverage.
+- 🧾 **Dashboard Typography and Report Table Density Refinements** — Standardized font scales across sidebar, empty states, and history controls; adjusted table `th/td` padding in Markdown reports to compact 4-6px range, aligning density with Dashboard rhythm.
 
-### 修复
+### Fixed
 
-- ⏰ **定时模式不再锁定启动时 CLI 股票快照** — `python main.py --schedule --stocks ...` 现在不会让后续计划执行沿用启动时的旧股票列表；定时任务每次触发前都会重新读取最新保存的 `STOCK_LIST`，确保 WebUI 或 `.env` 更新后的自选股配置能参与后续推送。
-- 🌍 **LLM Prompt 按股票市场动态注入上下文** — 分析链路不再把市场规则写死成 A 股；系统 Prompt 会根据股票代码识别 A 股、港股或美股，并注入对应的角色描述与交易规则提示，减少跨市场分析出现口径错位或结论失真的问题。
-- 🔎 **美股自动补全复用 ticker 去重** — `generate_index_from_csv.py` 在导入 Tushare `us_basic` CSV 时会先按 `ts_code` 折叠复用的美股 ticker，优先保留更可能仍在使用的记录，避免 `stocks.index.json` 出现重复 `canonicalCode` 后让 Web 自动补全展示历史名称或提交歧义代码。
-- 🧾 **Web 报告详情复制交互稳定性修复**（#749）— `ReportDetails` 中“原始分析结果 / 分析快照”的复制按钮补齐可点击层级，避免被下方 JSON 内容覆盖；两个面板的复制提示也改为各自独立，不再出现复制一个后两个按钮同时显示“已复制”的误导反馈。
-- 📊 **Agent skill 回测与兼容接口语义收敛** — `get_skill_backtest_summary` 现在要求显式传入 `skill_id`，缺失时返回明确校验提示；仓库尚未持久化真实 skill 级汇总时会返回明确的 unsupported/info 响应，并保留 `normalized` 与 `*_pct` 兼容字段，避免沿用 overall 指标误导 Agent 或用户。
-- 🔧 **Skill 默认选择与兼容层行为加固** — `allowed-tools` 会继续仅作为 `SKILL.md` bundle 元数据保留，不再泄露到运行时工具选择；`/api/v1/agent/strategies` 恢复旧 payload 形状；显式传入 `skills: []` 时会清空陈旧上下文；当用户明确选择策略 skill 时不再偷偷叠加默认 bull-trend，而在 `AGENT_SKILLS` 为空时则统一只回落到单一主默认 skill。
+- ⏰ **Scheduled Mode Unlocks Startup CLI Stock Snapshot** — `python main.py --schedule --stocks ...` no longer forces subsequent scheduled runs to use startup stock list; re-reads latest saved `STOCK_LIST` before every trigger, ensuring updated watchlist participate in future notifications.
+- 🌍 **LLM Prompt Dynamically Injects Context by Stock Market** — Analysis pipeline no longer hardcodes market rules to A-shares; system prompt identifies A-shares, HK, or US equities from symbol, injecting corresponding role descriptions and trading rules to eliminate misaligned conclusions.
+- 🔎 **US Stock Autocomplete Deduplicates Reused Tickers** — `generate_index_from_csv.py` folds reused US tickers by `ts_code` when importing Tushare `us_basic` CSV, preserving active records to avoid duplicate `canonicalCode` entries in `stocks.index.json`.
+- 🧾 **Web Report Details Copy Interaction Stability Fix** (#749) — Fixed clickability layer of copy buttons in "Raw Analysis Results / Analysis Snapshot" inside `ReportDetails`, preventing overlay by JSON content; decoupled copy feedback between panels so copying one does not falsely mark both as copied.
+- 📊 **Agent Skill Backtest and Compatibility Interface Semantic Convergence** — `get_skill_backtest_summary` requires explicit `skill_id`, returning clear validation errors when absent; returns explicit unsupported/info response when repository has not persisted skill-level summaries, retaining `normalized` and `*_pct` fields.
+- 🔧 **Skill Default Selection and Compatibility Layer Hardening** — `allowed-tools` retained solely as `SKILL.md` bundle metadata without leaking into runtime tool selection; `/api/v1/agent/strategies` restores legacy payload shape; passing `skills: []` clears stale context; explicit selection skips default bull-trend, and empty `AGENT_SKILLS` falls back to single primary default skill.
 
-### 测试
+### Tests
 
-- 🧪 **Dashboard 组件测试覆盖率扩展（PR7-2）** — 新增 `ReportNews` 和 `TaskPanel` 测试；对 `HistoryList`、`ReportDetails`、`HomePage`、`useDashboardLifecycle` 和 `stockPoolStore` 增强了断言覆盖，包括删除回退、移动端抽屉和任务生命周期等场景。
-- 🧪 **多市场索引生成测试补齐** — 新增 `tests/test_generate_index_from_csv.py`，覆盖 Tushare/AkShare 双数据源解析、多市场判断、美股 DUMMY 过滤与重复 ticker 去重等核心路径。
-- 🧪 **关联板块写入与 API 契约回归** — 新增 `tests/test_pipeline_related_boards.py`，并补充分析历史与分析接口契约测试，确保 `belong_boards` / `sector_rankings` 只做增量扩展且保持 fail-open。
-- 🧪 **定时模式股票列表语义回归测试** — 新增 `tests/test_main_schedule_mode.py`，覆盖定时模式忽略启动时 `--stocks` 快照、单次运行仍保留 CLI 股票覆盖的边界场景。
+- 🧪 **Dashboard Component Test Coverage Expansion (PR7-2)** — Added tests for `ReportNews` and `TaskPanel`; enhanced assertion coverage for `HistoryList`, `ReportDetails`, `HomePage`, `useDashboardLifecycle`, and `stockPoolStore`, covering delete rollbacks, mobile drawers, and task lifecycle.
+- 🧪 **Multi-Market Index Generation Tests** — Added `tests/test_generate_index_from_csv.py`, covering Tushare/AkShare dual source parsing, multi-market detection, US DUMMY filtering, and ticker deduplication.
+- 🧪 **Associated Sector Write and API Contract Regression** — Added `tests/test_pipeline_related_boards.py` with analysis history and API contract tests, ensuring `belong_boards` / `sector_rankings` remain incremental extensions and fail open.
+- 🧪 **Scheduled Mode Stock List Semantic Regression Tests** — Added `tests/test_main_schedule_mode.py`, covering scheduled mode ignoring startup `--stocks` snapshot while single runs retain CLI stock overrides.
 
-### 文档
+### Documentation
 
-- 📘 **新增 Tushare 股票列表工具文档** — 新增 `docs/TUSHARE_STOCK_LIST_GUIDE.md`，说明股票列表抓取工具的使用方法、数据格式和常见问题。
-- 🌍 **补齐定时模式与关联板块的双语说明** — `docs/full-guide.md` / `docs/full-guide_EN.md` 现在明确说明 scheduled mode 会在每次执行前重新读取 `STOCK_LIST`，并同步补充个股关联板块展示能力说明，减少配置预期偏差。
-- 🧭 **调整 Agent 术语兼容文案** — README、双语文档、设置页与问股界面继续以“策略”作为用户入口主称呼，同时补充 `skill` 作为内部统一命名，降低迁移期理解成本。
+- 📘 **Added Tushare Stock List Tool Documentation** — Added `docs/TUSHARE_STOCK_LIST_GUIDE.md` explaining stock list scraper usage, data formats, and FAQ.
+- 🌍 **Bilingual Documentation for Scheduled Mode and Associated Sectors** — `docs/full-guide.md` / `docs/full-guide_EN.md` clarifies scheduled mode re-reads `STOCK_LIST` before each run, adding associated sector display documentation.
+- 🧭 **Adjusted Agent Terminology Compatibility Copy** — README, bilingual docs, settings, and chat interface continue using "Strategy" as primary user-facing term while introducing `skill` as internal unified name.
 
 ## [3.9.0] - 2026-03-20
 
-### 发布亮点
+### Release Highlights
 
-- 🤖 **模型链路与报告语言更灵活** — Agent 现在可以通过 `AGENT_LITELLM_MODEL` 独立选择模型链路，普通分析与 Agent 报告也可通过 `REPORT_LANGUAGE=zh|en` 输出统一语言，减少“英文内容 + 中文壳子”这类混排问题，并允许团队分别权衡主分析与 Agent 的成本、速度和能力。
-- 🔎 **首页分析体验完成一轮闭环优化** — 首页新增 A 股自动补全，支持代码、中文名、拼音和别名检索；同时 Dashboard 状态收口到统一 store，历史、报告、新闻与 Markdown 抽屉的交互更稳定，“Ask AI” 追问也会优先携带当前报告上下文。
-- 💬 **通知与检索能力继续外扩** — 新增 Slack 一等通知渠道；SearXNG 在未配置自建实例时可以自动发现公共实例并按受控轮询降级；Tavily 时效新闻链路修复后，严格时效过滤不再错误丢光有效结果。
-- 💼 **持仓与市场复盘链路更稳** — A 股 market review 可选接入 TickFlow 强化指数与涨跌统计；持仓账本写入改为串行化以缩小并发超卖窗口；汇率刷新入口和禁用态提示也更加清晰，减少用户误判。
+- 🤖 **More Flexible Model Pipelines and Report Language** — Agent can now select model pipelines independently via `AGENT_LITELLM_MODEL`; standard analysis and Agent reports can output unified language via `REPORT_LANGUAGE=zh|en`, eliminating "English content + Chinese shell" mixing and allowing teams to balance cost, latency, and capability between primary analysis and Agent workflows.
+- 🔎 **Closed-Loop Home Analysis Experience Enhancements** — Added local-index-driven stock auto-complete on home page supporting symbols, Chinese names, pinyin, and aliases; consolidated Dashboard state into a unified store for more stable drawer interactions (history, reports, news, Markdown); "Ask AI" follow-ups now prioritize current report context.
+- 💬 **Expanded Notifications and Retrieval Capabilities** — Added first-class Slack notifications; SearXNG automatically discovers public instances with controlled fallback polling when self-hosted instances are not configured; Tavily real-time news retrieval fixes prevent strict freshness filters from discarding valid results.
+- 💼 **More Reliable Portfolio and Market Review Pipelines** — A-share market review optionally integrates TickFlow for enhanced index quotes and market breadth; portfolio ledger writes are serialized to reduce concurrent overselling windows; FX refresh entry points and disabled-state indicators are clearer to prevent confusion.
 
-### 新功能
+### Features
 
-- 🔎 **Web 股票自动补全 MVP** — 首页分析输入框新增本地索引驱动的自动补全，支持股票代码、中文名、拼音和别名匹配；选中候选后会提交 canonical code，并透传 `stock_name`、`original_query`、`selection_source` 到分析请求、任务状态和 SSE 事件；索引加载失败时自动退回旧输入模式，不阻断原有提交流程。同步补充了静态索引加载器、索引生成脚本和前后端契约测试。分阶段进行开发，第一阶段仅支持 A 股。
-- 💬 **Slack 一等通知渠道** — 新增 Slack 原生通知支持，同时支持 Bot Token 和 Incoming Webhook 两种接入方式；同时配置时优先使用 Bot API，确保文本与图片发送到同一频道；Bot Token 模式支持图片上传（raw body POST，不使用 multipart）；新增 `SLACK_BOT_TOKEN`、`SLACK_CHANNEL_ID`、`SLACK_WEBHOOK_URL` 配置项，GitHub Actions 工作流同步补齐对应 Secrets 传递。
-- 🌍 **报告输出语言可配置**（Issue #758）— 新增 `REPORT_LANGUAGE=zh|en`，默认 `zh`；语言设置会同步注入普通分析与 Agent Prompt，并覆盖 Markdown/Jinja 模板、通知 fallback、历史/API `report_language` 元数据及 Web 报告页固定文案，避免“英文内容 + 中文壳子”的混合输出。
-- 🚀 **Agent 与普通分析模型解耦**（Issue #692）— 新增 `AGENT_LITELLM_MODEL`（留空继承 `LITELLM_MODEL`，无前缀按 `openai/<model>` 归一）；Agent 执行链路与 `/api/v1/agent/models` 的 `is_primary/is_fallback` 标记改为基于 Agent 实际模型链路；系统配置与启动期校验补齐 `AGENT_LITELLM_MODEL` 的 `unknown_model/missing_runtime_source` 检查；Web 设置页新增 Agent 主模型选择并与渠道模式运行时配置同步。
-- 🔎 **SearXNG 公共实例自动发现与受控轮询**（#752）— 新增 `SEARXNG_PUBLIC_INSTANCES_ENABLED`，在未配置 `SEARXNG_BASE_URLS` 时默认从 `searx.space` 拉取公共实例列表，并按受控轮询顺序选择实例；同次请求内遇到超时、连接错误、HTTP 非 200 或无效 JSON 会自动切换到下一个实例。已配置自建实例的用户保持原有优先级与语义不变；`daily_analysis` GitHub Actions 工作流也已支持显式透传该开关并在启动日志中展示当前状态。
-- 📈 **TickFlow market review enhancement** (#632) — 新增可选 `TICKFLOW_API_KEY`；配置后，A 股大盘复盘的主要指数行情优先尝试 TickFlow；若当前 TickFlow 套餐支持标的池查询，市场涨跌统计也会优先尝试 TickFlow。失败或权限不足时立即回退到现有 `AkShare / Tushare / efinance` 链路；板块涨跌榜回退顺序保持不变。接入层同时适配了真实 SDK 契约：主指数查询按单次请求上限分批拉取，并将 TickFlow 返回的比例型 `change_pct` / `amplitude` 统一转换为项目内部的百分比口径。
+- 🔎 **Web Stock Autocomplete MVP** — Added local-index-driven autocomplete to home analysis input box, supporting stock symbols, Chinese names, pinyin, and alias matching; submitting selected candidates passes canonical code along with `stock_name`, `original_query`, and `selection_source` to analysis requests, task status, and SSE events; falls back to legacy input mode if index loading fails without blocking submissions. Added static index loader, index generator scripts, and frontend/backend contract tests. Rolled out in phases, Phase 1 supports A-shares only.
+- 💬 **First-Class Slack Notification Channel** — Added native Slack notification support for both Bot Token and Incoming Webhook; prioritizes Bot API when both are configured to ensure text and images are posted to the same channel; Bot Token mode supports image upload (raw body POST, non-multipart); added `SLACK_BOT_TOKEN`, `SLACK_CHANNEL_ID`, `SLACK_WEBHOOK_URL` configuration settings, with GitHub Actions workflows passing corresponding Secrets.
+- 🌍 **Configurable Report Output Language** (Issue #758) — Added `REPORT_LANGUAGE=zh|en`, defaults to `zh`; language setting is injected into standard analysis and Agent prompts, and covers Markdown/Jinja templates, notification fallbacks, history/API `report_language` metadata, and Web report static copy, preventing mixed "English content + Chinese shell" outputs.
+- 🚀 **Decoupled Agent and Standard Analysis Models** (Issue #692) — Added `AGENT_LITELLM_MODEL` (inherits `LITELLM_MODEL` when empty, normalizes unprefixed names as `openai/<model>`); Agent execution pipeline and `/api/v1/agent/models` flags (`is_primary/is_fallback`) now reflect actual Agent model pipelines; system configuration and startup validation check for `unknown_model/missing_runtime_source` against `AGENT_LITELLM_MODEL`; Web settings adds Agent primary model selection synchronized with channel mode runtime config.
+- 🔎 **SearXNG Public Instance Discovery and Controlled Polling** (#752) — Added `SEARXNG_PUBLIC_INSTANCES_ENABLED`; fetches public instance lists from `searx.space` when `SEARXNG_BASE_URLS` is unset, selecting instances via controlled round-robin; automatically switches to the next instance upon timeout, connection error, non-200 HTTP status, or invalid JSON. Preserves existing priority and semantics for self-hosted instances; `daily_analysis` GitHub Actions workflow supports passing this toggle explicitly with logging.
+- 📈 **TickFlow market review enhancement** (#632) — Added optional `TICKFLOW_API_KEY`; when configured, A-share market review primary index quotes attempt TickFlow first; if the TickFlow plan supports symbol pool queries, market breadth statistics also attempt TickFlow first. Immediately falls back to existing `AkShare / Tushare / efinance` pipelines upon failure or insufficient permissions; sector leaderboards maintain existing fallback order. Adapted to official SDK contracts: batches main index queries within request limits and unifies proportional `change_pct` / `amplitude` to project percentage standards.
 
-### 改进
+### Improvements
 
 - **Dashboard state slice and workspace closure** — moved Home / Dashboard state into `stockPoolStore`, consolidated history selection, report loading, task syncing, polling refresh, and markdown drawer handling under a single state slice.
 - **Dashboard panel standardization** — kept the current dashboard layout contract stable while unifying history, report, news, and markdown presentation with shared tokens, standardized states, and bounded in-panel scrolling for the history list.
 - **Dashboard-to-chat follow-up bridge** — routed “Ask AI” follow-ups through report-context hydration instead of direct cross-page state coupling, while keeping chat sends usable when enriched history context is still loading.
-- 💼 **持仓账本并发写入串行化**（#742）— 持仓源事件写入/删除现在会在 SQLite 下先获取串行化写锁，减少并发卖出把超售流水写入账本的窗口；直接持仓写接口在锁竞争时返回 `409 portfolio_busy`，CSV 导入保持逐条提交并把 busy 计入 `failed_count`。
-- 💱 **持仓页汇率手动刷新入口补齐**（#748）— Web `/portfolio` 页面现在会在“汇率状态”卡片中展示“刷新汇率”按钮，直接调用现有 `POST /api/v1/portfolio/fx/refresh` 接口；刷新后会仅重载快照与风险数据，并以内联摘要反馈“已更新 / 仍 stale / 刷新失败”的结果，减少用户对 `fxStale` 长时间停留的误解。
+- 💼 **Serialized Concurrent Portfolio Ledger Writes** (#742) — Portfolio transaction event writes/deletions now acquire serialized write locks under SQLite to reduce concurrent overselling windows; direct portfolio write endpoints return `409 portfolio_busy` on lock contention, and CSV imports submit sequentially counting busy locks toward `failed_count`.
+- 💱 **Portfolio FX Manual Refresh Entry Point** (#748) — Web `/portfolio` page now displays a "Refresh Exchange Rates" button on the "FX Status" card, invoking `POST /api/v1/portfolio/fx/refresh`; reloads only snapshot and risk data, providing inline feedback ("Updated / Still Stale / Refresh Failed") to prevent misunderstandings over persistent `fxStale` indicators.
 
-### 修复
+### Fixed
 
-- 🔎 **Web 自动补全 Enter 提交语义修正** — 股票自动补全在搜索命中候选时不再默认高亮第一项；候选列表展开但用户尚未用方向键或鼠标明确选中时，按 Enter 会继续提交原始输入，避免手动输入被第一条候选静默覆盖。
-- 🌍 **补齐 `REPORT_LANGUAGE` 启动解析与历史展示本地化边界** — `Config` 在启动时继续遵循“真实环境变量优先、`.env` 兜底”的既有语义，并在两者冲突时输出显式告警，减少 `REPORT_LANGUAGE` 来源不清带来的误判；同时 `/api/v1/history/{id}` 英文详情响应会同步本地化 `sentiment_label`，历史 Markdown 也会正确识别英文 `bias_status` 的风险等级 emoji，避免出现 `乐观` 或 `🚨Safe` 这类中英混排/误报展示。
-- 📰 **Tavily 时效新闻检索发布时间映射修复**（#782）— Tavily 在股票新闻和严格时效的情报维度中现在会显式使用 `topic="news"`，并兼容 `published_date` / `publishedDate` 两种发布时间字段；修复了 Tavily 明明返回结果却在后续硬过滤阶段被全部记为 `drop_unknown` 丢弃的问题，同时将机构分析、业绩预期、行业分析等分析型维度恢复为宽源搜索，不再被统一压缩成新闻模式。
-- 💱 **持仓页汇率刷新禁用语义修正**（#772）— 当 `PORTFOLIO_FX_UPDATE_ENABLED=false` 时，`POST /api/v1/portfolio/fx/refresh` 现在会返回显式 `refresh_enabled=false` 与 `disabled_reason`，Web `/portfolio` 页面会明确提示“汇率在线刷新已被禁用”，不再误报“当前范围无可刷新的汇率对”。
+- 🔎 **Web Autocomplete Enter Key Submission Semantics** — Stock autocomplete no longer defaults to highlighting the first item upon search match; when candidate list is expanded but user has not explicitly navigated with arrow keys or mouse, pressing Enter submits raw input, preventing unintentional overwrite by the first suggestion.
+- 🌍 **`REPORT_LANGUAGE` Startup Parsing and History Localization Boundaries** — `Config` continues to follow "real environment variables first, `.env` fallback" startup semantics, emitting explicit warnings on conflict; `/api/v1/history/{id}` English responses localize `sentiment_label`, and historical Markdown correctly recognizes risk level emojis for English `bias_status`, eliminating mixed displays like `Optimistic` or `🚨Safe`.
+- 📰 **Tavily Fresh News Retrieval Publication Date Mapping** (#782) — Tavily explicitly sets `topic="news"` for stock news and strict-freshness intel dimensions, supporting both `published_date` and `publishedDate` fields; fixes bug where returned results were dropped as `drop_unknown` in hard-filtering stage, while restoring analytical dimensions (institutional analysis, earnings expectations, industry research) to broad search without forcing news mode.
+- 💱 **Portfolio FX Refresh Disabled Semantics** (#772) — When `PORTFOLIO_FX_UPDATE_ENABLED=false`, `POST /api/v1/portfolio/fx/refresh` returns explicit `refresh_enabled=false` and `disabled_reason`; Web `/portfolio` page clearly indicates "Online exchange rate refresh is disabled" instead of falsely reporting "No refreshable currency pairs in current scope".
 - 🤖 **Agent timeout and config hardening** — `AGENT_ORCHESTRATOR_TIMEOUT_S` now also protects the legacy single-agent ReAct loop, parallel tool batches stop waiting once the remaining budget is exhausted, and invalid numeric `.env` values fall back to safe defaults with warnings instead of crashing startup.
 - 🌐 **CORS wildcard + credentials compatibility** — `CORS_ALLOW_ALL=true` no longer combines `allow_origins=["*"]` with credentialed requests, avoiding browser-side cross-origin failures in demo/development setups.
 - 🧭 **Unavailable Agent settings hidden from Web UI** — Deep Research / Event Monitor controls are now treated as compatibility-only metadata in the current branch and are removed from the Settings page to avoid exposing non-functional toggles.
 
-### 文档
+### Documentation
 
-- 新增 Ollama 本地模型配置说明，同步更新 `README.md` 与 `docs/README_EN.md`（Fixes #690）
-- 完善 Ollama 配置说明：`docs/full-guide.md` / `docs/full-guide_EN.md` 环境变量表与 Note 补充 `OLLAMA_API_BASE`，避免英文用户误以为 Ollama 不能作为独立配置入口；合并重复的 `OLLAMA_API_BASE` 条目为单一条目
-- 明确文档同步治理边界：补充 `README.md`、专题文档、双语文档与交付说明之间的默认同步规则，减少后续文档漂移
+- Added Ollama local model configuration instructions, updating `README.md` and `docs/README_EN.md` (Fixes #690)
+- Improved Ollama documentation: added `OLLAMA_API_BASE` to environment variable tables and notes in `docs/full-guide.md` / `docs/full-guide_EN.md`, clarifying Ollama as standalone configuration; consolidated duplicate `OLLAMA_API_BASE` entries
+- Clarified documentation governance boundaries: added default synchronization rules between `README.md`, topical docs, bilingual docs, and delivery notes to prevent future drift
 
 ## [3.8.0] - 2026-03-17
 
-### 发布亮点
+### Release Highlights
 
-- 🎨 **Web 界面完成一轮骨架升级** — 新的 App Shell、侧边导航、主题能力、登录与系统设置流程已经串成统一体验，桌面端加载背景也完成对齐。
-- 📈 **分析上下文继续补强** — 美股新增社交舆情情报，A 股补齐财报与分红结构化上下文，Tushare 新接入筹码分布和行业板块涨跌数据。
-- 🔒 **运行稳定性与配置兼容性提升** — 退出登录会立即让旧会话失效，定时启动兼容旧配置，运行中的 `MAX_WORKERS` 调整和新闻时效窗口反馈更清晰。
-- 💼 **持仓纠错链路更完整** — 超售会被前置拦截，错误交易/资金流水/公司行为可以直接删除回滚，便于修复脏数据。
+- 🎨 **Web Interface Structural Upgrade** — New App Shell, sidebar navigation, theme capabilities, login and system settings workflows connected into unified experience; desktop loading background aligned.
+- 📈 **Analysis Context Strengthened** — US equities add social sentiment intelligence, A-shares complete structured financial report and dividend context, Tushare integrates chip distribution and sector performance.
+- 🔒 **Runtime Stability and Configuration Compatibility** — Logout immediately invalidates existing sessions, scheduled startup maintains legacy config compatibility, and `MAX_WORKERS` runtime tuning and news freshness feedback are clearer.
+- 💼 **Complete Portfolio Error Correction Pipeline** — Overselling is intercepted upfront, and erroneous trades, cash flows, or corporate actions can be deleted/rolled back to repair corrupted data.
 
-### 新功能
+### Features
 
-- 📱 **美股社交舆情情报** — 新增 Reddit / X / Polymarket 社交媒体情绪数据源，为美股分析提供实时社交热度、情绪评分和提及量等补充指标；完全可选，仅在配置 `SOCIAL_SENTIMENT_API_KEY` 后对美股生效。
-- 📊 **A 股财报与分红结构化增强**（Issue #710）— `fundamental_context.earnings.data` 新增 `financial_report` 与 `dividend` 字段；分红统一按“仅现金分红、税前口径”计算，并补充 `ttm_cash_dividend_per_share` 与 `ttm_dividend_yield_pct`；分析/历史 API 的 `details` 追加 `financial_report`、`dividend_metrics` 可选字段，保持 fail-open 与向后兼容。
-- 🔍 **接入 Tushare 筹码与行业板块接口** — 新增筹码分布、行业板块涨跌数据获取能力，并统一纳入配置化数据源优先级；默认按上海时间区分盘中/盘后交易日取数，优先使用 Tushare 同花顺接口，必要时降级到东财。
-- 🧱 **Web UI 基础骨架升级** — 重建共享设计令牌与通用组件，新增 App Shell、Theme Provider、侧边导航，并同步调整 Electron 加载背景，为 Web / Desktop 的统一体验打底。
-- 🔐 **登录与系统设置流程重做** — 重构 Login、Settings 与 Auth 管理流程，补上显式的认证 setup-state 处理，并让 Web 端与运行时认证配置 API 行为对齐。
-- 🧪 **前端回归与冒烟覆盖补强** — 新增并扩展登录、首页、聊天、移动端 Shell、设置页、回测入口等关键路径的组件测试与 Playwright smoke coverage。
+- 📱 **US Equities Social Sentiment Intelligence** — Added Reddit / X / Polymarket social media sentiment data sources, providing real-time buzz, sentiment scores, and mention metrics; completely optional, active for US stocks only when `SOCIAL_SENTIMENT_API_KEY` is configured.
+- 📊 **A-Share Financial Reports and Dividend Structured Data** (Issue #710) — Added `financial_report` and `dividend` fields to `fundamental_context.earnings.data`; dividends computed uniformly as "cash dividend only, pre-tax", adding `ttm_cash_dividend_per_share` and `ttm_dividend_yield_pct`; analysis and history APIs append optional `financial_report` and `dividend_metrics` fields in `details`, maintaining fail-open backward compatibility.
+- 🔍 **Tushare Chip Distribution and Industry Sectors Integration** — Added chip distribution and industry sector performance retrieval, unified under configurable data source priority; queries Shanghai time for intraday/post-market trading days, prioritizing Tushare Flush interface with fallback to EastMoney.
+- 🧱 **Web UI Foundation Structural Upgrade** — Rebuilt shared design tokens and common components, adding App Shell, Theme Provider, sidebar navigation, and aligned Electron loading background for unified Web/Desktop experience.
+- 🔐 **Reworked Login and System Settings Flow** — Refactored Login, Settings, and Auth management flows, adding explicit authentication setup-state handling and aligning Web behavior with runtime authentication configuration APIs.
+- 🧪 **Frontend Regression and Smoke Test Coverage** — Added and expanded component tests and Playwright smoke coverage for login, home, chat, mobile shell, settings, and backtesting entry points.
 
-### 变更
+### Changed
 
-- 🧭 **页面接入新 Shell 布局契约** — Home、Chat、Settings、Backtest 已统一接入新的页面容器、抽屉和滚动约定，降低 UI 迁移期间的页面行为不一致。
-- 💾 **设置页状态同步更稳** — 优化草稿保留、直接保存同步与冲突处理，减少模块级保存后前后端配置状态不一致的问题。
-- 🎭 **登录页视觉基线回归** — 登录页恢复到既有 `006` 分支的视觉基线，同时保留新的认证状态逻辑和统一表单交互模型。
-- 🏛️ **AI 协作治理资产加固** — 收敛并加强 `AGENTS.md`、`CLAUDE.md`、Copilot 指令和校验脚本的一致性约束，降低治理资产长期漂移风险。
+- 🧭 **Page Integration into New Shell Layout Contracts** — Home, Chat, Settings, and Backtest integrated into new page container, drawer, and scrolling conventions, eliminating UI discrepancies during migration.
+- 💾 **More Reliable Settings Page State Sync** — Optimized draft retention, direct save synchronization, and conflict handling, preventing state mismatch between frontend and backend after module-level saves.
+- 🎭 **Login Page Visual Baseline Alignment** — Restored login page to established `006` visual baseline while retaining new authentication state logic and unified form interaction model.
+- 🏛️ **AI Collaboration Governance Asset Hardening** — Converged and strengthened consistency constraints across `AGENTS.md`, `CLAUDE.md`, Copilot instructions, and validation scripts to prevent governance drift.
 
 ### Added
 
@@ -1470,61 +1470,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Settings state consistency** — refined draft preservation, direct-save synchronization, and conflict handling so module-level saves no longer leave the page out of sync with backend config state
 - **Login visual baseline** — restored the login page visual treatment to the established `006` branch baseline while keeping the newer auth-state logic and unified form interaction model
 
-### 修复
+### Fixed
 
-- ⏰ **定时启动立即执行兼容旧配置**（Issue #726）— `SCHEDULE_RUN_IMMEDIATELY` 未设置时会回退读取 `RUN_IMMEDIATELY`，修复升级后旧 `.env` 在定时模式下的兼容性问题；同时澄清 `.env.example` / README 中两个配置项的适用范围，并注明 Outlook / Exchange 强制 OAuth2 暂不支持。
-- 🧵 **运行期 `MAX_WORKERS` 配置生效与可解释性增强**（#633）— 修复异步分析队列未按 `MAX_WORKERS` 同步的问题；新增任务队列并发 in-place 同步机制（空闲即时生效、繁忙延后），并在设置保存反馈与运行日志中明确输出 `profile/max/effective`，减少“参数未生效”误解。
-- 🔐 **退出登录立即失效现有会话** — `POST /api/v1/auth/logout` 现在会轮换 session secret，避免旧 cookie 在退出后仍可继续访问受保护接口；同浏览器标签页和并发页面会被同步登出。认证开启时，该接口也不再属于匿名白名单，未登录请求会返回 `401`，避免匿名请求触发全局 session 失效。
-- 🧮 **Tushare 板块/筹码调用限流与跨日缓存修复** — 新增的 `trade_cal`、行业板块排行、筹码分布链路统一接入 `_check_rate_limit()`；交易日历缓存改为按自然日刷新，避免服务跨天运行后继续沿用旧交易日判断取数日期。
-- 💼 **持仓超售拦截与错误流水恢复**（#718）— `POST /api/v1/portfolio/trades` 现在会在写入前校验可卖数量，超售返回 `409 portfolio_oversell`；持仓页新增交易 / 资金流水 / 公司行为删除能力，删除后会同步失效仓位缓存与未来快照，便于从错误流水中直接恢复。
-- 📧 **邮件中文发件人名编码**（#708）— 邮件通知现在会对包含中文的 `EMAIL_SENDER_NAME` 自动做 RFC 2047 编码，并在异常路径补充 SMTP 连接清理，修复 GitHub Actions / QQ SMTP 下 `'ascii' codec can't encode characters` 导致的发送失败。
-- 🐛 **港股 Agent 实时行情去重与快速路由** — 统一 `HK01810` / `1810.HK` / `01810` 等港股代码归一规则；港股实时行情改为直接走单次 `akshare_hk` 路径，避免按 A 股 source priority 重复触发同一失败接口；Agent 运行期对显式 `retriable=false` 的工具失败增加短路缓存，减少同轮分析中的重复失败调用。
-- 📰 **新闻时效硬过滤与策略分窗**（#697）— 新增 `NEWS_STRATEGY_PROFILE`（`ultra_short/short/medium/long`）并与 `NEWS_MAX_AGE_DAYS` 统一计算有效窗口；搜索结果在返回后执行发布时间硬过滤（时间未知剔除、超窗剔除、未来仅容忍 1 天），并在历史 fallback 链路追加相同约束，避免旧闻再次进入“最新动态/风险警报”。
+- ⏰ **Scheduled Startup Immediate Run Compatibility** (Issue #726) — Falls back to reading `RUN_IMMEDIATELY` when `SCHEDULE_RUN_IMMEDIATELY` is unset, resolving upgrade compatibility for legacy `.env` files in scheduled mode; clarified scopes in `.env.example` / README and noted lack of support for Outlook / Exchange OAuth2 enforcement.
+- 🧵 **Runtime `MAX_WORKERS` Configuration and Explainability** (#633) — Fixed issue where async analysis queue did not synchronize with `MAX_WORKERS`; added in-place concurrency sync (instant when idle, deferred when busy) and logs `profile/max/effective` metrics in settings save feedback and runtime logs.
+- 🔐 **Logout Immediately Invalidates Existing Sessions** — `POST /api/v1/auth/logout` rotates session secret, preventing revoked cookies from accessing protected endpoints; concurrently open tabs are logged out. When auth is enabled, endpoint is removed from anonymous whitelist and unauthenticated calls return `401` to prevent unauthorized global session invalidation.
+- 🧮 **Tushare Sector/Chip Rate Limiting and Cross-Day Cache Fixes** — Added `trade_cal`, industry sector rankings, and chip distribution routes to `_check_rate_limit()`; refreshed trading calendar cache per calendar day to prevent stale date evaluations across midnight.
+- 💼 **Portfolio Overselling Interception and Rollback** (#718) — `POST /api/v1/portfolio/trades` validates sellable quantities before writing, returning `409 portfolio_oversell` on excess; portfolio page adds trade, cash flow, and corporate action deletion, invalidating position caches and future snapshots for clean recovery.
+- 📧 **Email Chinese Sender Name Encoding** (#708) — Email notifications automatically apply RFC 2047 encoding to `EMAIL_SENDER_NAME` containing non-ASCII characters, with SMTP connection cleanup on error paths, resolving `'ascii' codec can't encode characters` in GitHub Actions and QQ SMTP.
+- 🐛 **HK Stock Agent Real-Time Quotes Deduplication and Fast Routing** — Unified symbol normalization for `HK01810` / `1810.HK` / `01810`; routed HK real-time quotes directly to single `akshare_hk` path, avoiding redundant failure cycles through A-share priority lists; short-circuit caches explicit `retriable=false` tool failures to avoid repeated calls within the same turn.
+- 📰 **News Freshness Hard Filtering and Window Splitting** (#697) — Added `NEWS_STRATEGY_PROFILE` (`ultra_short/short/medium/long`), calculating effective windows with `NEWS_MAX_AGE_DAYS`; search results undergo hard publication date filtering (drops unknown timestamps, drops expired windows, allows max 1 day in future) with identical constraints on historical fallback paths to prevent stale news from entering alerts.
 
-### 文档
+### Documentation
 
-- ☁️ **新增云服务器 Web 界面部署与访问教程**（Fixes #686）— 补充从云端部署到外部访问的落地说明，降低远程自托管门槛。
-- 🌍 **补齐英文文档索引与协作文档** — 新增英文文档索引、贡献指南、Bot 命令文档，并补充中英双语 issue / PR 模板，方便中英文协作与外部贡献者理解项目入口。
-- 🏷️ **本地化 README 补充 Trendshift badge** — 在多语言 README 中同步补上新版能力入口标识，减少中英文说明面不一致。
+- ☁️ **Cloud Server Web Interface Deployment and Access Tutorial** (Fixes #686) — Added step-by-step guidance for cloud deployment and external access, lowering self-hosting barriers.
+- 🌍 **Completed English Documentation Index and Collaboration Guides** — Added English documentation index, contribution guide, Bot command docs, and bilingual issue/PR templates for global collaboration.
+- 🏷️ **Localized README Trendshift Badge** — Added updated capability entry badges across multilingual READMEs to keep feature visibility aligned.
 
 ## [3.7.0] - 2026-03-15
 
-### 新功能
+### Features
 
-- 💼 **持仓管理 P0 全功能上线**（#677，对应 Issue #627）
-  - **核心账本与快照闭环**：新增账户、交易、现金流水、企业行为、持仓缓存、每日快照等核心数据模型与 API 端点；支持 FIFO / AVG 双成本法回放；同日事件顺序固定为 `现金 → 企业行为 → 交易`；持仓快照写入采用原子事务。
-  - **券商 CSV 导入**：支持华泰 / 中信 / 招商首批适配，含列名别名兼容；两阶段接口（解析预览 + 确认提交）；`trade_uid` 优先、key-field hash 兜底的幂等去重；前导零股票代码完整保留。
-  - **组合风险报告**：集中度风险（Top Positions + A 股板块口径）、历史回撤监控（支持回填缺失快照）、止损接近预警；多币种统一换算 CNY 口径；汲取失败时回退最近成功汇率并标记 stale。
-  - **Web 持仓页**（`/portfolio`）：组合总览、持仓明细、集中度饼图、风险摘要、全组合 / 单账户切换；手工录入交易 / 资金流水 / 企业行为；内嵌账户创建入口；CSV 解析 + 提交闭环与券商选择器。
-  - **Agent 持仓工具**：新增 `get_portfolio_snapshot` 数据工具，默认紧凑摘要，可选持仓明细与风险数据。
-  - **事件查询 API**：新增 `GET /portfolio/trades`、`GET /portfolio/cash-ledger`、`GET /portfolio/corporate-actions`，支持日期过滤与分页。
-  - **可扩展 Parser Registry**：应用级共享注册，支持运行时注册新券商；新增 `GET /portfolio/imports/csv/brokers` 发现接口。
+- 💼 **Portfolio Management P0 Full Feature Launch** (#677, Issue #627)
+  - **Core Ledger and Snapshot Closure**: Added core data models and API endpoints for accounts, trades, cash transactions, corporate actions, position caching, and daily snapshots; supports FIFO and AVG cost accounting; enforces same-day event sequence (`Cash -> Corporate Action -> Trade`); atomic transactions for portfolio snapshots.
+  - **Broker CSV Import**: Initial support for Huatai, CITIC, and CMB with column alias compatibility; two-phase API (parse preview + confirm commit); idempotent deduplication prioritizing `trade_uid` with key-field hash fallback; preserves leading zeros in stock symbols.
+  - **Portfolio Risk Reports**: Concentration risk (Top Positions + A-share sectors), historical drawdown monitoring (supports backfilling missing snapshots), stop-loss proximity alerts; multi-currency unified conversion to CNY; falls back to last successful FX rate and flags as stale on fetch errors.
+  - **Web Portfolio Page** (`/portfolio`): Portfolio overview, position details, concentration pie charts, risk summary, portfolio/account toggles; manual logging of trades, cash flows, and corporate actions; built-in account creation modal; CSV parsing + commit workflow with broker selector.
+  - **Agent Portfolio Tools**: Added `get_portfolio_snapshot` data tool returning compact summary by default, with optional position breakdown and risk metrics.
+  - **Event Query APIs**: Added `GET /portfolio/trades`, `GET /portfolio/cash-ledger`, `GET /portfolio/corporate-actions` with date filtering and pagination.
+  - **Extensible Parser Registry**: Application-level shared registry supporting runtime registration of new brokers; added `GET /portfolio/imports/csv/brokers` discovery endpoint.
 
-- 🎨 **前端设计系统与原子组件库**（#662）
-  - 引入渐进式双主题架构（HSL 变量化设计令牌），清理历史 Legacy CSS；重构 Button / Card / Badge / Collapsible / Input / Select 等 20+ 核心组件；新增 `clsx` + `tailwind-merge` 类名合并工具；提升历史记录、LLM 配置等页面可读性。
+- 🎨 **Frontend Design System and Atomic Component Library** (#662)
+  - Introduced progressive dual-theme architecture (HSL variable design tokens), purging legacy CSS; refactored 20+ core components including Button, Card, Badge, Collapsible, Input, Select; added `clsx` + `tailwind-merge` class merging utility; improved readability across History and LLM configuration pages.
 
-- ⚡ **分析 API 异步契约与启动优化**（#656）
-  - 规范 `POST /api/v1/analysis/analyze` 异步请求的返回契约；优化服务启动辅助逻辑；修复前端报告类型联合定义与后端响应对齐问题。
+- ⚡ **Analysis API Asynchronous Contract and Startup Optimization** (#656)
+  - Standardized response contract for asynchronous `POST /api/v1/analysis/analyze` requests; optimized server startup helper logic; resolved frontend report type union misalignment with backend responses.
 
-### 修复
+### Fixed
 
-- 🔔 **Discord 环境变量向后兼容**（#659）：运行时新增 `DISCORD_CHANNEL_ID` → `DISCORD_MAIN_CHANNEL_ID` 的 fallback 读取；历史配置用户无需修改即可恢复 Discord Bot 通知；全部相关文档与 `.env.example` 对齐。
-- 🔧 **GitHub Actions Node 24 升级**（#665）：将所有 GitHub 官方 actions 升级至 Node 24 兼容版本，消除 CI 日志中的 Node.js 20 deprecation warning（影响 2026-06-02 强制升级窗口）。
-- 📅 **持仓页默认日期本地化**：手工录入表单默认日期改用本地时间（`getFullYear/Month/Date`），修复 UTC-N 时区用户在当天晚间出现日期偏移的问题。
-- 🔁 **CSV 导入去重逻辑加固**：dedup hash 纳入行序号作为区分因子，确保同字段合法分笔成交不被误折叠；同时在 `trade_uid` 存在时也持久化 hash，防止混合来源重复写入。
+- 🔔 **Discord Environment Variable Backward Compatibility** (#659): Added runtime fallback reading `DISCORD_CHANNEL_ID` -> `DISCORD_MAIN_CHANNEL_ID`; existing users restore Discord Bot notifications without config changes; aligned all docs and `.env.example`.
+- 🔧 **GitHub Actions Node 24 Upgrade** (#665): Upgraded all official GitHub actions to Node 24-compatible versions, eliminating Node.js 20 deprecation warnings in CI logs (affecting 2026-06-02 mandatory upgrade window).
+- 📅 **Portfolio Page Default Date Localization**: Manual entry forms default to local time (`getFullYear/Month/Date`), fixing date offset issues for UTC-N timezone users in the evening.
+- 🔁 **CSV Import Deduplication Hardening**: Included row index in dedup hash calculation to prevent legitimate split trades from being folded; persisted hash even when `trade_uid` exists to prevent duplicate writes from mixed sources.
 
-### 变更
+### Changed
 
-- `POST /api/v1/portfolio/trades` 在同账户内 `trade_uid` 冲突时返回 `409`。
-- 持仓风险响应新增 `sector_concentration` 字段（增量扩展），原有 `concentration` 字段保持不变。
-- 分析 API `analyze` 接口异步行为契约文档化；前端报告类型联合更新。
+- `POST /api/v1/portfolio/trades` returns `409` when `trade_uid` conflicts within the same account.
+- Portfolio risk responses add incremental `sector_concentration` field while retaining existing `concentration` field.
+- Documented asynchronous behavior contract for `analyze` API endpoint; updated frontend report type union.
 
-### 测试
+### Tests
 
-- 新增持仓核心服务测试（FIFO / AVG 部分卖出、同日事件顺序、重复 `trade_uid` 返回 409、快照 API 契约）。
-- 新增 CSV 导入幂等性、合法分笔成交不误去重、去重边界、风险阈值边界、汇率降级行为测试。
-- 新增 Agent `get_portfolio_snapshot` 工具调用测试。
-- 新增分析 API 异步契约回归测试。
+- Added core portfolio service tests (FIFO/AVG partial sales, same-day event sequence, duplicate `trade_uid` 409 responses, snapshot API contracts).
+- Added tests for CSV import idempotency, preserving valid split executions, deduplication boundaries, risk thresholds, and FX fallback behavior.
+- Added test coverage for Agent `get_portfolio_snapshot` tool invocation.
+- Added regression tests for asynchronous analysis API contracts.
 
 ## [3.6.0] - 2026-03-14
 
@@ -1534,19 +1534,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - 🗑️ **History batch deletion** — Web UI now supports multi-selection and batch deletion of analysis history; added `POST /api/v1/history/batch-delete` endpoint and `ConfirmDialog` component.
 - 🔐 **Auth settings API** — new `POST /api/v1/auth/settings` endpoint to enable or disable Web authentication at runtime and set the initial admin password when needed
-- openclaw Skill 集成指南 — 新增 [docs/openclaw-skill-integration.md](openclaw-skill-integration.md)，说明如何通过 openclaw Skill 调用 DSA API
+- openclaw Skill Integration Guide — Added [docs/openclaw-skill-integration.md](openclaw-skill-integration.md) explaining how to call DSA APIs via openclaw Skill
 - ⚙️ **LLM channel protocol/test UX** — `.env` and Web settings now share the same channel shape (`LLM_CHANNELS` + `LLM_<NAME>_PROTOCOL/BASE_URL/API_KEY/MODELS/ENABLED`); settings page adds per-channel connection testing, primary/fallback/vision model selection, and protocol-aware model prefixing
 - 🤖 **Agent architecture Phase 0+1** — shared protocols (`AgentContext`, `AgentOpinion`, `StageResult`), extracted `run_agent_loop()` runner, `AGENT_ARCH` switch (`single`/`multi`), config registry entries
 - 🔍 **Bot NL routing** — two-layer natural-language routing: cheap regex pre-filter (stock codes + finance keywords) → lightweight LLM intent parsing; controlled by `AGENT_NL_ROUTING=true`; supports multi-stock and strategy extraction
 - 💬 **`/ask` multi-stock analysis** — comma or `vs` separated codes (max 5), parallel thread execution with 150s timeout (preserves partial results), Markdown comparison summary table at top
 - 📋 **`/history` command** — per-user session isolation via `{platform}_{user_id}:{scope}` format (colon delimiter prevents prefix collision); lists both `/chat` and `/ask` sessions; view detail or clear
-- 📊 **`/strategies` command** — lists available strategy YAML files grouped by category (趋势/形态/反转/框架) with ✅/⬜ activation status
+- 📊 **`/strategies` command** — lists available strategy YAML files grouped by category (Trend / Pattern / Reversal / Framework) with ✅/⬜ activation status
 - 🔧 **Backtest summary tools** — `get_strategy_backtest_summary` and `get_stock_backtest_summary` registered as read-only Agent tools
 - ⚙️ **Agent auto-detection** — `is_agent_available()` auto-detects from `LITELLM_MODEL`; explicit `AGENT_MODE=true/false` takes full precedence
 - 🏗️ **Multi-Agent orchestrator (Phase 2)** — `AgentOrchestrator` with 4 modes (`quick`/`standard`/`full`/`strategy`); drop-in replacement for `AgentExecutor` via `AGENT_ARCH=multi`; `BaseAgent` ABC with tool subset filtering, cached data injection, and structured `AgentOpinion` output
 - 🧩 **Specialised agents (Phase 2-4)** — `TechnicalAgent` (8 tools, trend/MA/MACD/volume/pattern analysis), `IntelAgent` (news & sentiment, risk flag propagation), `DecisionAgent` (synthesis into Decision Dashboard JSON), `RiskAgent` (7 risk categories, two-level severity with soft/hard override)
 - 📈 **Strategy system (Phase 3)** — `StrategyAgent` (per-strategy evaluation from YAML skills), `StrategyRouter` (rule-based regime detection → strategy selection), `StrategyAggregator` (weighted consensus with backtest performance factor)
-- 🔬 **Deep Research agent (Phase 5)** — `ResearchAgent` with 3-phase approach (decompose → research sub-questions → synthesise report); token budget tracking; new `/research` bot command with aliases (`/深研`, `/deepsearch`)
+- 🔬 **Deep Research agent (Phase 5)** — `ResearchAgent` with 3-phase approach (decompose → research sub-questions → synthesise report); token budget tracking; new `/research` bot command with aliases (`/research`, `/deepsearch`)
 - 🧠 **Memory & calibration (Phase 6)** — `AgentMemory` with prediction accuracy tracking, confidence calibration (activates after minimum sample threshold), strategy auto-weighting based on historical win rate
 - 📊 **Portfolio Agent (Phase 7)** — `PortfolioAgent` for multi-stock portfolio analysis (position sizing, sector concentration, correlation risk, cross-market linkage, rebalance suggestions)
 - 🔔 **Event-driven alerts (Phase 7)** — `EventMonitor` with `PriceAlert`, `VolumeAlert`, `SentimentAlert` rules; async checking, callback notifications, serializable persistence
@@ -1567,15 +1567,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - 🎮 **Discord channel env compatibility** — runtime now accepts legacy `DISCORD_CHANNEL_ID` as a fallback for `DISCORD_MAIN_CHANNEL_ID`, and the docs/examples now use the same variable name as the actual workflow/config implementation
 - 🐛 **Session secret rotation on Windows** — use atomic replace so auth toggles invalidate existing sessions even when `.session_secret` already exists
 - 🐛 **Auth toggle atomicity** — persist `ADMIN_AUTH_ENABLED` before rotating session secret; on rotation failure, roll back to the previous auth state
-- 🔧 **LLM runtime selection guardrails** — YAML 模式下渠道编辑器不再覆盖 `LITELLM_MODEL` / fallback / Vision；系统配置校验补上全部渠道禁用后的运行时来源检查，并修复 `vertexai/...` 这类协议别名模型被重复加前缀的问题
+- 🔧 **LLM runtime selection guardrails** — Channel editor in YAML mode no longer overrides `LITELLM_MODEL` / fallback / Vision; system configuration validation adds runtime source checks when all channels are disabled, fixing duplicate prefixes on protocol alias models like `vertexai/...`
 - 🐛 **Multi-stock `/ask` follow-up regressions** — portfolio overlay now shares the same timeout budget as the per-stock phase and is skipped on timeout instead of blocking the bot reply; `/history` now stores the readable per-stock summary instead of raw dashboard JSON; condensed multi-stock output now renders numeric `sniper_points` values
-- 🐛 **Decision dashboard enum compatibility** — multi-agent `DecisionAgent` now keeps `decision_type` within the legacy `buy|hold|sell` contract and normalizes stray `strong_*` outputs before risk override, pipeline conversion, and downstream统计/通知汇总
-- 🛟 **Multi-Agent partial-result fallback** — `IntelAgent` now caches parsed intel for downstream reuse, shared JSON parsing tolerates lightly malformed model output, and the orchestrator preserves/synthesizes a minimal dashboard on timeout or mid-pipeline parse failure instead of always collapsing to `50/观望/未知`
+- 🐛 **Decision dashboard enum compatibility** — multi-agent `DecisionAgent` now keeps `decision_type` within the legacy `buy|hold|sell` contract and normalizes stray `strong_*` outputs before risk override, pipeline conversion, and downstream statistics/notification summaries
+- 🛟 **Multi-Agent partial-result fallback** — `IntelAgent` now caches parsed intel for downstream reuse, shared JSON parsing tolerates lightly malformed model output, and the orchestrator preserves/synthesizes a minimal dashboard on timeout or mid-pipeline parse failure instead of always collapsing to `50/hold/unknown`
 - 🐛 **Shared LiteLLM routing restored** — bot NL intent parsing and `ResearchAgent` planning/synthesis now reuse the same LiteLLM adapter / Router / fallback / `api_base` injection path as the main Agent flow, so `LLM_CHANNELS` / `LITELLM_CONFIG` / OpenAI-compatible deployments behave consistently
 - 🐛 **Bot chat session backward compatibility** — `/chat` now keeps using the legacy `{platform}_{user_id}` session id when old history already exists, and `/history` can still list / view / clear those pre-migration sessions alongside the new `{platform}_{user_id}:chat` format
 - 🐛 **EventMonitor unsupported rule rejection** — config validation/runtime loading now reject or skip alert types the monitor cannot actually evaluate yet, so schedule mode no longer silently accepts permanent no-op rules
-- 🐛 **P0 基本面聚合稳定性修复** (#614) — 修复 `get_stock_info` 板块语义回归（新增 `belong_boards` 并保留 `boards` 兼容别名）、引入基本面上下文精简返回以控制 token、为基本面缓存增加最大条目淘汰，并补齐 ETF 总体状态聚合与 NaN 板块字段过滤，保证 fail-open 与最小入侵。
-- 🔧 **GitHub Actions 搜索引擎环境变量补充** — 工作流新增 `MINIMAX_API_KEYS`、`BRAVE_API_KEYS`、`SEARXNG_BASE_URLS` 环境变量映射，使 GitHub Actions 用户可配置 MiniMax、Brave、SearXNG 搜索服务（此前 v3.5.0 已添加 provider 实现但缺少工作流配置）
+- 🐛 **P0 Fundamental Aggregation Stability Fix** (#614) — Fixed `get_stock_info` sector semantics regression (added `belong_boards` while retaining `boards` compatibility alias), introduced streamlined fundamental context return to control tokens, added max-item eviction to fundamental cache, and completed ETF overall status aggregation and NaN sector filtering, ensuring fail-open and minimal invasion.
+- 🔧 **GitHub Actions Search Engine Environment Variables** — Added `MINIMAX_API_KEYS`, `BRAVE_API_KEYS`, `SEARXNG_BASE_URLS` mapping to workflows, enabling GitHub Actions users to configure MiniMax, Brave, and SearXNG search services (provider implementation added in v3.5.0 but missing workflow mapping)
 - 🤖 **Multi-Agent runtime consistency** — `AGENT_MAX_STEPS` now propagates to each orchestrated sub-agent; added cooperative `AGENT_ORCHESTRATOR_TIMEOUT_S` budget to stop overlong pipelines before they cascade further
 - 🔌 **Multi-Agent feature wiring** — `AGENT_RISK_OVERRIDE` now actively downgrades final dashboards on hard risk findings; `AGENT_MEMORY_ENABLED` now injects recent analysis memory + confidence calibration into specialised agents; multi-stock `/ask` now runs `PortfolioAgent` to add portfolio-level allocation and concentration guidance
 - 🔔 **EventMonitor runtime wiring** — schedule mode can now load alert rules from `AGENT_EVENT_ALERT_RULES_JSON`, poll them at `AGENT_EVENT_MONITOR_INTERVAL_MINUTES`, and send triggered alerts through the existing notification service
@@ -1589,17 +1589,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - 🧹 **ResearchAgent dedup** — `_filtered_registry()` now delegates to `BaseAgent._filtered_registry()` instead of duplicating the filtering logic
 - 🧹 **Bot trailing whitespace cleanup** — removed W291/W293 whitespace issues across `bot/handler.py`, `bot/dispatcher.py`, `bot/commands/base.py`, `bot/platforms/feishu_stream.py`, `bot/platforms/dingtalk_stream.py`
 - 🐛 **Dispatcher `_parse_intent_via_llm` safety** — replaced fragile `'raw' in dir()` with `'raw' in locals()` for undefined-variable guard in `JSONDecodeError` handler
-- 🐛 **筹码结构 LLM 未填写时兜底补全** (#589) — DeepSeek 等模型未正确填写 `chip_structure` 时，自动用数据源已获取的筹码数据补全，保证各模型展示一致；普通分析与 Agent 模式均生效
-- 🐛 **历史报告狙击点位显示原始文本** (#452) — 历史详情页现优先展示 `raw_result.dashboard.battle_plan.sniper_points` 中的原始字符串，避免 `analysis_history` 数值列把区间、说明文字或复杂点位压缩成单个数字；保留原有数值列作为回退
+- 🐛 **Chip structure fallback when LLM omits it** (#589) — When models like DeepSeek omit `chip_structure`, automatically populates with chip data already retrieved from data sources to ensure consistent display across models; applies to both standard analysis and Agent mode
+- 🐛 **Historical report sniper points display raw text** (#452) — History detail page now prioritizes raw strings from `raw_result.dashboard.battle_plan.sniper_points`, preventing `analysis_history` numeric columns from compressing ranges, notes, or complex points into a single number; retains numeric column as fallback
 - 🐛 **Session prefix collision** — user ID `123` could see sessions of user `1234` via `startswith`; fixed with colon delimiter in session_id format
 - 🐛 **NL pre-filter false positives** — `re.IGNORECASE` caused `[A-Z]{2,5}` to match common English words like "hello"; removed global flag, use inline `(?i:...)` only for English finance keywords
 - 🐛 **Dotted ticker in strategy args** — `_get_strategy_args()` didn't recognize `BRK.B` as a stock code, leaving it in strategy text; now accepts `TICKER.CLASS` format
-- ⏱️ **efinance 长调用挂起修复** (#660) — 为所有 efinance API 调用引入 `_ef_call_with_timeout()` 包装（默认 30 秒，可通过 `EFINANCE_CALL_TIMEOUT` 配置）；使用 `executor.shutdown(wait=False)` 确保超时后不再阻塞主线程，彻底消除 81 分钟挂起问题
-- 🛡️ **类型安全内容完整性检查** (#660) — `check_content_integrity()` 现在将非字符串类型的 `operation_advice` / `analysis_summary` 视为缺失字段，避免下游 `get_emoji()` 因 `dict.strip()` 崩溃
-- 📄 **报告保存与通知解耦** (#660) — `_save_local_report()` 不再依赖 `send_notification` 标志触发，`--no-notify` 模式下本地报告照常保存
-- 🔄 **operation_advice 字典归一化** (#660) — Pipeline 和 BacktestEngine 现在将 LLM 返回的 `dict` 格式 `operation_advice` 通过 `decision_type`（不区分大小写）映射为标准字符串，防止因模型输出格式变化导致崩溃
-- 🛡️ **runner.py usage None 防护** (#660) — `response.usage` 为 `None` 时不再抛出 `AttributeError`，回退为 0 token 计数
-- 📋 **orchestrator 静默失败改为日志警告** (#660) — `IntelAgent` / `RiskAgent` 阶段失败现在记录 `WARNING` 而非静默跳过，便于诊断
+- ⏱️ **efinance long-call hang fix** (#660) — Wrapped all efinance API calls in `_ef_call_with_timeout()` (default 30 seconds, configurable via `EFINANCE_CALL_TIMEOUT`); uses `executor.shutdown(wait=False)` to prevent main thread blocking upon timeout, completely resolving 81-minute hangs
+- 🛡️ **Type-safe content integrity check** (#660) — `check_content_integrity()` now treats non-string `operation_advice` / `analysis_summary` as missing fields, preventing downstream `get_emoji()` crashes on `dict.strip()`
+- 📄 **Decoupled report saving and notifications** (#660) — `_save_local_report()` is no longer triggered by `send_notification` flag; local reports are saved normally under `--no-notify` mode
+- 🔄 **operation_advice dictionary normalization** (#660) — Pipeline and BacktestEngine now map dictionary `operation_advice` returned by LLMs to standard strings via case-insensitive `decision_type`, preventing crashes from model output format variations
+- 🛡️ **runner.py usage None guard** (#660) — When `response.usage` is `None`, no longer raises `AttributeError`, falling back to 0 token count
+- 📋 **orchestrator silent failures changed to log warnings** (#660) — `IntelAgent` / `RiskAgent` phase failures now log `WARNING` instead of silently skipping, facilitating diagnosis
 
 ### Notes
 - ⚠️ **Multi-worker auth toggles** — runtime auth updates are process-local; multi-worker deployments must restart/roll workers to keep auth state consistent
@@ -1653,20 +1653,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - 🐛 **EfinanceFetcher ETF OHLCV data** (#541, #527) — switch `_fetch_etf_data` from `ef.fund.get_quote_history` (NAV-only, no OHLCV, no `beg`/`end` params) to `ef.stock.get_quote_history`; ETFs now return proper open/high/low/close/volume/amount instead of zeros; remove obsolete NAV column mappings from `_normalize_data`
 - 🐛 **tiktoken 0.12.0 `Unknown encoding cl100k_base`** (#537) — pin `tiktoken>=0.8.0,<0.12.0` in requirements.txt to avoid plugin-registration regression introduced in 0.12.0
 - 🐛 **Web UI API error classification** (#540) — frontend no longer treats every HTTP 400 as the same "server/network" failure; now distinguishes Agent disabled / missing params / model-tool incompatibility / upstream LLM errors / local connection failures
-- 🐛 **北交所代码识别失败** (#491, #533) — 8/4/92 开头的 6 位代码现正确识别为北交所；Tushare/Akshare/Yfinance 等数据源支持 .BJ 或 bj 前缀；Baostock/Pytdx 对北交所代码显式切换数据源；避免误判上海 B 股 900xxx
-- 🐛 **狙击点位解析错误** (#488, #532) — 理想买入/二次买入等字段在无「元」字时误提取括号内技术指标数字；现先截去第一个括号后内容再提取
+- 🐛 **BSE stock symbol identification failure** (#491, #533) — 6-digit symbols starting with 8/4/92 are now properly recognized as Beijing Stock Exchange; Tushare/Akshare/Yfinance data sources support .BJ or bj prefix; Baostock/Pytdx explicitly switch data providers for BSE symbols; avoids misidentifying Shanghai B-shares 900xxx
+- 🐛 **Sniper point parsing error** (#488, #532) — Ideal buy / secondary buy fields previously mis-extracted technical indicator numbers inside parentheses when the character "yuan" was missing; now trims content after the first parenthesis before extraction
 
 ### Added
-- **Markdown-to-image for dashboard report** (#455, #535) — 个股日报汇总支持 markdown 转图片推送（Telegram、WeChat、Custom、Email），与大盘复盘行为一致
-- **markdown-to-file engine** (#455) — `MD2IMG_ENGINE=markdown-to-file` 可选，对 emoji 支持更好，需 `npm i -g markdown-to-file`
-- **PREFETCH_REALTIME_QUOTES** (#455) — 设为 `false` 可禁用实时行情预取，避免 efinance/akshare_em 全市场拉取
-- **Stock name prefetch** (#455) — 分析前预取股票名称，减少报告中「股票xxxxx」占位符
-- 📊 **分析报告模型标记** (#528, #534) — 在分析报告 meta、报告末尾、推送内容中展示 `model_used`（完整 LLM 模型名）；Agent 多轮调用时记录并展示每轮实际使用的模型（支持 fallback 切换）
+- **Markdown-to-image for dashboard report** (#455, #535) — Single-stock daily summary supports markdown-to-image push (Telegram, WeChat, Custom, Email), consistent with market review behavior
+- **markdown-to-file engine** (#455) — Optional `MD2IMG_ENGINE=markdown-to-file`, better emoji support, requires `npm i -g markdown-to-file`
+- **PREFETCH_REALTIME_QUOTES** (#455) — Setting to `false` disables real-time quote prefetching, avoiding full-market pulls via efinance/akshare_em
+- **Stock name prefetch** (#455) — Prefetches stock names prior to analysis, reducing "stock_xxxxx" placeholders in reports
+- 📊 **Analysis report model tagging** (#528, #534) — Displays `model_used` (full LLM model name) in report metadata, report footer, and notification content; tracks and displays the actual model used per turn during multi-turn Agent calls (supporting fallback switching)
 
 ### Changed
-- **Enhanced markdown-to-image failure warning** (#455) — 转图失败时提示具体依赖（wkhtmltopdf 或 m2f）
-- **WeChat-only image routing optimization** (#455) — 仅配置企业微信图片时，不再对完整报告做冗余转图，避免误导性失败日志
-- **Stock name prefetch lightweight mode** (#455) — 名称预取阶段跳过 realtime quote 查询，减少额外网络开销
+- **Enhanced markdown-to-image failure warning** (#455) — Displays specific missing dependency hints (wkhtmltopdf or m2f) upon image conversion failure
+- **WeChat-only image routing optimization** (#455) — When only WeChat Work image push is configured, bypasses redundant image conversion of the full report to prevent misleading error logs
+- **Stock name prefetch lightweight mode** (#455) — Skips real-time quote queries during the stock name prefetching stage, reducing unnecessary network overhead
 
 ## [3.4.9] - 2026-03-06
 
@@ -1785,649 +1785,649 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [3.2.11] - 2026-02-23
 
-### 修复（#patch）
-- 🐛 **StockTrendAnalyzer 从未执行** (Issue #357)
-  - 根因：`get_analysis_context` 仅返回 2 天数据且无 `raw_data`，pipeline 中 `raw_data in context` 始终为 False
-  - 修复：Step 3 直接调用 `get_data_range` 获取 90 日历天（约 60 交易日）历史数据用于趋势分析
-  - 改善：趋势分析失败时用 `logger.warning(..., exc_info=True)` 记录完整 traceback
+### Fixed (#patch)
+- 🐛 **StockTrendAnalyzer Never Executed** (Issue #357)
+  - Root cause: `get_analysis_context` only returned 2 days of data without `raw_data`; `raw_data in context` was always False in the pipeline
+  - Fix: Step 3 directly calls `get_data_range` to fetch 90 calendar days (~60 trading days) of historical data for trend analysis
+  - Improvement: Logs full traceback via `logger.warning(..., exc_info=True)` when trend analysis fails
 
 ## [3.2.10] - 2026-02-22
 
-### 新增
-- ⚙️ 支持 `RUN_IMMEDIATELY` 配置项，设为 `true` 时定时任务触发后立即执行一次分析，无需等待首个定时点
+### Added
+- ⚙️ Supported `RUN_IMMEDIATELY` configuration setting; when set to `true`, executes an immediate analysis run upon scheduler trigger without waiting for the first scheduled time slot
 
-### 修复
-- 🐛 修复 Web UI 页面居中问题
-- 🐛 修复 Settings 返回 500 错误
+### Fixed
+- 🐛 Fixed Web UI page centering issue
+- 🐛 Fixed Settings returning 500 error
 
 ## [3.2.9] - 2026-02-22
 
-### 修复
-- 🐛 **ETF 分析仅关注指数走势**（Issue #274）
-  - 美股/港股 ETF（如 VOO、QQQ）与 A 股 ETF 不再纳入基金公司层面风险（诉讼、声誉等）
-  - 搜索维度：ETF/指数专用 risk_check、earnings、industry 查询，避免命中基金管理人新闻
-  - AI 提示：指数型标的分析约束，`risk_alerts` 不得出现基金管理人公司经营风险
+### Fixed
+- 🐛 **ETF Analysis Focused Solely on Index Trend** (Issue #274)
+  - US/HK ETFs (e.g. VOO, QQQ) and A-share ETFs no longer include fund company-level risks (litigation, reputation, etc.)
+  - Search dimensions: ETF/index-specific risk_check, earnings, and industry queries, preventing hits on fund manager corporate news
+  - AI prompt: Index-type asset analysis constraints, disallowing fund manager operational risks in `risk_alerts`
 
 ## [3.2.8] - 2026-02-21
 
-### 修复
-- 🐛 **BOT 与 WEB UI 股票代码大小写统一**（Issue #355）
-  - BOT `/analyze` 与 WEB UI 触发分析的股票代码统一为大写（如 `aapl` → `AAPL`）
-  - 新增 `canonical_stock_code()`，在 BOT、API、Config、CLI、task_queue 入口处规范化
-  - 历史记录与任务去重逻辑可正确识别同一股票（大小写不再影响）
+### Fixed
+- 🐛 **Unified Stock Symbol Casing Across BOT and WEB UI** (Issue #355)
+  - Stock symbols triggered via BOT `/analyze` and WEB UI unified to uppercase (e.g. `aapl` -> `AAPL`)
+  - Added `canonical_stock_code()`, normalizing at BOT, API, Config, CLI, and task_queue entry points
+  - History records and task deduplication logic correctly identify identical stocks regardless of case
 
 ## [3.2.7] - 2026-02-20
 
-### 新增
-- 🔐 **Web 页面密码验证**（Issue #320, #349）
-  - 支持 `ADMIN_AUTH_ENABLED=true` 启用 Web 登录保护
-  - 首次访问在网页设置初始密码；支持「系统设置 > 修改密码」和 CLI `python -m src.auth reset_password` 重置
+### Added
+- 🔐 **Web Page Password Authentication** (Issue #320, #349)
+  - Added `ADMIN_AUTH_ENABLED=true` support to enable Web login protection
+  - Set initial password on first web visit; supports password changes via "System Settings > Change Password" and CLI reset via `python -m src.auth reset_password`
 
 ## [3.2.6] - 2026-02-20
-### ⚠️ 破坏性变更（Breaking Changes）
+### ⚠️ Breaking Changes
 
-- **历史记录 API 变更 (Issue #322)**
-  - 路由变更：`GET /api/v1/history/{query_id}` → `GET /api/v1/history/{record_id}`
-  - 参数变更：`query_id` (字符串) → `record_id` (整数)
-  - 新闻接口变更：`GET /api/v1/history/{query_id}/news` → `GET /api/v1/history/{record_id}/news`
-  - 原因：`query_id` 在批量分析时可能重复，无法唯一标识单条历史记录。改用数据库主键 `id` 确保唯一性
-  - 影响范围：使用旧版历史详情 API 的所有客户端需同步更新
+- **History API Changes (Issue #322)**
+  - Route change: `GET /api/v1/history/{query_id}` -> `GET /api/v1/history/{record_id}`
+  - Parameter change: `query_id` (string) -> `record_id` (integer)
+  - News endpoint change: `GET /api/v1/history/{query_id}/news` -> `GET /api/v1/history/{record_id}/news`
+  - Reason: `query_id` could collide during batch analysis and could not uniquely identify a single history record. Switched to database primary key `id` for guaranteed uniqueness
+  - Impact scope: All clients using the legacy history details API must update accordingly
 
-### 修复
-- 修复美股（如 ADBE）技术指标矛盾：akshare 美股复权数据异常，统一美股历史数据源为 YFinance（Issue #311）
-- 🐛 **历史记录查询和显示问题 (Issue #322)**
-  - 修复历史记录列表查询中日期不一致问题：使用明天作为 endDate，确保包含今天全天的数据
-  - 修复服务器 UI 报告选择问题：原因是多条记录共享同一 `query_id`，导致总是显示第一条。现改用 `analysis_history.id` 作为唯一标识
-  - 历史详情、新闻接口及前端组件已全面适配 `record_id`
-  - 新增后台轮询（每 30s）与页面可见性变更时静默刷新历史列表，确保 CLI 发起的分析完成后前端能及时同步，使用 `silent` 模式避免触发 loading 状态
-- 🐛 **美股指数实时行情与日线数据** (Issue #273)
-  - 修复 SPX、DJI、IXIC、NDX、VIX、RUT 等美股指数无法获取实时行情的问题
-  - 新增 `us_index_mapping` 模块，将用户输入（如 SPX）映射为 Yahoo Finance 符号（如 ^GSPC）
-  - 美股指数与美股股票日线数据直接路由至 YfinanceFetcher，避免遍历不支持的数据源
-  - 消除重复的美股识别逻辑，统一使用 `is_us_stock_code()` 函数
+### Fixed
+- Fixed conflicting technical indicators for US stocks (e.g. ADBE): AkShare US stock adjusted data was erratic; unified US historical data source to YFinance (Issue #311)
+- 🐛 **History Record Query and Display Issues (Issue #322)**
+  - Fixed date inconsistency in history record list queries: uses tomorrow as endDate to ensure full-day coverage for today
+  - Fixed server UI report selection issue caused by multiple records sharing identical `query_id` resulting in always displaying the first entry. Now uses `analysis_history.id` as unique identifier
+  - Fully adapted history details, news API, and frontend components to `record_id`
+  - Added background polling (every 30s) and silent refresh of history list upon page visibility change, ensuring frontend stays in sync with CLI-initiated analysis; uses `silent` mode to avoid triggering loading spinners
+- 🐛 **US Index Real-Time Quotes and Daily Bar Data** (Issue #273)
+  - Fixed missing real-time quotes for US indices including SPX, DJI, IXIC, NDX, VIX, RUT
+  - Added `us_index_mapping` module, mapping user input (e.g. SPX) to Yahoo Finance symbols (e.g. ^GSPC)
+  - Routed US index and equity daily bars directly to YfinanceFetcher, avoiding unsupported providers
+  - Eliminated duplicate US stock identification logic, unifying under `is_us_stock_code()` function
 
-### 优化
-- 🎨 **首页输入栏与 Market Sentiment 布局对齐优化**
-  - 股票代码输入框左缘与历史记录 glass-card 框左对齐
-  - 分析按钮右缘与 Market Sentiment 外框右对齐
-  - Market Sentiment 卡片向下拉伸填满格子，消除与 STRATEGY POINTS 之间的空隙
-  - 窄屏时输入栏填满宽度，响应式对齐保持一致
+### Changed
+- 🎨 **Home Input Bar and Market Sentiment Layout Alignment**
+  - Aligned left edge of stock symbol input box with history record glass-card
+  - Aligned right edge of Analyze button with Market Sentiment outer container
+  - Stretched Market Sentiment card downwards to fill the grid, eliminating gap above STRATEGY POINTS
+  - Full-width input bar on narrow viewports maintaining consistent responsive alignment
 
 ## [3.2.5] - 2026-02-19
 
-### 新增
-- 🌍 **大盘复盘可选区域**（Issue #299）
-  - 支持 `MARKET_REVIEW_REGION` 环境变量：`cn`（A股）、`us`（美股）、`both`（两者）
-  - us 模式使用 SPX/纳斯达克/道指/VIX 等指数；both 模式可同时复盘 A 股与美股
-  - 默认 `cn`，保持向后兼容
+### Added
+- 🌍 **Configurable Market Review Regions** (Issue #299)
+  - Supported `MARKET_REVIEW_REGION` environment variable: `cn` (A-shares), `us` (US equities), `both` (both)
+  - `us` mode uses SPX/Nasdaq/Dow/VIX indices; `both` mode reviews both A-shares and US markets simultaneously
+  - Defaults to `cn`, maintaining backward compatibility
 
 ## [3.2.4] - 2026-02-18
 
-### 修复
-- 🐛 **统一美股数据源为 YFinance**（Issue #311）
-  - akshare 美股复权数据异常，统一美股历史数据源为 YFinance
-  - 修复 ADBE 等美股股票技术指标矛盾问题
+### Fixed
+- 🐛 **Unified US Data Source to YFinance** (Issue #311)
+  - AkShare US adjusted data was erratic; unified US historical data source to YFinance
+  - Fixed conflicting technical indicators for US equities such as ADBE
 
 ## [3.2.3] - 2026-02-18
 
-### 修复
-- 🐛 **标普500实时数据缺失**（Issue #273）
-  - 修复 SPX、DJI、IXIC、NDX、VIX、RUT 等美股指数无法获取实时行情的问题
-  - 新增 `us_index_mapping` 模块，将用户输入（如 SPX）映射为 Yahoo Finance 符号（如 `^GSPC`）
-  - 美股指数与美股股票日线数据直接路由至 YfinanceFetcher，避免遍历不支持的数据源
+### Fixed
+- 🐛 **S&P 500 Real-Time Data Missing** (Issue #273)
+  - Fixed missing live quotes for US indices including SPX, DJI, IXIC, NDX, VIX, RUT
+  - Added `us_index_mapping` module, mapping user input (e.g. SPX) to Yahoo Finance symbols (e.g. `^GSPC`)
+  - Routed US index and equity daily bars directly to YfinanceFetcher, avoiding unsupported data providers
 
 ## [3.2.2] - 2026-02-16
 
-### 新增
-- 📊 **PE 指标支持**（Issue #296）
-  - AI System Prompt 增加 PE 估值关注
-- 📰 **新闻时效性筛查**（Issue #296）
-  - `NEWS_MAX_AGE_DAYS`：新闻最大时效（天），默认 3，避免使用过时信息
-- 📈 **强势趋势股乖离率放宽**（Issue #296）
-  - `BIAS_THRESHOLD`：乖离率阈值（%），默认 5.0，可配置
-  - 强势趋势股（多头排列且趋势强度 ≥70）自动放宽乖离率到 1.5 倍
+### Added
+- 📊 **PE Ratio Support** (Issue #296)
+  - Added PE valuation analysis to AI system prompts
+- 📰 **News Freshness Filtering** (Issue #296)
+  - `NEWS_MAX_AGE_DAYS`: Maximum news age in days (default 3) to prevent using outdated information
+- 📈 **Relaxed Bias Threshold for Strong Trend Stocks** (Issue #296)
+  - `BIAS_THRESHOLD`: Configurable price bias threshold percentage (default 5.0%)
+  - Automatically relaxes bias threshold to 1.5x for strong trend stocks (bullish moving average alignment and trend strength >= 70)
 
 ## [3.2.1] - 2026-02-16
 
-### 新增
-- 🔧 **东财接口补丁可配置开关**
-  - 支持 `EFINANCE_PATCH_ENABLED` 环境变量开关东财接口补丁（默认 `true`）
-  - 补丁不可用时可降级关闭，避免影响主流程
+### Added
+- 🔧 **Configurable EastMoney Interface Patch**
+  - Added `EFINANCE_PATCH_ENABLED` environment variable toggling EastMoney patch (default `true`)
+  - Allows disabling patch gracefully when unavailable without interrupting primary pipeline
 
 ## [3.2.0] - 2026-02-15
 
-### 新增
-- 🔒 **CI 门禁统一（P0）**
-  - 新增 `scripts/ci_gate.sh` 作为后端门禁单一入口
-  - 主 CI 改为 `backend-gate`、`docker-build`、`web-gate` 三段式
-  - CI 触发改为所有 PR，避免 Required Checks 因路径过滤缺失而卡住合并
-  - `web-gate` 支持前端路径变更按需触发
-  - 新增 `network-smoke` 工作流承载非阻断网络场景回归
-- 📦 **发布链路收敛（P0）**
-  - `docker-publish` 调整为 tag 主触发，并增加发布前门禁校验
-  - 手动发布增加 `release_tag` 输入与 semver/changelog 强校验
-  - 发布前新增 Docker smoke（关键模块导入）
-- 📝 **PR 模板升级（P0）**
-  - 增加背景、范围、验证命令与结果、回滚方案、Issue 关联等必填项
-- 🤖 **AI 审查覆盖增强（P0）**
-  - `pr-review` 纳入 `.github/workflows/**` 范围
-  - 新增 `AI_REVIEW_STRICT` 开关，可选将 AI 审查失败升级为阻断
+### Added
+- 🔒 **Unified CI Gates (P0)**
+  - Added `scripts/ci_gate.sh` as single entry point for backend validation gates
+  - Structured primary CI into three stages: `backend-gate`, `docker-build`, `web-gate`
+  - Triggered CI on all PRs, preventing merge blocks from missing required checks due to path filtering
+  - `web-gate` triggers on demand upon frontend path changes
+  - Added non-blocking `network-smoke` workflow for network-dependent regression tests
+- 📦 **Release Pipeline Convergence (P0)**
+  - Configured `docker-publish` to trigger primarily on tags with pre-release gate validation
+  - Manual release workflow adds `release_tag` input with strict semver and changelog validation
+  - Added Docker smoke test verifying key module imports before publishing
+- 📝 **PR Template Upgrade (P0)**
+  - Added required sections for context, scope, verification commands/results, rollback plan, and issue references
+- 🤖 **Enhanced AI Review Coverage (P0)**
+  - Included `.github/workflows/**` in `pr-review` scope
+  - Added `AI_REVIEW_STRICT` toggle, optionally upgrading AI review failures to blocking status
 
 ## [3.1.13] - 2026-02-15
 
-### 新增
-- 📊 **仅分析结果摘要**（Issue #262）
-  - 支持 `REPORT_SUMMARY_ONLY` 环境变量，设为 `true` 时只推送汇总，不含个股详情
-  - 默认 `false`，多股时适合快速浏览
+### Added
+- 📊 **Summary-Only Analysis Results** (Issue #262)
+  - Added `REPORT_SUMMARY_ONLY` environment variable; when set to `true`, delivers summary overview only without single-stock details
+  - Defaults to `false`, providing quick overview mode for multi-stock analysis
 
 ## [3.1.12] - 2026-02-15
 
-### 新增
-- 📧 **个股与大盘复盘合并推送**（Issue #190）
-  - 支持 `MERGE_EMAIL_NOTIFICATION` 环境变量，设为 `true` 时将个股分析与大盘复盘合并为一次推送
-  - 默认 `false`，减少邮件数量、降低被识别为垃圾邮件的风险
+### Added
+- 📧 **Merged Notification for Single-Stock Analysis and Market Review** (Issue #190)
+  - Supported `MERGE_EMAIL_NOTIFICATION` environment variable; when set to `true`, merges single-stock analysis and market review into a single notification
+  - Defaults to `false`, reducing email volume and lowering the risk of spam detection
 
 ## [3.1.11] - 2026-02-15
 
-### 新增
-- 🤖 **Anthropic Claude API 支持**（Issue #257）
-  - 支持 `ANTHROPIC_API_KEY`、`ANTHROPIC_MODEL`、`ANTHROPIC_TEMPERATURE`、`ANTHROPIC_MAX_TOKENS`
-  - AI 分析优先级：Gemini > Anthropic > OpenAI
-- 📷 **从图片识别股票代码**（Issue #257）
-  - 上传自选股截图，通过 Vision LLM 自动提取股票代码
-  - API: `POST /api/v1/stocks/extract-from-image`；支持 JPEG/PNG/WebP/GIF，最大 5MB
-  - 支持 `OPENAI_VISION_MODEL` 单独配置图片识别模型
-- ⚙️ **通达信数据源手动配置**（Issue #257）
-  - 支持 `PYTDX_HOST`、`PYTDX_PORT` 或 `PYTDX_SERVERS` 配置自建通达信服务器
+### Added
+- 🤖 **Anthropic Claude API Support** (Issue #257)
+  - Added support for `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_TEMPERATURE`, `ANTHROPIC_MAX_TOKENS`
+  - AI analysis priority: Gemini > Anthropic > OpenAI
+- 📷 **Stock Symbol Extraction from Images** (Issue #257)
+  - Upload watchlist screenshots to automatically extract stock symbols via Vision LLMs
+  - API: `POST /api/v1/stocks/extract-from-image`; supports JPEG/PNG/WebP/GIF up to 5MB
+  - Added `OPENAI_VISION_MODEL` configuration for image recognition models
+- ⚙️ **Manual TongDaXin Data Source Configuration** (Issue #257)
+  - Added support for `PYTDX_HOST`, `PYTDX_PORT`, or `PYTDX_SERVERS` to configure custom TongDaXin servers
 
 ## [3.1.10] - 2026-02-15
 
-### 新增
-- ⚙️ **立即运行配置**（Issue #332）
-  - 支持 `RUN_IMMEDIATELY` 环境变量，`true` 时定时任务启动后立即执行一次
-- 🐛 修复 Docker 构建问题
+### Added
+- ⚙️ **Immediate Execution Configuration** (Issue #332)
+  - Added `RUN_IMMEDIATELY` environment variable; when `true`, executes immediately upon scheduled job start
+- 🐛 Fixed Docker build issue
 
 ## [3.1.9] - 2026-02-14
 
-### 新增
-- 🔌 **东财接口补丁机制**
-  - 新增 `patch/eastmoney_patch.py` 修复 efinance 上游接口变更
-  - 不影响其他数据源的正常运行
+### Added
+- 🔌 **EastMoney Interface Patch Mechanism**
+  - Added `patch/eastmoney_patch.py` fixing efinance upstream interface changes
+  - Preserves normal operation of other data sources
 
 ## [3.1.8] - 2026-02-14
 
-### 新增
-- 🔐 **Webhook 证书校验开关**（Issue #265）
-  - 支持 `WEBHOOK_VERIFY_SSL` 环境变量，可关闭 HTTPS 证书校验以支持自签名证书
-  - 默认保持校验，关闭存在 MITM 风险，仅建议在可信内网使用
+### Added
+- 🔐 **Webhook Certificate Verification Toggle** (Issue #265)
+  - Added `WEBHOOK_VERIFY_SSL` environment variable, allowing disabling HTTPS certificate verification for self-signed certificates
+  - Verification enabled by default; disabling carries MITM risks and is recommended only for trusted internal networks
 
 ## [3.1.7] - 2026-02-14
 
-### 修复
-- 🐛 修复包导入错误（package import error）
+### Fixed
+- 🐛 Fixed package import error
 
 ## [3.1.6] - 2026-02-13
 
-### 修复
-- 🐛 修复 `news_intel` 中 `query_id` 不一致问题
+### Fixed
+- 🐛 Fixed `query_id` inconsistency in `news_intel`
 
 ## [3.1.5] - 2026-02-13
 
-### 新增
-- 📷 **Markdown 转图片通知**（Issue #289）
-  - 支持 `MARKDOWN_TO_IMAGE_CHANNELS` 配置，对 Telegram、企业微信、自定义 Webhook（Discord）、邮件发送图片格式报告
-  - 邮件为内联附件，增强对不支持 HTML 客户端的兼容性
-  - 需安装 `wkhtmltopdf` 和 `imgkit`
+### Added
+- 📷 **Markdown-to-Image Notifications** (Issue #289)
+  - Added `MARKDOWN_TO_IMAGE_CHANNELS` configuration, delivering image-format reports to Telegram, WeChat Work, custom Webhook (Discord), and Email
+  - Inlines image attachments in emails, enhancing compatibility with email clients lacking rich HTML support
+  - Requires `wkhtmltopdf` and `imgkit`
 
 ## [3.1.4] - 2026-02-12
 
-### 新增
-- 📧 **股票分组发往不同邮箱**（Issue #268）
-  - 支持 `STOCK_GROUP_N` + `EMAIL_GROUP_N` 配置，不同股票组报告发送到对应邮箱
-  - 大盘复盘发往所有配置的邮箱
+### Added
+- 📧 **Stock Grouping with Destination-Specific Emails** (Issue #268)
+  - Added `STOCK_GROUP_N` + `EMAIL_GROUP_N` configuration, routing different stock group reports to designated email inboxes
+  - Market review reports are sent to all configured email addresses
 
 ## [3.1.3] - 2026-02-12
 
-### 修复
-- 🐛 修复 Docker 内运行时通过页面修改配置报错 `[Errno 16] Device or resource busy` 的问题
+### Fixed
+- 🐛 Fixed `[Errno 16] Device or resource busy` error when modifying configuration via Web UI in Docker
 
 ## [3.1.2] - 2026-02-11
 
-### 修复
-- 🐛 修复 Docker 一致性问题，解决关键批次处理与通知 Bug
+### Fixed
+- 🐛 Fixed Docker consistency issues, resolving critical batch processing and notification bugs
 
 ## [3.1.1] - 2026-02-11
 
-### 变更
-- ♻️ `API_HOST` → `WEBUI_HOST`：Docker Compose 配置项统一
+### Changed
+- ♻️ `API_HOST` -> `WEBUI_HOST`: Unified Docker Compose configuration settings
 
 ## [3.1.0] - 2026-02-11
 
-### 新增
-- 📊 **ETF 支持增强与代码规范化**
-  - 统一各数据源 ETF 代码处理逻辑
-  - 新增 `canonical_stock_code()` 统一代码格式，确保数据源路由正确
+### Added
+- 📊 **ETF Support Enhancement and Symbol Normalization**
+  - Unified ETF symbol handling logic across data sources
+  - Added `canonical_stock_code()` to unify symbol formats and ensure accurate provider routing
 
 ## [3.0.5] - 2026-02-08
 
-### 修复
-- 🐛 修复信号 emoji 与建议不一致的问题（复合建议如"卖出/观望"未正确映射）
-- 🐛 修复 `*ST` 股票名在微信/Dashboard 中 markdown 转义问题
-- 🐛 修复 `idx.amount` 为 None 时大盘复盘 TypeError
-- 🐛 修复分析 API 返回 `report=None` 及 ReportStrategy 类型不一致问题
-- 🐛 修复 Tushare 返回类型错误（dict → UnifiedRealtimeQuote）及 API 端点指向
+### Fixed
+- 🐛 Fixed mismatch between signal emoji and recommendations (compound recommendations like "Sell/Wait" were improperly mapped)
+- 🐛 Fixed markdown escaping issue for `*ST` stock names in WeChat and Dashboard
+- 🐛 Fixed TypeError in market review when `idx.amount` is None
+- 🐛 Fixed analysis API returning `report=None` and ReportStrategy type inconsistency
+- 🐛 Fixed Tushare return type error (dict -> UnifiedRealtimeQuote) and API endpoint routing
 
-### 新增
-- 📊 大盘复盘报告注入结构化数据（涨跌统计、指数表格、板块排名）
-- 🔍 搜索结果 TTL 缓存（500 条上限，FIFO 淘汰）
-- 🔧 Tushare Token 存在时自动注入实时行情优先级
-- 📰 新闻摘要截断长度 50→200 字
+### Added
+- 📊 Injected structured data into market review reports (gain/loss statistics, index tables, sector rankings)
+- 🔍 Search results TTL cache (500 items max, FIFO eviction)
+- 🔧 Automatically injects real-time quote priority when Tushare Token is present
+- 📰 News summary truncation length expanded from 50 to 200 characters
 
-### 优化
-- ⚡ 补充行情字段请求限制为最多 1 次，减少无效请求
+### Changed
+- ⚡ Capped supplementary quote field requests to maximum 1 attempt, reducing redundant network requests
 
 ## [3.0.4] - 2026-02-07
 
-### 新增
-- 📈 **回测引擎** (PR #269)
-  - 新增基于历史分析记录的回测系统，支持收益率、胜率、最大回撤等指标评估
-  - WebUI 集成回测结果展示
+### Added
+- 📈 **Backtesting Engine** (PR #269)
+  - Added backtesting engine based on historical analysis records, evaluating returns, win rate, and maximum drawdown metrics
+  - Integrated backtesting results display in Web UI
 
 ## [3.0.3] - 2026-02-07
 
-### 修复
-- 🐛 修复狙击点位数据解析错误问题 (PR #271)
+### Fixed
+- 🐛 Fixed sniper point data parsing error (PR #271)
 
 ## [3.0.2] - 2026-02-06
 
-### 新增
-- ✉️ 可配置邮件发送者名称 (PR #272)
-- 🌐 外国股票支持英文关键词搜索
+### Added
+- ✉️ Configurable email sender name (PR #272)
+- 🌐 English keyword search support for international stocks
 
 ## [3.0.1] - 2026-02-06
 
-### 修复
-- 🐛 修复 ETF 实时行情获取、市场数据回退、企业微信消息分块问题
-- 🔧 CI 流程简化
+### Fixed
+- 🐛 Fixed ETF real-time quote fetching, market data fallback, and WeChat Work message chunking issues
+- 🔧 Simplified CI workflows
 
 ## [3.0.0] - 2026-02-06
 
-### 移除
-- 🗑️ **移除旧版 WebUI**
-  - 删除基于 `http.server.ThreadingHTTPServer` 的旧版 WebUI（`web/` 包）
-  - 旧版 WebUI 的功能已完全被 FastAPI（`api/`）+ React 前端替代
-  - `--webui` / `--webui-only` 命令行参数标记为弃用，自动重定向到 `--serve` / `--serve-only`
-  - `WEBUI_ENABLED` / `WEBUI_HOST` / `WEBUI_PORT` 环境变量保持兼容，自动转发到 FastAPI 服务
-  - `webui.py` 保留为兼容入口，启动时直接调用 FastAPI 后端
-  - Docker Compose 中移除 `webui` 服务定义，统一使用 `server` 服务
+### Removed
+- 🗑️ **Legacy WebUI Removed**
+  - Removed legacy Web UI based on `http.server.ThreadingHTTPServer` (`web/` package)
+  - All legacy Web UI features are completely superseded by FastAPI (`api/`) + React frontend
+  - CLI options `--webui` / `--webui-only` marked as deprecated, automatically redirecting to `--serve` / `--serve-only`
+  - Environment variables `WEBUI_ENABLED` / `WEBUI_HOST` / `WEBUI_PORT` maintained for compatibility, forwarded to FastAPI service
+  - Retained `webui.py` as compatibility wrapper, delegating directly to FastAPI backend on launch
+  - Removed `webui` service definition from Docker Compose, standardizing on `server` service
 
-### 变更
-- ♻️ **服务层重构**
-  - 将 `web/services.py` 中的异步任务服务迁移至 `src/services/task_service.py`
-  - Bot 分析命令（`bot/commands/analyze.py`）改为使用 `src.services.task_service`
-  - Docker 环境变量 `WEBUI_HOST`/`WEBUI_PORT` 更名为 `API_HOST`/`API_PORT`（旧名仍兼容）
+### Changed
+- ♻️ **Service Layer Refactoring**
+  - Migrated async task service from `web/services.py` to `src/services/task_service.py`
+  - Bot analyze command (`bot/commands/analyze.py`) updated to use `src.services.task_service`
+  - Renamed Docker environment variables `WEBUI_HOST`/`WEBUI_PORT` to `API_HOST`/`API_PORT` (legacy names remain backward-compatible)
 
 ## [2.3.0] - 2026-02-01
 
-### 新增
-- 🇺🇸 **增强美股支持** (Issue #153)
-  - 实现基于 Akshare 的美股历史数据获取 (`ak.stock_us_daily()`)
-  - 实现基于 Yfinance 的美股实时行情获取（优先策略）
-  - 增加对不支持数据源（Tushare/Baostock/Pytdx/Efinance）的美股代码过滤和快速降级
+### Added
+- 🇺🇸 **Enhanced US Stock Support** (Issue #153)
+  - Implemented AkShare-based US stock historical daily data retrieval (`ak.stock_us_daily()`)
+  - Implemented YFinance-based US stock real-time quotes (priority strategy)
+  - Added US stock symbol filtering and fast fallback for unsupported data sources (Tushare/Baostock/Pytdx/Efinance)
 
-### 修复
-- 🐛 修复 AMD 等美股代码被误识别为 A 股的问题 (Issue #153)
+### Fixed
+- 🐛 Fixed issue where US symbols like AMD were misidentified as A-shares (Issue #153)
 
 ## [2.2.5] - 2026-02-01
 
-### 新增
-- 🤖 **AstrBot 消息推送** (PR #217)
-  - 新增 AstrBot 通知渠道，支持推送到 QQ 和微信
-  - 支持 HMAC SHA256 签名验证，确保通信安全
-  - 通过 `ASTRBOT_URL` 和 `ASTRBOT_TOKEN` 配置
+### Added
+- 🤖 **AstrBot Push Notifications** (PR #217)
+  - Added AstrBot notification channel supporting push to QQ and WeChat
+  - Supported HMAC SHA256 signature verification for secure communication
+  - Configured via `ASTRBOT_URL` and `ASTRBOT_TOKEN`
 
 ## [2.2.4] - 2026-02-01
 
-### 新增
-- ⚙️ **可配置数据源优先级** (PR #215)
-  - 支持通过环境变量（如 `YFINANCE_PRIORITY=0`）动态调整数据源优先级
-  - 无需修改代码即可优先使用特定数据源（如 Yahoo Finance）
+### Added
+- ⚙️ **Configurable Data Source Priority** (PR #215)
+  - Supported dynamic data source priority adjustment via environment variables (e.g. `YFINANCE_PRIORITY=0`)
+  - Prioritizes specific data sources (such as Yahoo Finance) without modifying code
 
 ## [2.2.3] - 2026-01-31
 
-### 修复
-- 📦 更新 requirements.txt，增加 `lxml_html_clean` 依赖以解决兼容性问题
+### Fixed
+- 📦 Updated requirements.txt with `lxml_html_clean` dependency resolving compatibility issues
 
 ## [2.2.2] - 2026-01-31
 
-### 修复
-- 🐛 修复代理配置区分大小写问题 (fixes #211)
+### Fixed
+- 🐛 Fixed case-sensitivity issue in proxy configuration (fixes #211)
 
 ## [2.2.1] - 2026-01-31
 
-### 修复
-- 🐛 **YFinance 兼容性修复** (PR #210, fixes #209)
-  - 修复新版 yfinance 返回 MultiIndex 列名导致的数据解析错误
+### Fixed
+- 🐛 **YFinance Compatibility Fix** (PR #210, fixes #209)
+  - Fixed data parsing error caused by MultiIndex column names returned by newer yfinance versions
 
 ## [2.2.0] - 2026-01-31
 
-### 新增
-- 🔄 **多源回退策略增强**
-  - 实现了更健壮的数据获取回退机制 (feat: multi-source fallback strategy)
-  - 优化了数据源故障时的自动切换逻辑
+### Added
+- 🔄 **Enhanced Multi-Source Fallback Strategy**
+  - Implemented more robust data retrieval fallback mechanisms (feat: multi-source fallback strategy)
+  - Optimized automatic failover switching logic when data providers fail
 
-### 修复
-- 🐛 修复 analyzer 运行后无法通过改 .env 文件的 stock_list 内容调整跟踪的股票
+### Fixed
+- 🐛 Fixed issue where modifying stock_list in .env after analyzer startup failed to update tracked stocks
 
 ## [2.1.14] - 2026-01-31
 
-### 文档
-- 📝 更新 README 和优化 auto-tag 规则
+### Documentation
+- 📝 Updated README and optimized auto-tag rules
 
 ## [2.1.13] - 2026-01-31
 
-### 修复
-- 🐛 **Tushare 优先级与实时行情** (Fixed #185)
-  - 修复 Tushare 数据源优先级设置问题
-  - 修复 Tushare 实时行情获取功能
+### Fixed
+- 🐛 **Tushare Priority and Real-Time Quotes** (Fixed #185)
+  - Fixed Tushare data source priority configuration issue
+  - Fixed Tushare real-time quote retrieval function
 
 ## [2.1.12] - 2026-01-30
 
-### 修复
-- 🌐 修复代理配置在某些情况下的区分大小写问题
-- 🌐 修复本地环境禁用代理的逻辑
+### Fixed
+- 🌐 Fixed case-sensitivity issue in proxy configuration under certain conditions
+- 🌐 Fixed logic for disabling proxies in local environments
 
 ## [2.1.11] - 2026-01-30
 
-### 优化
-- 🚀 **飞书消息流优化** (PR #192)
-  - 优化飞书 Stream 模式的消息类型处理
-  - 修改 Stream 消息模式默认为关闭，防止配置错误运行时报错
+### Changed
+- 🚀 **Feishu Message Stream Optimization** (PR #192)
+  - Optimized message type handling for Feishu Stream mode
+  - Changed default Stream message mode to disabled, preventing runtime errors on misconfiguration
 
 ## [2.1.10] - 2026-01-30
 
-### 合并
-- 📦 合并 PR #154 贡献
+### Merged
+- 📦 Merged contributions from PR #154
 
 ## [2.1.9] - 2026-01-30
 
-### 新增
-- 💬 **微信文本消息支持** (PR #137)
-  - 新增微信推送的纯文本消息类型支持
-  - 添加 `WECHAT_MSG_TYPE` 配置项
+### Added
+- 💬 **WeChat Plain Text Message Support** (PR #137)
+  - Added plain text message type support for WeChat Work notifications
+  - Added `WECHAT_MSG_TYPE` configuration setting
 
 ## [2.1.8] - 2026-01-30
 
-### 修复
-- 🐛 修正日志中 API 提供商显示错误 (PR #197)
+### Fixed
+- 🐛 Fixed incorrect API provider display in logs (PR #197)
 
 ## [2.1.7] - 2026-01-30
 
-### 修复
-- 🌐 禁用本地环境的代理设置，避免网络连接问题
+### Fixed
+- 🌐 Disabled proxy settings in local environment to prevent network connection issues
 
 ## [2.1.6] - 2026-01-29
 
-### 新增
-- 📡 **Pytdx 数据源 (Priority 2)**
-  - 新增通达信数据源，免费无需注册
-  - 多服务器自动切换
-  - 支持实时行情和历史数据
-- 🏷️ **多源股票名称解析**
-  - DataFetcherManager 新增 `get_stock_name()` 方法
-  - 新增 `batch_get_stock_names()` 批量查询
-  - 自动在多数据源间回退
-  - Tushare 和 Baostock 新增股票名称/列表方法
-- 🔍 **增强搜索回退**
-  - 新增 `search_stock_price_fallback()` 用于数据源全部失败时
-  - 新增搜索维度：市场分析、行业分析
-  - 最大搜索次数从 3 增加到 5
-  - 改进搜索结果格式（每维度 4 条结果）
+### Added
+- 📡 **Pytdx Data Source (Priority 2)**
+  - Added TongDaXin data source, free without registration required
+  - Automatic multi-server failover
+  - Supports real-time quotes and historical data
+- 🏷️ **Multi-Source Stock Name Resolution**
+  - Added `get_stock_name()` method to DataFetcherManager
+  - Added `batch_get_stock_names()` batch query method
+  - Automatic fallback across multiple data sources
+  - Added stock name and list methods to Tushare and Baostock
+- 🔍 **Enhanced Search Fallback**
+  - Added `search_stock_price_fallback()` when all primary data sources fail
+  - Added search dimensions: market analysis, industry analysis
+  - Increased maximum search attempts from 3 to 5
+  - Improved search result format (4 results per dimension)
 
-### 改进
-- 更新搜索查询模板以提高相关性
-- 增强 `format_intel_report()` 输出结构
+### Changed
+- Updated search query templates to improve relevance
+- Enhanced `format_intel_report()` output structure
 
 ## [2.1.5] - 2026-01-29
 
-### 新增
-- 📡 新增 Pytdx 数据源和多源股票名称解析功能
+### Added
+- 📡 Added Pytdx data source and multi-source stock name resolution
 
 ## [2.1.4] - 2026-01-29
 
-### 文档
-- 📝 更新赞助商信息
+### Documentation
+- 📝 Updated sponsor information
 
 ## [2.1.3] - 2026-01-28
 
-### 文档
-- 📝 重构 README 布局
-- 🌐 新增繁体中文翻译 (README_CHT.md)
+### Documentation
+- 📝 Refactored README layout
+- 🌐 Added Traditional Chinese translation (README_CHT.md)
 
-### 修复
-- 🐛 修复 WebUI 无法输入美股代码问题
-  - 输入框逻辑改成所有字母都转换成大写
-  - 支持 `.` 的输入（如 `BRK.B`）
+### Fixed
+- 🐛 Fixed issue preventing US stock symbol input in WebUI
+  - Updated input logic to automatically convert all characters to uppercase
+  - Supported input of `.` (e.g. `BRK.B`)
 
 ## [2.1.2] - 2026-01-27
 
-### 修复
-- 🐛 修复个股分析推送失败和报告路径问题 (fixes #166)
-- 🐛 修改 CR 错误，确保微信消息最大字节配置生效
+### Fixed
+- 🐛 Fixed single-stock analysis notification failure and report path issue (fixes #166)
+- 🐛 Fixed CR error, ensuring maximum byte limit configuration for WeChat messages takes effect
 
 ## [2.1.1] - 2026-01-26
 
-### 新增
-- 🔧 添加 GitHub Actions auto-tag 工作流
-- 📡 添加 yfinance 兜底数据源及数据缺失警告
+### Added
+- 🔧 Added GitHub Actions auto-tag workflow
+- 📡 Added YFinance fallback data source and missing data warning
 
-### 修复
-- 🐳 修复 docker-compose 路径和文档命令
-- 🐳 Dockerfile 补充 copy src 文件夹 (fixes #145)
+### Fixed
+- 🐳 Fixed docker-compose paths and documentation commands
+- 🐳 Updated Dockerfile to copy `src/` directory (fixes #145)
 
 ## [2.1.0] - 2026-01-25
 
-### 新增
-- 🇺🇸 **美股分析支持**
-  - 支持美股代码直接输入（如 `AAPL`, `TSLA`）
-  - 使用 YFinance 作为美股数据源
-- 📈 **MACD 和 RSI 技术指标**
-  - MACD：趋势确认、金叉死叉信号（零轴上金叉⭐、金叉✅、死叉❌）
-  - RSI：超买超卖判断（超卖⭐、强势✅、超买⚠️）
-  - 指标信号纳入综合评分系统
-- 🎮 **Discord 推送支持** (PR #124, #125, #144)
-  - 支持 Discord Webhook 和 Bot API 两种方式
-  - 通过 `DISCORD_WEBHOOK_URL` 或 `DISCORD_BOT_TOKEN` + `DISCORD_MAIN_CHANNEL_ID` 配置
-- 🤖 **机器人命令交互**
-  - 钉钉机器人支持 `/分析 股票代码` 命令触发分析
-  - 支持 Stream 长连接模式
-- 🌡️ **AI 温度参数可配置** (PR #142)
-  - 支持自定义 AI 模型温度参数
-- 🐳 **Zeabur 部署支持**
-  - 添加 Zeabur 镜像部署工作流
-  - 支持 commit hash 和 latest 双标签
+### Added
+- 🇺🇸 **US Stock Analysis Support**
+  - Supported direct input of US stock symbols (e.g. `AAPL`, `TSLA`)
+  - Utilized YFinance as data source for US equities
+- 📈 **MACD and RSI Technical Indicators**
+  - MACD: Trend confirmation and golden/death cross signals (golden cross above zero axis ⭐, golden cross ✅, death cross ❌)
+  - RSI: Overbought/oversold assessment (oversold ⭐, strong ✅, overbought ⚠️)
+  - Integrated indicator signals into comprehensive scoring system
+- 🎮 **Discord Notification Support** (PR #124, #125, #144)
+  - Supported both Discord Webhook and Bot API methods
+  - Configured via `DISCORD_WEBHOOK_URL` or `DISCORD_BOT_TOKEN` + `DISCORD_MAIN_CHANNEL_ID`
+- 🤖 **Bot Command Interaction**
+  - DingTalk bot supports `/analyze <symbol>` command to trigger analysis
+  - Supported Stream persistent connection mode
+- 🌡️ **Configurable AI Temperature Parameter** (PR #142)
+  - Supported custom AI model temperature configuration
+- 🐳 **Zeabur Deployment Support**
+  - Added Zeabur container deployment workflow
+  - Supported dual tagging with commit hash and latest
 
-### 重构
-- 🏗️ **项目结构优化**
-  - 核心代码移至 `src/` 目录，根目录更清爽
-  - 文档移至 `docs/` 目录
-  - Docker 配置移至 `docker/` 目录
-  - 修复所有 import 路径，保持向后兼容
-- 🔄 **数据源架构升级**
-  - 新增数据源熔断机制，单数据源连续失败自动切换
-  - 实时行情缓存优化，批量预取减少 API 调用
-  - 网络代理智能分流，国内接口自动直连
-- 🤖 Discord 机器人重构为平台适配器架构
+### Changed
+- 🏗️ **Project Structure Optimization**
+  - Moved core code into `src/` directory for cleaner root layout
+  - Moved documentation into `docs/` directory
+  - Moved Docker configuration into `docker/` directory
+  - Fixed all import paths while maintaining backward compatibility
+- 🔄 **Data Source Architecture Upgrade**
+  - Added circuit breaker mechanism for data sources with automatic failover on consecutive failures
+  - Optimized real-time quote caching with batch prefetching to reduce API calls
+  - Intelligent proxy routing with direct connection for mainland China endpoints
+- 🤖 Refactored Discord bot into platform adapter architecture
 
-### 修复
-- 🌐 **网络稳定性增强**
-  - 自动检测代理配置，对国内行情接口强制直连
-  - 修复 EfinanceFetcher 偶发的 `ProtocolError`
-  - 增加对底层网络错误的捕获和重试机制
-- 📧 **邮件渲染优化**
-  - 修复邮件中表格不渲染问题 (#134)
-  - 优化邮件排版，更紧凑美观
-- 📢 **企业微信推送修复**
-  - 修复大盘复盘推送不完整问题
-  - 增强消息分割逻辑，支持更多标题格式
-  - 增加分批发送间隔，避免限流丢失
-- 👷 **CI/CD 修复**
-  - 修复 GitHub Actions 中路径引用的错误
+### Fixed
+- 🌐 **Network Stability Enhancements**
+  - Automatically detects proxy configuration and enforces direct connections for domestic market endpoints
+  - Fixed intermittent `ProtocolError` in EfinanceFetcher
+  - Added low-level network error handling and retry mechanisms
+- 📧 **Email Rendering Optimization**
+  - Fixed issue where tables failed to render in emails (#134)
+  - Optimized email formatting for a more compact and elegant layout
+- 📢 **WeChat Work Notification Fixes**
+  - Fixed incomplete market review push notifications
+  - Enhanced message chunking logic supporting additional heading formats
+  - Added throttling interval between batch deliveries to prevent rate-limiting drops
+- 👷 **CI/CD Fixes**
+  - Fixed path reference errors in GitHub Actions
 
 ## [2.0.0] - 2026-01-24
 
-### 新增
-- 🇺🇸 **美股分析支持**
-  - 支持美股代码直接输入（如 `AAPL`, `TSLA`）
-  - 使用 YFinance 作为美股数据源
-- 🤖 **机器人命令交互** (PR #113)
-  - 钉钉机器人支持 `/分析 股票代码` 命令触发分析
-  - 支持 Stream 长连接模式
-  - 支持选择精简报告或完整报告
-- 🎮 **Discord 推送支持** (PR #124)
-  - 支持 Discord Webhook 推送
-  - 添加 Discord 环境变量到工作流
+### Added
+- 🇺🇸 **US Stock Analysis Support**
+  - Supported direct input of US stock symbols (e.g. `AAPL`, `TSLA`)
+  - Utilized YFinance as data source for US equities
+- 🤖 **Bot Command Interaction** (PR #113)
+  - DingTalk bot supports `/analyze <symbol>` command to trigger analysis
+  - Supported Stream persistent connection mode
+  - Supported selection of condensed or full reports
+- 🎮 **Discord Notification Support** (PR #124)
+  - Supported Discord Webhook notifications
+  - Added Discord environment variables to workflows
 
-### 修复
-- 🐳 修复 WebUI 在 Docker 中绑定 0.0.0.0 (fixed #118)
-- 🔔 修复飞书长连接通知问题
-- 🐛 修复 `analysis_delay` 未定义错误
-- 🔧 启动时 config.py 检测通知渠道，修复已配置自定义渠道情况下仍然提示未配置问题
+### Fixed
+- 🐳 Fixed WebUI binding to 0.0.0.0 in Docker (fixed #118)
+- 🔔 Fixed Feishu persistent connection notification issue
+- 🐛 Fixed undefined `analysis_delay` error
+- 🔧 Enhanced notification channel check in config.py at startup, fixing false unconfigured warnings when custom channels are active
 
-### 改进
-- 🔧 优化 Tushare 优先级判断逻辑，提升封装性
-- 🔧 修复 Tushare 优先级提升后仍排在 Efinance 之后的问题
-- ⚙️ 配置 TUSHARE_TOKEN 时自动提升 Tushare 数据源优先级
-- ⚙️ 实现 4 个用户反馈 issue (#112, #128, #38, #119)
+### Changed
+- 🔧 Optimized Tushare priority evaluation logic, improving encapsulation
+- 🔧 Fixed issue where elevated Tushare priority remained ranked below Efinance
+- ⚙️ Automatically elevated Tushare data source priority when `TUSHARE_TOKEN` is configured
+- ⚙️ Resolved 4 user feedback issues (#112, #128, #38, #119)
 
 ## [1.6.0] - 2026-01-19
 
-### 新增
-- 🖥️ WebUI 管理界面及 API 支持（PR #72）
-  - 全新 Web 架构：分层设计（Server/Router/Handler/Service）
-  - 核心 API：支持 `/analysis` (触发分析), `/tasks` (查询进度), `/health` (健康检查)
-  - 交互界面：支持页面直接输入代码并触发分析，实时展示进度
-  - 运行模式：新增 `--webui-only` 模式，仅启动 Web 服务
-  - 解决了 [#70](https://github.com/ZhuLinsen/daily_stock_analysis/issues/70) 的核心需求（提供触发分析的接口）
-- ⚙️ GitHub Actions 配置灵活性增强（[#79](https://github.com/ZhuLinsen/daily_stock_analysis/issues/79)）
-  - 支持从 Repository Variables 读取非敏感配置（如 STOCK_LIST, GEMINI_MODEL）
-  - 保持对 Secrets 的向下兼容
+### Added
+- 🖥️ WebUI Management Interface and API Support (PR #72)
+  - Brand new Web architecture: layered design (Server/Router/Handler/Service)
+  - Core APIs: `/analysis` (trigger analysis), `/tasks` (query progress), `/health` (health check)
+  - Interactive UI: enter stock symbols directly to trigger analysis with real-time progress display
+  - Run mode: added `--webui-only` mode to launch Web service only
+  - Solved core requirement of [#70](https://github.com/ZhuLinsen/daily_stock_analysis/issues/70) (providing API endpoints to trigger analysis)
+- ⚙️ Enhanced GitHub Actions Configuration Flexibility ([#79](https://github.com/ZhuLinsen/daily_stock_analysis/issues/79))
+  - Supported reading non-sensitive configurations from Repository Variables (e.g. STOCK_LIST, GEMINI_MODEL)
+  - Maintained backward compatibility with Secrets
 
-### 修复
-- 🐛 修复企业微信/飞书报告截断问题（[#73](https://github.com/ZhuLinsen/daily_stock_analysis/issues/73)）
-  - 移除 notification.py 中不必要的长度硬截断逻辑
-  - 依赖底层自动分片机制处理长消息
-- 🐛 修复 GitHub Workflow 环境变量缺失（[#80](https://github.com/ZhuLinsen/daily_stock_analysis/issues/80)）
-  - 修复 `CUSTOM_WEBHOOK_BEARER_TOKEN` 未正确传递到 Runner 的问题
+### Fixed
+- 🐛 Fixed WeChat Work / Feishu report truncation issue ([#73](https://github.com/ZhuLinsen/daily_stock_analysis/issues/73))
+  - Removed unnecessary hardcoded truncation logic in notification.py
+  - Relied on underlying automatic chunking mechanism to handle long messages
+- 🐛 Fixed missing environment variables in GitHub Workflow ([#80](https://github.com/ZhuLinsen/daily_stock_analysis/issues/80))
+  - Fixed issue where `CUSTOM_WEBHOOK_BEARER_TOKEN` was not properly passed to Runner
 
 ## [1.5.0] - 2026-01-17
 
-### 新增
-- 📲 单股推送模式（[#55](https://github.com/ZhuLinsen/daily_stock_analysis/issues/55)）
-  - 每分析完一只股票立即推送，不用等全部分析完
-  - 命令行参数：`--single-notify`
-  - 环境变量：`SINGLE_STOCK_NOTIFY=true`
-- 🔐 自定义 Webhook Bearer Token 认证（[#51](https://github.com/ZhuLinsen/daily_stock_analysis/issues/51)）
-  - 支持需要 Token 认证的 Webhook 端点
-  - 环境变量：`CUSTOM_WEBHOOK_BEARER_TOKEN`
+### Added
+- 📲 Single-Stock Notification Mode ([#55](https://github.com/ZhuLinsen/daily_stock_analysis/issues/55))
+  - Pushes notification immediately upon completing each stock analysis without waiting for batch completion
+  - CLI flag: `--single-notify`
+  - Environment variable: `SINGLE_STOCK_NOTIFY=true`
+- 🔐 Custom Webhook Bearer Token Authentication ([#51](https://github.com/ZhuLinsen/daily_stock_analysis/issues/51))
+  - Supported Webhook endpoints requiring Token authentication
+  - Environment variable: `CUSTOM_WEBHOOK_BEARER_TOKEN`
 
 ## [1.4.0] - 2026-01-17
 
-### 新增
-- 📱 Pushover 推送支持（PR #26）
-  - 支持 iOS/Android 跨平台推送
-  - 通过 `PUSHOVER_USER_KEY` 和 `PUSHOVER_API_TOKEN` 配置
-- 🔍 博查搜索 API 集成（PR #27）
-  - 中文搜索优化，支持 AI 摘要
-  - 通过 `BOCHA_API_KEYS` 配置
-- 📊 Efinance 数据源支持（PR #59）
-  - 新增 efinance 作为数据源选项
-- 🇭🇰 港股支持（PR #17）
-  - 支持 5 位代码或 HK 前缀（如 `hk00700`、`hk1810`）
+### Added
+- 📱 Pushover Notification Support (PR #26)
+  - Supported cross-platform notifications on iOS/Android
+  - Configured via `PUSHOVER_USER_KEY` and `PUSHOVER_API_TOKEN`
+- 🔍 Bocha Search API Integration (PR #27)
+  - Chinese search optimization with AI summary support
+  - Configured via `BOCHA_API_KEYS`
+- 📊 Efinance Data Source Support (PR #59)
+  - Added efinance as data source option
+- 🇭🇰 Hong Kong Stocks Support (PR #17)
+  - Supported 5-digit symbols or HK prefix (e.g. `hk00700`, `hk1810`)
 
-### 修复
-- 🔧 飞书 Markdown 渲染优化（PR #34）
-  - 使用交互卡片和格式化器修复渲染问题
-- ♻️ 股票列表热重载（PR #42 修复）
-  - 分析前自动重载 `STOCK_LIST` 配置
-- 🐛 钉钉 Webhook 20KB 限制处理
-  - 长消息自动分块发送，避免被截断
-- 🔄 AkShare API 重试机制增强
-  - 添加失败缓存，避免重复请求失败接口
+### Fixed
+- 🔧 Feishu Markdown Rendering Optimization (PR #34)
+  - Fixed rendering issues using interactive cards and formatters
+- ♻️ Stock List Hot-Reloading (PR #42 fix)
+  - Automatically reloads `STOCK_LIST` configuration before analysis
+- 🐛 DingTalk Webhook 20KB Limit Handling
+  - Automatically chunks long messages to prevent truncation
+- 🔄 AkShare API Retry Mechanism Enhancement
+  - Added failure caching to prevent repeated requests to failing endpoints
 
-### 改进
-- 📝 README 精简优化
-  - 高级配置移至 `docs/full-guide.md`
+### Changed
+- 📝 Streamlined and optimized README
+  - Moved advanced configuration to `docs/full-guide.md`
 
 
 ## [1.3.0] - 2026-01-12
 
-### 新增
-- 🔗 自定义 Webhook 支持
-  - 支持任意 POST JSON 的 Webhook 端点
-  - 自动识别钉钉、Discord、Slack、Bark 等常见服务格式
-  - 支持配置多个 Webhook（逗号分隔）
-  - 通过 `CUSTOM_WEBHOOK_URLS` 环境变量配置
+### Added
+- 🔗 Custom Webhook Support
+  - Supported arbitrary POST JSON Webhook endpoints
+  - Automatically recognized DingTalk, Discord, Slack, Bark, and common service formats
+  - Supported multiple Webhook configurations (comma-separated)
+  - Configured via `CUSTOM_WEBHOOK_URLS` environment variable
 
-### 修复
-- 📝 企业微信长消息分批发送
-  - 解决自选股过多时内容超过 4096 字符限制导致推送失败的问题
-  - 智能按股票分析块分割，每批添加分页标记（如 1/3, 2/3）
-  - 批次间隔 1 秒，避免触发频率限制
+### Fixed
+- 📝 WeChat Work Long Message Batch Chunking
+  - Resolved push failures when watchlist content exceeded 4096 character limit
+  - Intelligently chunks by stock analysis section, appending page markers to each batch (e.g. 1/3, 2/3)
+  - 1-second interval between batches to avoid triggering rate limits
 
 ## [1.2.0] - 2026-01-11
 
-### 新增
-- 📢 多渠道推送支持
-  - 企业微信 Webhook
-  - 飞书 Webhook（新增）
-  - 邮件 SMTP（新增）
-  - 自动识别渠道类型，配置更简单
+### Added
+- 📢 Multi-Channel Notification Support
+  - WeChat Work Webhook
+  - Feishu Webhook (new)
+  - Email SMTP (new)
+  - Automatic channel type detection for simplified configuration
 
-### 改进
-- 统一使用 `NOTIFICATION_URL` 配置，兼容旧的 `WECHAT_WEBHOOK_URL`
-- 邮件支持 Markdown 转 HTML 渲染
+### Changed
+- Standardized on `NOTIFICATION_URL` configuration, backward-compatible with legacy `WECHAT_WEBHOOK_URL`
+- Supported Markdown-to-HTML rendering for emails
 
 ## [1.1.0] - 2026-01-11
 
-### 新增
-- 🤖 OpenAI 兼容 API 支持
-  - 支持 DeepSeek、通义千问、Moonshot、智谱 GLM 等
-  - Gemini 和 OpenAI 格式二选一
-  - 自动降级重试机制
+### Added
+- 🤖 OpenAI-Compatible API Support
+  - Supported DeepSeek, Qwen, Moonshot, Zhipu GLM, etc.
+  - Choice between Gemini and OpenAI formats
+  - Automatic fallback retry mechanism
 
 ## [1.0.0] - 2026-01-10
 
-### 新增
-- 🎯 AI 决策仪表盘分析
-  - 一句话核心结论
-  - 精确买入/止损/目标点位
-  - 检查清单（✅⚠️❌）
-  - 分持仓建议（空仓者 vs 持仓者）
-- 📊 大盘复盘功能
-  - 主要指数行情
-  - 涨跌统计
-  - 板块涨跌榜
-  - AI 生成复盘报告
-- 🔍 多数据源支持
-  - AkShare（主数据源，免费）
+### Added
+- 🎯 AI Decision Dashboard Analysis
+  - One-sentence core conclusion
+  - Precise buy / stop-loss / target price levels
+  - Checklist (✅⚠️❌)
+  - Differentiated position advice (unhedged/flat vs existing holders)
+- 📊 Market Review Feature
+  - Major index quotes
+  - Gain/loss market breadth statistics
+  - Sector leaderboard
+  - AI-generated market review report
+- 🔍 Multi-Source Data Support
+  - AkShare (primary source, free)
   - Tushare Pro
   - Baostock
   - YFinance
-- 📰 新闻搜索服务
+- 📰 News Search Services
   - Tavily API
   - SerpAPI
-- 💬 企业微信机器人推送
-- ⏰ 定时任务调度
-- 🐳 Docker 部署支持
-- 🚀 GitHub Actions 零成本部署
+- 💬 WeChat Work Bot Push Notifications
+- ⏰ Scheduled Cron Jobs
+- 🐳 Docker Deployment Support
+- 🚀 Zero-Cost Deployment on GitHub Actions
 
-### 技术特性
-- Gemini AI 模型（gemini-3-flash-preview）
-- 429 限流自动重试 + 模型切换
-- 请求间延时防封禁
-- 多 API Key 负载均衡
-- SQLite 本地数据存储
+### Technical Characteristics
+- Gemini AI model (gemini-3-flash-preview)
+- Automatic retry on 429 rate limits + model switching
+- Inter-request delay to prevent blocking
+- Multi-API-Key load balancing
+- SQLite local data storage
 
 ---
 
