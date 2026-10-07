@@ -51,7 +51,15 @@ export async function onRequest(context) {
   }
 
   // 3. Inspect session cookie for protected routes
-  const secret = requireSessionSecret(env);
+  let secret;
+  try {
+    secret = requireSessionSecret(env);
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "Server authentication is not configured." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   const token = parseSessionCookie(request);
   let sessionPayload = null;

@@ -81,7 +81,7 @@ export async function onRequestPost(context) {
       : "New Account Onboarding Request";
 
     // 2. Resolve admin recipient strictly server-side (never returned to client)
-    const adminRecipient = (await getAdminNotificationEmail(env)) || "fjmaresca@gmail.com";
+    const adminRecipient = await getAdminNotificationEmail(env);
 
     const userAgent = request.headers.get("User-Agent") || "Unknown Browser";
     const timestampIso = new Date().toISOString();
@@ -164,7 +164,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
     const deliveryProtocols = [];
 
     // 3. Primary Dispatch: Resend REST API (if configured)
-    if (env.RESEND_API_KEY) {
+    if (env.RESEND_API_KEY && adminRecipient) {
       try {
         const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
         const resendResp = await fetch("https://api.resend.com/emails", {
@@ -446,7 +446,16 @@ export async function onRequestGet(context) {
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
     }
-    const adminRecipient = (await getAdminNotificationEmail(env)) || "fjmaresca@gmail.com";
+    const adminRecipient = await getAdminNotificationEmail(env);
+    if (!adminRecipient) {
+      return new Response(
+        JSON.stringify({
+          configured: false,
+          error: "Admin recipient email is not configured in system_settings or ADMIN_NOTIFICATION_EMAIL.",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
     const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
     try {
       const resendResp = await fetch("https://api.resend.com/emails", {

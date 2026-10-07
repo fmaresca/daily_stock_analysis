@@ -19,7 +19,26 @@ import {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  const secret = requireSessionSecret(env);
+  // Fail closed if server authentication secret is not configured
+  let secret;
+  try {
+    secret = requireSessionSecret(env);
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "Server authentication is not configured." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Fail closed if D1 database is not configured (unless in local development)
+  if (!env || !env.DB) {
+    if (env?.ENVIRONMENT !== "development") {
+      return new Response(
+        JSON.stringify({ error: "User database is not configured." }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
 
   try {
     const body = await request.json().catch(() => ({}));

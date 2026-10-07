@@ -55,6 +55,9 @@ export default defineConfig({
           if (id.includes('macroScheduleData')) {
             return 'data-macro-schedule';
           }
+          if (id.includes('cboeWeeklyDirectory')) {
+            return 'data-cboe-weekly';
+          }
           if (id.includes('components/icons') || id.includes('components\\icons')) {
             return 'ui-icons';
           }

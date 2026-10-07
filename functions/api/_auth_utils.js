@@ -7,17 +7,18 @@
 export const SESSION_COOKIE_NAME = "deltaharvest_session";
 export const DEFAULT_SESSION_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days
 export const DEFAULT_ADMIN_EMAIL = "admin@deltaharvest.local";
-export const DEFAULT_SECRET = "deltaharvest-edge-auth-secret-key-prod-2026";
 
 /**
- * Resolves SESSION_SECRET from environment or resilient edge fallback default.
+ * Requires SESSION_SECRET to be configured in Cloudflare environment.
+ * Throws immediately if missing, enforcing fail-closed security.
  */
 export function requireSessionSecret(env) {
   const secret = env?.SESSION_SECRET;
-  if (secret && typeof secret === "string" && secret.trim()) {
-    return secret.trim();
+  if (!secret || typeof secret !== "string" || !secret.trim()) {
+    console.error("CRITICAL CONFIGURATION ERROR: SESSION_SECRET is not configured.");
+    throw new Error("Server authentication is not configured.");
   }
-  return DEFAULT_SECRET;
+  return secret.trim();
 }
 
 // ==========================================
@@ -216,73 +217,16 @@ export function parseSessionCookie(request) {
 }
 
 // ==========================================
-// 4. Memory / Fallback Store & Bootstrap Users
+// 4. In-Memory Store (Development Mode Only)
 // ==========================================
 
-export const BUILTIN_BOOTSTRAP_USERS = [
-  {
-    id: "admin-root-0000-0000-000000000001",
-    email: DEFAULT_ADMIN_EMAIL, // admin@deltaharvest.local
-    password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
-    password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
-    role: "admin",
-    is_active: 1,
-    must_change_password: 0,
-    token_version: 0,
-    display_name: "Administrator",
-    created_at: "2026-01-01T00:00:00.000Z",
-    updated_at: "2026-01-01T00:00:00.000Z",
-  },
-  {
-    id: "admin-root-0000-0000-000000000002",
-    email: "fjmaresca@gmail.com",
-    password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
-    password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
-    role: "admin",
-    is_active: 1,
-    must_change_password: 0,
-    token_version: 0,
-    display_name: "Frank Maresca",
-    created_at: "2026-01-01T00:00:00.000Z",
-    updated_at: "2026-01-01T00:00:00.000Z",
-  },
-  {
-    id: "user-tenant-0000-0000-000000000001",
-    email: "wayneodonohue@gmail.com",
-    password_hash: "109eae8174b76c1c7440d583806281325e843a1ab0c01ade8510223c7116485d",
-    password_salt: "4f059882c1df1b504f9809e99302c6bf",
-    role: "client",
-    is_active: 1,
-    must_change_password: 0,
-    token_version: 0,
-    display_name: "Wayne O'Donohue",
-    created_at: "2026-10-06T00:00:00.000Z",
-    updated_at: "2026-10-06T00:00:00.000Z",
-  },
-];
-
 const localMemoryDb = {
-  users: [...BUILTIN_BOOTSTRAP_USERS],
-  profiles: {
-    "admin-root-0000-0000-000000000001": {
-      display_name: "Administrator",
-      account_notes: "Primary System Administrator",
-    },
-    "admin-root-0000-0000-000000000002": {
-      display_name: "Frank Maresca",
-      account_notes: "Principal Administrator",
-    },
-    "user-tenant-0000-0000-000000000001": {
-      display_name: "Wayne O'Donohue",
-      account_notes: "Client Tenant Workspace",
-    },
-  },
+  users: [],
+  profiles: {},
   trades: [],
   watchlists: [],
   portfolios: {},
-  settings: {
-    admin_notification_email: "fjmaresca@gmail.com",
-  },
+  settings: {},
 };
 
 export const dynamicUserOverrides = new Map();
@@ -363,24 +307,6 @@ export async function ensureUsersTables(env) {
           created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
         )
       `).run();
-
-      // Seed bootstrap users into D1 if not already present
-      for (const bu of BUILTIN_BOOTSTRAP_USERS) {
-        try {
-          await env.DB.prepare(`
-            INSERT OR IGNORE INTO users (id, email, password_hash, password_salt, role, is_active, must_change_password, token_version, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).bind(bu.id, bu.email.toLowerCase(), bu.password_hash, bu.password_salt, bu.role, bu.is_active, bu.must_change_password, bu.token_version || 0, bu.created_at, bu.updated_at).run();
-
-          const dName = bu.display_name || (bu.email === "admin@deltaharvest.local" ? "Administrator" : bu.email.split("@")[0]);
-          await env.DB.prepare(`
-            INSERT OR IGNORE INTO user_profiles (user_id, display_name, account_notes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-          `).bind(bu.id, dName, "Provisioned Tenant Account", bu.created_at, bu.updated_at).run();
-        } catch {
-          // ignore duplicate
-        }
-      }
     } catch (e) {
       console.warn("D1 ensureUsersTables error:", e);
     }
@@ -422,12 +348,17 @@ export async function storePasswordResetToken(env, tokenHash, userId, expiresInM
       return true;
     } catch (e) {
       console.warn("D1 storePasswordResetToken error:", e);
+      throw e;
     }
   }
 
-  // Memory fallback for local dev / non-production
-  localMemoryResetTokens.set(tokenHash, { userId, expiresAt, createdAt });
-  return true;
+  // Memory fallback ONLY for local development
+  if (env?.ENVIRONMENT === "development") {
+    localMemoryResetTokens.set(tokenHash, { userId, expiresAt, createdAt });
+    return true;
+  }
+
+  throw new Error("User database is not configured.");
 }
 
 export async function consumePasswordResetToken(env, tokenHash) {
@@ -451,15 +382,20 @@ export async function consumePasswordResetToken(env, tokenHash) {
       return row.user_id;
     } catch (e) {
       console.warn("D1 consumePasswordResetToken error:", e);
+      return null;
     }
   }
 
-  // Memory fallback
-  const mem = localMemoryResetTokens.get(tokenHash);
-  if (!mem) return null;
-  localMemoryResetTokens.delete(tokenHash);
-  if (mem.expiresAt < now) return null;
-  return mem.userId;
+  // Memory fallback ONLY for local development
+  if (env?.ENVIRONMENT === "development") {
+    const mem = localMemoryResetTokens.get(tokenHash);
+    if (!mem) return null;
+    localMemoryResetTokens.delete(tokenHash);
+    if (mem.expiresAt < now) return null;
+    return mem.userId;
+  }
+
+  return null;
 }
 
 export async function getUserByEmail(env, email) {
@@ -476,14 +412,11 @@ export async function getUserByEmail(env, email) {
     }
   }
 
-  // Fallback to local memory / bootstrap store if not found in D1 or D1 not bound
-  if (!user) {
+  // Memory fallback ONLY for local development
+  if (!user && env?.ENVIRONMENT === "development") {
     const found = localMemoryDb.users.find((u) => u.email.toLowerCase() === cleanEmail);
     if (found) {
       user = { ...found };
-    } else {
-      const bu = BUILTIN_BOOTSTRAP_USERS.find((u) => u.email.toLowerCase() === cleanEmail);
-      if (bu) user = { ...bu };
     }
   }
 
@@ -528,14 +461,11 @@ export async function getUserById(env, id) {
     }
   }
 
-  // Fallback to local memory / bootstrap store if not found in D1 or D1 not bound
-  if (!user) {
+  // Memory fallback ONLY for local development
+  if (!user && env?.ENVIRONMENT === "development") {
     const found = localMemoryDb.users.find((u) => u.id === id);
     if (found) {
       user = { ...found };
-    } else {
-      const bu = BUILTIN_BOOTSTRAP_USERS.find((u) => u.id === id);
-      if (bu) user = { ...bu };
     }
   }
 
@@ -569,8 +499,6 @@ export async function getUserById(env, id) {
 }
 
 export async function getAllUsers(env) {
-  let userList = [];
-
   if (env && env.DB) {
     try {
       await ensureUsersTables(env);
@@ -583,7 +511,7 @@ export async function getAllUsers(env) {
         ORDER BY u.created_at DESC
       `);
       const { results } = await stmt.all();
-      userList = (results || []).map((u) => ({
+      return (results || []).map((u) => ({
         id: u.id,
         email: u.email,
         role: (u.role || "client").toUpperCase(),
@@ -603,11 +531,14 @@ export async function getAllUsers(env) {
       }));
     } catch (err) {
       console.warn("D1 query error in getAllUsers:", err);
+      if (env?.ENVIRONMENT !== "development") {
+        throw err;
+      }
     }
   }
 
-  if (userList.length === 0) {
-    userList = localMemoryDb.users.map((u) => ({
+  if (env?.ENVIRONMENT === "development") {
+    return localMemoryDb.users.map((u) => ({
       id: u.id,
       email: u.email,
       role: (u.role || "client").toUpperCase(),
@@ -621,39 +552,13 @@ export async function getAllUsers(env) {
       updated_at: u.updated_at,
       display_name: localMemoryDb.profiles[u.id]?.display_name || (u.email === DEFAULT_ADMIN_EMAIL ? "Administrator" : u.email.split("@")[0]),
       displayName: localMemoryDb.profiles[u.id]?.display_name || (u.email === DEFAULT_ADMIN_EMAIL ? "Administrator" : u.email.split("@")[0]),
-      account_notes: localMemoryDb.profiles[u.id]?.account_notes || "Provisioned Tenant Account",
+      account_notes: localMemoryDb.profiles[u.id]?.account_notes || "Development Account",
       trade_count: localMemoryDb.trades.filter((t) => t.user_id === u.id).length,
       tradeCount: localMemoryDb.trades.filter((t) => t.user_id === u.id).length,
     }));
   }
 
-  // Ensure bootstrap users are always included
-  const existingEmails = new Set(userList.map((u) => u.email.toLowerCase()));
-  for (const bu of BUILTIN_BOOTSTRAP_USERS) {
-    if (!existingEmails.has(bu.email.toLowerCase())) {
-      userList.push({
-        id: bu.id,
-        email: bu.email,
-        role: (bu.role || "client").toUpperCase(),
-        is_active: bu.is_active,
-        status: (bu.is_active === 1 || bu.is_active === true) ? "ACTIVE" : "SUSPENDED",
-        must_change_password: bu.must_change_password,
-        last_login_at: null,
-        lastLoginAt: null,
-        created_at: bu.created_at,
-        createdAt: bu.created_at,
-        updated_at: bu.updated_at,
-        display_name: bu.display_name || (bu.email === DEFAULT_ADMIN_EMAIL ? "Administrator" : bu.email.split("@")[0]),
-        displayName: bu.display_name || (bu.email === DEFAULT_ADMIN_EMAIL ? "Administrator" : bu.email.split("@")[0]),
-        account_notes: "Provisioned Tenant Account",
-        trade_count: 0,
-        tradeCount: 0,
-      });
-      existingEmails.add(bu.email.toLowerCase());
-    }
-  }
-
-  return userList;
+  return [];
 }
 
 export async function createUser(env, { id, email, password_hash, password_salt, role, is_active, must_change_password, display_name, token_version }) {
@@ -665,7 +570,7 @@ export async function createUser(env, { id, email, password_hash, password_salt,
   if (env && env.DB) {
     try {
       await ensureUsersTables(env);
-      const batch = await env.DB.batch([
+      await env.DB.batch([
         env.DB.prepare(`
           INSERT INTO users (id, email, password_hash, password_salt, role, is_active, must_change_password, token_version, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -677,25 +582,32 @@ export async function createUser(env, { id, email, password_hash, password_salt,
       ]);
       return { id: userId, email: cleanEmail, role: role || "client" };
     } catch (err) {
-      console.warn("D1 insert error, writing to memory fallback:", err);
+      console.warn("D1 insert error in createUser:", err);
+      if (env?.ENVIRONMENT !== "development") {
+        throw err;
+      }
     }
   }
 
-  const newUser = {
-    id: userId,
-    email: cleanEmail,
-    password_hash,
-    password_salt,
-    role: role || "client",
-    is_active: is_active ?? 1,
-    must_change_password: must_change_password ?? 0,
-    token_version: tv,
-    created_at: now,
-    updated_at: now,
-  };
-  localMemoryDb.users.push(newUser);
-  localMemoryDb.profiles[userId] = { display_name: display_name || cleanEmail.split("@")[0] };
-  return newUser;
+  if (env?.ENVIRONMENT === "development") {
+    const newUser = {
+      id: userId,
+      email: cleanEmail,
+      password_hash,
+      password_salt,
+      role: role || "client",
+      is_active: is_active ?? 1,
+      must_change_password: must_change_password ?? 0,
+      token_version: tv,
+      created_at: now,
+      updated_at: now,
+    };
+    localMemoryDb.users.push(newUser);
+    localMemoryDb.profiles[userId] = { display_name: display_name || cleanEmail.split("@")[0] };
+    return newUser;
+  }
+
+  throw new Error("User database is not configured.");
 }
 
 export async function updateUserPassword(env, userId, newHash, newSalt) {
@@ -848,7 +760,20 @@ export async function authenticateRequest(context, allowedRoles = null) {
     };
   }
 
-  // Look up user in D1 or resilient bootstrap store to ensure account wasn't suspended or deleted
+  // Fail closed if user database is not configured (unless in local development)
+  if (!env || !env.DB) {
+    if (env?.ENVIRONMENT !== "development") {
+      return {
+        authenticated: false,
+        response: new Response(
+          JSON.stringify({ error: "User database is not configured." }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        ),
+      };
+    }
+  }
+
+  // Look up user in D1 to ensure account wasn't suspended or deleted
   const user = await getUserById(env, payload.sub);
   if (!user || (user.is_active !== 1 && user.is_active !== true)) {
     return {
@@ -950,7 +875,7 @@ export async function getAdminNotificationEmail(env) {
   if (envEmail && envEmail.includes("@")) {
     return envEmail;
   }
-  return "fjmaresca@gmail.com";
+  return "";
 }
 
 export async function setAdminNotificationEmail(env, email) {

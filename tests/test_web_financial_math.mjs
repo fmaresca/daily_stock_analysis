@@ -442,47 +442,37 @@ test('13. Admin Inquiries Multi-Channel Dispatch Contract & Server-Side Security
   assert.ok(fs.existsSync(requestAccessPath), 'functions/api/auth/request-access.js must exist');
 });
 
-test('14. Resilient Multi-Tenant Auth, Bootstrap Credentials & Secret Fallback', async () => {
+test('14. Fail-Closed Authentication & Session Secret Security Gate', async () => {
   const authUtils = await import('../functions/api/_auth_utils.js');
-  const { requireSessionSecret, hashPassword, verifyPassword, getUserByEmail, DEFAULT_SECRET, BUILTIN_BOOTSTRAP_USERS } = authUtils;
+  const { requireSessionSecret, hashPassword, verifyPassword, getUserByEmail } = authUtils;
 
-  // A. Verify DEFAULT_SECRET exists as resilient edge fallback
-  assert.strictEqual(typeof DEFAULT_SECRET, 'string');
-  assert.ok(DEFAULT_SECRET.length >= 32, 'DEFAULT_SECRET must be at least 32 characters');
+  // A. Verify DEFAULT_SECRET and BUILTIN_BOOTSTRAP_USERS are completely purged
+  assert.strictEqual(authUtils.DEFAULT_SECRET, undefined, 'DEFAULT_SECRET must NOT be exported or exist');
+  assert.strictEqual(authUtils.BUILTIN_BOOTSTRAP_USERS, undefined, 'BUILTIN_BOOTSTRAP_USERS must NOT be exported or exist');
 
-  // B. Verify BUILTIN_BOOTSTRAP_USERS contains all provisioned administrators and clients
-  assert.ok(Array.isArray(BUILTIN_BOOTSTRAP_USERS), 'BUILTIN_BOOTSTRAP_USERS must be an array');
-  assert.strictEqual(BUILTIN_BOOTSTRAP_USERS.length, 3, 'Must include admin@deltaharvest.local, fjmaresca@gmail.com, and wayneodonohue@gmail.com');
+  // B. Verify requireSessionSecret fails closed when SESSION_SECRET is missing
+  assert.throws(
+    () => requireSessionSecret({}),
+    /Server authentication is not configured/,
+    'requireSessionSecret must throw when SESSION_SECRET is missing'
+  );
+  assert.throws(
+    () => requireSessionSecret({ SESSION_SECRET: '   ' }),
+    /Server authentication is not configured/,
+    'requireSessionSecret must throw when SESSION_SECRET is whitespace'
+  );
 
-  const adminUser = BUILTIN_BOOTSTRAP_USERS.find(u => u.email === 'admin@deltaharvest.local');
-  assert.ok(adminUser, 'admin@deltaharvest.local must be provisioned');
-  assert.strictEqual(adminUser.role, 'admin');
-  assert.strictEqual(await verifyPassword('DeltaHarvest2026!', adminUser.password_salt, adminUser.password_hash), true, 'Admin password must verify');
+  // C. Verify requireSessionSecret returns valid secret when provided
+  const validSecret = 'test-secret-value-12345';
+  assert.strictEqual(
+    requireSessionSecret({ SESSION_SECRET: validSecret }),
+    validSecret,
+    'requireSessionSecret must return configured secret'
+  );
 
-  const frankUser = BUILTIN_BOOTSTRAP_USERS.find(u => u.email === 'fjmaresca@gmail.com');
-  assert.ok(frankUser, 'fjmaresca@gmail.com must be provisioned');
-  assert.strictEqual(frankUser.role, 'admin');
-  assert.strictEqual(await verifyPassword('DeltaHarvest2026!', frankUser.password_salt, frankUser.password_hash), true, 'Frank Maresca password must verify');
-
-  const wayneUser = BUILTIN_BOOTSTRAP_USERS.find(u => u.email === 'wayneodonohue@gmail.com');
-  assert.ok(wayneUser, 'wayneodonohue@gmail.com must be provisioned');
-  assert.strictEqual(wayneUser.role, 'client');
-  assert.strictEqual(await verifyPassword('Whffranklin26', wayneUser.password_salt, wayneUser.password_hash), true, 'Wayne ODonohue password must verify');
-
-  // C. Verify requireSessionSecret falls back to DEFAULT_SECRET when unconfigured
-  assert.strictEqual(requireSessionSecret({}), DEFAULT_SECRET, 'requireSessionSecret must return DEFAULT_SECRET when missing');
-  assert.strictEqual(requireSessionSecret({ SESSION_SECRET: '   ' }), DEFAULT_SECRET, 'requireSessionSecret must return DEFAULT_SECRET when whitespace');
-  const customSecret = 'custom-test-secret-value-12345';
-  assert.strictEqual(requireSessionSecret({ SESSION_SECRET: customSecret }), customSecret, 'requireSessionSecret must return configured secret');
-
-  // D. Verify getUserByEmail resolves bootstrap users even without D1 binding
-  const resolvedFrank = await getUserByEmail({}, 'fjmaresca@gmail.com');
-  assert.ok(resolvedFrank, 'fjmaresca@gmail.com must resolve without D1');
-  assert.strictEqual(resolvedFrank.role, 'admin');
-
-  const resolvedWayne = await getUserByEmail({}, 'wayneodonohue@gmail.com');
-  assert.ok(resolvedWayne, 'wayneodonohue@gmail.com must resolve without D1');
-  assert.strictEqual(resolvedWayne.role, 'client');
+  // D. Verify non-development environment fails closed without D1
+  const prodUser = await getUserByEmail({ ENVIRONMENT: 'production' }, 'anyone@example.com');
+  assert.strictEqual(prodUser, null, 'Production environment must fail closed without D1 database binding');
 
   // E. Verify PBKDF2 hashing and verification functions
   const { generateRandomSalt } = authUtils;
@@ -716,6 +706,63 @@ test('16. CBOE Weekly Options Pre-Processing, Custom CSV Sanitization & Gemini P
   assert.ok(promptCode.includes('if (!isCboeWeeklyOptionable(sym)) return false;'), 'geminiPromptTemplates must filter candidate opportunities with isCboeWeeklyOptionable');
   assert.ok(promptCode.includes('CRITICAL WEEKLY OPTIONS EXPIRATION MANDATE'), 'Gemini prompt must contain mandatory weekly options instruction');
   assert.ok(promptCode.includes('Failed Weekly Options Mandate (Monthly Expiration Only)'), 'Gemini prompt must instruct placing non-weekly stocks into Table 3');
+});
+
+test('17. Round-8 Task-Oriented Navigation Label Consistency & IA Alignment', async () => {
+  const fs = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+
+  // A. Verify docs/LABEL_GLOSSARY.md exists and defines the canonical label rules
+  const glossaryPath = fileURLToPath(new URL('../docs/LABEL_GLOSSARY.md', import.meta.url));
+  assert.ok(fs.existsSync(glossaryPath), 'docs/LABEL_GLOSSARY.md must exist');
+  const glossaryContent = fs.readFileSync(glossaryPath, 'utf-8');
+
+  // B. Verify the 7 Weekend Ritual canonical steps are consistently titled across sidebar and glossary
+  const canonicalRitualSteps = [
+    { step: 1, label: '1. Upload Positions', subtitle: 'Schwab CSV Import' },
+    { step: 2, label: '2. Cash & Tax Ledger', subtitle: 'Living & Loss Carryforward' },
+    { step: 3, label: '3. Holdings & Covered Calls', subtitle: '80% Profit & 20Δ Radar' },
+    { step: 4, label: '4. Economic Calendar', subtitle: 'High-Impact USD Macro' },
+    { step: 5, label: '5. Weekly Shortlist Screener', subtitle: '15Δ–25Δ Funnel & AI' },
+    { step: 6, label: '6. Executive Report', subtitle: 'Compliance & Theta Pulse' },
+    { step: 7, label: '7. Order Staging', subtitle: 'Broker Staging & Execution' },
+  ];
+
+  for (const item of canonicalRitualSteps) {
+    assert.ok(
+      glossaryContent.includes(item.label),
+      `docs/LABEL_GLOSSARY.md must document step ${item.step}: ${item.label}`
+    );
+  }
+
+  // C. Verify InstitutionalSidebar.tsx renders these exact canonical labels
+  const sidebarPath = fileURLToPath(new URL('../web/src/components/InstitutionalSidebar.tsx', import.meta.url));
+  const sidebarContent = fs.readFileSync(sidebarPath, 'utf-8');
+  const normalizedSidebar = sidebarContent.replace(/&amp;/g, '&');
+  for (const item of canonicalRitualSteps) {
+    assert.ok(
+      normalizedSidebar.includes(item.label),
+      `InstitutionalSidebar.tsx must contain canonical label: ${item.label}`
+    );
+    assert.ok(
+      normalizedSidebar.includes(item.subtitle),
+      `InstitutionalSidebar.tsx must contain canonical subtitle: ${item.subtitle}`
+    );
+  }
+
+  // D. Verify owner-chosen label preservation ("Investment Portfolio")
+  assert.ok(sidebarContent.includes('Investment Portfolio'), 'Sidebar must preserve owner-chosen label Investment Portfolio');
+  assert.ok(glossaryContent.includes('KEEP — owner-chosen'), 'Glossary must mark owner-chosen labels');
+
+  // E. Verify admin diagnostics endpoint file exists and exports onRequestGet
+  const diagPath = fileURLToPath(new URL('../functions/api/admin/diagnostics.js', import.meta.url));
+  assert.ok(fs.existsSync(diagPath), 'functions/api/admin/diagnostics.js must exist');
+  const diagContent = fs.readFileSync(diagPath, 'utf-8');
+  assert.ok(diagContent.includes('secret_configured'), 'Diagnostics must return secret_configured boolean');
+  assert.ok(diagContent.includes('d1_bound'), 'Diagnostics must return d1_bound boolean');
+  assert.ok(diagContent.includes('d1_writable'), 'Diagnostics must return d1_writable boolean');
+  assert.ok(diagContent.includes('rate_limit_kv_bound'), 'Diagnostics must return rate_limit_kv_bound boolean');
+  assert.ok(diagContent.includes('resend_configured'), 'Diagnostics must return resend_configured boolean');
 });
 
 

@@ -57,6 +57,16 @@ export async function onRequestPost(context) {
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
 
+    // Require D1 database for reliable distributed token persistence
+    if (!env || !env.DB) {
+      if (env?.ENVIRONMENT !== "development") {
+        return new Response(
+          JSON.stringify({ error: "Password reset is temporarily unavailable. Please contact your administrator." }),
+          { status: 503, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Look up user in D1 (or memory in local development)
     const user = await getUserByEmail(env, cleanEmail);
 
@@ -66,7 +76,17 @@ export async function onRequestPost(context) {
       return genericSuccessResponse();
     }
 
-    // Account exists & active: generate cryptographically random 32-byte single-use token
+    // Account exists & active: verify Resend is configured before issuing token
+    if (!env.RESEND_API_KEY || !env.RESEND_API_KEY.trim()) {
+      const adminEmail = await getAdminNotificationEmail(env);
+      console.error("Password reset unavailable: RESEND_API_KEY is not configured. Admin recipient:", adminEmail);
+      return new Response(
+        JSON.stringify({ error: "Password reset is temporarily unavailable. Please contact your administrator." }),
+        { status: 503, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate cryptographically random 32-byte single-use token
     const plaintextToken = generateSecureRandomToken(32);
     const tokenHash = await hashTokenSha256(plaintextToken);
 
@@ -77,13 +97,12 @@ export async function onRequestPost(context) {
     const url = new URL(request.url);
     const resetUrl = `${url.origin}/login?reset_token=${plaintextToken}`;
 
-    // Dispatch reset link to registered email via Resend if provisioned
+    // Dispatch reset link to registered email via Resend
     let emailDispatched = false;
-    if (env.RESEND_API_KEY) {
-      const fromAddress = env.EMAIL_FROM || "DeltaHarvest Security <onboarding@resend.dev>";
-      const emailSubject = "[DeltaHarvest] Account Password Reset Instructions";
-      const textBody = `Hello,\n\nA password reset request was initiated for your DeltaHarvest account (${cleanEmail}).\n\nTo reset your password, visit the following URL:\n${resetUrl}\n\nAlternatively, you may enter this reset token directly into the login portal:\n${plaintextToken}\n\nThis token is valid for 30 minutes and can only be used once.\nIf you did not request this reset, no action is needed.\n\nDeltaHarvest Institutional Security Team`;
-      const htmlBody = `<!DOCTYPE html>
+    const fromAddress = env.EMAIL_FROM || "DeltaHarvest Security <onboarding@resend.dev>";
+    const emailSubject = "[DeltaHarvest] Account Password Reset Instructions";
+    const textBody = `Hello,\n\nA password reset request was initiated for your DeltaHarvest account (${cleanEmail}).\n\nTo reset your password, visit the following URL:\n${resetUrl}\n\nAlternatively, you may enter this reset token directly into the login portal:\n${plaintextToken}\n\nThis token is valid for 30 minutes and can only be used once.\nIf you did not request this reset, no action is needed.\n\nDeltaHarvest Institutional Security Team`;
+    const htmlBody = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #020617; color: #f8fafc; padding: 24px;">
@@ -101,55 +120,37 @@ export async function onRequestPost(context) {
 </body>
 </html>`;
 
-      try {
-        const resendResp = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${env.RESEND_API_KEY.trim()}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: [cleanEmail],
-            subject: emailSubject,
-            text: textBody,
-            html: htmlBody,
-          }),
-        });
-        if (resendResp.ok) {
-          emailDispatched = true;
-        }
-      } catch (emailErr) {
-        console.warn("Resend password reset email dispatch failed:", emailErr);
+    try {
+      const resendResp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.RESEND_API_KEY.trim()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: [cleanEmail],
+          subject: emailSubject,
+          text: textBody,
+          html: htmlBody,
+        }),
+      });
+      if (resendResp.ok) {
+        emailDispatched = true;
+      } else {
+        console.error("Resend password reset API error:", resendResp.status, await resendResp.text().catch(() => ""));
       }
+    } catch (emailErr) {
+      console.error("Resend password reset email dispatch failed:", emailErr);
     }
 
-    // Active Fallback: FormSubmit Direct Email Gateway if Resend is not configured or fails
     if (!emailDispatched) {
-      try {
-        const adminEmail = (await getAdminNotificationEmail(env)) || "fjmaresca@gmail.com";
-        await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Origin": "https://daily-stock-analysis-89j.pages.dev",
-            "Referer": "https://daily-stock-analysis-89j.pages.dev/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          },
-          body: JSON.stringify({
-            _subject: `[DeltaHarvest] Password Reset Requested for ${cleanEmail}`,
-            _captcha: "false",
-            accountEmail: cleanEmail,
-            resetLink: resetUrl,
-            resetToken: plaintextToken,
-            instructions: "Deliver this reset link or single-use token to the user within 30 minutes.",
-            timestamp: new Date().toUTCString(),
-          }),
-        }).catch(() => {});
-      } catch (fsErr) {
-        console.warn("FormSubmit password reset notification error:", fsErr);
-      }
+      const adminEmail = await getAdminNotificationEmail(env);
+      console.error("Password reset email delivery failed via Resend. Admin recipient:", adminEmail);
+      return new Response(
+        JSON.stringify({ error: "Password reset is temporarily unavailable. Please contact your administrator." }),
+        { status: 503, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     // Always return the identical generic confirmation

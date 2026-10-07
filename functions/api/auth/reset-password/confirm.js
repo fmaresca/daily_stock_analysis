@@ -21,6 +21,15 @@ import {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
+  if (!env || !env.DB) {
+    if (env?.ENVIRONMENT !== "development") {
+      return new Response(
+        JSON.stringify({ error: "Password reset is temporarily unavailable. Please contact your administrator." }),
+        { status: 503, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
+
   try {
     const body = await request.json().catch(() => ({}));
     const { token, newPassword, confirmPassword } = body;
