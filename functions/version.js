@@ -7,9 +7,7 @@ export async function onRequestGet(context) {
   const branch = context.env.CF_PAGES_BRANCH || "main";
   const timestamp = new Date().toISOString();
 
-  const envKeys = Object.keys(context.env || {}).filter(
-    (k) => !k.toLowerCase().includes("secret") && !k.toLowerCase().includes("key") && !k.toLowerCase().includes("token") && !k.toLowerCase().includes("pass")
-  );
+  const allKeys = Object.keys(context.env || {});
 
   return new Response(
     JSON.stringify({
@@ -25,7 +23,8 @@ export async function onRequestGet(context) {
         typeof context.env.SESSION_SECRET === "string" &&
         context.env.SESSION_SECRET.trim().length > 0
       ),
-      env_keys: envKeys,
+      session_secret_type: typeof context.env?.SESSION_SECRET,
+      all_keys: allKeys,
     }),
     {
       status: 200,
