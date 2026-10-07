@@ -5,4 +5,6 @@ export interface RouteLocation {
   tree: MenuTreeType;
   optionsTab?: OptionsTabType;
   equitiesTab?: EquitiesTabType;
+  canonicalPath?: string;
+  isNotFound?: boolean;
 }

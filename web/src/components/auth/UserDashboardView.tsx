@@ -55,7 +55,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     {
       step: 1,
       tab: 'SCHWAB_POSITIONS_UPLOAD',
-      title: 'Upload Positions',
+      title: 'Upload Schwab Positions (CSV)',
       subtitle: 'Reconcile Schwab CSV export & cash reserves',
       badge: 'Step 1',
       icon: <Upload className="w-3.5 h-3.5" />,
@@ -63,7 +63,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     {
       step: 2,
       tab: 'WEEKLY_CASH_LEDGER',
-      title: 'Cash & Tax Ledger',
+      title: 'Cash Ledger & Tax Accrual',
       subtitle: '$5k living expenses & §1256 carryover',
       badge: 'Step 2',
       icon: <DollarSign className="w-3.5 h-3.5" />,
@@ -71,7 +71,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     {
       step: 3,
       tab: 'HOLDINGS_COVERED_CALLS',
-      title: 'Holdings Calls',
+      title: 'Holdings & Covered Calls',
       subtitle: 'Harvest 20Δ calls on long equity (≥100)',
       badge: 'Step 3',
       icon: <ShieldCheck className="w-3.5 h-3.5" />,
@@ -79,7 +79,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     {
       step: 4,
       tab: 'ECONOMIC_CALENDAR',
-      title: 'Macro Calendar',
+      title: 'Macro Economic Calendar',
       subtitle: 'FOMC, CPI, NFP, and binary catalysts',
       badge: 'Step 4',
       icon: <Calendar className="w-3.5 h-3.5" />,
@@ -87,7 +87,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     {
       step: 5,
       tab: 'CASCADING_SCREENER',
-      title: 'Cascading Screener',
+      title: 'Top Opportunities Screener',
       subtitle: 'Top Barchart & Chameleon options scans',
       badge: 'Step 5',
       icon: <TrendingUp className="w-3.5 h-3.5" />,
@@ -95,7 +95,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     {
       step: 6,
       tab: 'WEEKLY_EXECUTIVE_REPORT',
-      title: 'Executive Report',
+      title: 'Weekly Executive Report',
       subtitle: 'Print-ready institutional digest & PDF',
       badge: 'Step 6',
       icon: <Award className="w-3.5 h-3.5" />,
@@ -103,7 +103,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     {
       step: 7,
       tab: 'BROKER_STAGING',
-      title: 'Broker Staging',
+      title: 'Broker Staging & Order Execution',
       subtitle: '1-click Schwab & IBKR bracket orders',
       badge: 'Step 7',
       icon: <Zap className="w-3.5 h-3.5" />,
@@ -697,11 +697,30 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
               {error}
             </div>
           ) : effectiveTrades.length === 0 ? (
-            <div className="py-12 text-center border border-dashed border-slate-800 rounded-xl p-6 text-slate-500 text-xs space-y-2">
-              <p>No trades recorded yet in your personal workspace.</p>
+            <div className="py-12 text-center border border-dashed border-slate-800 rounded-xl p-6 text-slate-500 text-xs space-y-3">
+              <p className="text-slate-300 font-medium">You haven't recorded any trades in your personal log yet.</p>
               <p className="text-slate-400">
-                Click <strong>Record Trade</strong> to log a Cash-Secured Put or Covered Call.
+                Log a Cash-Secured Put or Covered Call to start tracking your options income history.
               </p>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsAddTradeOpen(true)}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Record First Trade</span>
+                </button>
+                {onNavigateToWorkflow && (
+                  <button
+                    type="button"
+                    onClick={onNavigateToWorkflow}
+                    className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors cursor-pointer"
+                  >
+                    Start Weekend Ritual &rarr;
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-800">
@@ -791,9 +810,23 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
 
           <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
             {effectiveWatchlists.length === 0 ? (
-              <p className="text-xs text-slate-500 py-4 text-center">
-                No tickers in watchlist. Add one above!
-              </p>
+              <div className="py-6 px-3 text-center border border-dashed border-slate-800 rounded-lg space-y-2">
+                <p className="text-xs font-medium text-slate-300">
+                  Your watchlist is empty.
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Add tickers above or explore screener candidates to build your tracking list.
+                </p>
+                {onNavigateToScreener && (
+                  <button
+                    type="button"
+                    onClick={onNavigateToScreener}
+                    className="mt-1 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold rounded-lg border border-slate-700 transition-colors inline-block"
+                  >
+                    Explore Stock Screener &rarr;
+                  </button>
+                )}
+              </div>
             ) : (
               effectiveWatchlists.map((w) => (
                 <div

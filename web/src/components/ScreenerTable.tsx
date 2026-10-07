@@ -12,6 +12,7 @@ interface ScreenerTableProps {
   onOpenCalculator: (opportunity: OptionOpportunity) => void;
   onStageOrder?: (opportunity: OptionOpportunity) => void;
   onOpenSimulator?: (opportunity: OptionOpportunity) => void;
+  onResetFilters?: () => void;
 }
 
 export const ScreenerTable: React.FC<ScreenerTableProps> = ({
@@ -23,6 +24,7 @@ export const ScreenerTable: React.FC<ScreenerTableProps> = ({
   onOpenCalculator,
   onStageOrder,
   onOpenSimulator,
+  onResetFilters,
 }) => {
   const renderSortArrow = (column: keyof OptionOpportunity | 'annualized_roc') => {
     if (sortBy !== column) {
@@ -149,13 +151,22 @@ export const ScreenerTable: React.FC<ScreenerTableProps> = ({
             {opportunities.length === 0 ? (
               <tr>
                 <td colSpan={11} className="py-12 text-center text-slate-400">
-                  <div className="max-w-md mx-auto space-y-2">
-                    <p className="text-sm font-medium text-slate-300">
+                  <div className="max-w-md mx-auto space-y-3 flex flex-col items-center">
+                    <p className="text-sm font-medium text-slate-200">
                       No options contracts match your current filters.
                     </p>
                     <p className="text-xs text-slate-400">
                       Try increasing Max Delta, lowering Min Annualized Yield, or expanding the DTE window.
                     </p>
+                    {onResetFilters && (
+                      <button
+                        type="button"
+                        onClick={onResetFilters}
+                        className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-sm"
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -438,7 +438,7 @@ export const ChapterPlatformNavigationTour: React.FC<ChapterPlatformNavigationTo
               className="p-3 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-colors space-y-1"
             >
               <div className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
-                <span>1. Upload Schwab Positions</span>
+                <span>1. Upload Schwab Positions (CSV)</span>
               </div>
               <p className="text-[11px] text-slate-400">
                 Drag-and-drop your broker CSV export. Automatically sums liquid Cash &amp; Money Market Funds (MMFs) and subtracts open CSP collateral.
@@ -450,7 +450,7 @@ export const ChapterPlatformNavigationTour: React.FC<ChapterPlatformNavigationTo
               className="p-3 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-colors space-y-1"
             >
               <div className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
-                <span>2. Cash &amp; Tax Ledger</span>
+                <span>2. Cash Ledger &amp; Tax Accrual</span>
               </div>
               <p className="text-[11px] text-slate-400">
                 Visualizes your 3-tier liquid cash reserves, encumbers weekly living disbursements ($5,000), tracks YTD options premiums, and updates tax carryforwards.
@@ -462,7 +462,7 @@ export const ChapterPlatformNavigationTour: React.FC<ChapterPlatformNavigationTo
               className="p-3 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-colors space-y-1"
             >
               <div className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
-                <span>3. Holdings &amp; 20Δ Calls</span>
+                <span>3. Holdings &amp; Covered Calls</span>
               </div>
               <p className="text-[11px] text-slate-400">
                 Scans your stock holdings for uncovered 100-share blocks, detects &ge;80% profit close/roll opportunities, and stages safe 20Δ weekly Covered Calls.
@@ -474,7 +474,7 @@ export const ChapterPlatformNavigationTour: React.FC<ChapterPlatformNavigationTo
               className="p-3 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-colors space-y-1"
             >
               <div className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
-                <span>4. Macro &amp; Catalysts</span>
+                <span>4. Macro Economic Calendar</span>
               </div>
               <p className="text-[11px] text-slate-400">
                 Audits upcoming high-impact economic releases (CPI, PPI, FOMC, NFP) and company earnings dates to protect options from surprise volatility gaps.
@@ -486,7 +486,7 @@ export const ChapterPlatformNavigationTour: React.FC<ChapterPlatformNavigationTo
               className="p-3 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-colors space-y-1"
             >
               <div className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
-                <span>5. Screener &amp; Gemini AI</span>
+                <span>5. Top Opportunities Screener</span>
               </div>
               <p className="text-[11px] text-slate-400">
                 Synthesizes top candidates from ThinkorSwim, Barchart, and MarketChameleon. Allocates cash and generates a 1-click prompt for Gemini AI Pro.
@@ -498,7 +498,7 @@ export const ChapterPlatformNavigationTour: React.FC<ChapterPlatformNavigationTo
               className="p-3 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-colors space-y-1"
             >
               <div className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
-                <span>6. Executive Report</span>
+                <span>6. Weekly Executive Report</span>
               </div>
               <p className="text-[11px] text-slate-400">
                 Generates a formal executive digest summarizing portfolio yield, capital utilization, theta generation, and active risk metrics.
@@ -510,7 +510,7 @@ export const ChapterPlatformNavigationTour: React.FC<ChapterPlatformNavigationTo
               className="p-3 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-colors col-span-full sm:col-span-1 space-y-1"
             >
               <div className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
-                <span>7. Order Staging</span>
+                <span>7. Broker Staging &amp; Order Execution</span>
               </div>
               <p className="text-[11px] text-slate-400">
                 Review all staged CSPs and CCs, inspect calculated limit prices, and export the queue to your broker for execution on Monday morning.

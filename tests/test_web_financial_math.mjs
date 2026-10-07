@@ -323,23 +323,49 @@ test('11. Post-Reload Route Resolution & Deep Link Mapping', async () => {
   const { parseRouteFromLocation } = await import('../web/src/hooks/useAppNavigation.ts');
 
   const testCases = [
-    { path: '/equities', expectedTree: 'EQUITIES', expectedEqTab: 'TECHNICAL_SCREENER' },
-    { path: '/equities/screener', expectedTree: 'EQUITIES', expectedEqTab: 'TECHNICAL_SCREENER' },
-    { path: '/equities/screeners', expectedTree: 'EQUITIES', expectedEqTab: 'WEEKLY_STOCK_SCREENERS' },
-    { path: '/equities/watchlist', expectedTree: 'EQUITIES', expectedEqTab: 'WEEKLY_STOCK_SCREENERS' },
-    { path: '/equities/watchlist-builder', expectedTree: 'EQUITIES', expectedEqTab: 'WEEKLY_STOCK_SCREENERS' },
-    { path: '/charts', expectedTree: 'EQUITIES', expectedEqTab: 'INTERACTIVE_CHARTS' },
-    { path: '/solvency', expectedTree: 'EQUITIES', expectedEqTab: 'FUNDAMENTAL_HEALTH' },
-    { path: '/calendar', expectedTree: 'EQUITIES', expectedEqTab: 'ECONOMIC_CALENDAR' },
-    { path: '/options', expectedTree: 'OPTIONS', expectedOptTab: 'INCOME_SCREENER' },
-    { path: '/spreads', expectedTree: 'OPTIONS', expectedOptTab: 'MULTI_LEG_SPREADS' },
-    { path: '/margin', expectedTree: 'OPTIONS', expectedOptTab: 'PORTFOLIO_MARGIN_SIM' },
-    { path: '/tax', expectedTree: 'OPTIONS', expectedOptTab: 'TAX_ALPHA_OPTIMIZER' },
-    { path: '/staging', expectedTree: 'OPTIONS', expectedOptTab: 'BROKER_STAGING' },
-    { path: '/workflow', expectedTree: 'WORKFLOW', expectedOptTab: 'SCHWAB_POSITIONS_UPLOAD' },
-    { path: '/workflow/cash', expectedTree: 'WORKFLOW', expectedOptTab: 'WEEKLY_CASH_LEDGER' },
-    { path: '/workflow/holdings', expectedTree: 'WORKFLOW', expectedOptTab: 'HOLDINGS_COVERED_CALLS' },
-    { path: '/workflow/screener', expectedTree: 'WORKFLOW', expectedOptTab: 'CASCADING_SCREENER' },
+    // Legacy Routes (preserved for backwards-compatibility & redirected to canonical)
+    { path: '/equities', expectedTree: 'EQUITIES', expectedEqTab: 'TECHNICAL_SCREENER', expectedCanonical: '/research/stocks' },
+    { path: '/equities/screener', expectedTree: 'EQUITIES', expectedEqTab: 'TECHNICAL_SCREENER', expectedCanonical: '/research/stocks' },
+    { path: '/equities/screeners', expectedTree: 'EQUITIES', expectedEqTab: 'WEEKLY_STOCK_SCREENERS', expectedCanonical: '/research/weekly-stocks' },
+    { path: '/equities/watchlist', expectedTree: 'EQUITIES', expectedEqTab: 'WEEKLY_STOCK_SCREENERS', expectedCanonical: '/research/weekly-stocks' },
+    { path: '/equities/watchlist-builder', expectedTree: 'EQUITIES', expectedEqTab: 'WEEKLY_STOCK_SCREENERS', expectedCanonical: '/research/weekly-stocks' },
+    { path: '/charts', expectedTree: 'EQUITIES', expectedEqTab: 'INTERACTIVE_CHARTS', expectedCanonical: '/research/charts' },
+    { path: '/solvency', expectedTree: 'EQUITIES', expectedEqTab: 'FUNDAMENTAL_HEALTH', expectedCanonical: '/research/fundamentals' },
+    { path: '/calendar', expectedTree: 'EQUITIES', expectedEqTab: 'ECONOMIC_CALENDAR', expectedCanonical: '/research/calendar' },
+    { path: '/options', expectedTree: 'OPTIONS', expectedOptTab: 'INCOME_SCREENER', expectedCanonical: '/research/income' },
+    { path: '/spreads', expectedTree: 'OPTIONS', expectedOptTab: 'MULTI_LEG_SPREADS', expectedCanonical: '/tools/spreads' },
+    { path: '/margin', expectedTree: 'OPTIONS', expectedOptTab: 'PORTFOLIO_MARGIN_SIM', expectedCanonical: '/tools/margin' },
+    { path: '/tax', expectedTree: 'OPTIONS', expectedOptTab: 'TAX_ALPHA_OPTIMIZER', expectedCanonical: '/tools/tax' },
+    { path: '/staging', expectedTree: 'OPTIONS', expectedOptTab: 'BROKER_STAGING', expectedCanonical: '/money/staging' },
+    { path: '/workflow', expectedTree: 'WORKFLOW', expectedOptTab: 'SCHWAB_POSITIONS_UPLOAD', expectedCanonical: '/ritual' },
+    { path: '/workflow/cash', expectedTree: 'WORKFLOW', expectedOptTab: 'WEEKLY_CASH_LEDGER', expectedCanonical: '/ritual/cash' },
+    { path: '/workflow/holdings', expectedTree: 'WORKFLOW', expectedOptTab: 'HOLDINGS_COVERED_CALLS', expectedCanonical: '/ritual/holdings' },
+    { path: '/workflow/screener', expectedTree: 'WORKFLOW', expectedOptTab: 'CASCADING_SCREENER', expectedCanonical: '/ritual/screener' },
+
+    // Round-8 Canonical Routes
+    { path: '/ritual/upload', expectedTree: 'WORKFLOW', expectedOptTab: 'SCHWAB_POSITIONS_UPLOAD', expectedCanonical: '/ritual/upload' },
+    { path: '/ritual/cash', expectedTree: 'WORKFLOW', expectedOptTab: 'WEEKLY_CASH_LEDGER', expectedCanonical: '/ritual/cash' },
+    { path: '/ritual/holdings', expectedTree: 'WORKFLOW', expectedOptTab: 'HOLDINGS_COVERED_CALLS', expectedCanonical: '/ritual/holdings' },
+    { path: '/ritual/calendar', expectedTree: 'WORKFLOW', expectedOptTab: 'ECONOMIC_CALENDAR', expectedCanonical: '/ritual/calendar' },
+    { path: '/ritual/screener', expectedTree: 'WORKFLOW', expectedOptTab: 'CASCADING_SCREENER', expectedCanonical: '/ritual/screener' },
+    { path: '/ritual/report', expectedTree: 'WORKFLOW', expectedOptTab: 'WEEKLY_EXECUTIVE_REPORT', expectedCanonical: '/ritual/report' },
+    { path: '/ritual/staging', expectedTree: 'WORKFLOW', expectedOptTab: 'BROKER_STAGING', expectedCanonical: '/ritual/staging' },
+
+    { path: '/research/stocks', expectedTree: 'EQUITIES', expectedEqTab: 'TECHNICAL_SCREENER', expectedCanonical: '/research/stocks' },
+    { path: '/research/income', expectedTree: 'OPTIONS', expectedOptTab: 'INCOME_SCREENER', expectedCanonical: '/research/income' },
+    { path: '/research/charts', expectedTree: 'EQUITIES', expectedEqTab: 'INTERACTIVE_CHARTS', expectedCanonical: '/research/charts' },
+    { path: '/research/health', expectedTree: 'EQUITIES', expectedEqTab: 'FUNDAMENTAL_HEALTH', expectedCanonical: '/research/fundamentals' },
+
+    { path: '/money/workspace', expectedTree: 'DASHBOARD', expectedCanonical: '/money/workspace' },
+    { path: '/money/portfolio', expectedTree: 'OPTIONS', expectedOptTab: 'EXECUTIVE_DIGEST', expectedCanonical: '/money/portfolio' },
+
+    { path: '/tools/spreads', expectedTree: 'OPTIONS', expectedOptTab: 'MULTI_LEG_SPREADS', expectedCanonical: '/tools/spreads' },
+    { path: '/tools/margin', expectedTree: 'OPTIONS', expectedOptTab: 'PORTFOLIO_MARGIN_SIM', expectedCanonical: '/tools/margin' },
+    { path: '/tools/tax', expectedTree: 'OPTIONS', expectedOptTab: 'TAX_ALPHA_OPTIMIZER', expectedCanonical: '/tools/tax' },
+
+    { path: '/learn/methodology', expectedTree: 'METHODOLOGY', expectedCanonical: '/learn/methodology' },
+    { path: '/learn/faq', expectedTree: 'FAQ', expectedCanonical: '/learn/faq' },
+    { path: '/learn/disclaimer', expectedTree: 'DISCLAIMER', expectedCanonical: '/learn/disclaimer' },
   ];
 
   for (const tc of testCases) {
@@ -357,7 +383,21 @@ test('11. Post-Reload Route Resolution & Deep Link Mapping', async () => {
     if (tc.expectedOptTab) {
       assert.equal(route.optionsTab, tc.expectedOptTab, `Path ${tc.path} must resolve to optionsTab ${tc.expectedOptTab}`);
     }
+    if (tc.expectedCanonical) {
+      assert.equal(route.canonicalPath, tc.expectedCanonical, `Path ${tc.path} must map to canonicalPath ${tc.expectedCanonical}`);
+    }
+    assert.equal(route.isNotFound, false, `Valid path ${tc.path} must not be marked isNotFound`);
   }
+
+  // Verify unknown route marks isNotFound = true
+  globalThis.window = {
+    location: {
+      pathname: '/some/nonexistent/subpath',
+      hash: '',
+    },
+  };
+  const unknownRoute = parseRouteFromLocation();
+  assert.equal(unknownRoute.isNotFound, true, 'Unknown path must flag isNotFound = true');
 
   delete globalThis.window;
 });

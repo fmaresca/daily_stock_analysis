@@ -14,6 +14,7 @@ import { ScreenerTable } from './ScreenerTable';
 import { ScrollToTopButton } from './ScrollToTopButton';
 import { ErrorBoundary } from './ErrorBoundary';
 import { InstitutionalFooter } from './layout/InstitutionalFooter';
+import { StartHereChecklist } from './orientation/StartHereChecklist';
 
 // Custom Hooks
 import { useAppNavigation } from '../hooks/useAppNavigation';
@@ -102,6 +103,7 @@ export const AuthenticatedTerminal: React.FC = () => {
     setActiveOptionsTab,
     activeChartSymbol,
     setActiveChartSymbol,
+    isNotFound,
     navigateTo,
   } = useAppNavigation();
 
@@ -684,8 +686,18 @@ export const AuthenticatedTerminal: React.FC = () => {
             onPrint={triggerPrintReport}
           />
 
+          {/* New User Onboarding / Orientation Checklist */}
+          {activeTree !== 'ADMIN_USERS' && activeTree !== 'SETTINGS_PASSWORD' && !isNotFound && (
+            <StartHereChecklist
+              onNavigateToRitualStep1={() => navigateTo('WORKFLOW', 'SCHWAB_POSITIONS_UPLOAD')}
+              onNavigateToCalendar={() => navigateTo('EQUITIES', undefined, 'ECONOMIC_CALENDAR')}
+              onOpenWatchlists={() => setIsWatchlistModalOpen(true)}
+              onOpenHandbookTour={() => setIsHelpModalOpen(true)}
+            />
+          )}
+
           {/* Contextual Screener Toolbar: Rendered strictly on Screening Views */}
-          {isScreeningTab && (
+          {isScreeningTab && !isNotFound && (
             <ScreenerFilterToolbar
               filters={filters}
               setFilters={setFilters}
@@ -714,7 +726,31 @@ export const AuthenticatedTerminal: React.FC = () => {
             fallbackMessage="An unexpected issue occurred while rendering this module. You can switch to another tab or reload this view without losing terminal state."
           >
             <Suspense fallback={<LoadingSkeleton rows={8} className="p-4" />}>
-            {activeTree === 'DASHBOARD' ? (
+            {isNotFound ? (
+              <div className="p-8 max-w-lg mx-auto text-center bg-slate-900 border border-amber-500/40 rounded-2xl shadow-2xl space-y-4 my-12">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center mx-auto text-xl font-bold font-mono">
+                  404
+                </div>
+                <h2 className="text-lg font-bold text-white">Page Not Found</h2>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  The URL or page you requested does not exist or has been reorganized in the updated sitemap.
+                </p>
+                <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
+                  <button
+                    onClick={() => navigateTo('WORKFLOW', 'SCHWAB_POSITIONS_UPLOAD')}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-bold shadow cursor-pointer transition-all"
+                  >
+                    Start Weekend Ritual
+                  </button>
+                  <button
+                    onClick={() => navigateTo('DASHBOARD')}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    My Workspace
+                  </button>
+                </div>
+              </div>
+            ) : activeTree === 'DASHBOARD' ? (
               <UserDashboardView
                 onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
                 onNavigateToCharts={() => navigateTo('EQUITIES', undefined, 'INTERACTIVE_CHARTS')}
@@ -910,6 +946,7 @@ export const AuthenticatedTerminal: React.FC = () => {
                   sortOrder={filters.sortOrder}
                   onSort={handleSort}
                   onSelectTicker={(ticker) => setSelectedTicker(ticker)}
+                  onResetFilters={handleResetFilters}
                 />
               </div>
             )
@@ -1131,6 +1168,7 @@ export const AuthenticatedTerminal: React.FC = () => {
                       });
                       setIsSimulatorModalOpen(true);
                     }}
+                    onResetFilters={handleResetFilters}
                   />
                 </div>
               )}

@@ -15,6 +15,7 @@ interface PrimaryScreenerTableProps {
   sortOrder: 'asc' | 'desc';
   onSort: (column: keyof TickerMeta | 'cushion_pct' | 'opinion_pct') => void;
   onSelectTicker: (ticker: TickerMeta) => void;
+  onResetFilters?: () => void;
 }
 
 export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
@@ -25,6 +26,7 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
   sortOrder,
   onSort,
   onSelectTicker,
+  onResetFilters,
 }) => {
   const [opinionFilter, setOpinionFilter] = useState<'ALL' | 'TOP_1_PCT' | 'BUY_ONLY' | 'WEEKLY_ONLY'>('ALL');
 
@@ -293,12 +295,24 @@ export const PrimaryScreenerTable: React.FC<PrimaryScreenerTableProps> = ({
             {sortedTickers.length === 0 ? (
               <tr>
                 <td colSpan={13} className="py-12 text-center text-slate-400">
-                  <p className="text-sm font-medium text-slate-300">
-                    No tickers match the active filter criteria.
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Try resetting filters or clearing the search box.
-                  </p>
+                  <div className="max-w-md mx-auto flex flex-col items-center">
+                    <p className="text-sm font-medium text-slate-200">
+                      No stocks match your current filter settings.
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1 mb-4">
+                      Try relaxing signal filters or clearing your search term to see more opportunities.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpinionFilter('ALL');
+                        if (onResetFilters) onResetFilters();
+                      }}
+                      className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-sm"
+                    >
+                      Reset All Filters
+                    </button>
+                  </div>
                 </td>
               </tr>
             ) : (
