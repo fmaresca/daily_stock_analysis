@@ -154,6 +154,25 @@ export const ChapterWeeklyScreenersGuide: React.FC<ChapterWeeklyScreenersGuidePr
           <div>python scripts/run_screener_agent.py --source barchart_custom --symbols-file symbols.txt</div>
         </div>
       </div>
+
+      {/* CBOE Weekly Options Pre-Processing & Custom CSV Gating Safeguard */}
+      <div className="bg-slate-950/60 p-4 rounded-xl border border-emerald-800/60 space-y-3">
+        <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-1.5 text-emerald-400">
+          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <span>6. CBOE Weekly Options Pre-Processing &amp; Custom CSV Gating Safeguard</span>
+        </h4>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          When uploading custom stock screens or overriding watchlist CSV files (e.g. from Barchart, ThinkorSwim, or MarketChameleon), individual equities might only trade on standard <strong>monthly expiration cycles</strong> (3rd Friday) rather than active weekly cycles (every Friday). DeltaHarvest implements an automated two-tier defense:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+            <span className="font-bold text-emerald-300">Tier 1: Pre-Processing Ingestion Routine:</span> Every uploaded ticker is cross-referenced in real-time against the official <strong>CBOE Available Weeklys Directory</strong> (680+ verified active US equities and ETFs). Non-weekly/monthly-only stocks are automatically tagged and eliminated before entering candidate synthesis, with an audit count displayed to the user.<br />
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+            <span className="font-bold text-emerald-300">Tier 2: Gemini AI Exclusion Mandate:</span> The Institutional Gemini Options Prompt strictly filters out non-weekly stocks from its candidate payload and enforces a mandatory prompt rule: any monthly-only stock must be rejected into <strong>Table 3 (Excluded Candidates)</strong> with reason <em>&quot;Failed Weekly Options Mandate (Monthly Expiration Only)&quot;</em>.
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

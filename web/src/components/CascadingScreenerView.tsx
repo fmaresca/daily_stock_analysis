@@ -53,6 +53,7 @@ import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { parseScreenerCSV } from '../utils/screenerCsvParser';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
 import { hydrateOptionOpportunity } from '../utils/screenerHydrator';
+import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
 import { SortableTh } from './ui/SortableTh';
 import { sortData, SortOrder } from '../utils/tableSort';
 import { BarchartTopTab } from './screener/cascading/BarchartTopTab';
@@ -344,13 +345,15 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       // 1. Check if uploaded file is already a full standardized screener CSV (e.g. exported Barchart View 190898)
       const parsedFullRecords = parseScreenerCSV(content, 'BARCHART');
       if (parsedFullRecords.length > 0 && parsedFullRecords.some((r) => r.opinion_pct !== 0 || r.last_price > 0)) {
+        const verifiedRecords = parsedFullRecords.filter((r) => isCboeWeeklyOptionable(r.symbol));
+        const eliminatedCount = parsedFullRecords.length - verifiedRecords.length;
         const newDataset: WeeklyScreenerDataset = {
           source_id: 'barchart_custom',
           source_name: 'Barchart Watchlist (View 190898)',
           source_url: 'https://www.barchart.com/my/watchlist?viewName=190898',
           timestamp: new Date().toISOString(),
-          total_count: parsedFullRecords.length,
-          records: parsedFullRecords,
+          total_count: verifiedRecords.length,
+          records: verifiedRecords,
         };
         setTosWatchlistDataset(newDataset);
         try {
@@ -358,10 +361,12 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
         } catch {
           // ignore
         }
-        const cleanSymbols = parsedFullRecords.map((r) => r.symbol);
+        const cleanSymbols = verifiedRecords.map((r) => r.symbol);
         setTosTickersInput(cleanSymbols.join(', '));
         showToast(
-          `Audit Safeguard: Detected full Barchart View 190898 CSV. Loaded ${parsedFullRecords.length} analyzed symbols and populated tickers!`
+          eliminatedCount > 0
+            ? `CBOE Pre-Processing: Loaded ${verifiedRecords.length} weekly-optionable equities (eliminated ${eliminatedCount} monthly-only stocks).`
+            : `Audit Safeguard: Detected full Barchart CSV. Loaded ${verifiedRecords.length} verified weekly symbols!`
         );
         return;
       }
@@ -369,9 +374,21 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       // 2. Otherwise extract symbols using column-aware CSV detection and strict audit engine
       const audit = extractSymbolsFromTextOrCsv(content);
       if (audit.validSymbols.length > 0) {
-        setTosTickersInput(audit.validSymbols.join(', '));
-        setTosError('');
-        showToast(audit.auditMessage);
+        const weeklySymbols = audit.validSymbols.filter((s) => isCboeWeeklyOptionable(s));
+        const eliminatedCount = audit.validSymbols.length - weeklySymbols.length;
+        if (weeklySymbols.length > 0) {
+          setTosTickersInput(weeklySymbols.join(', '));
+          setTosError('');
+          showToast(
+            eliminatedCount > 0
+              ? `CBOE Pre-Processing: Retained ${weeklySymbols.length} weekly-optionable symbols (eliminated ${eliminatedCount} monthly-only tickers).`
+              : audit.auditMessage
+          );
+        } else {
+          setTosError(
+            `All ${audit.validSymbols.length} extracted tickers are monthly-only options (none found in CBOE weekly registry).`
+          );
+        }
       } else {
         setTosError(
           `No valid stock symbols found in ${file.name}. ${
@@ -515,13 +532,15 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
           showToast('No valid records found in the uploaded Barchart CSV.');
           return;
         }
+        const verifiedRecords = records.filter((r) => isCboeWeeklyOptionable(r.symbol));
+        const eliminatedCount = records.length - verifiedRecords.length;
         const fresh: WeeklyScreenerDataset = {
           source_id: 'barchart',
           source_name: 'Barchart Direction Strength (Top 1%)',
           source_url: 'https://www.barchart.com/stocks/signals/direction-strength?viewName=190898',
           timestamp: new Date().toISOString(),
-          total_count: records.length,
-          records,
+          total_count: verifiedRecords.length,
+          records: verifiedRecords,
         };
         setBarchartDataset(fresh);
         try {
@@ -529,7 +548,11 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
         } catch {
           // ignore
         }
-        showToast(`✓ Successfully imported ${records.length} Barchart screened equities from ${file.name}!`);
+        showToast(
+          eliminatedCount > 0
+            ? `✓ CBOE Pre-Processing: Imported ${verifiedRecords.length} weekly equities from ${file.name} (auto-eliminated ${eliminatedCount} monthly-only stocks)!`
+            : `✓ Successfully imported ${verifiedRecords.length} Barchart screened equities from ${file.name}!`
+        );
       } catch (err: any) {
         console.error('Error parsing Barchart CSV:', err);
         showToast('Failed to parse Barchart CSV. Please check the file format.');
@@ -624,13 +647,15 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
           showToast('No valid records found in the uploaded MarketChameleon CSV.');
           return;
         }
+        const verifiedRecords = records.filter((r) => isCboeWeeklyOptionable(r.symbol));
+        const eliminatedCount = records.length - verifiedRecords.length;
         const fresh: WeeklyScreenerDataset = {
           source_id: 'marketchameleon',
           source_name: 'MarketChameleon Momentum Screener',
           source_url: 'https://marketchameleon.com/Screeners/Stocks',
           timestamp: new Date().toISOString(),
-          total_count: records.length,
-          records,
+          total_count: verifiedRecords.length,
+          records: verifiedRecords,
         };
         setMcDataset(fresh);
         try {
@@ -638,7 +663,11 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
         } catch {
           // ignore
         }
-        showToast(`✓ Successfully imported ${records.length} MarketChameleon equities from ${file.name}!`);
+        showToast(
+          eliminatedCount > 0
+            ? `✓ CBOE Pre-Processing: Imported ${verifiedRecords.length} weekly equities from ${file.name} (auto-eliminated ${eliminatedCount} monthly-only stocks)!`
+            : `✓ Successfully imported ${verifiedRecords.length} MarketChameleon equities from ${file.name}!`
+        );
       } catch (err: any) {
         console.error('Error parsing MarketChameleon CSV:', err);
         showToast('Failed to parse MarketChameleon CSV. Please check the file format.');
@@ -1001,11 +1030,11 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       const upper = opp.symbol.toUpperCase();
       if (!seenSymbols.has(upper)) {
         seenSymbols.add(upper);
-        const hasWeekly = opp.has_weeklys ?? isWeeklyCadence(upper, tickerMetaMap.get(upper)?.has_weeklys);
+        const hasWeekly = isCboeWeeklyOptionable(upper) && (opp.has_weeklys ?? isWeeklyCadence(upper, tickerMetaMap.get(upper)?.has_weeklys));
         hydratedOpps.push({
           ...opp,
           has_weeklys: hasWeekly,
-          expiration_cadence: opp.expiration_cadence || (hasWeekly ? 'Weekly' : 'Monthly Only'),
+          expiration_cadence: hasWeekly ? 'Weekly' : 'Monthly Only',
         });
       }
     }
@@ -1092,7 +1121,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       for (const opp of synthesizedCandidateOpps) {
         const sym = opp.symbol.toUpperCase();
         if (!seen.has(sym)) {
-          if (strictCboeWeeklysOnly && opp.has_weeklys === false) continue;
+          if (!isCboeWeeklyOptionable(sym) || opp.has_weeklys === false) continue;
           if (opp.strategy && opp.strategy !== strategyMode) continue;
           const collateral = opp.collateral_required || opp.strike * 100;
           if (collateral > 200000) continue;

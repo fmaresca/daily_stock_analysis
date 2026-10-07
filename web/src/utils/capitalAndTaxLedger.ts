@@ -19,6 +19,7 @@ import {
 } from '../types/options';
 import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest';
 import { getOptionExpirationStatus } from './optionExpirationEngine';
+import { CBOE_WEEKLY_OPTIONS_SET, isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
 
 const CAPITAL_STORAGE_KEY = 'deltaharvest_capital_ledger';
 const TAX_STORAGE_KEY = 'deltaharvest_tax_ledger';
@@ -967,22 +968,21 @@ export function auditPositionsWeeklyStatus(
 }
 
 /**
- * Standard CBOE Weekly Options Directory symbols
+ * Standard CBOE Weekly Options Directory symbols (680+ verified active weekly options)
  */
-export const CBOE_WEEKLY_SYMBOLS = new Set([
-  'SPY', 'QQQ', 'IWM', 'TSLA', 'AAPL', 'NVDA', 'MSFT', 'AMZN', 'GOOGL', 'META',
-  'PLTR', 'AMD', 'PANW', 'NET', 'IONQ', 'RTX', 'COIN', 'SOFI', 'MARA', 'DELL',
-  'NOW', 'AVGO', 'SMCI', 'BABA', 'NFLX', 'DIS', 'JPM', 'BAC', 'XLE', 'XLF', 'XLK',
-]);
+export const CBOE_WEEKLY_SYMBOLS = CBOE_WEEKLY_OPTIONS_SET;
 
 /**
  * Evaluates whether an equity symbol has weekly options (Friday expiries).
- * Respects ticker metadata `has_weeklys` flag if provided, otherwise matches against CBOE registry.
+ * Respects ticker metadata `has_weeklys` flag if explicitly provided as false,
+ * otherwise matches against official CBOE available weeklys directory.
  */
 export function isWeeklyCadence(symbol: string, metaHasWeeklys?: boolean): boolean {
+  const inCboe = isCboeWeeklyOptionable(symbol);
   if (metaHasWeeklys !== undefined && metaHasWeeklys !== null) {
-    return Boolean(metaHasWeeklys);
+    return Boolean(metaHasWeeklys) && inCboe;
   }
-  return CBOE_WEEKLY_SYMBOLS.has((symbol || '').trim().toUpperCase());
+  return inCboe;
 }
+
 

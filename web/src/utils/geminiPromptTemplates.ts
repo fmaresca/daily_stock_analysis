@@ -9,6 +9,7 @@
  */
 
 import { AccountCapitalState, OptionOpportunity, TickerMeta } from '../types/options';
+import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
 
 export interface GeminiPromptGenerationParams {
   capitalState: AccountCapitalState;
@@ -47,6 +48,7 @@ export function generateInstitutionalGeminiPrompt({
     if (o.has_weeklys === false) return false;
     const sym = (o.symbol || '').toUpperCase();
     if (!sym || seenSymbols.has(sym)) return false;
+    if (!isCboeWeeklyOptionable(sym)) return false;
     seenSymbols.add(sym);
     return true;
   });
@@ -88,12 +90,13 @@ You are an institutional options portfolio manager. Analyze the pre-screened can
 - Maximum Concurrent Positions: Up to ${maxPositions} positions (Strictly capped at 5 max)
 
 **Execution Protocol (Mandatory):**
-1. Candidate Universe: Evaluate only the candidates provided in the data payload below. All candidates already have Weekly Options = "Yes", 14-Day RSI <= 70, average daily volume >= 500k shares, and no earnings during the target expiration week (${expDate}).
-2. Fallback Ranking: Rank qualifying candidates by:
+1. Candidate Universe: Evaluate only the candidates provided in the data payload below. All candidates already have Weekly Options = "Yes" (verified against the official CBOE Weekly Options Directory), 14-Day RSI <= 70, average daily volume >= 500k shares, and no earnings during the target expiration week (${expDate}).
+2. CRITICAL WEEKLY OPTIONS EXPIRATION MANDATE: Every recommended trade in TABLE 1 MUST have active weekly options expirations (Friday-to-Friday cycles). Any stock that trades only on standard monthly cycles (3rd Friday) or lacks active weekly options chains MUST BE STRICTLY EXCLUDED and placed into TABLE 3 (EXCLUDED CANDIDATES) with reason "Failed Weekly Options Mandate (Monthly Expiration Only)". Never allocate portfolio cash to a monthly-only expiration.
+3. Fallback Ranking: Rank qualifying candidates by:
    (a) Barchart Short-Term Directional Consensus = "100% Buy" (or highest available conviction),
    (b) 9/18-day EMA confirming uptrend ("Strongest" / "Strengthening" / MarketChameleon "Uptrend"),
    (c) IV Rank >= 35% / elevated IV for maximum volatility risk premium capture.
-3. Capital Sizing Algorithm:
+4. Capital Sizing Algorithm:
    - Target Strike: ~0.16 to 0.22 Delta (must sit below confirmed technical support and 2-SD lower Bollinger Band).
    - Capital Pool: Exactly $${deployableCash.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} available cash collateral.
    - Sizing Methodology: Inverse-volatility risk parity (allocate higher dollar percentages to lower-IV, high-conviction underlying assets).

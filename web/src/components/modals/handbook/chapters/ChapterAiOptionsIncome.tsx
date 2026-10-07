@@ -46,7 +46,7 @@ export const ChapterAiOptionsIncome: React.FC<ChapterAiOptionsIncomeProps> = ({
             <span>Cash-Secured Put (CSP) Constraints</span>
           </div>
           <ul className="space-y-1.5 text-xs text-slate-300">
-            <li><strong>DTE:</strong> 5–10 DTE (nearest weekly expiration) for rapid theta decay.</li>
+            <li><strong>DTE &amp; Expiration Cadence:</strong> 5–10 DTE (nearest weekly Friday expiration). Must have active weekly options (verified against CBOE Weeklys Directory); monthly-only options strictly excluded.</li>
             <li><strong>Delta:</strong> -0.15 to -0.30 (80%–85% win probability).</li>
             <li><strong>Downside Cushion:</strong> 3.5% to 6.0% below current spot price.</li>
             <li><strong>Technical Anchor:</strong> Strike &le; major support (20/50 SMA, swing low).</li>

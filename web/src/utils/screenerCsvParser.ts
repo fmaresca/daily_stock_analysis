@@ -1,4 +1,5 @@
 import { WeeklyScreenerRecord, ScreenerSourceType } from '../types/weeklyScreeners';
+import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
 
 /**
  * Parses raw CSV text (from Barchart, MarketChameleon, or standard screener exports)
@@ -95,13 +96,17 @@ export function parseScreenerCSV(
       percentChange = Math.round(percentChange * 10000) / 100;
     }
 
-    // Weekly Options column check
+    // Weekly Options pre-processing routine against official CBOE weekly options directory
+    const inCboeRegistry = isCboeWeeklyOptionable(symbol);
     const weeklyStr = getCol('has_weekly_options', 'hasweeklyoptions', 'weekly options', 'weeklys', 'has options');
-    const hasWeekly =
-      weeklyStr === '' ||
-      weeklyStr.toLowerCase() === 'true' ||
-      weeklyStr.toLowerCase() === 'yes' ||
-      weeklyStr === '1';
+    let hasWeekly = inCboeRegistry;
+    if (weeklyStr !== '') {
+      const explicitWeekly =
+        weeklyStr.toLowerCase() === 'true' ||
+        weeklyStr.toLowerCase() === 'yes' ||
+        weeklyStr === '1';
+      hasWeekly = explicitWeekly && inCboeRegistry;
+    }
 
     // Opinion percentage calculation
     let opinionPct = 100;
@@ -157,6 +162,8 @@ export function parseScreenerCSV(
       opinion_last_month: opinionLm,
       has_options: true,
       has_weekly_options: hasWeekly,
+      in_cboe_registry: inCboeRegistry,
+      expiration_cadence: hasWeekly ? 'Weekly' : 'Monthly Only',
       signal_strength: signalStrength,
       signal_direction: signalDirection,
       source: sourceType === 'BARCHART' ? 'barchart' : sourceType === 'MARKETCHAMELEON' ? 'marketchameleon' : 'custom_upload',

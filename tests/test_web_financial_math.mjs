@@ -13,6 +13,8 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import {
   calculateBlackScholesGreeks,
@@ -34,6 +36,12 @@ import {
   sortData,
   normalizeSortValue,
 } from '../web/src/utils/tableSort.ts';
+
+import {
+  isCboeWeeklyOptionable,
+  CBOE_WEEKLY_OPTIONS_SET,
+  CBOE_WEEKLY_OPTIONS_REGISTRY,
+} from '../web/src/data/cboeWeeklyDirectory.ts';
 
 test('1. Black-Scholes Hull Academic Benchmark & Put-Call Parity', () => {
   // S=100, K=100, DTE=91.25 (T=0.25y), r=0.05, sigma=20%, q=0
@@ -613,6 +621,94 @@ test('15. Two-Step Password Reset Integrity, Token Single-Use & Revocation', asy
   const changePasswordCode = fs.readFileSync(fileURLToPath(new URL('../functions/api/user/change-password.js', import.meta.url)), 'utf-8');
   assert.ok(changePasswordCode.includes('currentPassword = body.currentPassword || body.oldPassword'), 'change-password must accept both currentPassword and oldPassword');
 });
+
+test('16. CBOE Weekly Options Pre-Processing, Custom CSV Sanitization & Gemini Prompt Exclusion Mandate', () => {
+  // A. Verify official CBOE weekly options directory lookup & size
+  assert.ok(CBOE_WEEKLY_OPTIONS_REGISTRY.length >= 680, `CBOE Registry must have at least 680 symbols (found ${CBOE_WEEKLY_OPTIONS_REGISTRY.length})`);
+  assert.strictEqual(isCboeWeeklyOptionable('AAPL'), true, 'AAPL must be weekly optionable');
+  assert.strictEqual(isCboeWeeklyOptionable('aapl'), true, 'Case insensitive lookup must match');
+  assert.strictEqual(isCboeWeeklyOptionable('  NVDA  '), true, 'Whitespace trimmed lookup must match');
+  assert.strictEqual(isCboeWeeklyOptionable('SPY'), true, 'SPY must be weekly optionable');
+  assert.strictEqual(isCboeWeeklyOptionable('QQQ'), true, 'QQQ must be weekly optionable');
+  assert.strictEqual(isCboeWeeklyOptionable('IWM'), true, 'IWM must be weekly optionable');
+  assert.strictEqual(isCboeWeeklyOptionable('XYZNONEXISTENT'), false, 'Non-existent ticker must not be weekly optionable');
+  assert.strictEqual(isCboeWeeklyOptionable('BRK.A'), false, 'BRK.A has no weekly options and must be false');
+  assert.strictEqual(isCboeWeeklyOptionable(''), false, 'Empty string must return false');
+
+  // B. Verify CSV Pre-Processing Logic: Custom CSV without weekly options column
+  // Simulates ingest of custom/override CSV (Barchart/MarketChameleon or custom symbols)
+  const mockRows = [
+    { symbol: 'NVDA', last: 120.50, weeklyCol: '' },
+    { symbol: 'XYZFAKE', last: 45.00, weeklyCol: '' },
+    { symbol: 'AAPL', last: 225.00, weeklyCol: '' },
+    { symbol: 'BRK.A', last: 680000.00, weeklyCol: '' },
+  ];
+
+  const preprocessed = mockRows.map(row => {
+    const inCboe = isCboeWeeklyOptionable(row.symbol);
+    let hasWeekly = inCboe;
+    if (row.weeklyCol !== '') {
+      hasWeekly = (row.weeklyCol.toLowerCase() === 'yes' || row.weeklyCol.toLowerCase() === 'true') && inCboe;
+    }
+    return {
+      ...row,
+      has_weekly_options: hasWeekly,
+      in_cboe_registry: inCboe,
+      expiration_cadence: hasWeekly ? 'Weekly' : 'Monthly Only',
+    };
+  });
+
+  const nvda = preprocessed.find(r => r.symbol === 'NVDA');
+  assert.strictEqual(nvda?.has_weekly_options, true, 'NVDA must be weekly optionable');
+  assert.strictEqual(nvda?.in_cboe_registry, true);
+  assert.strictEqual(nvda?.expiration_cadence, 'Weekly');
+
+  const fakeStock = preprocessed.find(r => r.symbol === 'XYZFAKE');
+  assert.strictEqual(fakeStock?.has_weekly_options, false, 'Custom non-weekly stock must be eliminated from weeklys');
+  assert.strictEqual(fakeStock?.in_cboe_registry, false);
+  assert.strictEqual(fakeStock?.expiration_cadence, 'Monthly Only');
+
+  const brk = preprocessed.find(r => r.symbol === 'BRK.A');
+  assert.strictEqual(brk?.has_weekly_options, false, 'BRK.A must be eliminated from weeklys');
+  assert.strictEqual(brk?.expiration_cadence, 'Monthly Only');
+
+  // C. Verify pre-processing filtering eliminates monthly-only stocks before Gemini
+  const weeklyCandidates = preprocessed.filter(r => isCboeWeeklyOptionable(r.symbol));
+  assert.strictEqual(weeklyCandidates.length, 2, 'Only NVDA and AAPL should pass');
+  assert.deepStrictEqual(weeklyCandidates.map(r => r.symbol), ['NVDA', 'AAPL']);
+
+  // D. Verify screenerCsvParser.ts contract
+  const parserCode = fs.readFileSync(fileURLToPath(new URL('../web/src/utils/screenerCsvParser.ts', import.meta.url)), 'utf-8');
+  assert.ok(parserCode.includes("import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory'"), 'screenerCsvParser must import isCboeWeeklyOptionable');
+  assert.ok(parserCode.includes('const inCboeRegistry = isCboeWeeklyOptionable(symbol)'), 'screenerCsvParser must verify symbol against CBOE registry');
+  assert.ok(parserCode.includes('in_cboe_registry: inCboeRegistry'), 'screenerCsvParser must set in_cboe_registry');
+  assert.ok(parserCode.includes("expiration_cadence: hasWeekly ? 'Weekly' : 'Monthly Only'"), 'screenerCsvParser must set expiration_cadence');
+
+  // E. Verify screenerHydrator.ts contract
+  const hydratorCode = fs.readFileSync(fileURLToPath(new URL('../web/src/utils/screenerHydrator.ts', import.meta.url)), 'utf-8');
+  assert.ok(hydratorCode.includes("import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory'"), 'screenerHydrator must import isCboeWeeklyOptionable');
+  assert.ok(hydratorCode.includes('isCboeWeeklyOptionable(record.symbol)'), 'screenerHydrator must guard has_weeklys with isCboeWeeklyOptionable');
+
+  // F. Verify capitalAndTaxLedger.ts delegation to CBOE registry
+  const ledgerCode = fs.readFileSync(fileURLToPath(new URL('../web/src/utils/capitalAndTaxLedger.ts', import.meta.url)), 'utf-8');
+  assert.ok(ledgerCode.includes("import { CBOE_WEEKLY_OPTIONS_SET, isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory'"), 'capitalAndTaxLedger must import CBOE registry');
+  assert.ok(ledgerCode.includes('export const CBOE_WEEKLY_SYMBOLS = CBOE_WEEKLY_OPTIONS_SET'), 'capitalAndTaxLedger must export CBOE_WEEKLY_OPTIONS_SET');
+
+  // G. Verify CascadingScreenerView.tsx pre-processing & candidatePromptPool gating
+  const screenerCode = fs.readFileSync(fileURLToPath(new URL('../web/src/components/CascadingScreenerView.tsx', import.meta.url)), 'utf-8');
+  assert.ok(screenerCode.includes("import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory'"), 'CascadingScreenerView must import isCboeWeeklyOptionable');
+  assert.ok(screenerCode.includes('isCboeWeeklyOptionable(r.symbol)'), 'CascadingScreenerView must filter uploaded records against CBOE weekly options list');
+  assert.ok(screenerCode.includes('!isCboeWeeklyOptionable(sym) || opp.has_weeklys === false'), 'candidatePromptPool must strictly exclude non-weekly optionable symbols');
+
+  // H. Verify geminiPromptTemplates.ts exclusion mandate
+  const promptCode = fs.readFileSync(fileURLToPath(new URL('../web/src/utils/geminiPromptTemplates.ts', import.meta.url)), 'utf-8');
+  assert.ok(promptCode.includes("import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory'"), 'geminiPromptTemplates must import isCboeWeeklyOptionable');
+  assert.ok(promptCode.includes('if (!isCboeWeeklyOptionable(sym)) return false;'), 'geminiPromptTemplates must filter candidate opportunities with isCboeWeeklyOptionable');
+  assert.ok(promptCode.includes('CRITICAL WEEKLY OPTIONS EXPIRATION MANDATE'), 'Gemini prompt must contain mandatory weekly options instruction');
+  assert.ok(promptCode.includes('Failed Weekly Options Mandate (Monthly Expiration Only)'), 'Gemini prompt must instruct placing non-weekly stocks into Table 3');
+});
+
+
 
 
 

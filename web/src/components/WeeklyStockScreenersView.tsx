@@ -35,6 +35,7 @@ import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescr
 import { fetchTickerChartData, syncLiveEquitiesPrices } from '../utils/liveMarketFetcher';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { isWeeklyCadence } from '../utils/capitalAndTaxLedger';
+import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
 import { getSchwabImportedEquities, getSchwabImportedEquitiesWithPrices } from '../utils/schwabPositionsParser';
 import { SECURITY_INTELLIGENCE_REGISTRY } from '../utils/securityIntelligence';
@@ -369,16 +370,22 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
           // Check if it's already a full screener CSV first
           const parsedRecords = parseScreenerCSV(text, activeSource);
           if (parsedRecords.length > 0 && parsedRecords.some(r => r.opinion_pct > 0 || r.last_price > 0)) {
+            const verifiedRecords = parsedRecords.filter((r) => isCboeWeeklyOptionable(r.symbol));
+            const eliminatedCount = parsedRecords.length - verifiedRecords.length;
             const newDataset: WeeklyScreenerDataset = {
               source_id: 'barchart_custom',
               source_name: 'Barchart Watchlist (View 190898)',
               source_url: 'https://www.barchart.com/my/watchlist?viewName=190898',
               timestamp: new Date().toISOString(),
-              total_count: parsedRecords.length,
-              records: parsedRecords,
+              total_count: verifiedRecords.length,
+              records: verifiedRecords,
             };
             setWatchlistDataset(newDataset);
-            setUploadSuccessMsg(`Successfully imported ${parsedRecords.length} tickers from ${file.name}!`);
+            setUploadSuccessMsg(
+              eliminatedCount > 0
+                ? `CBOE Pre-Processing: Loaded ${verifiedRecords.length} weekly-optionable tickers from ${file.name} (eliminated ${eliminatedCount} monthly-only stocks).`
+                : `Successfully imported ${verifiedRecords.length} tickers from ${file.name}!`
+            );
             setTimeout(() => setUploadSuccessMsg(''), 6000);
             return;
           }
@@ -386,11 +393,25 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
           // Extract symbols using column-aware CSV detection and strict audit engine
           const audit = extractSymbolsFromTextOrCsv(text);
           if (audit.validSymbols.length > 0) {
-            setWatchlistInputText(audit.validSymbols.join(', '));
-            setUploadSuccessMsg(audit.auditMessage);
-            setTimeout(() => setUploadSuccessMsg(''), 6000);
-            handleRunBarchartWatchlist(audit.validSymbols);
-            return;
+            const weeklySymbols = audit.validSymbols.filter((s) => isCboeWeeklyOptionable(s));
+            const eliminatedCount = audit.validSymbols.length - weeklySymbols.length;
+            if (weeklySymbols.length > 0) {
+              setWatchlistInputText(weeklySymbols.join(', '));
+              setUploadSuccessMsg(
+                eliminatedCount > 0
+                  ? `CBOE Pre-Processing: Retained ${weeklySymbols.length} weekly-optionable symbols (eliminated ${eliminatedCount} monthly-only tickers).`
+                  : audit.auditMessage
+              );
+              setTimeout(() => setUploadSuccessMsg(''), 6000);
+              handleRunBarchartWatchlist(weeklySymbols);
+              return;
+            } else {
+              setWatchlistError(
+                `All ${audit.validSymbols.length} extracted tickers are monthly-only options (none found in CBOE weekly registry).`
+              );
+              setIsUploading(false);
+              return;
+            }
           } else {
             setWatchlistError(
               `No valid stock symbols found in ${file.name}. ${
@@ -406,19 +427,25 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
 
         const parsedRecords = parseScreenerCSV(text, activeSource);
         if (parsedRecords.length > 0) {
+          const verifiedRecords = parsedRecords.filter((r) => isCboeWeeklyOptionable(r.symbol));
+          const eliminatedCount = parsedRecords.length - verifiedRecords.length;
           const newDataset: WeeklyScreenerDataset = {
             source_id: activeSource === 'BARCHART' ? 'barchart' : activeSource === 'MARKETCHAMELEON' ? 'marketchameleon' : 'custom_upload',
             source_name: activeSource === 'BARCHART' ? 'Barchart Direction Strength' : activeSource === 'MARKETCHAMELEON' ? 'MarketChameleon Screener' : 'Custom Uploaded Screener',
             source_url: activeSource === 'BARCHART' ? 'https://www.barchart.com/stocks/signals/direction-strength?viewName=190898&timeFrame=daily&orderBy=hasWeeklyOptions&orderDir=desc' : 'https://marketchameleon.com/Screeners/Stocks',
             timestamp: new Date().toISOString(),
-            total_count: parsedRecords.length,
-            records: parsedRecords,
+            total_count: verifiedRecords.length,
+            records: verifiedRecords,
           };
           if (activeSource === 'BARCHART') setBarchartDataset(newDataset);
           else if (activeSource === 'MARKETCHAMELEON') setMcDataset(newDataset);
           else setCustomDataset(newDataset);
 
-          setUploadSuccessMsg(`Successfully imported ${parsedRecords.length} tickers from ${file.name}!`);
+          setUploadSuccessMsg(
+            eliminatedCount > 0
+              ? `CBOE Pre-Processing: Imported ${verifiedRecords.length} weekly-optionable tickers from ${file.name} (auto-eliminated ${eliminatedCount} monthly-only stocks)!`
+              : `Successfully imported ${verifiedRecords.length} tickers from ${file.name}!`
+          );
           setTimeout(() => setUploadSuccessMsg(''), 6000);
         } else {
           alert('Could not parse any ticker rows from the provided CSV file. Please verify the CSV header contains Symbol/Price columns.');

@@ -22,6 +22,7 @@ import { WeeklyScreenerRecord } from '../types/weeklyScreeners';
 import { calculateBlackScholesGreeks, clamp, roundToDecimals } from './financeMath';
 import { calculateRSI } from './technicalIndicators';
 import { isWeeklyCadence } from './capitalAndTaxLedger';
+import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
 
 export interface HydratedVolAndRsi {
   sector: string;
@@ -290,7 +291,7 @@ export function hydrateOptionOpportunity(
     tags: [record.source.toUpperCase(), 'WEEKLY_CSP', `RSI_${volStats.rsi}`, `IV_${Math.round(volStats.iv * 100)}%`],
     rating: record.opinion_pct || 90,
     earnings_within_7d: false,
-    has_weeklys: record.has_weekly_options ?? isWeeklyCadence(record.symbol, tMeta?.has_weeklys),
-    expiration_cadence: (record.has_weekly_options ?? isWeeklyCadence(record.symbol, tMeta?.has_weeklys)) ? 'Weekly' : 'Monthly Only',
+    has_weeklys: isCboeWeeklyOptionable(record.symbol) && (record.has_weekly_options !== false) && isWeeklyCadence(record.symbol, tMeta?.has_weeklys),
+    expiration_cadence: (isCboeWeeklyOptionable(record.symbol) && (record.has_weekly_options !== false) && isWeeklyCadence(record.symbol, tMeta?.has_weeklys)) ? 'Weekly' : 'Monthly Only',
   };
 }
