@@ -20,9 +20,11 @@ import {
   DollarSign,
   Award,
   Upload,
+  RefreshCw,
 } from './icons';
 import { TickerMeta, MenuTreeType, EquitiesTabType, OptionsTabType } from '../types/options';
 import { getSecurityIntelligence } from '../utils/securityIntelligence';
+import { fetchAndBuildTickerMeta } from '../utils/liveMarketFetcher';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -90,7 +92,27 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   if (!isOpen) return null;
 
+  const [isFetchingNewTicker, setIsFetchingNewTicker] = useState(false);
+
   const q = query.toLowerCase().trim();
+  const cleanSym = query.toUpperCase().trim().replace(/[^A-Z0-9.\-_]/g, '');
+  const hasExactTickerMatch = tickers.some((t) => t.symbol.toUpperCase() === cleanSym);
+  const isNewTickerCandidate = cleanSym.length >= 1 && cleanSym.length <= 8 && !hasExactTickerMatch;
+
+  const handleFetchNewTicker = async (targetSym: string) => {
+    const sym = targetSym.toUpperCase().trim().replace(/[^A-Z0-9.\-_]/g, '');
+    if (!sym) return;
+    setIsFetchingNewTicker(true);
+    try {
+      const built = await fetchAndBuildTickerMeta(sym, tickers);
+      onSelectTicker(built);
+      onClose();
+    } catch (err) {
+      console.warn(`Failed to fetch live quote for ${sym}:`, err);
+    } finally {
+      setIsFetchingNewTicker(false);
+    }
+  };
 
   // Search Results
   const matchingTickers = tickers
@@ -455,7 +477,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
   ].filter((a) => !q || a.title.toLowerCase().includes(q) || a.subtitle.toLowerCase().includes(q));
 
-  const totalItems = matchingTickers.length + actions.length;
+  const totalItems = (isNewTickerCandidate ? 1 : 0) + matchingTickers.length + actions.length;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -466,16 +488,25 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       setSelectedIndex((prev) => (prev - 1 + totalItems) % Math.max(1, totalItems));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (selectedIndex < matchingTickers.length) {
-        const item = matchingTickers[selectedIndex];
+      if (isNewTickerCandidate && selectedIndex === 0) {
+        handleFetchNewTicker(cleanSym);
+        return;
+      }
+      const tickerOffset = isNewTickerCandidate ? 1 : 0;
+      if (selectedIndex < tickerOffset + matchingTickers.length) {
+        const item = matchingTickers[selectedIndex - tickerOffset];
         if (item) {
           onSelectTicker(item);
           onClose();
         }
       } else {
-        const actionIdx = selectedIndex - matchingTickers.length;
+        const actionIdx = selectedIndex - tickerOffset - matchingTickers.length;
         const act = actions[actionIdx];
-        if (act) act.action();
+        if (act) {
+          act.action();
+        } else if (isNewTickerCandidate) {
+          handleFetchNewTicker(cleanSym);
+        }
       }
     }
   };
@@ -517,15 +548,58 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         {/* Results List */}
         <div className="overflow-y-auto p-2 space-y-4 flex-1">
           {/* Tickers Section */}
-          {matchingTickers.length > 0 && (
+          {(matchingTickers.length > 0 || isNewTickerCandidate) && (
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5 flex items-center justify-between">
                 <span>Equities &amp; Tickers</span>
-                <span className="font-mono">{matchingTickers.length} results</span>
+                <span className="font-mono">{matchingTickers.length + (isNewTickerCandidate ? 1 : 0)} results</span>
               </div>
               <div className="space-y-1 mt-1">
+                {/* 1. New Ticker Fetch Option */}
+                {isNewTickerCandidate && (
+                  <div
+                    onClick={() => handleFetchNewTicker(cleanSym)}
+                    onMouseEnter={() => setSelectedIndex(0)}
+                    className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
+                      selectedIndex === 0
+                        ? 'bg-emerald-600/25 text-white border border-emerald-400 shadow-md shadow-emerald-950/40'
+                        : 'hover:bg-slate-800/60 text-slate-300 border border-slate-700/60'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-500/50 flex items-center justify-center font-mono font-bold text-emerald-300 text-xs">
+                        <Zap className={`w-4 h-4 text-emerald-400 ${isFetchingNewTicker ? 'animate-spin' : 'animate-pulse'}`} />
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs text-white flex items-center gap-1.5">
+                          <span>Fetch &amp; Analyze "{cleanSym}"</span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-bold">
+                            New Equity
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          Fetch live price, 20-SMA, Bollinger Bands, RSI-14, Greeks &amp; render equity card
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {isFetchingNewTicker ? (
+                        <span className="text-xs text-emerald-300 font-mono flex items-center gap-1">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Fetching...
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded">
+                          ↵ Enter to Open
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Existing Database Tickers */}
                 {matchingTickers.map((t, idx) => {
-                  const isSelected = selectedIndex === idx;
+                  const globalIdx = (isNewTickerCandidate ? 1 : 0) + idx;
+                  const isSelected = selectedIndex === globalIdx;
                   return (
                     <div
                       key={t.symbol}
@@ -533,7 +607,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         onSelectTicker(t);
                         onClose();
                       }}
-                      onMouseEnter={() => setSelectedIndex(idx)}
+                      onMouseEnter={() => setSelectedIndex(globalIdx)}
                       className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
                         isSelected
                           ? 'bg-emerald-600/20 text-white border border-emerald-500/40'
@@ -591,7 +665,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               </div>
               <div className="space-y-1 mt-1">
                 {actions.map((act, idx) => {
-                  const globalIdx = matchingTickers.length + idx;
+                  const globalIdx = (isNewTickerCandidate ? 1 : 0) + matchingTickers.length + idx;
                   const isSelected = selectedIndex === globalIdx;
                   return (
                     <div

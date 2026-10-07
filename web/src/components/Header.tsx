@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   TrendingUp,
   RefreshCw,
@@ -20,9 +20,10 @@ import {
   Users,
   LogOut,
   Key,
+  X,
 } from './icons';
 import { DeltaHarvestLogo } from './ui/DeltaHarvestLogo';
-import { ScreenerSummary, MenuTreeType, OptionsTabType, EquitiesTabType } from '../types/options';
+import { ScreenerSummary, MenuTreeType, OptionsTabType, EquitiesTabType, TickerMeta } from '../types/options';
 import { analyzeSyncRateLimits } from '../utils/marketHoursAndAutoSync';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -62,6 +63,7 @@ interface HeaderProps {
   onToggleMarketHoursOnly?: () => void;
   isMarketOpen?: boolean;
   isThrottled?: boolean;
+  universeTickers?: TickerMeta[];
   onNavigateTo?: (tree: MenuTreeType, optionsTab?: OptionsTabType, equitiesTab?: EquitiesTabType) => void;
 }
 
@@ -96,6 +98,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleMarketHoursOnly,
   isMarketOpen = true,
   isThrottled = false,
+  universeTickers,
   executiveMetrics,
   onNavigateTo,
 }) => {
@@ -188,6 +191,73 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [lastUpdated]);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const cleanQuery = searchQuery.trim().toUpperCase().replace(/[^A-Z0-9.\-_]/g, '');
+
+  const matchingTickers = useMemo(() => {
+    if (!cleanQuery) return [];
+    const pool = universeTickers || [];
+    return pool
+      .filter(
+        (t) =>
+          t.symbol.toUpperCase().includes(cleanQuery) ||
+          t.name.toUpperCase().includes(cleanQuery)
+      )
+      .slice(0, 5);
+  }, [cleanQuery, universeTickers]);
+
+  const hasExactUniverseMatch = useMemo(() => {
+    if (!cleanQuery) return false;
+    return (universeTickers || []).some((t) => t.symbol.toUpperCase() === cleanQuery);
+  }, [cleanQuery, universeTickers]);
+
+  const handleSelectTicker = (sym: string) => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+    if (onOpenEquityAnalysis) {
+      onOpenEquityAnalysis(sym);
+    }
+  };
+
+  const handleSearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cleanQuery) {
+      onOpenCommandPalette();
+      return;
+    }
+    setIsSearching(true);
+    setIsSearchOpen(false);
+    try {
+      if (onOpenEquityAnalysis) {
+        await onOpenEquityAnalysis(cleanQuery);
+      }
+      setSearchQuery('');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsSearchOpen(false);
+    }
+  };
+
   return (
     <header className="border-b border-slate-800/80 light:border-slate-200/90 bg-slate-950/90 light:bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-xl transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3">
@@ -218,20 +288,118 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Global Search Trigger (Ctrl+K) */}
-        <div className="flex-1 max-w-xs mx-2 hidden md:block">
-          <button
-            onClick={onOpenCommandPalette}
-            className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 light:bg-slate-100 light:hover:bg-slate-200/80 border border-slate-800 light:border-slate-300 text-slate-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 transition-all text-xs group shadow-inner"
-          >
-            <div className="flex items-center space-x-2">
-              <Search className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
-              <span>Search tickers, strategies...</span>
-            </div>
-            <kbd className="px-1.5 py-0.5 bg-slate-800 light:bg-white rounded text-[10px] font-mono text-slate-400 light:text-slate-500 border border-slate-700 light:border-slate-300">
+        {/* Upper Right Global Search Input & Autocomplete Dropdown (Ctrl+K) */}
+        <div className="flex-1 max-w-xs mx-2 hidden md:block relative" ref={searchContainerRef}>
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
+            <Search className={`w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${
+              isSearching ? 'text-emerald-400 animate-pulse' : 'text-slate-500'
+            }`} />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchOpen(true);
+              }}
+              onFocus={() => setIsSearchOpen(true)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search or enter symbol (e.g. NVDA)..."
+              className="w-full pl-8 pr-16 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 focus:bg-slate-900 light:bg-slate-100 light:hover:bg-slate-200/80 light:focus:bg-white border border-slate-800 focus:border-emerald-500/60 light:border-slate-300 light:focus:border-emerald-600 text-slate-200 light:text-slate-800 text-xs placeholder-slate-500 focus:outline-none transition-all shadow-inner font-mono font-medium"
+            />
+            {isSearching ? (
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center space-x-1">
+                <span className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : searchQuery ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setIsSearchOpen(false);
+                }}
+                className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-0.5"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            ) : null}
+            <kbd
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenCommandPalette();
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-slate-800 light:bg-white rounded text-[9px] font-mono text-slate-400 light:text-slate-500 border border-slate-700 light:border-slate-300 cursor-pointer hover:border-emerald-500/50"
+              title="Open Global Command Palette (Ctrl+K)"
+            >
               Ctrl+K
             </kbd>
-          </button>
+          </form>
+
+          {/* Autocomplete / Suggestions Dropdown */}
+          {isSearchOpen && cleanQuery.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-900/95 light:bg-white border border-slate-700/80 light:border-slate-300 rounded-xl shadow-2xl overflow-hidden z-50 backdrop-blur-md animate-fade-in divide-y divide-slate-800/60 light:divide-slate-200">
+              {/* Existing Database Tickers Matching Query */}
+              {matchingTickers.length > 0 && (
+                <div className="p-1">
+                  <div className="text-[10px] font-bold text-slate-400 light:text-slate-500 uppercase tracking-wider px-2.5 py-1">
+                    Database Tickers ({matchingTickers.length})
+                  </div>
+                  {matchingTickers.map((t) => (
+                    <div
+                      key={t.symbol}
+                      onClick={() => handleSelectTicker(t.symbol)}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-800 light:hover:bg-slate-100 cursor-pointer transition-colors text-xs group"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono font-bold text-emerald-400 light:text-teal-600 bg-slate-950 light:bg-slate-200 px-1.5 py-0.5 rounded border border-slate-800 light:border-slate-300 text-[11px]">
+                          {t.symbol}
+                        </span>
+                        <span className="text-slate-200 light:text-slate-700 truncate max-w-[140px] text-xs">
+                          {t.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-[11px] font-mono">
+                        <span className="text-slate-300 light:text-slate-600 font-semibold">
+                          ${t.spot_price?.toFixed(2) || '0.00'}
+                        </span>
+                        <span className="text-slate-500 light:text-slate-400 group-hover:text-emerald-400 transition-colors">
+                          ↵ Card
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Dynamic New Ticker Fetch Option (if not exact match or enter pressed) */}
+              {!hasExactUniverseMatch && cleanQuery.length <= 8 && (
+                <div className="p-1.5 bg-emerald-950/20 light:bg-emerald-50/50">
+                  <div
+                    onClick={() => handleSelectTicker(cleanQuery)}
+                    className="flex items-center justify-between p-2 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-300 light:text-teal-800 cursor-pointer transition-all"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0 animate-pulse" />
+                      <div>
+                        <div className="font-bold text-xs flex items-center gap-1.5">
+                          <span>{`Fetch & Render "${cleanQuery}"`}</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            New Symbol
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 light:text-slate-500">
+                          Fetch live quote, 20-SMA, Bollinger, RSI &amp; open Equity Card
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold bg-emerald-500 text-slate-950 px-2 py-0.5 rounded shrink-0">
+                      Enter ↵
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Action Controls & Navigation Shortcuts */}

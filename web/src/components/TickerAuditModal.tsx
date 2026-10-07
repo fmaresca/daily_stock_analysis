@@ -22,7 +22,7 @@ import { exportToExcel } from '../utils/exportImport';
 import { getSecEdgarUrl } from '../utils/secEdgarRegistry';
 import { TickerOptionsTechTab } from './modals/tickerAudit/TickerOptionsTechTab';
 import { TickerNewsAnalystTab } from './modals/tickerAudit/TickerNewsAnalystTab';
-import { fetchTickerChartData } from '../utils/liveMarketFetcher';
+import { fetchTickerChartData, fetchAndBuildTickerMeta } from '../utils/liveMarketFetcher';
 import { calculateRSI, calculateSMA, calculateBollingerBands } from '../utils/technicalIndicators';
 import { classifySectorAndBaseVol } from '../utils/screenerHydrator';
 import { calculateBlackScholesGreeks } from '../utils/financeMath';
@@ -269,88 +269,18 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
     setFetchError(null);
 
     try {
-      // 1. Check if present in universe
-      const matched = availableTickers?.find((t) => t.symbol.toUpperCase() === sym);
-
-      // 2. Query real-time chart data & quotes
-      const chartData = await fetchTickerChartData(sym);
-
-      if (!chartData && !matched) {
-        setFetchError(`Could not find real-time market quote for "${sym}". Please verify ticker symbol.`);
-        setIsFetching(false);
-        return;
-      }
-
-      const spot = chartData?.spotPrice || matched?.spot_price || 100.0;
-      const closes = chartData?.closes || [];
-      const profile = classifySectorAndBaseVol(sym, matched?.name || '');
-
-      let newRsi = matched?.rsi_14 || 50.0;
-      if (closes.length >= 15) {
-        newRsi = calculateRSI(closes, 14);
-      }
-
-      let newSma = matched?.sma_20 || spot;
-      if (closes.length >= 20) {
-        newSma = calculateSMA(closes, 20);
-      }
-
-      let newLowerBb = matched?.lower_bb || spot * 0.93;
-      let newUpperBb = matched?.upper_bb || spot * 1.07;
-      if (closes.length >= 20) {
-        const bb = calculateBollingerBands(closes, 20, 2);
-        newLowerBb = bb.lower;
-        newUpperBb = bb.upper;
-      }
-
-      // Calculate HV30 from closes if available
-      let newHv30 = profile.baseIv * 0.9;
-      if (closes.length >= 20) {
-        const recent = closes.slice(-30);
-        const logReturns: number[] = [];
-        for (let i = 1; i < recent.length; i++) {
-          if (recent[i - 1] > 0 && recent[i] > 0) {
-            logReturns.push(Math.log(recent[i] / recent[i - 1]));
-          }
-        }
-        if (logReturns.length >= 10) {
-          const mean = logReturns.reduce((a, b) => a + b, 0) / logReturns.length;
-          const variance = logReturns.reduce((acc, r) => acc + Math.pow(r - mean, 2), 0) / (logReturns.length - 1);
-          newHv30 = Math.sqrt(variance) * Math.sqrt(252);
-        }
-      }
-
-      const rawIvVal = matched?.iv_current || Math.round(newHv30 * 1.15 * 100);
-      const newIvCurrent = rawIvVal <= 1.5 ? rawIvVal * 100 : rawIvVal;
-      const newIvRank = matched?.iv_rank || profile.baseIvRank;
-      const newAvgVolume = chartData?.avgVolume || matched?.avg_volume_30 || 1500000;
-
-      const updatedTicker: TickerMeta = {
-        symbol: sym,
-        name: matched?.name || `${sym} Equity`,
-        sector: matched?.sector || profile.sector,
-        spot_price: spot,
-        lower_bb: newLowerBb,
-        upper_bb: newUpperBb,
-        bb_width_pct: spot > 0 ? Math.round((((newUpperBb - newLowerBb) / spot) * 100) * 10) / 10 : 14.0,
-        sma_20: newSma,
-        rsi_14: newRsi,
-        rsi_flag: newRsi >= 70 ? 'OVERBOUGHT' : newRsi <= 30 ? 'OVERSOLD' : 'NEUTRAL',
-        iv_current: newIvCurrent,
-        hv_30: Math.round(newHv30 * 1000) / 10,
-        iv_rank: newIvRank,
-        avg_volume_30: newAvgVolume,
-        liquidity_tier: matched?.liquidity_tier || (newAvgVolume > 5000000 ? 'Tier 1 (High)' : 'Tier 2/3 (Moderate)'),
-        earnings_within_7d: matched?.earnings_within_7d || false,
-        next_earnings_date: matched?.next_earnings_date || 'N/A',
-      };
+      const updatedTicker = await fetchAndBuildTickerMeta(sym, availableTickers);
+      const spot = updatedTicker.spot_price || 100.0;
+      const lowerBb = updatedTicker.lower_bb || spot * 0.93;
+      const upperBb = updatedTicker.upper_bb || spot * 1.07;
+      const ivCurrent = updatedTicker.iv_current || 25.0;
 
       // Match or generate synthetic opportunities
       const existingOpps = (opportunities || []).filter((o) => o?.symbol.toUpperCase() === sym);
       const activeOpps =
         existingOpps.length > 0
           ? existingOpps
-          : generateSyntheticOpportunities(sym, spot, newIvCurrent, newLowerBb, newUpperBb);
+          : generateSyntheticOpportunities(sym, spot, ivCurrent, lowerBb, upperBb);
 
       setActiveTicker(updatedTicker);
       setActiveOpportunities((prev) => [...prev.filter((o) => o.symbol.toUpperCase() !== sym), ...activeOpps]);

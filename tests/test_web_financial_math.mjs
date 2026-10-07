@@ -765,6 +765,54 @@ test('17. Round-8 Task-Oriented Navigation Label Consistency & IA Alignment', as
   assert.ok(diagContent.includes('resend_configured'), 'Diagnostics must return resend_configured boolean');
 });
 
+test('18. Dynamic Stock Symbol Ingestion, Full Database Field Hydration & Equity Card Contract', async () => {
+  // A. Verify Header.tsx contains the interactive search input, submit handler, and new symbol fetch prompt
+  const headerPath = fileURLToPath(new URL('../web/src/components/Header.tsx', import.meta.url));
+  const headerContent = fs.readFileSync(headerPath, 'utf-8');
+  assert.ok(headerContent.includes('handleSearchSubmit'), 'Header.tsx must implement handleSearchSubmit');
+  assert.ok(headerContent.includes('Fetch & Render'), 'Header.tsx must prompt Fetch & Render for new symbols');
+  assert.ok(headerContent.includes('universeTickers'), 'Header.tsx must accept universeTickers for database matching');
+
+  // B. Verify CommandPalette.tsx contains the new ticker candidate handling
+  const cmdPalettePath = fileURLToPath(new URL('../web/src/components/CommandPalette.tsx', import.meta.url));
+  const cmdPaletteContent = fs.readFileSync(cmdPalettePath, 'utf-8');
+  assert.ok(cmdPaletteContent.includes('isNewTickerCandidate'), 'CommandPalette.tsx must detect new ticker candidates');
+  assert.ok(cmdPaletteContent.includes('handleFetchNewTicker'), 'CommandPalette.tsx must implement handleFetchNewTicker');
+  assert.ok(cmdPaletteContent.includes('fetchAndBuildTickerMeta'), 'CommandPalette.tsx must import fetchAndBuildTickerMeta');
+
+  // C. Verify AuthenticatedTerminal.tsx wires handleOpenEquityAnalysis to fetchAndBuildTickerMeta
+  const terminalPath = fileURLToPath(new URL('../web/src/components/AuthenticatedTerminal.tsx', import.meta.url));
+  const terminalContent = fs.readFileSync(terminalPath, 'utf-8');
+  assert.ok(terminalContent.includes('fetchAndBuildTickerMeta'), 'AuthenticatedTerminal.tsx must import fetchAndBuildTickerMeta');
+  assert.ok(terminalContent.includes('handleAddCustomTickerMeta(built)'), 'AuthenticatedTerminal.tsx must persist built ticker to universe');
+
+  // D. Verify liveMarketFetcher.ts exports fetchAndBuildTickerMeta with complete database schema
+  const fetcherPath = fileURLToPath(new URL('../web/src/utils/liveMarketFetcher.ts', import.meta.url));
+  const fetcherContent = fs.readFileSync(fetcherPath, 'utf-8');
+  assert.ok(fetcherContent.includes('export async function fetchAndBuildTickerMeta'), 'liveMarketFetcher.ts must export fetchAndBuildTickerMeta');
+  assert.ok(fetcherContent.includes('barchart_opinion'), 'fetchAndBuildTickerMeta must hydrate barchart_opinion');
+  assert.ok(fetcherContent.includes('bb_width_pct'), 'fetchAndBuildTickerMeta must hydrate bb_width_pct');
+  assert.ok(fetcherContent.includes('rsi_14'), 'fetchAndBuildTickerMeta must hydrate rsi_14');
+  assert.ok(fetcherContent.includes('hv_30'), 'fetchAndBuildTickerMeta must hydrate hv_30');
+  assert.ok(fetcherContent.includes('has_weeklys'), 'fetchAndBuildTickerMeta must hydrate has_weeklys');
+
+  // E. Verify options_data.json database structure matches hydrated fields
+  const dbPath = fileURLToPath(new URL('../web/public/data/options_data.json', import.meta.url));
+  const dbJson = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  assert.ok(Array.isArray(dbJson.tickers), 'options_data.json must contain tickers array');
+  const sample = dbJson.tickers[0];
+  const requiredFields = [
+    'symbol', 'name', 'sector', 'liquidity_tier', 'spot_price', 'avg_volume_30',
+    'sma_20', 'upper_bb', 'lower_bb', 'bb_width_pct', 'rsi_14', 'rsi_flag',
+    'hv_30', 'iv_current', 'iv_rank', 'has_weeklys', 'expiration_cadence',
+    'barchart_opinion'
+  ];
+  for (const field of requiredFields) {
+    assert.ok(field in sample, `options_data.json database tickers must contain field: ${field}`);
+  }
+});
+
+
 
 
 

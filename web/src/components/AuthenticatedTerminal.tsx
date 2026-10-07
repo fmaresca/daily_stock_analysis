@@ -87,6 +87,7 @@ import {
   synthesizeAllUniverseOpportunities,
   createFallbackTickerMeta,
 } from '../utils/optionsSynthesis';
+import { fetchAndBuildTickerMeta } from '../utils/liveMarketFetcher';
 
 const DEFAULT_UNIVERSE_SYMBOLS = [
   'AXTI', 'BLZE', 'IONQ', 'LUNR', 'NET', 'RTX', 'TSLA',
@@ -443,57 +444,69 @@ export const AuthenticatedTerminal: React.FC = () => {
     filters,
   });
 
-  const handleAddCustomTickerMeta = (symbol: string) => {
-    const cleanSym = symbol.trim().toUpperCase().replace(/[^A-Z0-9.\-_]/g, '');
+  const handleAddCustomTickerMeta = (tickerInput: string | TickerMeta) => {
+    const cleanSym = (typeof tickerInput === 'string' ? tickerInput : tickerInput.symbol)
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9.\-_]/g, '');
     if (!cleanSym) return;
 
-    if (!universeTickers.some((t) => t.symbol === cleanSym)) {
-      const intel = SECURITY_INTELLIGENCE_REGISTRY[cleanSym];
-      const initialSpot = intel?.keySupportPrice && intel?.keyResistancePrice
-        ? Math.round(((intel.keySupportPrice + intel.keyResistancePrice) / 2) * 100) / 100
-        : intel?.targetPrice ? Math.round(intel.targetPrice * 0.9 * 100) / 100 : 100.0;
-      const initialVol = intel?.liquidityScore && intel.liquidityScore >= 95 ? 25000000 : 1000000;
-      const initialName = intel?.name || `${cleanSym} Equity`;
-      const initialSector = intel?.sector || 'Custom Watchlist';
-      const initialTier = intel?.liquidityScore && intel.liquidityScore >= 95 ? 'Tier 1 (Ultra-Liquid)' : 'Tier 2/3 (Moderate)';
+    const syntheticMeta: TickerMeta =
+      typeof tickerInput === 'object' && tickerInput.spot_price > 0
+        ? tickerInput
+        : (() => {
+            const intel = SECURITY_INTELLIGENCE_REGISTRY[cleanSym];
+            const initialSpot =
+              intel?.keySupportPrice && intel?.keyResistancePrice
+                ? Math.round(((intel.keySupportPrice + intel.keyResistancePrice) / 2) * 100) / 100
+                : intel?.targetPrice
+                ? Math.round(intel.targetPrice * 0.9 * 100) / 100
+                : 100.0;
+            const initialVol = intel?.liquidityScore && intel.liquidityScore >= 95 ? 25000000 : 1000000;
+            const initialName = intel?.name || `${cleanSym} Equity`;
+            const initialSector = intel?.sector || 'Custom Watchlist';
+            const initialTier =
+              intel?.liquidityScore && intel.liquidityScore >= 95
+                ? 'Tier 1 (Ultra-Liquid)'
+                : 'Tier 2/3 (Moderate)';
 
-      const syntheticMeta = createFallbackTickerMeta(cleanSym, {
-        name: initialName,
-        sector: initialSector,
-        liquidity_tier: initialTier,
-        spot_price: initialSpot,
-        avg_volume_30: initialVol,
-        sma_20: initialSpot,
-        upper_bb: Math.round(initialSpot * 1.05 * 100) / 100,
-        lower_bb: Math.round(initialSpot * 0.95 * 100) / 100,
-        bb_width_pct: 10.0,
-        rsi_14: 50.0,
-        rsi_flag: 'NORMAL',
-        hv_30: 25.0,
-        iv_current: 25.0,
-        iv_rank: 30,
-        earnings_within_7d: false,
-        next_earnings_date: 'N/A',
-        has_weeklys: true,
-        expiration_cadence: 'Daily / Multi-Weekly',
-      });
+            return createFallbackTickerMeta(cleanSym, {
+              name: initialName,
+              sector: initialSector,
+              liquidity_tier: initialTier,
+              spot_price: initialSpot,
+              avg_volume_30: initialVol,
+              sma_20: initialSpot,
+              upper_bb: Math.round(initialSpot * 1.05 * 100) / 100,
+              lower_bb: Math.round(initialSpot * 0.95 * 100) / 100,
+              bb_width_pct: 10.0,
+              rsi_14: 50.0,
+              rsi_flag: 'NORMAL',
+              hv_30: 25.0,
+              iv_current: 25.0,
+              iv_rank: 30,
+              earnings_within_7d: false,
+              next_earnings_date: 'N/A',
+              has_weeklys: true,
+              expiration_cadence: 'Daily / Multi-Weekly',
+            });
+          })();
 
-      setCustomTickers((prev) => {
-        if (prev.some((c) => c.symbol === cleanSym)) return prev;
-        return [...prev, syntheticMeta];
-      });
+    setCustomTickers((prev) => {
+      const filtered = prev.filter((c) => c.symbol !== cleanSym);
+      return [...filtered, syntheticMeta];
+    });
 
-      setWatchlistGroups((prev) =>
-        prev.map((g) => {
-          if (g.id === 'core-universe' && !g.tickers.includes(cleanSym)) {
-            return { ...g, tickers: [...g.tickers, cleanSym] };
-          }
-          return g;
-        })
-      );
+    setWatchlistGroups((prev) =>
+      prev.map((g) => {
+        if (g.id === 'core-universe' && !g.tickers.includes(cleanSym)) {
+          return { ...g, tickers: [...g.tickers, cleanSym] };
+        }
+        return g;
+      })
+    );
 
-      handleLiveRecalculate([cleanSym]);
-    }
+    handleLiveRecalculate([cleanSym]);
   };
 
   // Quick Exports
@@ -551,11 +564,22 @@ export const AuthenticatedTerminal: React.FC = () => {
     }
   };
 
-  const handleOpenEquityAnalysis = (symbol?: string) => {
-    const sym = symbol || activeChartSymbol || (filteredTickers[0]?.symbol) || 'TSLA';
-    const target = universeTickers.find((t) => t.symbol === sym) || filteredTickers.find((t) => t.symbol === sym) || createFallbackTickerMeta(sym);
-    if (target) {
-      setSelectedTicker(target);
+  const handleOpenEquityAnalysis = async (symbol?: string) => {
+    const sym = (symbol || activeChartSymbol || (filteredTickers[0]?.symbol) || 'TSLA').toUpperCase().trim();
+    const existing = universeTickers.find((t) => t.symbol === sym) || filteredTickers.find((t) => t.symbol === sym);
+    if (existing && existing.spot_price > 0 && existing.lower_bb > 0) {
+      setSelectedTicker(existing);
+      return;
+    }
+    try {
+      const built = await fetchAndBuildTickerMeta(sym, universeTickers);
+      handleAddCustomTickerMeta(built);
+      setSelectedTicker(built);
+    } catch (e) {
+      console.warn(`Failed to fetch live data for ${sym}, using fallback:`, e);
+      const fallback = createFallbackTickerMeta(sym);
+      handleAddCustomTickerMeta(fallback);
+      setSelectedTicker(fallback);
     }
   };
 
@@ -628,6 +652,7 @@ export const AuthenticatedTerminal: React.FC = () => {
           onOpenSimulator={() => setIsSimulatorModalOpen(true)}
           onOpenValuation={() => openValuation('NVDA')}
           onOpenEquityAnalysis={handleOpenEquityAnalysis}
+          universeTickers={universeTickers}
           onOpenExecutiveDigest={() => {
             setActiveTree('OPTIONS');
             setActiveOptionsTab('EXECUTIVE_DIGEST');
@@ -1184,7 +1209,10 @@ export const AuthenticatedTerminal: React.FC = () => {
           isOpen={modalState.isCommandPaletteOpen}
           onClose={() => setIsCommandPaletteOpen(false)}
           tickers={universeTickers}
-          onSelectTicker={(t) => setSelectedTicker(t)}
+          onSelectTicker={(t) => {
+            handleAddCustomTickerMeta(t);
+            setSelectedTicker(t);
+          }}
           onNavigateTree={(tree, tab) => {
             if (tree === 'WORKFLOW') {
               navigateTo('WORKFLOW', (tab as OptionsTabType) || 'SCHWAB_POSITIONS_UPLOAD');

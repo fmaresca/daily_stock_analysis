@@ -255,10 +255,10 @@ export const ChapterPlatformNavigationTour: React.FC<ChapterPlatformNavigationTo
               </button>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              <strong>What it does:</strong> Instant keyboard-navigable spotlight search. Type any ticker symbol (e.g. <code>TSLA</code>, <code>AAPL</code>), strategy, or tool name to jump straight to it without scrolling menus.
+              <strong>What it does:</strong> Interactive global search box and keyboard-navigable spotlight palette. Type any existing database ticker to instantly view it, or enter <strong>any new stock symbol</strong> (e.g. <code>NVDA</code>, <code>PLTR</code>, <code>AMZN</code>) to automatically fetch live quote data, 20-day SMA, 2-SD Bollinger Bands, Wilder RSI-14, HV-30, CBOE weekly options status, and hydrate all database fields directly into the Equity Card.
             </p>
             <p className="text-[11px] text-slate-400">
-              <em>When to use:</em> Press <kbd className="px-1 py-0.5 bg-slate-800 text-[10px] rounded font-mono">Ctrl+K</kbd> anywhere in the application to navigate at high speed.
+              <em>When to use:</em> Use the upper right search box or press <kbd className="px-1 py-0.5 bg-slate-800 text-[10px] rounded font-mono">Ctrl+K</kbd> anywhere to find database stocks or analyze any new equity on demand.
             </p>
           </div>
 
