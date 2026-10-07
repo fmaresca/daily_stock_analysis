@@ -23,7 +23,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
 
   // Dedicated Password Reset State
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+  const [resetStep, setResetStep] = useState<'REQUEST' | 'CONFIRM'>('REQUEST');
   const [resetEmail, setResetEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -43,12 +45,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const [requestErrorMessage, setRequestErrorMessage] = useState<string | null>(null);
 
   const [requestType, setRequestType] = useState<'NEW_ACCOUNT' | 'PASSWORD_RESET' | 'MAINTENANCE'>('NEW_ACCOUNT');
-  const [emailCopied, setEmailCopied] = useState(false);
   const [deliveryDelivered, setDeliveryDelivered] = useState<boolean>(false);
-  const [mailtoUrl, setMailtoUrl] = useState<string | null>(null);
   const [legalModalTab, setLegalModalTab] = useState<LegalTab | null>(null);
 
-  // Pre-load saved login name if previously selected
+  // Pre-load saved login name if previously selected & check for reset_token query parameter
   useEffect(() => {
     try {
       const savedEmail = localStorage.getItem(STORAGE_REMEMBER_KEY);
@@ -58,6 +58,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       }
     } catch {
       // Ignore localStorage access errors
+    }
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tokenParam = params.get('reset_token') || params.get('token');
+      if (tokenParam && tokenParam.trim()) {
+        setResetToken(tokenParam.trim());
+        setResetStep('CONFIRM');
+        setIsResetPasswordOpen(true);
+        // Clean query parameter from URL history without page reload
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch {
+      // Ignore URL parsing errors
     }
   }, []);
 
@@ -130,43 +144,78 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     setResetErrorMessage(null);
     setResetSuccessMessage(null);
 
-    const cleanEmail = resetEmail.trim().toLowerCase();
-    if (!cleanEmail) {
-      setResetErrorMessage('Please enter your registered email address.');
-      return;
-    }
-    if (resetNewPassword.length < 8) {
-      setResetErrorMessage('New password must be at least 8 characters long.');
-      return;
-    }
-    if (resetNewPassword !== resetConfirmPassword) {
-      setResetErrorMessage('New password and confirmation do not match.');
-      return;
-    }
-
-    setIsResettingPassword(true);
-    try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: cleanEmail,
-          newPassword: resetNewPassword,
-          confirmPassword: resetConfirmPassword,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
-        setResetSuccessMessage(data.message || 'Password successfully updated! You can now sign in.');
-        setEmail(cleanEmail);
-        setPassword(resetNewPassword);
-      } else {
-        setResetErrorMessage(data.error || 'Failed to reset password. Please check your email or contact the administrator.');
+    if (resetStep === 'REQUEST') {
+      const cleanEmail = resetEmail.trim().toLowerCase();
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        setResetErrorMessage('Please enter a valid registered email address.');
+        return;
       }
-    } catch {
-      setResetErrorMessage('Network error resetting password. Please check your connection.');
-    } finally {
-      setIsResettingPassword(false);
+
+      setIsResettingPassword(true);
+      try {
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          setResetSuccessMessage(
+            data.message || 'If an account exists for that email, a reset link has been sent.'
+          );
+        } else {
+          setResetErrorMessage(data.error || 'Failed to submit password reset request. Please try again.');
+        }
+      } catch {
+        setResetErrorMessage('Network error requesting password reset. Please check your connection.');
+      } finally {
+        setIsResettingPassword(false);
+      }
+    } else {
+      // Step B: Confirm with token
+      const cleanToken = resetToken.trim();
+      if (!cleanToken) {
+        setResetErrorMessage('Please enter the reset token received via email.');
+        return;
+      }
+      if (resetNewPassword.length < 8) {
+        setResetErrorMessage('New password must be at least 8 characters long.');
+        return;
+      }
+      if (resetNewPassword !== resetConfirmPassword) {
+        setResetErrorMessage('New password and confirmation do not match.');
+        return;
+      }
+
+      setIsResettingPassword(true);
+      try {
+        const res = await fetch('/api/auth/reset-password/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: cleanToken,
+            newPassword: resetNewPassword,
+            confirmPassword: resetConfirmPassword,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          setResetSuccessMessage(data.message || 'Password updated, please sign in.');
+          if (resetEmail) {
+            setEmail(resetEmail.trim().toLowerCase());
+          }
+          setPassword('');
+          setResetToken('');
+          setResetNewPassword('');
+          setResetConfirmPassword('');
+        } else {
+          setResetErrorMessage(data.error || 'Failed to update password. Invalid or expired token.');
+        }
+      } catch {
+        setResetErrorMessage('Network error updating password. Please check your connection.');
+      } finally {
+        setIsResettingPassword(false);
+      }
     }
   };
 
@@ -185,49 +234,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       requestType,
     };
 
-    const typeLabel = requestType === 'PASSWORD_RESET'
-      ? 'Password Reset Request'
-      : requestType === 'MAINTENANCE'
-      ? 'System Support Inquiry'
-      : 'New Account Onboarding Request';
-
-    const subject = `[DeltaHarvest] ${typeLabel}: ${payload.name} (${payload.email})`;
-    const fallbackMailto = `mailto:fjmaresca@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
-      `Name: ${payload.name}\nEmail: ${payload.email}\nRequest Category: ${requestType}\nMessage:\n${payload.note || 'None'}\n\nSubmitted from DeltaHarvest Institutional Terminal`
-    )}`;
-    setMailtoUrl(fallbackMailto);
-
-    let browserDelivered = false;
-    let backendDelivered = false;
-    let customErrorMsg = '';
-
-    // 1. Direct browser gateway delivery via FormSubmit (guaranteed browser origin/referer/agent)
-    try {
-      const fsRes = await fetch('https://formsubmit.co/ajax/fjmaresca@gmail.com', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          _subject: subject,
-          name: payload.name,
-          email: payload.email,
-          requestType,
-          message: payload.note || 'None provided',
-          _replyto: payload.email,
-          _template: 'table',
-        }),
-      });
-      const fsData = await fsRes.json().catch(() => ({}));
-      if (fsRes.ok && (fsData.success === true || fsData.success === 'true')) {
-        browserDelivered = true;
-      }
-    } catch {
-      // Proceed to server endpoint
-    }
-
-    // 2. Cloudflare Pages Edge Function (/api/admin/inquiries) for audit logging & server notifications
     try {
       const resp = await fetch('/api/admin/inquiries', {
         method: 'POST',
@@ -235,48 +241,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
         body: JSON.stringify(payload),
       });
       const data = await resp.json().catch(() => ({}));
-      if (resp.ok) {
-        if (data.delivered === true) backendDelivered = true;
-        if (data.mailtoUrl) setMailtoUrl(data.mailtoUrl);
+      if (resp.ok && data.success) {
+        setDeliveryDelivered(data.delivered === true);
+        setRequestSuccessMessage(data.message || 'Your inquiry has been transmitted to the platform administrator.');
+        setRequestAccessSent(true);
       } else if (resp.status === 429) {
-        customErrorMsg = data.error || 'Too many submissions. Please wait a minute before trying again.';
+        setRequestErrorMessage(data.error || 'Too many submissions. Please wait a minute before trying again.');
+      } else {
+        setRequestErrorMessage(data.error || 'Unable to submit request at this time. Please contact your administrator.');
       }
     } catch {
-      // Proceed to fallback
-    }
-
-    // 3. Secondary fallback: /api/auth/request-access
-    if (!browserDelivered && !backendDelivered && !customErrorMsg) {
-      try {
-        const resp2 = await fetch('/api/auth/request-access', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data2 = await resp2.json().catch(() => ({}));
-        if (resp2.ok && data2.delivered === true) {
-          backendDelivered = true;
-        }
-      } catch {
-        // Both APIs unreachable or offline
-      }
-    }
-
-    setIsSendingRequest(false);
-    const anySuccess = browserDelivered || backendDelivered;
-    setDeliveryDelivered(anySuccess);
-
-    if (anySuccess || !customErrorMsg) {
-      setRequestSuccessMessage(
-        anySuccess
-          ? 'Your inquiry has been successfully transmitted directly to administrator Frank Maresca (fjmaresca@gmail.com).'
-          : 'Your inquiry has been registered. If urgent, please use the 1-click email button below.'
-      );
-      setRequestAccessSent(true);
-    } else {
-      setRequestErrorMessage(
-        customErrorMsg || 'Unable to submit request at this time. Please check your connection or email fjmaresca@gmail.com directly.'
-      );
+      setRequestErrorMessage('Network error submitting inquiry. Please check your connection and try again.');
+    } finally {
+      setIsSendingRequest(false);
     }
   };
 
@@ -514,34 +491,53 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   <ShieldCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-white">Password Updated Successfully!</p>
+                  <p className="font-bold text-sm text-white">
+                    {resetStep === 'CONFIRM' ? 'Password Updated Successfully!' : 'Reset Request Submitted'}
+                  </p>
                   <p className="text-slate-300 text-xs leading-relaxed mt-1">
                     {resetSuccessMessage}
                   </p>
                 </div>
 
-                <div className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 text-left font-mono text-[11px] text-slate-300 space-y-0.5">
-                  <div><strong>Account:</strong> {resetEmail}</div>
-                  <div><strong>Status:</strong> Active &amp; Verified</div>
-                  <div><strong>Audit:</strong> Notification Dispatched to Administrator</div>
-                </div>
+                {resetStep === 'REQUEST' && (
+                  <div className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 text-left font-mono text-[11px] text-slate-300 space-y-1">
+                    <div>Please check your registered inbox for your reset link and token.</div>
+                  </div>
+                )}
 
                 <div className="pt-2 flex items-center justify-center gap-2">
+                  {resetStep === 'REQUEST' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetSuccessMessage(null);
+                        setResetStep('CONFIRM');
+                      }}
+                      className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-lg shadow-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Key className="w-4 h-4" />
+                      <span>Enter Reset Token Now →</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsResetPasswordOpen(false);
+                        setResetSuccessMessage(null);
+                        setResetStep('REQUEST');
+                      }}
+                      className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span>Sign In Now</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
                       setIsResetPasswordOpen(false);
-                      const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-                      handleSubmit(fakeEvent);
+                      setResetSuccessMessage(null);
                     }}
-                    className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Zap className="w-4 h-4" />
-                    <span>Sign In Now</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsResetPasswordOpen(false)}
                     className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
                   >
                     Close
@@ -550,8 +546,41 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               </div>
             ) : (
               <form onSubmit={handleResetPasswordSubmit} className="space-y-3.5">
+                <div className="flex border-b border-slate-800 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetStep('REQUEST');
+                      setResetErrorMessage(null);
+                    }}
+                    className={`pb-2 px-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${
+                      resetStep === 'REQUEST'
+                        ? 'border-amber-500 text-amber-400'
+                        : 'border-transparent text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    1. Request Reset Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetStep('CONFIRM');
+                      setResetErrorMessage(null);
+                    }}
+                    className={`pb-2 px-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${
+                      resetStep === 'CONFIRM'
+                        ? 'border-amber-500 text-amber-400'
+                        : 'border-transparent text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    2. Enter Token &amp; Update Password
+                  </button>
+                </div>
+
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Enter your registered institutional email address and set your new password. An automated audit notification will be transmitted to administrator Frank Maresca.
+                  {resetStep === 'REQUEST'
+                    ? 'Enter your registered email address. If an account exists, a secure single-use reset link and token will be sent to your email.'
+                    : 'Enter the single-use reset token sent to your email and specify your new password (minimum 8 characters).'}
                 </p>
 
                 {resetErrorMessage && (
@@ -561,81 +590,105 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   </div>
                 )}
 
-                <div>
-                  <label htmlFor="reset-email" className="block text-xs text-slate-300 mb-1 font-semibold">
-                    Registered Email Address *
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Mail className="w-4 h-4" />
+                {resetStep === 'REQUEST' ? (
+                  <div>
+                    <label htmlFor="reset-email" className="block text-xs text-slate-300 mb-1 font-semibold">
+                      Registered Email Address *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <input
+                        id="reset-email"
+                        type="email"
+                        required
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        placeholder="name@domain.com"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
+                      />
                     </div>
-                    <input
-                      id="reset-email"
-                      type="email"
-                      required
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      placeholder="name@domain.com"
-                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
-                    />
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div>
+                      <label htmlFor="reset-token" className="block text-xs text-slate-300 mb-1 font-semibold">
+                        Reset Token (from email) *
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                          <Key className="w-4 h-4" />
+                        </div>
+                        <input
+                          id="reset-token"
+                          type="text"
+                          required
+                          value={resetToken}
+                          onChange={(e) => setResetToken(e.target.value)}
+                          placeholder="Paste 64-character token..."
+                          className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label htmlFor="reset-new-password" className="block text-xs text-slate-300 mb-1 font-semibold">
-                    New Password (min. 8 characters) *
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Lock className="w-4 h-4" />
+                    <div>
+                      <label htmlFor="reset-new-password" className="block text-xs text-slate-300 mb-1 font-semibold">
+                        New Password (min. 8 characters) *
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                          <Lock className="w-4 h-4" />
+                        </div>
+                        <input
+                          id="reset-new-password"
+                          type={showResetPassword ? 'text' : 'password'}
+                          required
+                          minLength={8}
+                          value={resetNewPassword}
+                          onChange={(e) => setResetNewPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowResetPassword(!showResetPassword)}
+                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
+                        >
+                          {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
-                    <input
-                      id="reset-new-password"
-                      type={showResetPassword ? 'text' : 'password'}
-                      required
-                      minLength={8}
-                      value={resetNewPassword}
-                      onChange={(e) => setResetNewPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowResetPassword(!showResetPassword)}
-                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
-                    >
-                      {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
 
-                <div>
-                  <label htmlFor="reset-confirm-password" className="block text-xs text-slate-300 mb-1 font-semibold">
-                    Confirm New Password *
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Lock className="w-4 h-4" />
+                    <div>
+                      <label htmlFor="reset-confirm-password" className="block text-xs text-slate-300 mb-1 font-semibold">
+                        Confirm New Password *
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                          <Lock className="w-4 h-4" />
+                        </div>
+                        <input
+                          id="reset-confirm-password"
+                          type={showResetConfirm ? 'text' : 'password'}
+                          required
+                          minLength={8}
+                          value={resetConfirmPassword}
+                          onChange={(e) => setResetConfirmPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowResetConfirm(!showResetConfirm)}
+                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
+                        >
+                          {showResetConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
-                    <input
-                      id="reset-confirm-password"
-                      type={showResetConfirm ? 'text' : 'password'}
-                      required
-                      minLength={8}
-                      value={resetConfirmPassword}
-                      onChange={(e) => setResetConfirmPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowResetConfirm(!showResetConfirm)}
-                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
-                    >
-                      {showResetConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+                  </>
+                )}
 
                 <div className="pt-2 flex items-center justify-end gap-2">
                   <button
@@ -653,18 +706,41 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                     {isResettingPassword ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Updating Password...</span>
+                        <span>{resetStep === 'REQUEST' ? 'Sending Link...' : 'Updating Password...'}</span>
                       </>
                     ) : (
                       <>
                         <Key className="w-3.5 h-3.5" />
-                        <span>Reset Password</span>
+                        <span>{resetStep === 'REQUEST' ? 'Send Reset Link' : 'Update Password'}</span>
                       </>
                     )}
                   </button>
                 </div>
 
-                <div className="pt-3 border-t border-slate-800 text-center">
+                <div className="pt-3 border-t border-slate-800 text-center flex flex-col gap-1.5">
+                  {resetStep === 'REQUEST' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetStep('CONFIRM');
+                        setResetErrorMessage(null);
+                      }}
+                      className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
+                    >
+                      Already have a reset token? Enter token to set new password →
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetStep('REQUEST');
+                        setResetErrorMessage(null);
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      ← Need to request a reset link?
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -759,27 +835,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   <div><strong>Status:</strong> Forwarded to Administrator</div>
                 </div>
 
-                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
-                  {mailtoUrl && (
-                    <a
-                      href={mailtoUrl}
-                      className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>Open in Email App</span>
-                    </a>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText('fjmaresca@gmail.com');
-                      setEmailCopied(true);
-                      setTimeout(() => setEmailCopied(false), 3000);
-                    }}
-                    className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>{emailCopied ? '✓ Copied (fjmaresca@gmail.com)' : 'Copy Admin Email'}</span>
-                  </button>
+                <div className="pt-2 flex items-center justify-center">
                   <button
                     type="button"
                     onClick={() => {
@@ -789,10 +845,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                       setApplicantEmail('');
                       setApplicantNote('');
                       setRequestSuccessMessage(null);
-                      setEmailCopied(false);
-                      setMailtoUrl(null);
                     }}
-                    className="w-full sm:w-auto px-5 py-2 bg-slate-800/60 hover:bg-slate-800 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
+                    className="w-full sm:w-auto px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors cursor-pointer"
                   >
                     Close
                   </button>

@@ -204,7 +204,14 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
   };
 
   const handleTestEmail = async () => {
-    const targetEmail = adminNotificationEmail.trim() || 'fjmaresca@gmail.com';
+    const targetEmail = adminNotificationEmail.trim();
+    if (!targetEmail) {
+      setTestEmailResult({
+        success: false,
+        message: 'No administrator notification email configured. Please enter and save an email address above first.',
+      });
+      return;
+    }
     setIsTestingEmail(true);
     setTestEmailResult(null);
 
@@ -218,7 +225,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
         },
         body: JSON.stringify({
           _subject: subject,
-          name: 'Platform Administrator (Frank Maresca)',
+          name: 'Platform Administrator',
           email: targetEmail,
           requestType: 'System Test',
           message: `This is a verified live test alert sent from the DeltaHarvest Tenant User Directory to confirm that email notifications arrive in ${targetEmail}.`,

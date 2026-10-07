@@ -1,11 +1,28 @@
+import {
+  getClientIp,
+  checkRateLimit,
+  buildRateLimitResponse,
+} from "../../../_rate_limit.js";
+
 /**
  * Cloudflare Pages Function: GET/POST /api/v1/options/tradier/status
  * Verifies Tradier API connectivity without passing tokens in URL query strings.
- * Supports server-side provisioning via TRADIER_API_KEY / TRADIER_API_TOKEN.
+ * Protected by IP-based rate limiting (30 req / min) to prevent burning paid quota.
+ * Same-origin endpoint: does NOT expose wildcard CORS.
  */
-
 export async function onRequest(context) {
   const { request, env } = context;
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204 });
+  }
+
+  // Rate Limiting (Prompt 5): 30 requests per IP per minute (60s)
+  const clientIp = getClientIp(request);
+  const ipLimit = await checkRateLimit(env, `tradier:status:ip:${clientIp}`, 30, 60);
+  if (!ipLimit.allowed) {
+    return buildRateLimitResponse(ipLimit.retryAfter, "Too many Tradier status requests. Please try again later.");
+  }
 
   // 1. Extract token from Authorization header if client provided one
   const authHeader = request.headers.get("Authorization") || "";
@@ -44,9 +61,6 @@ export async function onRequest(context) {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Authorization, Content-Type",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         },
       }
     );
@@ -101,9 +115,6 @@ export async function onRequest(context) {
             status: 200,
             headers: {
               "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": "*",
-              "Access-Control-Allow-Headers": "Authorization, Content-Type",
-              "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             },
           }
         );
@@ -124,7 +135,6 @@ export async function onRequest(context) {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
         },
       }
     );
@@ -143,7 +153,6 @@ export async function onRequest(context) {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
         },
       }
     );

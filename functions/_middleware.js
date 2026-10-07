@@ -2,7 +2,8 @@ import {
   parseSessionCookie,
   verifySessionToken,
   getUserById,
-  DEFAULT_SECRET,
+  requireSessionSecret,
+  buildClearSessionCookie,
 } from "./api/_auth_utils.js";
 
 /**
@@ -37,7 +38,7 @@ export async function onRequest(context) {
     pathname === "/api/auth/login" ||
     pathname === "/api/auth/logout" ||
     pathname === "/api/auth/request-access" ||
-    pathname === "/api/auth/reset-password" ||
+    pathname.startsWith("/api/auth/reset-password") ||
     pathname === "/api/admin/inquiries" ||
     pathname.startsWith("/api/v1/options/") ||
     pathname === "/api/economic-calendar" ||
@@ -49,28 +50,62 @@ export async function onRequest(context) {
   }
 
   // 3. Inspect session cookie for protected routes
+  let secret;
+  try {
+    secret = requireSessionSecret(env);
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "Server authentication is not configured." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   const token = parseSessionCookie(request);
-  const secret = env.SESSION_SECRET || DEFAULT_SECRET;
   let sessionPayload = null;
 
   if (token) {
     sessionPayload = await verifySessionToken(token, secret);
   }
 
-  const isAuthenticated = !!(sessionPayload && sessionPayload.sub);
-  const userRole = sessionPayload ? sessionPayload.role : null;
+  // Look up user from DB if session payload exists
+  let dbUser = null;
+  let isAuthenticated = false;
+
+  if (sessionPayload && sessionPayload.sub) {
+    try {
+      dbUser = await getUserById(env, sessionPayload.sub);
+    } catch (e) {
+      console.warn("Middleware db user lookup error:", e);
+    }
+
+    if (dbUser && (dbUser.is_active === 1 || dbUser.is_active === true)) {
+      const dbTv = Number(dbUser.token_version || 0);
+      const tokenTv = Number(sessionPayload.tv || 0);
+      if (dbTv === tokenTv) {
+        isAuthenticated = true;
+      }
+    }
+  }
+
+  const userRole = (isAuthenticated && dbUser && dbUser.role) ? String(dbUser.role).toLowerCase() : null;
 
   // 4. Protect Admin APIs: /api/admin/*
   if (pathname.startsWith("/api/admin")) {
     if (!isAuthenticated) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized: Administrator session required." }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Set-Cookie": buildClearSessionCookie() } : {}),
+          },
+        }
       );
     }
     if (userRole !== "admin") {
       return new Response(
-        JSON.stringify({ error: "Forbidden: Restricted to authorized administrator." }),
+        JSON.stringify({ error: "Forbidden" }),
         { status: 403, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -81,8 +116,14 @@ export async function onRequest(context) {
   if (pathname.startsWith("/api/user")) {
     if (!isAuthenticated) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized: Please log in to access tenant data." }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Set-Cookie": buildClearSessionCookie() } : {}),
+          },
+        }
       );
     }
     return context.next();
@@ -99,8 +140,16 @@ export async function onRequest(context) {
     }
   }
 
-  // B. Client Dashboard: /dashboard
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/portfolio")) {
+  // B. Guard SPA routes at the edge: /equities*, /options*, /watchlist-builder*, /dashboard*, /portfolio*, /workflow*
+  const isProtectedSpaRoute =
+    pathname.startsWith("/equities") ||
+    pathname.startsWith("/options") ||
+    pathname.startsWith("/watchlist-builder") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/portfolio") ||
+    pathname.startsWith("/workflow");
+
+  if (isProtectedSpaRoute) {
     if (!isAuthenticated) {
       return Response.redirect(`${url.origin}/login`, 302);
     }

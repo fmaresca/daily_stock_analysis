@@ -15,7 +15,6 @@ export async function onRequest(context) {
     return new Response(null, {
       status: 204,
       headers: {
-        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
@@ -112,7 +111,6 @@ export async function onRequest(context) {
             status: 200,
             headers: {
               'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
               'Cache-Control': 'public, max-age=30, s-maxage=60',
             },
           }
@@ -168,7 +166,6 @@ export async function onRequest(context) {
               status: 200,
               headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
                 'Cache-Control': 'public, max-age=30, s-maxage=60',
               },
             }
@@ -190,7 +187,6 @@ export async function onRequest(context) {
       status: 502,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
       },
     }
   );

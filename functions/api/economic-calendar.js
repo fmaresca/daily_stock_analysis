@@ -872,7 +872,6 @@ export async function onRequestGet(context) {
 
   const commonHeaders = {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
     "Cache-Control": isForce
       ? "no-store, no-cache, must-revalidate"
       : "public, max-age=900, s-maxage=1800, stale-while-revalidate=3600"

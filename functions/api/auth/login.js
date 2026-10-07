@@ -4,8 +4,13 @@ import {
   createSessionToken,
   buildSessionCookie,
   updateLastLogin,
-  DEFAULT_SECRET,
+  requireSessionSecret,
 } from "../_auth_utils.js";
+import {
+  getClientIp,
+  checkRateLimit,
+  buildRateLimitResponse,
+} from "../_rate_limit.js";
 
 /**
  * Cloudflare Pages Function: POST /api/auth/login
@@ -13,6 +18,27 @@ import {
  */
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  // Fail closed if server authentication secret is not configured
+  let secret;
+  try {
+    secret = requireSessionSecret(env);
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "Server authentication is not configured." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Fail closed if D1 database is not configured (unless in local development)
+  if (!env || !env.DB) {
+    if (env?.ENVIRONMENT !== "development") {
+      return new Response(
+        JSON.stringify({ error: "User database is not configured." }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
 
   try {
     const body = await request.json().catch(() => ({}));
@@ -26,29 +52,26 @@ export async function onRequestPost(context) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const configuredAdminEmail = (env.ADMIN_EMAIL || "").trim().toLowerCase();
-    const isConfiguredAdmin = !!configuredAdminEmail && cleanEmail === configuredAdminEmail;
-    let user = await getUserByEmail(env, cleanEmail);
+    const clientIp = getClientIp(request);
 
-    // Initial administrator bootstrap check if DB uninitialized
-    if (!user && isConfiguredAdmin) {
-      user = {
-        id: "admin-root-0000-0000-000000000001",
-        email: cleanEmail,
-        role: "admin",
-        is_active: 1,
-        must_change_password: 0,
-        display_name: "Administrator",
-        password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
-        password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
-      };
+    // Rate Limiting (Prompt 5):
+    // 10 attempts per IP per 10 minutes (600s)
+    const ipLimit = await checkRateLimit(env, `login:ip:${clientIp}`, 10, 600);
+    if (!ipLimit.allowed) {
+      return buildRateLimitResponse(ipLimit.retryAfter, "Too many login attempts from this IP. Please try again later.");
     }
+
+    // 5 attempts per email per 15 minutes (900s)
+    const emailLimit = await checkRateLimit(env, `login:email:${cleanEmail}`, 5, 900);
+    if (!emailLimit.allowed) {
+      return buildRateLimitResponse(emailLimit.retryAfter, "Too many login attempts for this account. Please try again later.");
+    }
+
+    const user = await getUserByEmail(env, cleanEmail);
 
     if (!user) {
       return new Response(
-        JSON.stringify({
-          error: "Invalid email or password. If you are a new user, please contact your administrator to provision your account.",
-        }),
+        JSON.stringify({ error: "Invalid email or password." }),
         { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -69,42 +92,18 @@ export async function onRequestPost(context) {
 
     if (!isValid) {
       return new Response(
-        JSON.stringify({
-          error: "Invalid email or password. Please verify your credentials.",
-        }),
+        JSON.stringify({ error: "Invalid email or password." }),
         { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Auto-sync / persist verified user in D1 if physically bound
-    if (isValid && env && env.DB) {
-      try {
-        await env.DB.prepare(
-          "INSERT INTO users (id, email, password_hash, password_salt, role, is_active, must_change_password, updated_at) " +
-          "VALUES (?, ?, ?, ?, ?, 1, ?, DATETIME('now')) " +
-          "ON CONFLICT(email) DO UPDATE SET " +
-          "password_hash = excluded.password_hash, password_salt = excluded.password_salt, " +
-          "role = excluded.role, is_active = 1, updated_at = DATETIME('now')"
-        ).bind(
-          user.id || `user-${Date.now()}`,
-          cleanEmail,
-          user.password_hash,
-          user.password_salt,
-          user.role || 'client',
-          user.must_change_password ? 1 : 0
-        ).run();
-      } catch (d1Err) {
-        console.warn("Auto-sync user to D1 note:", d1Err);
-      }
-    }
-
-    // Generate encrypted JWT session token
-    const secret = env.SESSION_SECRET || DEFAULT_SECRET;
+    // Generate encrypted JWT session token using required secret
     const token = await createSessionToken(
       {
         sub: user.id,
         email: user.email,
         role: user.role,
+        tv: user.token_version ?? 0,
         name: user.display_name || user.email.split("@")[0],
       },
       secret

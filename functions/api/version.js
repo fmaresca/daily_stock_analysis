@@ -1,24 +1,15 @@
 /**
  * Cloudflare Pages Function: GET /api/version
- * Exposes lightweight build identification and deployment metadata.
+ * Exposes lightweight build identification and metadata (strictly without operational PII).
  */
 export async function onRequestGet(context) {
   const commitSha = context.env.CF_PAGES_COMMIT_SHA || "unknown";
-  const branch = context.env.CF_PAGES_BRANCH || "main";
-  const timestamp = new Date().toISOString();
 
   return new Response(
     JSON.stringify({
       app: "DeltaHarvest Institutional",
       version: "3.4",
       buildId: `dh-${commitSha.substring(0, 7)}-live`,
-      commit: commitSha.substring(0, 7),
-      branch,
-      timestamp,
-      environment: context.env.ENVIRONMENT || "production",
-      hasD1: !!context.env.DB,
-      hasResend: !!context.env.RESEND_API_KEY,
-      adminNotificationEmail: context.env.ADMIN_NOTIFICATION_EMAIL || "fjmaresca@gmail.com",
     }),
     {
       status: 200,
