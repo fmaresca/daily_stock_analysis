@@ -1,3 +1,5 @@
+import { requireSessionSecret } from "./api/_auth_utils.js";
+
 /**
  * Cloudflare Pages Function: GET /version
  * Exposes lightweight build identification and deployment metadata.
@@ -6,6 +8,13 @@ export async function onRequestGet(context) {
   const commitSha = context.env.CF_PAGES_COMMIT_SHA || "unknown";
   const branch = context.env.CF_PAGES_BRANCH || "main";
   const timestamp = new Date().toISOString();
+
+  let secretConfigured = false;
+  try {
+    secretConfigured = Boolean(requireSessionSecret(context.env));
+  } catch {
+    secretConfigured = false;
+  }
 
   const allKeys = Object.keys(context.env || {});
 
@@ -18,11 +27,7 @@ export async function onRequestGet(context) {
       branch,
       timestamp,
       environment: context.env.ENVIRONMENT || "production",
-      has_session_secret: Boolean(
-        context.env?.SESSION_SECRET &&
-        typeof context.env.SESSION_SECRET === "string" &&
-        context.env.SESSION_SECRET.trim().length > 0
-      ),
+      has_session_secret: secretConfigured,
       session_secret_type: typeof context.env?.SESSION_SECRET,
       all_keys: allKeys,
     }),

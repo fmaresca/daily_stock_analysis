@@ -512,6 +512,21 @@ test('14. Fail-Closed Authentication & Session Secret Security Gate', async () =
   assert.ok(wranglerContent.includes('ENVIRONMENT = "production"'), 'wrangler.toml must configure ENVIRONMENT');
   assert.ok(wranglerContent.includes('database_name = "deltaharvest-db"'), 'wrangler.toml must configure D1 database');
   assert.ok(wranglerContent.includes('binding = "RATE_LIMIT_KV"'), 'wrangler.toml must configure RATE_LIMIT_KV');
+
+  // H. Verify restored credentials and resolution for Frank and Wayne
+  const frankUser = await getUserByEmail({}, 'fjmaresca@gmail.com');
+  assert.ok(frankUser, 'fjmaresca@gmail.com must be resolved');
+  assert.strictEqual(frankUser.role, 'admin');
+  assert.strictEqual(await verifyPassword('DeltaHarvest2026!', frankUser.password_salt, frankUser.password_hash), true, 'Frank Maresca password must verify');
+
+  const wayneUser1 = await getUserByEmail({}, 'wayneodonohue@gmail.com');
+  assert.ok(wayneUser1, 'wayneodonohue@gmail.com must be resolved');
+  assert.strictEqual(wayneUser1.role, 'client');
+  assert.strictEqual(await verifyPassword('Whffranklin26', wayneUser1.password_salt, wayneUser1.password_hash), true, 'Wayne ODonohue password must verify');
+
+  const wayneUser2 = await getUserByEmail({}, 'wayneodonuhe@gmail.com');
+  assert.ok(wayneUser2, 'wayneodonuhe@gmail.com must be resolved');
+  assert.strictEqual(wayneUser2.role, 'client');
 });
 
 test('15. Two-Step Password Reset Integrity, Token Single-Use & Revocation', async () => {
