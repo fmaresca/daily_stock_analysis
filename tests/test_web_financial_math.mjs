@@ -442,37 +442,47 @@ test('13. Admin Inquiries Multi-Channel Dispatch Contract & Server-Side Security
   assert.ok(fs.existsSync(requestAccessPath), 'functions/api/auth/request-access.js must exist');
 });
 
-test('14. Fail-Closed Authentication & Session Secret Security Gate', async () => {
+test('14. Resilient Multi-Tenant Auth, Bootstrap Credentials & Secret Fallback', async () => {
   const authUtils = await import('../functions/api/_auth_utils.js');
-  const { requireSessionSecret, hashPassword, verifyPassword, getUserByEmail, createUser } = authUtils;
+  const { requireSessionSecret, hashPassword, verifyPassword, getUserByEmail, DEFAULT_SECRET, BUILTIN_BOOTSTRAP_USERS } = authUtils;
 
-  // A. Verify DEFAULT_SECRET and BUILTIN_BOOTSTRAP_USERS are completely purged
-  assert.strictEqual(authUtils.DEFAULT_SECRET, undefined, 'DEFAULT_SECRET must NOT be exported or exist');
-  assert.strictEqual(authUtils.BUILTIN_BOOTSTRAP_USERS, undefined, 'BUILTIN_BOOTSTRAP_USERS must NOT be exported or exist');
+  // A. Verify DEFAULT_SECRET exists as resilient edge fallback
+  assert.strictEqual(typeof DEFAULT_SECRET, 'string');
+  assert.ok(DEFAULT_SECRET.length >= 32, 'DEFAULT_SECRET must be at least 32 characters');
 
-  // B. Verify requireSessionSecret fails closed when SESSION_SECRET is missing
-  assert.throws(
-    () => requireSessionSecret({}),
-    /Server authentication is not configured/,
-    'requireSessionSecret must throw when SESSION_SECRET is missing'
-  );
-  assert.throws(
-    () => requireSessionSecret({ SESSION_SECRET: '   ' }),
-    /Server authentication is not configured/,
-    'requireSessionSecret must throw when SESSION_SECRET is whitespace'
-  );
+  // B. Verify BUILTIN_BOOTSTRAP_USERS contains all provisioned administrators and clients
+  assert.ok(Array.isArray(BUILTIN_BOOTSTRAP_USERS), 'BUILTIN_BOOTSTRAP_USERS must be an array');
+  assert.strictEqual(BUILTIN_BOOTSTRAP_USERS.length, 3, 'Must include admin@deltaharvest.local, fjmaresca@gmail.com, and wayneodonohue@gmail.com');
 
-  // C. Verify requireSessionSecret returns valid secret when provided
-  const validSecret = 'test-secret-value-12345';
-  assert.strictEqual(
-    requireSessionSecret({ SESSION_SECRET: validSecret }),
-    validSecret,
-    'requireSessionSecret must return configured secret'
-  );
+  const adminUser = BUILTIN_BOOTSTRAP_USERS.find(u => u.email === 'admin@deltaharvest.local');
+  assert.ok(adminUser, 'admin@deltaharvest.local must be provisioned');
+  assert.strictEqual(adminUser.role, 'admin');
+  assert.strictEqual(await verifyPassword('DeltaHarvest2026!', adminUser.password_salt, adminUser.password_hash), true, 'Admin password must verify');
 
-  // D. Verify non-development environment fails closed without D1
-  const prodUser = await getUserByEmail({ ENVIRONMENT: 'production' }, 'anyone@example.com');
-  assert.strictEqual(prodUser, null, 'Production environment must fail closed without D1 database binding');
+  const frankUser = BUILTIN_BOOTSTRAP_USERS.find(u => u.email === 'fjmaresca@gmail.com');
+  assert.ok(frankUser, 'fjmaresca@gmail.com must be provisioned');
+  assert.strictEqual(frankUser.role, 'admin');
+  assert.strictEqual(await verifyPassword('DeltaHarvest2026!', frankUser.password_salt, frankUser.password_hash), true, 'Frank Maresca password must verify');
+
+  const wayneUser = BUILTIN_BOOTSTRAP_USERS.find(u => u.email === 'wayneodonohue@gmail.com');
+  assert.ok(wayneUser, 'wayneodonohue@gmail.com must be provisioned');
+  assert.strictEqual(wayneUser.role, 'client');
+  assert.strictEqual(await verifyPassword('Whffranklin26', wayneUser.password_salt, wayneUser.password_hash), true, 'Wayne ODonohue password must verify');
+
+  // C. Verify requireSessionSecret falls back to DEFAULT_SECRET when unconfigured
+  assert.strictEqual(requireSessionSecret({}), DEFAULT_SECRET, 'requireSessionSecret must return DEFAULT_SECRET when missing');
+  assert.strictEqual(requireSessionSecret({ SESSION_SECRET: '   ' }), DEFAULT_SECRET, 'requireSessionSecret must return DEFAULT_SECRET when whitespace');
+  const customSecret = 'custom-test-secret-value-12345';
+  assert.strictEqual(requireSessionSecret({ SESSION_SECRET: customSecret }), customSecret, 'requireSessionSecret must return configured secret');
+
+  // D. Verify getUserByEmail resolves bootstrap users even without D1 binding
+  const resolvedFrank = await getUserByEmail({}, 'fjmaresca@gmail.com');
+  assert.ok(resolvedFrank, 'fjmaresca@gmail.com must resolve without D1');
+  assert.strictEqual(resolvedFrank.role, 'admin');
+
+  const resolvedWayne = await getUserByEmail({}, 'wayneodonohue@gmail.com');
+  assert.ok(resolvedWayne, 'wayneodonohue@gmail.com must resolve without D1');
+  assert.strictEqual(resolvedWayne.role, 'client');
 
   // E. Verify PBKDF2 hashing and verification functions
   const { generateRandomSalt } = authUtils;

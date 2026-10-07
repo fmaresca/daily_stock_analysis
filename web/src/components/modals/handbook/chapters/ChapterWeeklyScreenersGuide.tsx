@@ -1,6 +1,6 @@
 import React from 'react';
 import { DirectActionBanner } from './DirectActionBanner';
-import { Flame, TrendingUp, Zap, Layers } from '../../../icons';
+import { Flame, TrendingUp, Zap, Layers, ShieldCheck } from '../../../icons';
 import { MenuTreeType, EquitiesTabType, OptionsTabType } from '../../../../types/options';
 
 export interface ChapterWeeklyScreenersGuideProps {

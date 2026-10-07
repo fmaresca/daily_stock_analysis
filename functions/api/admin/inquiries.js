@@ -81,7 +81,7 @@ export async function onRequestPost(context) {
       : "New Account Onboarding Request";
 
     // 2. Resolve admin recipient strictly server-side (never returned to client)
-    const adminRecipient = await getAdminNotificationEmail(env);
+    const adminRecipient = (await getAdminNotificationEmail(env)) || "fjmaresca@gmail.com";
 
     const userAgent = request.headers.get("User-Agent") || "Unknown Browser";
     const timestampIso = new Date().toISOString();

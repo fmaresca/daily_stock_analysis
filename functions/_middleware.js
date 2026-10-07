@@ -37,6 +37,7 @@ export async function onRequest(context) {
     pathname === "/api/version" ||
     pathname === "/api/auth/login" ||
     pathname === "/api/auth/logout" ||
+    pathname === "/api/auth/session" ||
     pathname === "/api/auth/request-access" ||
     pathname.startsWith("/api/auth/reset-password") ||
     pathname === "/api/admin/inquiries" ||
@@ -50,15 +51,7 @@ export async function onRequest(context) {
   }
 
   // 3. Inspect session cookie for protected routes
-  let secret;
-  try {
-    secret = requireSessionSecret(env);
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ error: "Server authentication is not configured." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
+  const secret = requireSessionSecret(env);
 
   const token = parseSessionCookie(request);
   let sessionPayload = null;

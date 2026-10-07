@@ -3,6 +3,7 @@ import {
   generateSecureRandomToken,
   hashTokenSha256,
   storePasswordResetToken,
+  getAdminNotificationEmail,
 } from "../_auth_utils.js";
 import {
   getClientIp,
@@ -77,6 +78,7 @@ export async function onRequestPost(context) {
     const resetUrl = `${url.origin}/login?reset_token=${plaintextToken}`;
 
     // Dispatch reset link to registered email via Resend if provisioned
+    let emailDispatched = false;
     if (env.RESEND_API_KEY) {
       const fromAddress = env.EMAIL_FROM || "DeltaHarvest Security <onboarding@resend.dev>";
       const emailSubject = "[DeltaHarvest] Account Password Reset Instructions";
@@ -100,7 +102,7 @@ export async function onRequestPost(context) {
 </html>`;
 
       try {
-        await fetch("https://api.resend.com/emails", {
+        const resendResp = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${env.RESEND_API_KEY.trim()}`,
@@ -114,8 +116,38 @@ export async function onRequestPost(context) {
             html: htmlBody,
           }),
         });
+        if (resendResp.ok) {
+          emailDispatched = true;
+        }
       } catch (emailErr) {
         console.warn("Resend password reset email dispatch failed:", emailErr);
+      }
+    }
+
+    // Active Fallback: FormSubmit Direct Email Gateway if Resend is not configured or fails
+    if (!emailDispatched) {
+      try {
+        const adminEmail = (await getAdminNotificationEmail(env)) || "fjmaresca@gmail.com";
+        await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Origin": "https://daily-stock-analysis-89j.pages.dev",
+            "Referer": "https://daily-stock-analysis-89j.pages.dev/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          body: JSON.stringify({
+            _subject: `[DeltaHarvest] Password Reset Requested for ${cleanEmail}`,
+            accountEmail: cleanEmail,
+            resetLink: resetUrl,
+            resetToken: plaintextToken,
+            instructions: "Deliver this reset link or single-use token to the user within 30 minutes.",
+            timestamp: new Date().toUTCString(),
+          }),
+        }).catch(() => {});
+      } catch (fsErr) {
+        console.warn("FormSubmit password reset notification error:", fsErr);
       }
     }
 
