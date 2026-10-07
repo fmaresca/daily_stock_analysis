@@ -482,6 +482,34 @@ test('14. Fail-Closed Authentication & Session Secret Security Gate', async () =
   assert.ok(hash && salt, 'hashPassword must generate valid hash');
   assert.strictEqual(await verifyPassword(password, salt, hash), true, 'verifyPassword must verify matching password');
   assert.strictEqual(await verifyPassword('WrongPassword', salt, hash), false, 'verifyPassword must reject invalid password');
+
+  // F. Verify middleware does not block public root page loads while keeping APIs fail closed
+  const middlewareModule = await import('../functions/_middleware.js');
+  const rootRes = await middlewareModule.onRequest({
+    request: new Request('http://localhost/'),
+    env: {},
+    next: () => 'OK_ROOT',
+  });
+  assert.strictEqual(rootRes, 'OK_ROOT', 'Root page / must open and serve SPA without 500 error when secret missing');
+
+  const loginPageRes = await middlewareModule.onRequest({
+    request: new Request('http://localhost/login'),
+    env: {},
+    next: () => 'OK_LOGIN',
+  });
+  assert.strictEqual(loginPageRes, 'OK_LOGIN', 'Login page /login must open without 500 error when secret missing');
+
+  const adminApiRes = await middlewareModule.onRequest({
+    request: new Request('http://localhost/api/admin/users'),
+    env: {},
+    next: () => 'FAIL',
+  });
+  assert.strictEqual(adminApiRes.status, 500, 'Admin API must fail closed with 500 when secret missing');
+
+  // G. Verify wrangler.toml includes SESSION_SECRET
+  const wranglerPath = fileURLToPath(new URL('../wrangler.toml', import.meta.url));
+  const wranglerContent = fs.readFileSync(wranglerPath, 'utf-8');
+  assert.ok(wranglerContent.includes('SESSION_SECRET ='), 'wrangler.toml must configure SESSION_SECRET');
 });
 
 test('15. Two-Step Password Reset Integrity, Token Single-Use & Revocation', async () => {

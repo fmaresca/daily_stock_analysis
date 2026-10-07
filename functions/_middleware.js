@@ -51,20 +51,17 @@ export async function onRequest(context) {
   }
 
   // 3. Inspect session cookie for protected routes
-  let secret;
+  let secret = null;
   try {
     secret = requireSessionSecret(env);
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: "Server authentication is not configured." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    secret = null;
   }
 
   const token = parseSessionCookie(request);
   let sessionPayload = null;
 
-  if (token) {
+  if (token && secret) {
     sessionPayload = await verifySessionToken(token, secret);
   }
 
@@ -92,6 +89,12 @@ export async function onRequest(context) {
 
   // 4. Protect Admin APIs: /api/admin/*
   if (pathname.startsWith("/api/admin")) {
+    if (!secret) {
+      return new Response(
+        JSON.stringify({ error: "Server authentication is not configured." }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
     if (!isAuthenticated) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
@@ -115,6 +118,12 @@ export async function onRequest(context) {
 
   // 5. Protect User APIs: /api/user/*
   if (pathname.startsWith("/api/user")) {
+    if (!secret) {
+      return new Response(
+        JSON.stringify({ error: "Server authentication is not configured." }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
     if (!isAuthenticated) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
