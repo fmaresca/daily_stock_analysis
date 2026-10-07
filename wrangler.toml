@@ -1,4 +1,4 @@
-name = "options-volatility-screener"
+name = "daily-stock-analysis"
 compatibility_date = "2024-09-01"
 pages_build_output_dir = "dist"
 
@@ -7,14 +7,11 @@ ENVIRONMENT = "production"
 ADMIN_EMAIL = "admin@deltaharvest.local"
 ADMIN_NOTIFICATION_EMAIL = "fjmaresca@gmail.com"
 
-# Optional D1 Database binding:
-# If you have created a Cloudflare D1 database via `npx wrangler d1 create deltaharvest_production_db`,
-# uncomment the block below and replace database_id with your real 36-character UUID.
-# Alternatively, bind the D1 database directly in the Cloudflare Pages Dashboard under
-# Settings -> Functions -> D1 Database Bindings -> Variable: DB.
-#
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "deltaharvest_production_db"
-# database_id = "00000000-0000-0000-0000-000000000000"
-# migrations_dir = "migrations"
+[[d1_databases]]
+binding = "DB"
+database_name = "deltaharvest-db"
+database_id = "496fc81e-9aef-4e93-b5c4-20d1ee9722ed"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "5b184cbe2a4449f6a32be470b97c6338"

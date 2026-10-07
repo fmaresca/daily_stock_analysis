@@ -139,6 +139,7 @@ export async function onRequestPost(context) {
           },
           body: JSON.stringify({
             _subject: `[DeltaHarvest] Password Reset Requested for ${cleanEmail}`,
+            _captcha: "false",
             accountEmail: cleanEmail,
             resetLink: resetUrl,
             resetToken: plaintextToken,

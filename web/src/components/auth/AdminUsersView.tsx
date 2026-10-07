@@ -229,7 +229,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
           email: targetEmail,
           requestType: 'System Test',
           message: `This is a verified live test alert sent from the DeltaHarvest Tenant User Directory to confirm that email notifications arrive in ${targetEmail}.`,
-          timestamp: new Date().toUTCString(),
+          _captcha: 'false',
           _template: 'table',
         }),
       });

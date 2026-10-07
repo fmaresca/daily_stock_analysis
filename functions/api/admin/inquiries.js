@@ -215,6 +215,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
           },
           body: JSON.stringify({
             _subject: subject,
+            _captcha: "false",
             name: cleanName,
             email: cleanEmail,
             requestType: typeLabel,
@@ -251,6 +252,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
         try {
           const formParams = new URLSearchParams();
           formParams.append("_subject", subject);
+          formParams.append("_captcha", "false");
           formParams.append("name", cleanName);
           formParams.append("email", cleanEmail);
           formParams.append("requestType", typeLabel);
@@ -429,9 +431,59 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
  * Returns recent access inquiries and requests (restricted to authenticated administrators).
  */
 export async function onRequestGet(context) {
-  const { env } = context;
+  const { request, env } = context;
   const auth = await authenticateRequest(context, ["admin"]);
   if (!auth.authenticated) return auth.response;
+
+  const url = new URL(request.url);
+  if (url.searchParams.get("action") === "test_resend" || url.searchParams.get("test_resend") === "1") {
+    if (!env.RESEND_API_KEY || !env.RESEND_API_KEY.trim()) {
+      return new Response(
+        JSON.stringify({
+          configured: false,
+          error: "RESEND_API_KEY is not provisioned or is empty in Cloudflare environment.",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const adminRecipient = (await getAdminNotificationEmail(env)) || "fjmaresca@gmail.com";
+    const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
+    try {
+      const resendResp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY.trim()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: [adminRecipient],
+          subject: "[DeltaHarvest] Resend Configuration Verification Test",
+          text: `This is an automated verification test email dispatched via Resend REST API to ${adminRecipient}.`,
+        }),
+      });
+      const resData = await resendResp.json().catch(() => ({}));
+      return new Response(
+        JSON.stringify({
+          configured: true,
+          status: resendResp.status,
+          ok: resendResp.ok,
+          from: fromAddress,
+          to: adminRecipient,
+          resendResponse: resData,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (testErr) {
+      return new Response(
+        JSON.stringify({
+          configured: true,
+          error: String(testErr),
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
 
   try {
     if (env && env.DB) {
