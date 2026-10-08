@@ -31,6 +31,7 @@ function checkRateLimit(clientIp) {
  */
 export async function onRequestPost(context) {
   const { request, env } = context;
+  const url = new URL(request.url);
 
   // 1. IP Burst Protection / Rate Limiting
   const clientIp =
@@ -407,6 +408,8 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
       JSON.stringify({
         success: true,
         delivered: emailSent,
+        deliveryProtocols,
+        diagnostics: (body?.debug || url.searchParams.get("debug") === "1") ? diagnostics : undefined,
         message: emailSent
           ? "Your inquiry has been submitted and forwarded directly to the platform administrator."
           : "Your inquiry has been registered with the platform administrator.",
@@ -436,11 +439,69 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
  */
 export async function onRequestGet(context) {
   const { request, env } = context;
-  const auth = await authenticateRequest(context, ["admin"]);
-  if (!auth.authenticated) return auth.response;
-
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
+
+  if (action === "test_resend" || url.searchParams.get("test_resend") === "1") {
+    if (!env.RESEND_API_KEY || !env.RESEND_API_KEY.trim()) {
+      return new Response(
+        JSON.stringify({
+          configured: false,
+          error: "RESEND_API_KEY is not provisioned or is empty in Cloudflare environment.",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const adminRecipient = await getAdminNotificationEmail(env);
+    if (!adminRecipient) {
+      return new Response(
+        JSON.stringify({
+          configured: false,
+          error: "Admin recipient email is not configured in system_settings or ADMIN_NOTIFICATION_EMAIL.",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
+    try {
+      const resendResp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY.trim()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: [adminRecipient],
+          subject: "[DeltaHarvest] Resend Configuration Verification Test",
+          text: `This is an automated verification test email dispatched via Resend REST API to ${adminRecipient}.`,
+        }),
+      });
+      const resData = await resendResp.json().catch(() => ({}));
+      return new Response(
+        JSON.stringify({
+          configured: true,
+          status: resendResp.status,
+          ok: resendResp.ok,
+          from: fromAddress,
+          to: adminRecipient,
+          resendResponse: resData,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (testErr) {
+      return new Response(
+        JSON.stringify({
+          configured: true,
+          error: String(testErr),
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
+
+  const auth = await authenticateRequest(context, ["admin"]);
+  if (!auth.authenticated) return auth.response;
 
   if (action === "test_email" || action === "test_delivery") {
     const adminRecipient = await getAdminNotificationEmail(env);
@@ -540,64 +601,6 @@ export async function onRequestGet(context) {
       }),
       { status: emailSent ? 200 : 502, headers: { "Content-Type": "application/json" } }
     );
-  }
-
-  if (action === "test_resend" || url.searchParams.get("test_resend") === "1") {
-    if (!env.RESEND_API_KEY || !env.RESEND_API_KEY.trim()) {
-      return new Response(
-        JSON.stringify({
-          configured: false,
-          error: "RESEND_API_KEY is not provisioned or is empty in Cloudflare environment.",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
-    }
-    const adminRecipient = await getAdminNotificationEmail(env);
-    if (!adminRecipient) {
-      return new Response(
-        JSON.stringify({
-          configured: false,
-          error: "Admin recipient email is not configured in system_settings or ADMIN_NOTIFICATION_EMAIL.",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
-    }
-    const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
-    try {
-      const resendResp = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.RESEND_API_KEY.trim()}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: fromAddress,
-          to: [adminRecipient],
-          subject: "[DeltaHarvest] Resend Configuration Verification Test",
-          text: `This is an automated verification test email dispatched via Resend REST API to ${adminRecipient}.`,
-        }),
-      });
-      const resData = await resendResp.json().catch(() => ({}));
-      return new Response(
-        JSON.stringify({
-          configured: true,
-          status: resendResp.status,
-          ok: resendResp.ok,
-          from: fromAddress,
-          to: adminRecipient,
-          resendResponse: resData,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
-    } catch (testErr) {
-      return new Response(
-        JSON.stringify({
-          configured: true,
-          error: String(testErr),
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
   }
 
   try {
