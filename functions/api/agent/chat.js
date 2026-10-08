@@ -1,18 +1,22 @@
 /**
  * Cloudflare Pages Function: /api/agent/chat
  * Conversational Strategy Q&A Agent ("Ask about any stock")
- * 
+ *
  * Supports:
  * - POST: SSE Streaming chat execution with server-side tool calling loop
  * - GET: List user chat sessions or retrieve messages for a specific session
  * - DELETE: Delete a conversation session (strictly tenant-scoped)
- * 
+ *
  * Strict Security:
  * - Session authentication required (401 if unauthenticated)
  * - Rate-limited per user
  * - Tenant isolation: WHERE user_id = <session.id>
  * - Secrets strictly server-side
  * - Tool-only numerical facts (zero hallucinations)
+ *
+ * FIX (2026-10-08): SSE format corrected — all events use raw `data: {...}\n\n`
+ * lines (no `event:` prefix) to match the frontend's EventSource/fetch-stream
+ * parser. Also fixed Gemini tool-call conversation history format.
  */
 
 import { authenticateRequest } from "../_auth_utils.js";
@@ -153,6 +157,19 @@ async function handleDelete(context, user) {
 
 /**
  * POST /api/agent/chat: Run tool-calling loop & stream SSE response
+ *
+ * SSE FORMAT (corrected):
+ *   All messages use raw `data: <json>\n\n` — no `event:` prefix lines.
+ *   The frontend parser only reads `data:` lines; named events were silently dropped.
+ *
+ * Client-side distinguishes message types via the `type` field inside the JSON payload:
+ *   { type: "meta",        sessionId, lens, ticker }
+ *   { type: "tool",        tool: <name>, args: <obj> }
+ *   { type: "tool_result", tool: <name>, result: <obj> }
+ *   { type: "delta",       chunk: <string> }
+ *   { type: "done",        sessionId, finished: true }
+ *   { type: "error",       error: <string> }
+ *   Literal string "data: [DONE]\n\n" signals stream end.
  */
 async function handlePost(context, user) {
   const { request, env } = context;
@@ -202,16 +219,20 @@ async function handlePost(context, user) {
   const writer = writable.getWriter();
   const encoder = new TextEncoder();
 
-  // Helper to push SSE data event
-  async function sendSseEvent(event, data) {
-    const payload = typeof data === "string" ? data : JSON.stringify(data);
-    await writer.write(encoder.encode(`event: ${event}\ndata: ${payload}\n\n`));
+  /**
+   * Send a raw `data: <json>\n\n` SSE line.
+   * No `event:` prefix — matches frontend parser which only checks `data:` lines.
+   */
+  async function sendData(payload) {
+    const json = typeof payload === "string" ? payload : JSON.stringify(payload);
+    await writer.write(encoder.encode(`data: ${json}\n\n`));
   }
 
-  // Execute agent tool-calling loop asynchronously
+  // Execute agent tool-calling loop asynchronously (non-blocking return)
   (async () => {
     try {
-      await sendSseEvent("meta", {
+      await sendData({
+        type: "meta",
         sessionId,
         lens: activeLens,
         ticker: cleanTicker || session.ticker,
@@ -219,9 +240,10 @@ async function handlePost(context, user) {
 
       let iteration = 0;
       let finalResponseText = "";
+      // Working messages are OpenAI-format; provider adapters translate for Gemini/Anthropic
       let workingMessages = [...llmMessages];
 
-      while (iteration < 3) {
+      while (iteration < 4) {
         iteration++;
 
         const response = await completeLLM({
@@ -236,25 +258,39 @@ async function handlePost(context, user) {
         // Case 1: Tool Calls Requested
         if (response.toolCalls && response.toolCalls.length > 0) {
           for (const tc of response.toolCalls) {
-            await sendSseEvent("tool_call", {
-              id: tc.id,
+            // Notify frontend which tool is running
+            await sendData({
+              type: "tool",
               tool: tc.name,
-              args: tc.arguments,
+              args: typeof tc.arguments === "string"
+                ? JSON.parse(tc.arguments || "{}")
+                : tc.arguments,
             });
 
             // Execute the tool
             const toolResult = await executeAgentTool(tc.name, tc.arguments, env);
 
-            await sendSseEvent("tool_result", {
-              id: tc.id,
+            await sendData({
+              type: "tool_result",
               tool: tc.name,
               result: toolResult,
             });
 
-            // Append assistant tool_calls message and tool response message
+            // Append to working messages in OpenAI format
+            // (completeLLM adapters handle translation per provider)
             workingMessages.push({
               role: "assistant",
-              content: response.text || "",
+              content: response.text || null,
+              tool_calls: [{
+                id: tc.id,
+                type: "function",
+                function: {
+                  name: tc.name,
+                  arguments: typeof tc.arguments === "string"
+                    ? tc.arguments
+                    : JSON.stringify(tc.arguments || {}),
+                },
+              }],
             });
 
             workingMessages.push({
@@ -277,25 +313,21 @@ async function handlePost(context, user) {
         finalResponseText = "Analysis concluded. No further details available.";
       }
 
-      // Stream text in small chunks for responsive progressive rendering
-      const chunkSize = 28;
+      // Stream text in small chunks for progressive rendering
+      const chunkSize = 32;
       for (let i = 0; i < finalResponseText.length; i += chunkSize) {
         const chunk = finalResponseText.slice(i, i + chunkSize);
-        await sendSseEvent("delta", { chunk });
+        await sendData({ type: "delta", chunk });
       }
 
       // Persist assistant message in D1
       await saveMessage(env, user.id, sessionId, "assistant", finalResponseText, activeLens);
 
-      await sendSseEvent("done", {
-        sessionId,
-        lens: activeLens,
-        finished: true,
-      });
+      await sendData({ type: "done", sessionId, finished: true });
       await writer.write(encoder.encode("data: [DONE]\n\n"));
     } catch (err) {
       console.error("[Agent Chat] Execution error:", err);
-      await sendSseEvent("error", { error: err.message || "Strategy agent processing error." });
+      await sendData({ type: "error", error: err.message || "Strategy agent processing error." });
       await writer.write(encoder.encode("data: [DONE]\n\n"));
     } finally {
       await writer.close();
@@ -308,6 +340,7 @@ async function handlePost(context, user) {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }

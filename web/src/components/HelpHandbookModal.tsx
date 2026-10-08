@@ -40,6 +40,7 @@ import { ChapterLiquidityTiers } from './modals/handbook/chapters/ChapterLiquidi
 import { ChapterShortcutsFaq } from './modals/handbook/chapters/ChapterShortcutsFaq';
 import { ChapterQuantValuation } from './modals/handbook/chapters/ChapterQuantValuation';
 import { ChapterTaxAlphaAudit } from './modals/handbook/chapters/ChapterTaxAlphaAudit';
+import { ChapterStrategyAgent } from './modals/handbook/chapters/ChapterStrategyAgent';
 
 interface HelpHandbookModalProps {
   isOpen: boolean;
@@ -79,7 +80,8 @@ type HandbookTab =
   | 'LIQUIDITY_TIERS'
   | 'SHORTCUTS_FAQ'
   | 'QUANT_VALUATION_ENGINE'
-  | 'TAX_ALPHA_AUDIT';
+  | 'TAX_ALPHA_AUDIT'
+  | 'STRATEGY_AGENT';
 
 export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
   isOpen,
@@ -125,7 +127,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>DeltaHarvest Strategy Handbook &amp; Educational Center</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  v3.4
+                  v3.5
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
@@ -214,6 +216,18 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
           >
             <BrainCircuit className="w-4 h-4 text-violet-400" />
             <span>AI Options Screener (Thinking)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('STRATEGY_AGENT')}
+            className={`px-3 py-2 rounded-xl font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${
+              activeTab === 'STRATEGY_AGENT'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30 ring-1 ring-purple-400/50'
+                : 'text-purple-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <BrainCircuit className="w-4 h-4 text-purple-400" />
+            <span>🤖 Strategy Agent &amp; Market Recap</span>
           </button>
 
           <button
@@ -547,6 +561,11 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
               onOpenSimulator={onOpenSimulator}
             />
           )}
+
+          {activeTab === 'STRATEGY_AGENT' && (
+            <ChapterStrategyAgent onNavigate={onNavigate} />
+          )}
+
         </div>
 
         {/* Footer */}

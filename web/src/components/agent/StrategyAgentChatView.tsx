@@ -250,6 +250,7 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
             try {
               const data = JSON.parse(dataStr);
 
+              // ── Text chunks (streaming response) ──────────────────────────
               if (data.type === 'delta' || data.chunk) {
                 accumulatedText += (data.chunk || data.content || '');
                 setMessages((prev) =>
@@ -259,7 +260,9 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
                       : m
                   )
                 );
-              } else if (data.tool) {
+
+              // ── Tool call announced (show status banner) ───────────────────
+              } else if (data.type === 'tool' || data.tool) {
                 const toolName = data.tool;
                 if (toolName === 'get_market_price_and_technicals') {
                   setActiveToolStatus(`⚡ Pulling live spot price & technicals for ${ticker}...`);
@@ -272,15 +275,39 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
                 } else {
                   setActiveToolStatus(`⚡ Running quantitative tool: ${toolName}...`);
                 }
-              } else if (data.sessionId && !currentSessionId) {
-                setCurrentSessionId(data.sessionId);
-                fetchSessions();
+
+              // ── Tool result returned (clear status) ───────────────────────
+              } else if (data.type === 'tool_result') {
+                setActiveToolStatus('⚡ Synthesizing results...');
+
+              // ── Session metadata / new session created ─────────────────────
+              } else if (data.type === 'meta' || data.type === 'done') {
+                if (data.sessionId && !currentSessionId) {
+                  setCurrentSessionId(data.sessionId);
+                  fetchSessions();
+                }
+                if (data.type === 'done') {
+                  setActiveToolStatus(null);
+                }
+
+              // ── Server-side error forwarded as SSE ─────────────────────────
+              } else if (data.type === 'error') {
+                const errText = data.error || 'Strategy agent processing error.';
+                setErrorMsg(errText);
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId && !m.content
+                      ? { ...m, content: `⚠️ ${errText}` }
+                      : m
+                  )
+                );
               }
             } catch {
-              // Non-JSON SSE stream line
+              // Non-JSON SSE line — skip silently
             }
           }
         }
+
       }
     } catch (err: any) {
       console.error('Agent chat streaming error:', err);
