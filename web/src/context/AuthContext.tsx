@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { AuthUser, LoginCredentials } from '../types/auth';
+import { AuthUser, LoginCredentials, UserRole } from '../types/auth';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -13,6 +13,18 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const normalizeAuthUser = (raw: any): AuthUser => ({
+  id: raw.id,
+  email: raw.email,
+  role: String(raw.role || 'CLIENT').toUpperCase() as UserRole,
+  displayName: raw.displayName || raw.display_name || (raw.email ? raw.email.split('@')[0] : 'User'),
+  display_name: raw.display_name || raw.displayName,
+  status: raw.status || 'ACTIVE',
+  createdAt: raw.createdAt || raw.created_at,
+  lastLoginAt: raw.lastLoginAt || raw.last_login_at,
+  must_change_password: Boolean(raw.must_change_password ?? raw.mustChangePassword),
+});
 
 export const purgeTenantBrowserStorage = () => {
   if (typeof window === 'undefined' || !window.localStorage) return;
@@ -77,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const data = await res.json();
         if (data && data.authenticated && data.user) {
-          setUser(data.user);
+          setUser(normalizeAuthUser(data.user));
           return;
         }
       }
@@ -112,13 +124,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (lastUserId && lastUserId !== data.user.id) {
             purgeTenantBrowserStorage();
           }
-          localStorage.setItem('deltaharvest_last_active_user_id', data.user.id);
+          if (data.user.id) {
+            localStorage.setItem('deltaharvest_last_active_user_id', data.user.id);
+          }
         } catch {
           // Ignore storage errors
         }
 
-        setUser(data.user);
-        return { success: true, user: data.user };
+        const normalized = normalizeAuthUser(data.user);
+        setUser(normalized);
+        return { success: true, user: normalized };
       }
 
       return {
@@ -168,6 +183,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!res.ok || !data.success) {
         return { success: false, error: data.error || 'Password update failed' };
       }
+      // Immediately clear mandatory password flag locally and sync session
+      setUser((prev) => (prev ? { ...prev, must_change_password: false } : null));
+      await refreshSession();
       return { success: true };
     } catch {
       return { success: false, error: 'Authentication service unreachable.' };

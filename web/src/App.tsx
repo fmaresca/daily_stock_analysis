@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { useAuth } from './context/AuthContext';
 import { LoginView } from './components/auth/LoginView';
+import { PasswordChangeView } from './components/auth/PasswordChangeView';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 
 // Code-split authenticated workspace shell so login page downloads only minimal bundle
@@ -10,7 +11,7 @@ const AuthenticatedTerminal = lazyWithRetry(
 );
 
 export const App: React.FC = () => {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, user, refreshSession } = useAuth();
 
   // ------------------------------------------------------------------------
   // FAIL-SAFE PRIVACY & TENANT ISOLATION GATE
@@ -31,6 +32,22 @@ export const App: React.FC = () => {
     return <LoginView />;
   }
 
+  // ------------------------------------------------------------------------
+  // MANDATORY FIRST-LOGIN PASSWORD ROTATION GATE
+  // If the account has must_change_password flag set (e.g. temporary/reset credentials),
+  // immediately hold the user in the mandatory password update view.
+  // ------------------------------------------------------------------------
+  if (user?.must_change_password) {
+    return (
+      <PasswordChangeView
+        isMandatory={true}
+        onSuccess={async () => {
+          await refreshSession();
+        }}
+      />
+    );
+  }
+
   return (
     <Suspense
       fallback={
@@ -44,3 +61,4 @@ export const App: React.FC = () => {
     </Suspense>
   );
 };
+

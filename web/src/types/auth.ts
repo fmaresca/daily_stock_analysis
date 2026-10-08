@@ -6,9 +6,11 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   displayName: string;
+  display_name?: string;
   status?: AccountStatus;
   createdAt?: string;
   lastLoginAt?: string;
+  must_change_password?: boolean;
 }
 
 export interface LoginCredentials {

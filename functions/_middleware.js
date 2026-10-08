@@ -38,6 +38,7 @@ export async function onRequest(context) {
     pathname === "/api/auth/login" ||
     pathname === "/api/auth/logout" ||
     pathname === "/api/auth/session" ||
+    pathname === "/api/auth/change-password" ||
     pathname === "/api/auth/request-access" ||
     pathname.startsWith("/api/auth/reset-password") ||
     pathname === "/api/admin/inquiries" ||

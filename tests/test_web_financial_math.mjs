@@ -877,6 +877,89 @@ test('18. Dynamic Stock Symbol Ingestion, Full Database Field Hydration & Equity
   }
 });
 
+test('Test 19: Mandatory Password Change Gate & Self-Service Password Rotation', async () => {
+  // A. Verify App.tsx intercepts users with must_change_password
+  const appPath = fileURLToPath(new URL('../web/src/App.tsx', import.meta.url));
+  const appContent = fs.readFileSync(appPath, 'utf-8');
+  assert.ok(appContent.includes('user?.must_change_password'), 'App.tsx must check user.must_change_password');
+  assert.ok(appContent.includes('PasswordChangeView'), 'App.tsx must render PasswordChangeView');
+  assert.ok(appContent.includes('isMandatory={true}'), 'App.tsx must pass isMandatory={true}');
+
+  // B. Verify PasswordChangeView.tsx implements isMandatory mode and sign out
+  const pwdViewPath = fileURLToPath(new URL('../web/src/components/auth/PasswordChangeView.tsx', import.meta.url));
+  const pwdViewContent = fs.readFileSync(pwdViewPath, 'utf-8');
+  assert.ok(pwdViewContent.includes('isMandatory'), 'PasswordChangeView must support isMandatory');
+  assert.ok(pwdViewContent.includes('logout'), 'PasswordChangeView must support logout');
+  assert.ok(pwdViewContent.includes('Mandatory Password Update'), 'PasswordChangeView must have mandatory title');
+
+  // C. Verify /api/user/change-password endpoint and /api/auth/change-password alias
+  const userChangePwdModule = await import('../functions/api/user/change-password.js');
+  const authChangePwdModule = await import('../functions/api/auth/change-password.js');
+  assert.ok(typeof userChangePwdModule.onRequestPost === 'function', 'user change-password must export onRequestPost');
+  assert.ok(typeof authChangePwdModule.onRequestPost === 'function', 'auth change-password must export onRequestPost');
+
+  // D. Verify password change execution
+  const env = {
+    ENVIRONMENT: 'development',
+    SESSION_SECRET: 'test-change-pwd-suite-secret-key-2026',
+  };
+  const authModule = await import('../functions/api/_auth_utils.js');
+  const testEmail = 'rotation_test_user@deltaharvest.local';
+  const initialPassword = 'TempPassword2026!';
+  const initialSalt = authModule.generateRandomSalt(16);
+  const initialHash = await authModule.hashPassword(initialPassword, initialSalt);
+
+  const testUser = await authModule.createUser(env, {
+    email: testEmail,
+    password_hash: initialHash,
+    password_salt: initialSalt,
+    role: 'client',
+    is_active: 1,
+    must_change_password: 1,
+    display_name: 'Rotation Tester',
+  });
+  assert.ok(testUser, 'Test user created');
+
+  const token = await authModule.createSessionToken(
+    { sub: testUser.id, email: testEmail, role: 'client', tv: testUser.token_version ?? 0 },
+    env.SESSION_SECRET
+  );
+  const cookie = authModule.buildSessionCookie(token);
+
+  // 1. Rejects mismatched current password
+  const badOldReq = new Request('http://localhost/api/user/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify({ currentPassword: 'WrongPassword!', newPassword: 'NewValidPassword2026!' }),
+  });
+  const badOldRes = await userChangePwdModule.onRequestPost({ request: badOldReq, env });
+  assert.strictEqual(badOldRes.status, 400, 'Mismatched current password must return 400');
+
+  // 2. Rejects identical password
+  const sameReq = new Request('http://localhost/api/user/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify({ currentPassword: initialPassword, newPassword: initialPassword }),
+  });
+  const sameRes = await userChangePwdModule.onRequestPost({ request: sameReq, env });
+  assert.strictEqual(sameRes.status, 400, 'Identical password must return 400');
+
+  // 3. Successfully rotates password and re-issues session cookie
+  const validReq = new Request('http://localhost/api/user/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify({ currentPassword: initialPassword, newPassword: 'BrandNewPermanentPass2026!' }),
+  });
+  const validRes = await userChangePwdModule.onRequestPost({ request: validReq, env });
+  assert.strictEqual(validRes.status, 200, 'Valid password change must return 200');
+  const validBody = await validRes.json();
+  assert.strictEqual(validBody.success, true);
+  assert.strictEqual(validBody.user.must_change_password, false);
+  const setCookie = validRes.headers.get('Set-Cookie');
+  assert.ok(setCookie, 'Must re-issue updated session cookie');
+});
+
+
 
 
 
