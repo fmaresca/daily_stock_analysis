@@ -31,6 +31,7 @@ import {
   LogOut,
   Lock,
   Calendar,
+  Globe,
 } from './icons';
 import { useAuth } from '../context/AuthContext';
 
@@ -189,14 +190,19 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
                     onCloseMobile?.();
                   }}
                   className={`${getSubItemClasses(activeOptionsTab === 'SCHWAB_POSITIONS_UPLOAD')} w-full text-left`}
-                  title="Import your Schwab account positions and cash balances from CSV."
-                  aria-label="1. Upload Positions"
+                  title="Import your positions and cash from Schwab CSV, brokerage screenshot, or clipboard OCR."
+                  aria-label="1. Import Holdings"
                   aria-current={activeOptionsTab === 'SCHWAB_POSITIONS_UPLOAD' ? 'true' : undefined}
                 >
                   <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">1</span>
                   <div className="truncate min-w-0">
-                    <span className="truncate block font-medium">1. Upload Positions</span>
-                    <span className="text-[9px] text-slate-500 block">Schwab CSV Import</span>
+                    <div className="flex items-center justify-between">
+                      <span className="truncate block font-medium">1. Import Holdings</span>
+                      <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        OCR
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-slate-500 block">CSV, Screenshot &amp; Clipboard</span>
                   </div>
                 </button>
                 {/* Step 2 */}
@@ -461,7 +467,7 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
           </nav>
         </div>
 
-        {/* GROUP 3: Research (Stock Screener, Income Screener, Charts, Calendars, Fundamentals) */}
+        {/* GROUP 3: Research (Market Recap, Strategy Agent, Stock Screener, Income Screener, Charts, Calendars, Fundamentals) */}
         <div>
           {!isCollapsed && (
             <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 light:text-slate-700 px-3 mb-1.5">
@@ -469,6 +475,60 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
             </div>
           )}
           <nav className="space-y-0.5">
+            {/* ── NEW: Daily Market Recap ── */}
+            <button
+              onClick={() => {
+                onSelectTree('MARKET_RECAP');
+                onCloseMobile?.();
+              }}
+              className={`${getItemClasses(activeTree === 'MARKET_RECAP')} w-full`}
+              title="Live daily index recap, sector heat-strip, VIX and 10Y yield — cached and updated at 6h intervals."
+              aria-label="Daily Market Recap"
+              aria-current={activeTree === 'MARKET_RECAP' ? 'true' : undefined}
+            >
+              <Globe className="w-4 h-4 text-cyan-400 shrink-0" />
+              {!isCollapsed && (
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold truncate">Market Recap</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                      Live
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 light:text-slate-400 font-normal truncate">
+                    Indices, Sectors &amp; VIX
+                  </div>
+                </div>
+              )}
+            </button>
+
+            {/* ── NEW: Ask Strategy Agent ── */}
+            <button
+              onClick={() => {
+                onSelectTree('AGENT_CHAT');
+                onCloseMobile?.();
+              }}
+              className={`${getItemClasses(activeTree === 'AGENT_CHAT')} w-full`}
+              title="Conversational quantitative strategy assistant. Ask about any stock under 8 strategy lenses."
+              aria-label="Ask Strategy Agent"
+              aria-current={activeTree === 'AGENT_CHAT' ? 'true' : undefined}
+            >
+              <BrainCircuit className="w-4 h-4 text-purple-400 shrink-0" />
+              {!isCollapsed && (
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold truncate">Ask Strategy Agent</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      AI
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 light:text-slate-400 font-normal truncate">
+                    8 Lenses · Streaming Q&amp;A
+                  </div>
+                </div>
+              )}
+            </button>
+
             {/* Stock Screener */}
             <button
               onClick={() => {
@@ -497,33 +557,6 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
                   </div>
                   <div className="text-[10px] text-slate-500 light:text-slate-400 font-normal truncate">
                     Technical &amp; Trend Filters
-                  </div>
-                </div>
-              )}
-            </button>
-
-            {/* Ask Strategy Agent */}
-            <button
-              onClick={() => {
-                onSelectTree('AGENT_CHAT');
-                onCloseMobile?.();
-              }}
-              className={`${getItemClasses(activeTree === 'AGENT_CHAT')} w-full`}
-              title="Conversational quantitative strategy assistant. Ask about any stock under 8 strategy lenses."
-              aria-label="Ask Strategy Agent"
-              aria-current={activeTree === 'AGENT_CHAT' ? 'true' : undefined}
-            >
-              <BrainCircuit className="w-4 h-4 text-purple-400 shrink-0" />
-              {!isCollapsed && (
-                <div className="flex-1 text-left min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold truncate">Ask Strategy Agent</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      AI
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 light:text-slate-400 font-normal truncate">
-                    8 Strategy Lenses &amp; Q&amp;A
                   </div>
                 </div>
               )}
