@@ -59,6 +59,12 @@ export async function onRequestGet(context) {
     adminRecipient.includes("@")
   );
 
+  const adanosConfigured = Boolean(
+    env?.ADANOS_API_KEY &&
+    typeof env.ADANOS_API_KEY === "string" &&
+    env.ADANOS_API_KEY.trim().length > 0
+  );
+
   return new Response(
     JSON.stringify({
       secret_configured: secretConfigured,
@@ -67,6 +73,7 @@ export async function onRequestGet(context) {
       rate_limit_kv_bound: rateLimitKvBound,
       resend_configured: resendConfigured,
       admin_email_configured: adminEmailConfigured,
+      adanos_configured: adanosConfigured,
       environment: environment,
     }),
     {

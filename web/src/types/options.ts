@@ -223,6 +223,42 @@ export interface TickerMeta {
   social_sentiment?: SocialSentiment;
   barchart_opinion?: BarchartOpinion;
   market_chameleon?: MarketChameleonPattern;
+  // Adanos Market Sentiment Layer (Prompt 2 — Optional Display Context)
+  sentimentScore?: number;
+  buzzScore?: number;
+  bullishPct?: number;
+  bearishPct?: number;
+  sentimentTrend?: 'rising' | 'falling' | 'stable' | string;
+  sentimentSources?: Record<string, AdanosSourceSentiment>;
+  sentimentExplanation?: string;
+  sentimentExplanationSource?: string;
+  sentimentAsOf?: string;
+}
+
+export interface AdanosSourceSentiment {
+  sentiment_score?: number;
+  buzz_score?: number;
+  mentions?: number;
+  bullish_pct?: number;
+  bearish_pct?: number;
+  trend?: string;
+}
+
+export interface AdanosMarketSentiment {
+  configured?: boolean;
+  symbol: string;
+  sentiment_score: number | null;
+  buzz_score: number | null;
+  bullish_pct: number | null;
+  bearish_pct: number | null;
+  mentions: number;
+  trend: 'rising' | 'falling' | 'stable' | string | null;
+  sources: Record<string, AdanosSourceSentiment>;
+  explanation: string | null;
+  explanation_source: string | null;
+  asOf: string;
+  stale?: boolean;
+  cached?: boolean;
 }
 
 export interface OptionOpportunity {

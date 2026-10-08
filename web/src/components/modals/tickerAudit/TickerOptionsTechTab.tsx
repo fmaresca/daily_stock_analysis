@@ -11,12 +11,13 @@ import {
   DollarSign,
   Zap,
 } from '../../icons';
-import { TickerMeta, OptionOpportunity } from '../../../types/options';
+import { TickerMeta, OptionOpportunity, AdanosMarketSentiment } from '../../../types/options';
 import { InteractiveChart } from '../../InteractiveChart';
 import { BarchartOpinionCard } from '../../BarchartOpinionCard';
 import { calculateMarketChameleonPattern } from '../../../utils/securityIntelligence';
 import { SocialShareToolbar } from '../../trading/SocialShareToolbar';
 import { NewsCompactFeed } from '../../NewsCompactFeed';
+import { MarketSentimentSection } from '../../MarketSentimentSection';
 
 interface TickerOptionsTechTabProps {
   ticker: TickerMeta;
@@ -43,6 +44,8 @@ interface TickerOptionsTechTabProps {
   isTier4: boolean;
   onViewNewsAnalyst: () => void;
   onOpenSimulator?: (ticker: string) => void;
+  marketSentiment?: AdanosMarketSentiment | null;
+  isSentimentLoading?: boolean;
 }
 
 export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
@@ -70,6 +73,8 @@ export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
   isTier4,
   onViewNewsAnalyst,
   onOpenSimulator,
+  marketSentiment,
+  isSentimentLoading,
 }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
@@ -233,6 +238,34 @@ export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* SECTION 2.75: Adanos Market Sentiment & Social Attention Layer */}
+      <MarketSentimentSection
+        sentiment={
+          marketSentiment !== undefined
+            ? marketSentiment
+            : ticker.sentimentScore !== undefined
+            ? {
+                configured: true,
+                symbol: ticker.symbol,
+                sentiment_score: ticker.sentimentScore ?? null,
+                buzz_score: ticker.buzzScore ?? null,
+                bullish_pct: ticker.bullishPct ?? null,
+                bearish_pct: ticker.bearishPct ?? null,
+                mentions: ticker.sentimentSources
+                  ? Object.values(ticker.sentimentSources).reduce((acc, s) => acc + (s.mentions || 0), 0)
+                  : 0,
+                trend: ticker.sentimentTrend ?? null,
+                sources: ticker.sentimentSources ?? {},
+                explanation: ticker.sentimentExplanation ?? null,
+                explanation_source: ticker.sentimentExplanationSource ?? null,
+                asOf: ticker.sentimentAsOf ?? new Date().toISOString(),
+              }
+            : null
+        }
+        isLoading={isSentimentLoading}
+        symbol={ticker.symbol}
+      />
 
       {/* SECTION 3: Technical Boundaries */}
       <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">

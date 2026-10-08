@@ -13,10 +13,11 @@ import {
   RefreshCw,
   Zap,
 } from './icons';
-import { TickerMeta, OptionOpportunity } from '../types/options';
+import { TickerMeta, OptionOpportunity, AdanosMarketSentiment } from '../types/options';
 import { getSecurityIntelligence } from '../utils/securityIntelligence';
 import { PredictionMarketCards } from './PredictionMarketCards';
 import { SocialSentimentGauge } from './SocialSentimentGauge';
+import { MarketSentimentSection } from './MarketSentimentSection';
 import { calculateBarchartOpinion } from '../utils/barchartEngine';
 import { exportToExcel } from '../utils/exportImport';
 import { getSecEdgarUrl } from '../utils/secEdgarRegistry';
@@ -148,6 +149,94 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   const [isFetching, setIsFetching] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TickerDetailTab>('OPTIONS_TECH');
+  const [marketSentiment, setMarketSentiment] = useState<AdanosMarketSentiment | null>(() => {
+    if (ticker?.sentimentScore !== undefined || ticker?.sentimentSources !== undefined) {
+      return {
+        configured: true,
+        symbol: ticker.symbol,
+        sentiment_score: ticker.sentimentScore ?? null,
+        buzz_score: ticker.buzzScore ?? null,
+        bullish_pct: ticker.bullishPct ?? null,
+        bearish_pct: ticker.bearishPct ?? null,
+        mentions: ticker.sentimentSources
+          ? Object.values(ticker.sentimentSources).reduce((acc, s) => acc + (s.mentions || 0), 0)
+          : 0,
+        trend: ticker.sentimentTrend ?? null,
+        sources: ticker.sentimentSources ?? {},
+        explanation: ticker.sentimentExplanation ?? null,
+        explanation_source: ticker.sentimentExplanationSource ?? null,
+        asOf: ticker.sentimentAsOf ?? new Date().toISOString(),
+      };
+    }
+    return null;
+  });
+  const [isSentimentLoading, setIsSentimentLoading] = useState<boolean>(false);
+
+  // Parallel Market Sentiment Hydration (Prompt 2 — Non-blocking Edge Stream)
+  useEffect(() => {
+    const sym = activeTicker?.symbol;
+    if (!sym) return;
+
+    if (activeTicker.sentimentScore !== undefined || activeTicker.sentimentSources !== undefined) {
+      setMarketSentiment({
+        configured: true,
+        symbol: sym,
+        sentiment_score: activeTicker.sentimentScore ?? null,
+        buzz_score: activeTicker.buzzScore ?? null,
+        bullish_pct: activeTicker.bullishPct ?? null,
+        bearish_pct: activeTicker.bearishPct ?? null,
+        mentions: activeTicker.sentimentSources
+          ? Object.values(activeTicker.sentimentSources).reduce((acc, s) => acc + (s.mentions || 0), 0)
+          : 0,
+        trend: activeTicker.sentimentTrend ?? null,
+        sources: activeTicker.sentimentSources ?? {},
+        explanation: activeTicker.sentimentExplanation ?? null,
+        explanation_source: activeTicker.sentimentExplanationSource ?? null,
+        asOf: activeTicker.sentimentAsOf ?? new Date().toISOString(),
+      });
+      return;
+    }
+
+    let isMounted = true;
+    setIsSentimentLoading(true);
+
+    fetch(`/api/market-sentiment?symbol=${encodeURIComponent(sym)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: AdanosMarketSentiment | null) => {
+        if (!isMounted) return;
+        if (data && data.configured !== false) {
+          setMarketSentiment(data);
+          setActiveTicker((prev) =>
+            prev && prev.symbol === sym
+              ? {
+                  ...prev,
+                  sentimentScore: data.sentiment_score ?? undefined,
+                  buzzScore: data.buzz_score ?? undefined,
+                  bullishPct: data.bullish_pct ?? undefined,
+                  bearishPct: data.bearish_pct ?? undefined,
+                  sentimentTrend: data.trend ?? undefined,
+                  sentimentSources: data.sources ?? undefined,
+                  sentimentExplanation: data.explanation ?? undefined,
+                  sentimentExplanationSource: data.explanation_source ?? undefined,
+                  sentimentAsOf: data.asOf ?? undefined,
+                }
+              : prev
+          );
+        } else {
+          setMarketSentiment(null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setMarketSentiment(null);
+      })
+      .finally(() => {
+        if (isMounted) setIsSentimentLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTicker?.symbol]);
 
   useEffect(() => {
     if (ticker) {
@@ -693,6 +782,8 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
               isTier4={isTier4}
               onViewNewsAnalyst={() => setActiveTab('NEWS_ANALYST')}
               onOpenSimulator={onOpenSimulator}
+              marketSentiment={marketSentiment}
+              isSentimentLoading={isSentimentLoading}
             />
           )}
 
@@ -724,7 +815,12 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
 
           {/* TAB 4: SOCIAL & FORUM SENTIMENT */}
           {activeTab === 'SOCIAL_SENTIMENT' && (
-            <div className="animate-in fade-in duration-150">
+            <div className="animate-in fade-in duration-150 space-y-6">
+              <MarketSentimentSection
+                sentiment={marketSentiment}
+                isLoading={isSentimentLoading}
+                symbol={activeTicker.symbol}
+              />
               <SocialSentimentGauge
                 sentiment={socialSentiment}
                 technicalScore={intel.technicalScore}

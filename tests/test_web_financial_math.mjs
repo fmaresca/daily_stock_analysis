@@ -959,6 +959,246 @@ test('Test 19: Mandatory Password Change Gate & Self-Service Password Rotation',
   assert.ok(setCookie, 'Must re-issue updated session cookie');
 });
 
+test('20. Adanos Market Sentiment Proxy Contract, Mock Resilience & Security Grep Gates', async () => {
+  const { onRequest: onSentimentRequest } = await import('../functions/api/market-sentiment.js');
+  const diagnosticsModule = await import('../functions/api/admin/diagnostics.js');
+  const authModule = await import('../functions/api/_auth_utils.js');
+
+  const MOCK_API_KEY = 'sk_test_mockadanoskey1234567890abcdef';
+
+  // 1. Missing Key Contract: returns HTTP 200 { configured: false, sentiment: null }
+  const unconfiguredReq = new Request('http://localhost/api/market-sentiment?symbol=NVDA', { method: 'GET' });
+  const unconfiguredRes = await onSentimentRequest({ request: unconfiguredReq, env: {} });
+  assert.strictEqual(unconfiguredRes.status, 200, 'Unconfigured API key must return 200');
+  const unconfiguredBody = await unconfiguredRes.json();
+  assert.strictEqual(unconfiguredBody.configured, false);
+  assert.strictEqual(unconfiguredBody.sentiment, null);
+
+  // 2. Invalid Symbol Contract: rejects everything except 1-6 letters with 400
+  const invalidReq1 = new Request('http://localhost/api/market-sentiment?symbol=TOOLONGTICKER', { method: 'GET' });
+  const invalidRes1 = await onSentimentRequest({ request: invalidReq1, env: { ADANOS_API_KEY: MOCK_API_KEY } });
+  assert.strictEqual(invalidRes1.status, 400, 'Overlong symbol must return 400');
+
+  const invalidReq2 = new Request('http://localhost/api/market-sentiment?symbol=123', { method: 'GET' });
+  const invalidRes2 = await onSentimentRequest({ request: invalidReq2, env: { ADANOS_API_KEY: MOCK_API_KEY } });
+  assert.strictEqual(invalidRes2.status, 400, 'Numeric symbol must return 400');
+
+  const invalidReq3 = new Request('http://localhost/api/market-sentiment', { method: 'GET' });
+  const invalidRes3 = await onSentimentRequest({ request: invalidReq3, env: { ADANOS_API_KEY: MOCK_API_KEY } });
+  assert.strictEqual(invalidRes3.status, 400, 'Missing symbol must return 400');
+
+  // 3. Mocked Upstream Fetch: Valid Symbol -> Normalized Shape with 4 Source Blocks & AI Explanation
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url, options) => {
+      const urlStr = String(url);
+
+      // Verify request header carries API key and Accept header
+      assert.strictEqual(options?.headers?.['X-API-Key'], MOCK_API_KEY);
+      assert.strictEqual(options?.headers?.Accept, 'application/json');
+
+      if (urlStr.includes('/reddit/stocks/v1/stock/NVDA/explain')) {
+        return new Response(JSON.stringify({
+          explanation: 'NVIDIA experiencing strong retail sentiment following Blackwell architecture benchmarks.',
+          cached: true,
+          generated_at: '2026-10-08T12:00:00Z',
+          model: 'gpt-4o',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (urlStr.includes('/reddit/stocks/v1/stock/NVDA')) {
+        return new Response(JSON.stringify({
+          ticker: 'NVDA',
+          found: true,
+          sentiment_score: 0.5,
+          buzz_score: 81,
+          bullish_pct: 61,
+          bearish_pct: 22,
+          mentions: 900,
+          trend: 'rising',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (urlStr.includes('/x/stocks/v1/stock/NVDA')) {
+        return new Response(JSON.stringify({
+          ticker: 'NVDA',
+          found: true,
+          sentiment_score: 0.3,
+          buzz_score: 64,
+          bullish_pct: 58,
+          bearish_pct: 25,
+          mentions: 210,
+          trend: 'rising',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (urlStr.includes('/polymarket/stocks/v1/stock/NVDA')) {
+        return new Response(JSON.stringify({
+          ticker: 'NVDA',
+          found: true,
+          sentiment_score: 0.1,
+          buzz_score: 40,
+          bullish_pct: 50,
+          bearish_pct: 30,
+          mentions: 80,
+          trend: 'stable',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (urlStr.includes('/news/stocks/v1/stock/NVDA')) {
+        return new Response(JSON.stringify({
+          ticker: 'NVDA',
+          found: true,
+          sentiment_score: 0.45,
+          buzz_score: 70,
+          bullish_pct: 60,
+          bearish_pct: 18,
+          mentions: 44,
+          trend: 'rising',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      return new Response(JSON.stringify({ found: false }), { status: 404 });
+    };
+
+    const validReq = new Request('http://localhost/api/market-sentiment?symbol=NVDA', { method: 'GET' });
+    const validRes = await onSentimentRequest({
+      request: validReq,
+      env: { ADANOS_API_KEY: MOCK_API_KEY },
+    });
+    assert.strictEqual(validRes.status, 200, 'Valid symbol must return 200');
+    const validBody = await validRes.json();
+
+    assert.strictEqual(validBody.symbol, 'NVDA');
+    assert.strictEqual(validBody.configured, true);
+    assert.strictEqual(validBody.mentions, 1234, 'Total mentions must sum across all four sources');
+    assert.ok(typeof validBody.sentiment_score === 'number');
+    assert.ok(typeof validBody.buzz_score === 'number');
+    assert.strictEqual(validBody.sources.reddit.mentions, 900);
+    assert.strictEqual(validBody.sources.x.mentions, 210);
+    assert.strictEqual(validBody.sources.polymarket.mentions, 80);
+    assert.strictEqual(validBody.sources.news.mentions, 44);
+    assert.strictEqual(validBody.explanation_source, 'reddit');
+    assert.ok(validBody.explanation.includes('NVIDIA experiencing strong retail sentiment'));
+
+    // Redaction check: response JSON string must NEVER contain the API key
+    const rawResponseBody = JSON.stringify(validBody);
+    assert.ok(!rawResponseBody.includes(MOCK_API_KEY), 'Response must never leak API key string');
+
+    // 4. Source with found: false -> Block Omitted, Never Zero-Filled
+    globalThis.fetch = async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/reddit/stocks/v1/stock/AMD')) {
+        return new Response(JSON.stringify({
+          ticker: 'AMD',
+          found: true,
+          sentiment_score: 0.2,
+          buzz_score: 55,
+          mentions: 300,
+        }), { status: 200 });
+      }
+      if (urlStr.includes('/polymarket/stocks/v1/stock/AMD')) {
+        // Namespace has no qualifying data
+        return new Response(JSON.stringify({ ticker: 'AMD', found: false }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ found: false }), { status: 404 });
+    };
+
+    const amdReq = new Request('http://localhost/api/market-sentiment?symbol=AMD', { method: 'GET' });
+    const amdRes = await onSentimentRequest({
+      request: amdReq,
+      env: { ADANOS_API_KEY: MOCK_API_KEY },
+    });
+    assert.strictEqual(amdRes.status, 200);
+    const amdBody = await amdRes.json();
+    assert.strictEqual(amdBody.sources.reddit.mentions, 300);
+    assert.strictEqual(amdBody.sources.polymarket, undefined, 'Omitted source must not be zero-filled');
+
+    // 5. Upstream Timeout Contract: Graceful degradation, returns status 200 with sentiment: null
+    globalThis.fetch = async () => {
+      throw new DOMException('The operation was aborted', 'AbortError');
+    };
+    const timeoutReq = new Request('http://localhost/api/market-sentiment?symbol=INTC', { method: 'GET' });
+    const timeoutRes = await onSentimentRequest({
+      request: timeoutReq,
+      env: { ADANOS_API_KEY: MOCK_API_KEY },
+    });
+    assert.strictEqual(timeoutRes.status, 200, 'Timeout must not return 500 or crash');
+    const timeoutBody = await timeoutRes.json();
+    assert.strictEqual(timeoutBody.sentiment, null, 'Uncached timeout must return sentiment: null');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  // 6. Diagnostics Contract: adanos_configured boolean
+  const diagEnvUnset = {
+    ENVIRONMENT: 'development',
+    SESSION_SECRET: 'test-session-secret-key-diagnostics-2026',
+  };
+  const adminUser = await authModule.createUser(diagEnvUnset, {
+    email: 'admin_diag_tester@deltaharvest.local',
+    password_hash: 'mockhash',
+    password_salt: 'mocksalt',
+    role: 'admin',
+    is_active: 1,
+    must_change_password: 0,
+    display_name: 'Diag Admin',
+  });
+  const tokenUnset = await authModule.createSessionToken(
+    { sub: adminUser.id, email: adminUser.email, role: 'admin', tv: adminUser.token_version ?? 0 },
+    diagEnvUnset.SESSION_SECRET
+  );
+  const cookieUnset = authModule.buildSessionCookie(tokenUnset);
+  const diagReqUnset = new Request('http://localhost/api/admin/diagnostics', {
+    headers: { Cookie: cookieUnset },
+  });
+  const diagResUnset = await diagnosticsModule.onRequestGet({ request: diagReqUnset, env: diagEnvUnset });
+  assert.strictEqual(diagResUnset.status, 200);
+  const diagBodyUnset = await diagResUnset.json();
+  assert.strictEqual(diagBodyUnset.adanos_configured, false, 'Unconfigured Adanos must report adanos_configured: false');
+
+  const diagEnvSet = {
+    ENVIRONMENT: 'development',
+    SESSION_SECRET: 'test-session-secret-key-diagnostics-2026',
+    ADANOS_API_KEY: MOCK_API_KEY,
+  };
+  const diagReqSet = new Request('http://localhost/api/admin/diagnostics', {
+    headers: { Cookie: cookieUnset },
+  });
+  const diagResSet = await diagnosticsModule.onRequestGet({ request: diagReqSet, env: diagEnvSet });
+  const diagBodySet = await diagResSet.json();
+  assert.strictEqual(diagBodySet.adanos_configured, true, 'Configured Adanos must report adanos_configured: true');
+
+  // 7. Security Grep Gates
+  const { execSync } = await import('node:child_process');
+  const path = await import('node:path');
+  const rootDir = process.cwd();
+  const trackedFiles = execSync('git ls-files', { encoding: 'utf-8' })
+    .split(/\r?\n/)
+    .filter(Boolean);
+
+  for (const file of trackedFiles) {
+    const fullPath = path.join(rootDir, file);
+    if (!fs.existsSync(fullPath)) continue;
+    const content = fs.readFileSync(fullPath, 'utf-8');
+
+    // Rule A: The literal key prefix sk_live_ followed by 32 hex chars must never appear
+    assert.ok(
+      !/sk_live_[0-9a-fA-F]{32}/i.test(content),
+      `SECURITY GATE FAILED: Live Adanos API key pattern found in tracked file ${file}`
+    );
+
+    // Rule B: ADANOS_API_KEY must appear only in functions/ and docs/, NEVER in web/src
+    if (file.startsWith('web/src/')) {
+      assert.ok(
+        !content.includes('ADANOS_API_KEY'),
+        `SECURITY GATE FAILED: ADANOS_API_KEY leaked into client bundle file ${file}`
+      );
+    }
+  }
+});
+
+
 
 
 

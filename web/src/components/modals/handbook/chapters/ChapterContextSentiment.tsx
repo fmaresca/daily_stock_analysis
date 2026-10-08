@@ -114,6 +114,34 @@ export const ChapterContextSentiment: React.FC<ChapterContextSentimentProps> = (
           </div>
         </div>
       </div>
+
+      {/* Adanos Market Sentiment Layer */}
+      <div className="bg-slate-950/70 p-4 rounded-xl border border-amber-500/30 space-y-3">
+        <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
+          <Activity className="w-4 h-4" />
+          <span>Adanos Cross-Platform Sentiment &amp; AI Discussion Context (Audit &amp; Equity Card)</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+            <div className="font-bold text-emerald-400">Composite Sentiment &amp; Buzz</div>
+            <p className="text-slate-400 text-[11px] leading-relaxed">
+              Normalized directional score (-1.0 Bearish to +1.0 Bullish) and Buzz Score (0-100 Attention Index) aggregated across 35,000+ tickers with 3-day momentum trend badges.
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+            <div className="font-bold text-amber-400">AI Discussion Context</div>
+            <p className="text-slate-400 text-[11px] leading-relaxed">
+              Natural language explanation summarizing why an equity is trending, synthesized with multi-tier fallback (Reddit WSB &rarr; X / Twitter &rarr; Financial News Desks).
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+            <div className="font-bold text-cyan-400">4-Platform Breakdown</div>
+            <p className="text-slate-400 text-[11px] leading-relaxed">
+              Real-time granular breakdown comparing Reddit discussions, X Cashtags, Polymarket probability mentions, and editorial news coverage with non-blocking edge caching.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
