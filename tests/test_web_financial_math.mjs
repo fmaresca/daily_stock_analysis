@@ -436,10 +436,24 @@ test('13. Admin Inquiries Multi-Channel Dispatch Contract & Server-Side Security
   assert.ok(inquiriesContent.includes('export async function onRequestPost'), 'Must export onRequestPost');
   assert.ok(inquiriesContent.includes('export async function onRequestGet'), 'Must export onRequestGet');
   assert.ok(inquiriesContent.includes('formsubmit.co/ajax/'), 'Must integrate FormSubmit direct transport');
+  assert.ok(inquiriesContent.includes('api.resend.com/emails'), 'Must integrate Resend direct transport');
   assert.ok(inquiriesContent.includes('access_inquiries'), 'Must integrate Cloudflare D1 persistent audit storage');
+  assert.ok(inquiriesContent.includes('test_resend'), 'Must integrate Resend test diagnostic action');
+  assert.ok(inquiriesContent.includes('test_email'), 'Must integrate Email test diagnostic action');
 
   const requestAccessPath = fileURLToPath(new URL('../functions/api/auth/request-access.js', import.meta.url));
   assert.ok(fs.existsSync(requestAccessPath), 'functions/api/auth/request-access.js must exist');
+
+  // Verify getAdminNotificationEmail deterministic resolution and fallbacks
+  const { getAdminNotificationEmail } = await import('../functions/api/_auth_utils.js');
+  const defaultAdmin = await getAdminNotificationEmail({});
+  assert.strictEqual(defaultAdmin, 'fjmaresca@gmail.com', 'Unconfigured environment must resolve to superadmin fjmaresca@gmail.com');
+
+  const envConfiguredAdmin = await getAdminNotificationEmail({ ADMIN_NOTIFICATION_EMAIL: 'custom_admin@example.com' });
+  assert.strictEqual(envConfiguredAdmin, 'custom_admin@example.com', 'ADMIN_NOTIFICATION_EMAIL must override default');
+
+  const generalAdmin = await getAdminNotificationEmail({ ADMIN_EMAIL: 'general_admin@domain.com' });
+  assert.strictEqual(generalAdmin, 'general_admin@domain.com', 'External ADMIN_EMAIL must be used when notification email unset');
 });
 
 test('14. Fail-Closed Authentication & Session Secret Security Gate', async () => {

@@ -216,34 +216,40 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
     setTestEmailResult(null);
 
     try {
-      const subject = `[DeltaHarvest System Test] Administrator Email Alert Verified`;
-      const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetEmail)}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          _subject: subject,
-          name: 'Platform Administrator',
-          email: targetEmail,
-          requestType: 'System Test',
-          message: `This is a verified live test alert sent from the DeltaHarvest Tenant User Directory to confirm that email notifications arrive in ${targetEmail}.`,
-          _captcha: 'false',
-          _template: 'table',
-        }),
+      // 1. Dispatch through server-side edge middleware test endpoint
+      let res = await fetch('/api/admin/inquiries?action=test_email', {
+        headers: { Accept: 'application/json' },
       });
+      let data = await res.json().catch(() => ({}));
 
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && (data.success === true || data.success === 'true')) {
+      // Fallback: If GET test_email was not 200, try POST /api/admin/inquiries
+      if (!res.ok || !data.success) {
+        res = await fetch('/api/admin/inquiries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'Platform Administrator',
+            email: targetEmail,
+            requestType: 'MAINTENANCE',
+            message: `[DeltaHarvest System Test] Live test alert from Tenant Directory to verify notifications for ${targetEmail}.`,
+            note: 'Verification test alert',
+          }),
+        });
+        data = await res.json().catch(() => ({}));
+      }
+
+      if (res.ok && (data.success || data.delivered)) {
+        const protocolInfo = Array.isArray(data.protocols) && data.protocols.length > 0
+          ? ` via ${data.protocols.join(', ')}`
+          : '';
         setTestEmailResult({
           success: true,
-          message: `✓ Test alert successfully delivered to ${targetEmail}! Check your inbox.`,
+          message: `✓ Test alert successfully dispatched to ${targetEmail}${protocolInfo}! Check your inbox.`,
         });
       } else {
         setTestEmailResult({
           success: false,
-          message: data.message || `Unable to send test alert to ${targetEmail}. Please check spam filter or settings.`,
+          message: data.error || data.message || `Unable to send test alert to ${targetEmail}. Please check spam filter or settings.`,
         });
       }
     } catch {

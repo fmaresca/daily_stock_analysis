@@ -167,6 +167,31 @@ export async function sendEmailAlert(
   if (!cleanEmail || !cleanEmail.includes('@')) return false;
 
   try {
+    // 1. Primary: Route through server-side edge inquiries middleware (immune to client CSP & adblockers)
+    const res = await fetch('/api/admin/inquiries', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'DeltaHarvest Alerts',
+        email: cleanEmail,
+        requestType: 'MAINTENANCE',
+        message: `[Alert: ${subject}]\n\n${content}`,
+        note: content,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      return true;
+    }
+  } catch (err) {
+    console.warn('Backend inquiry alert route failed, attempting direct gateway:', err);
+  }
+
+  // 2. Fallback: Direct FormSubmit if client environment permits
+  try {
     const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(cleanEmail)}`, {
       method: 'POST',
       headers: {
@@ -175,6 +200,7 @@ export async function sendEmailAlert(
       },
       body: JSON.stringify({
         _subject: `[DeltaHarvest Alert] ${subject}`,
+        _captcha: 'false',
         recipient: cleanEmail,
         alertType: 'Market Opportunity Trigger',
         details: content,

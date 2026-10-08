@@ -1,4 +1,4 @@
-import { authenticateRequest } from "../_auth_utils.js";
+import { authenticateRequest, getAdminNotificationEmail } from "../_auth_utils.js";
 
 /**
  * Cloudflare Pages Function: GET /api/admin/diagnostics
@@ -52,6 +52,13 @@ export async function onRequestGet(context) {
       ? env.ENVIRONMENT.trim()
       : "production";
 
+  const adminRecipient = await getAdminNotificationEmail(env);
+  const adminEmailConfigured = Boolean(
+    adminRecipient &&
+    typeof adminRecipient === "string" &&
+    adminRecipient.includes("@")
+  );
+
   return new Response(
     JSON.stringify({
       secret_configured: secretConfigured,
@@ -59,6 +66,7 @@ export async function onRequestGet(context) {
       d1_writable: d1Writable,
       rate_limit_kv_bound: rateLimitKvBound,
       resend_configured: resendConfigured,
+      admin_email_configured: adminEmailConfigured,
       environment: environment,
     }),
     {

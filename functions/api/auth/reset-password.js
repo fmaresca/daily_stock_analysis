@@ -140,9 +140,9 @@ export async function onRequestPost(context) {
             headers: {
               "Content-Type": "application/json",
               "Accept": "application/json",
-              "Origin": url.origin,
-              "Referer": `${url.origin}/`,
-              "User-Agent": "DeltaHarvest/1.0",
+              "Origin": (url.origin && url.origin.startsWith("https://")) ? url.origin : "https://daily-stock-analysis-89j.pages.dev",
+              "Referer": (url.origin && url.origin.startsWith("https://")) ? `${url.origin}/` : "https://daily-stock-analysis-89j.pages.dev/",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             },
             body: JSON.stringify({
               _subject: `[DeltaHarvest Alert] Password Reset Request: ${cleanEmail}`,

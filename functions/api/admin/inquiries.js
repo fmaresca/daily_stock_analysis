@@ -162,9 +162,13 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
 
     let emailSent = false;
     const deliveryProtocols = [];
+    const diagnostics = {
+      adminRecipient,
+      resendConfigured: !!(env.RESEND_API_KEY && env.RESEND_API_KEY.trim()),
+    };
 
     // 3. Primary Dispatch: Resend REST API (if configured)
-    if (env.RESEND_API_KEY && adminRecipient) {
+    if (env.RESEND_API_KEY && env.RESEND_API_KEY.trim() && adminRecipient) {
       try {
         const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
         const resendResp = await fetch("https://api.resend.com/emails", {
@@ -183,34 +187,34 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
           }),
         });
 
+        const resData = await resendResp.json().catch(() => ({}));
+        diagnostics.resendStatus = resendResp.status;
+        diagnostics.resendResponse = resData;
+
         if (resendResp.ok) {
           emailSent = true;
           deliveryProtocols.push("Resend API");
           console.info(`[inquiries] Dispatched inquiry ${type} via Resend API to ${adminRecipient}.`);
         } else {
-          const errData = await resendResp.text();
-          console.warn(`[inquiries] Resend API returned ${resendResp.status}:`, errData);
+          console.warn(`[inquiries] Resend API returned ${resendResp.status}:`, resData);
         }
       } catch (rErr) {
+        diagnostics.resendError = String(rErr);
         console.warn("[inquiries] Resend dispatch failed:", rErr);
       }
     }
 
-    const diagnostics = {
-      adminRecipient,
-      resendConfigured: !!env.RESEND_API_KEY,
-    };
-
     // 4. Active Fallback: FormSubmit Direct Email Gateway (Zero-config HTTPS transport)
     if (!emailSent && adminRecipient) {
+      const fsOrigin = "https://daily-stock-analysis-89j.pages.dev";
       try {
         const fsResp = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminRecipient)}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "Origin": "https://daily-stock-analysis-89j.pages.dev",
-            "Referer": "https://daily-stock-analysis-89j.pages.dev/",
+            "Origin": fsOrigin,
+            "Referer": `${fsOrigin}/`,
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           },
           body: JSON.stringify({
@@ -231,16 +235,12 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
         const fsData = await fsResp.json().catch((parseErr) => ({ parseError: String(parseErr) }));
         diagnostics.formSubmitResponse = fsData;
 
-        if (fsResp.ok) {
-          if (fsData && (fsData.success === true || fsData.success === "true")) {
-            emailSent = true;
-            deliveryProtocols.push("FormSubmit Gateway");
-            console.info(`[inquiries] Dispatched inquiry ${type} via FormSubmit to ${adminRecipient}.`);
-          } else {
-            console.warn(`[inquiries] FormSubmit returned:`, fsData);
-          }
+        if (fsResp.ok && fsData && (fsData.success === true || fsData.success === "true")) {
+          emailSent = true;
+          deliveryProtocols.push("FormSubmit Gateway");
+          console.info(`[inquiries] Dispatched inquiry ${type} via FormSubmit to ${adminRecipient}.`);
         } else {
-          console.warn(`[inquiries] FormSubmit HTTP ${fsResp.status}`);
+          console.warn(`[inquiries] FormSubmit HTTP ${fsResp.status}:`, fsData);
         }
       } catch (fsErr) {
         diagnostics.formSubmitError = String(fsErr);
@@ -264,17 +264,21 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
             method: "POST",
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",
-              "Accept": "application/json",
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Origin": fsOrigin,
+              "Referer": `${fsOrigin}/`,
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             },
             body: formParams.toString(),
           });
-          const formResData = await formResp.json().catch(() => ({}));
-          if (formResp.ok && (formResData.success === true || formResData.success === "true")) {
+          const formResText = await formResp.text().catch(() => "");
+          if (formResp.ok || formResText.includes("Thanks!") || formResText.includes("submitted successfully")) {
             emailSent = true;
             deliveryProtocols.push("FormSubmit URL-Encoded");
+            console.info(`[inquiries] Dispatched inquiry ${type} via FormSubmit URL-Encoded to ${adminRecipient}.`);
           }
-        } catch {
-          // Ignore
+        } catch (ueErr) {
+          console.warn("[inquiries] FormSubmit URL-Encoded error:", ueErr);
         }
       }
     }
@@ -436,7 +440,109 @@ export async function onRequestGet(context) {
   if (!auth.authenticated) return auth.response;
 
   const url = new URL(request.url);
-  if (url.searchParams.get("action") === "test_resend" || url.searchParams.get("test_resend") === "1") {
+  const action = url.searchParams.get("action");
+
+  if (action === "test_email" || action === "test_delivery") {
+    const adminRecipient = await getAdminNotificationEmail(env);
+    if (!adminRecipient) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Admin recipient email is not configured.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const testSubject = `[DeltaHarvest System Test] Administrator Email Alert Verified`;
+    const testText = `This is a verified live test alert sent from the DeltaHarvest Tenant User Directory to confirm that email notifications arrive in ${adminRecipient}.`;
+    const testHtml = `<p>${testText}</p>`;
+    let emailSent = false;
+    const protocols = [];
+    const testDiag = { recipient: adminRecipient };
+
+    // 1. Resend
+    if (env.RESEND_API_KEY && env.RESEND_API_KEY.trim()) {
+      try {
+        const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
+        const resendResp = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.RESEND_API_KEY.trim()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: fromAddress,
+            to: [adminRecipient],
+            subject: testSubject,
+            text: testText,
+            html: testHtml,
+          }),
+        });
+        const resData = await resendResp.json().catch(() => ({}));
+        testDiag.resendStatus = resendResp.status;
+        testDiag.resendResponse = resData;
+        if (resendResp.ok) {
+          emailSent = true;
+          protocols.push("Resend API");
+        }
+      } catch (err) {
+        testDiag.resendError = String(err);
+      }
+    }
+
+    // 2. FormSubmit Gateway fallback
+    if (!emailSent) {
+      const fsOrigin = "https://daily-stock-analysis-89j.pages.dev";
+      try {
+        const fsResp = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminRecipient)}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Origin": fsOrigin,
+            "Referer": `${fsOrigin}/`,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          body: JSON.stringify({
+            _subject: testSubject,
+            _captcha: "false",
+            name: "Platform Administrator",
+            email: adminRecipient,
+            requestType: "System Test",
+            message: testText,
+            timestamp: new Date().toUTCString(),
+            _template: "table",
+          }),
+        });
+        const fsData = await fsResp.json().catch(() => ({}));
+        testDiag.formSubmitStatus = fsResp.status;
+        testDiag.formSubmitResponse = fsData;
+        if (fsResp.ok && fsData && (fsData.success === true || fsData.success === "true")) {
+          emailSent = true;
+          protocols.push("FormSubmit Gateway");
+        }
+      } catch (fsErr) {
+        testDiag.formSubmitError = String(fsErr);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: emailSent,
+        recipient: adminRecipient,
+        protocols,
+        deliveredBy: protocols.join(", ") || "None",
+        diagnostics: testDiag,
+        message: emailSent
+          ? `✓ Test alert successfully delivered to ${adminRecipient} via ${protocols.join(", ")}!`
+          : `Failed to deliver test alert to ${adminRecipient}.`,
+      }),
+      { status: emailSent ? 200 : 502, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  if (action === "test_resend" || url.searchParams.get("test_resend") === "1") {
     if (!env.RESEND_API_KEY || !env.RESEND_API_KEY.trim()) {
       return new Response(
         JSON.stringify({

@@ -101,6 +101,7 @@ To eliminate guesswork when verifying Cloudflare dashboard configuration, admini
     "d1_writable": true,
     "rate_limit_kv_bound": true,
     "resend_configured": true,
+    "admin_email_configured": true,
     "environment": "production"
   }
   ```
@@ -111,7 +112,13 @@ To eliminate guesswork when verifying Cloudflare dashboard configuration, admini
   | `d1_bound` | `DB` binding is missing from Functions | Bind D1 database `deltaharvest-db` as variable `DB` |
   | `d1_writable` | D1 database is read-only or schema locked | Check Cloudflare D1 account limits or billing |
   | `rate_limit_kv_bound` | `RATE_LIMIT_KV` binding is missing | Bind KV namespace `RATE_LIMIT_KV` |
-  | `resend_configured` | `RESEND_API_KEY` is not provisioned | Add `RESEND_API_KEY` in Pages Settings |
+  | `resend_configured` | `RESEND_API_KEY` is not provisioned | Add `RESEND_API_KEY` in Pages Settings (falls back to FormSubmit) |
+  | `admin_email_configured` | Notification mailbox is unset | Set `ADMIN_NOTIFICATION_EMAIL` or configure in Admin Directory |
+
+- **Live Email Delivery Test:**
+  Administrators can test end-to-end email delivery via:
+  `GET /api/admin/inquiries?action=test_email`
+  or via the **Send Test Alert Email** button in the Admin User Directory settings.
 
 ---
 

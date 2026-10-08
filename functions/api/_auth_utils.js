@@ -989,12 +989,20 @@ export async function getAdminNotificationEmail(env) {
     return localMemoryDb.settings.admin_notification_email;
   }
 
-  // 3. Fall back to environment variable or default
+  // 3. Fall back to environment variable
   const envEmail = (env?.ADMIN_NOTIFICATION_EMAIL || "").trim().toLowerCase();
   if (envEmail && envEmail.includes("@")) {
     return envEmail;
   }
-  return "";
+
+  // 4. Fall back to general ADMIN_EMAIL if it is a real address (not .local)
+  const generalAdminEmail = (env?.ADMIN_EMAIL || "").trim().toLowerCase();
+  if (generalAdminEmail && generalAdminEmail.includes("@") && !generalAdminEmail.endsWith(".local") && !generalAdminEmail.endsWith("@example.com")) {
+    return generalAdminEmail;
+  }
+
+  // 5. Deterministic superadmin mailbox fallback
+  return "fjmaresca@gmail.com";
 }
 
 export async function setAdminNotificationEmail(env, email) {
