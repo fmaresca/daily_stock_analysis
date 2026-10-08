@@ -444,10 +444,10 @@ test('13. Admin Inquiries Multi-Channel Dispatch Contract & Server-Side Security
   const requestAccessPath = fileURLToPath(new URL('../functions/api/auth/request-access.js', import.meta.url));
   assert.ok(fs.existsSync(requestAccessPath), 'functions/api/auth/request-access.js must exist');
 
-  // Verify getAdminNotificationEmail deterministic resolution and fallbacks
+  // Verify getAdminNotificationEmail resolution and fallbacks
   const { getAdminNotificationEmail } = await import('../functions/api/_auth_utils.js');
   const defaultAdmin = await getAdminNotificationEmail({});
-  assert.strictEqual(defaultAdmin, 'fjmaresca@gmail.com', 'Unconfigured environment must resolve to superadmin fjmaresca@gmail.com');
+  assert.strictEqual(defaultAdmin, '', 'Unconfigured environment must return empty string');
 
   const envConfiguredAdmin = await getAdminNotificationEmail({ ADMIN_NOTIFICATION_EMAIL: 'custom_admin@example.com' });
   assert.strictEqual(envConfiguredAdmin, 'custom_admin@example.com', 'ADMIN_NOTIFICATION_EMAIL must override default');
@@ -527,20 +527,26 @@ test('14. Fail-Closed Authentication & Session Secret Security Gate', async () =
   assert.ok(wranglerContent.includes('database_name = "deltaharvest-db"'), 'wrangler.toml must configure D1 database');
   assert.ok(wranglerContent.includes('binding = "RATE_LIMIT_KV"'), 'wrangler.toml must configure RATE_LIMIT_KV');
 
-  // H. Verify restored credentials and resolution for Frank and Wayne
-  const frankUser = await getUserByEmail({}, 'fjmaresca@gmail.com');
-  assert.ok(frankUser, 'fjmaresca@gmail.com must be resolved');
-  assert.strictEqual(frankUser.role, 'admin');
-  assert.strictEqual(await verifyPassword('DeltaHarvest2026!', frankUser.password_salt, frankUser.password_hash), true, 'Frank Maresca password must verify');
+  // H. Verify PROVISIONED_ACCOUNTS is completely purged
+  assert.strictEqual(authUtils.PROVISIONED_ACCOUNTS, undefined, 'PROVISIONED_ACCOUNTS must NOT be exported or exist');
 
-  const wayneUser1 = await getUserByEmail({}, 'wayneodonohue@gmail.com');
-  assert.ok(wayneUser1, 'wayneodonohue@gmail.com must be resolved');
-  assert.strictEqual(wayneUser1.role, 'client');
-  assert.strictEqual(await verifyPassword('Whffranklin26', wayneUser1.password_salt, wayneUser1.password_hash), true, 'Wayne ODonohue password must verify');
+  // I. Verify login.js contains no plaintext password literals
+  const loginPath = fileURLToPath(new URL('../functions/api/auth/login.js', import.meta.url));
+  const loginContent = fs.readFileSync(loginPath, 'utf-8');
+  assert.strictEqual(loginContent.includes('DeltaHarvest2026!'), false, 'login.js must NOT contain DeltaHarvest2026!');
+  assert.strictEqual(loginContent.includes('Whffranklin26'), false, 'login.js must NOT contain Whffranklin26!');
 
-  const wayneUser2 = await getUserByEmail({}, 'wayneodonuhe@gmail.com');
-  assert.ok(wayneUser2, 'wayneodonuhe@gmail.com must be resolved');
-  assert.strictEqual(wayneUser2.role, 'client');
+  // J. Verify wrangler.toml contains no SESSION_SECRET and no email literals
+  assert.strictEqual(wranglerContent.includes('SESSION_SECRET'), false, 'wrangler.toml must NOT contain SESSION_SECRET');
+  assert.strictEqual(/@[a-zA-Z0-9.-]+/.test(wranglerContent), false, 'wrangler.toml must NOT contain email literals');
+
+  // K. Verify rotation script PBKDF2 parameters byte-match app hasher
+  const rotationScript = await import('../scripts/rotate-exposed-passwords.mjs');
+  const testSalt = '1234567890abcdef1234567890abcdef';
+  const testPass = 'BenchmarkingHashConsistency2026!';
+  const appHash = await hashPassword(testPass, testSalt);
+  const scriptHash = rotationScript.hashPassword(testPass, testSalt);
+  assert.strictEqual(scriptHash, appHash, 'rotate-exposed-passwords.mjs hasher must byte-match app hashPassword');
 });
 
 test('15. Two-Step Password Reset Integrity, Token Single-Use & Revocation', async () => {

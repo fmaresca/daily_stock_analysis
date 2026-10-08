@@ -11,14 +11,11 @@ export const DEFAULT_ADMIN_EMAIL = "admin@deltaharvest.local";
 /**
  * Requires SESSION_SECRET to be configured in Cloudflare environment.
  * Throws immediately if missing, enforcing fail-closed security.
+ * Rotating SESSION_SECRET invalidates all outstanding JWTs (signature verification fails),
+ * which is the operational mechanism that revokes sessions minted under compromised secrets.
  */
 export function requireSessionSecret(env) {
-  let secret = env?.SESSION_SECRET;
-  if (!secret || typeof secret !== "string" || !secret.trim()) {
-    if (env?.CF_PAGES || (env?.ENVIRONMENT === "production" && env?.DB)) {
-      secret = "dh_sec_9f82c4a17b3e0d8f5a6b2c4e1d7a9b3c_prod2026";
-    }
-  }
+  const secret = env?.SESSION_SECRET;
   if (!secret || typeof secret !== "string" || !secret.trim()) {
     console.error("CRITICAL CONFIGURATION ERROR: SESSION_SECRET is not configured.");
     throw new Error("Server authentication is not configured.");
@@ -222,72 +219,12 @@ export function parseSessionCookie(request) {
 }
 
 // ==========================================
-// 4. In-Memory Store & Provisioned Accounts
+// 4. In-Memory Store
 // ==========================================
 
-const PROVISIONED_ACCOUNTS = [
-  {
-    id: "admin-root-0000-0000-000000000001",
-    email: DEFAULT_ADMIN_EMAIL, // admin@deltaharvest.local
-    password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
-    password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
-    role: "admin",
-    is_active: 1,
-    must_change_password: 0,
-    token_version: 0,
-    display_name: "Administrator",
-    created_at: "2026-01-01T00:00:00.000Z",
-    updated_at: "2026-01-01T00:00:00.000Z",
-  },
-  {
-    id: "admin-root-0000-0000-000000000002",
-    email: "fjmaresca@gmail.com",
-    password_hash: "53ae2bab27fe28f6523083a7705fb0f2ec2a9d098ecb0bb50f4553304b90fb4a",
-    password_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
-    role: "admin",
-    is_active: 1,
-    must_change_password: 0,
-    token_version: 0,
-    display_name: "Frank Maresca",
-    created_at: "2026-01-01T00:00:00.000Z",
-    updated_at: "2026-01-01T00:00:00.000Z",
-  },
-  {
-    id: "user-tenant-0000-0000-000000000001",
-    email: "wayneodonohue@gmail.com",
-    password_hash: "109eae8174b76c1c7440d583806281325e843a1ab0c01ade8510223c7116485d",
-    password_salt: "4f059882c1df1b504f9809e99302c6bf",
-    role: "client",
-    is_active: 1,
-    must_change_password: 0,
-    token_version: 0,
-    display_name: "Wayne O'Donohue",
-    created_at: "2026-10-06T00:00:00.000Z",
-    updated_at: "2026-10-06T00:00:00.000Z",
-  },
-  {
-    id: "user-tenant-0000-0000-000000000002",
-    email: "wayneodonuhe@gmail.com",
-    password_hash: "109eae8174b76c1c7440d583806281325e843a1ab0c01ade8510223c7116485d",
-    password_salt: "4f059882c1df1b504f9809e99302c6bf",
-    role: "client",
-    is_active: 1,
-    must_change_password: 0,
-    token_version: 0,
-    display_name: "Wayne O'Donohue",
-    created_at: "2026-10-06T00:00:00.000Z",
-    updated_at: "2026-10-06T00:00:00.000Z",
-  },
-];
-
 const localMemoryDb = {
-  users: [...PROVISIONED_ACCOUNTS],
-  profiles: {
-    "admin-root-0000-0000-000000000001": { display_name: "Administrator" },
-    "admin-root-0000-0000-000000000002": { display_name: "Frank Maresca" },
-    "user-tenant-0000-0000-000000000001": { display_name: "Wayne O'Donohue" },
-    "user-tenant-0000-0000-000000000002": { display_name: "Wayne O'Donohue" },
-  },
+  users: [],
+  profiles: {},
   trades: [],
   watchlists: [],
   portfolios: {},
@@ -373,22 +310,6 @@ export async function ensureUsersTables(env) {
         )
       `).run();
 
-      // Ensure provisioned accounts are persistently seeded into D1
-      for (const bu of PROVISIONED_ACCOUNTS) {
-        try {
-          await env.DB.prepare(`
-            INSERT OR IGNORE INTO users (id, email, password_hash, password_salt, role, is_active, must_change_password, token_version, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).bind(bu.id, bu.email.toLowerCase(), bu.password_hash, bu.password_salt, bu.role, bu.is_active, bu.must_change_password, bu.token_version || 0, bu.created_at, bu.updated_at).run();
-
-          await env.DB.prepare(`
-            INSERT OR IGNORE INTO user_profiles (user_id, display_name, account_notes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-          `).bind(bu.id, bu.display_name, "Provisioned Tenant Account", bu.created_at, bu.updated_at).run();
-        } catch {
-          // ignore duplicate
-        }
-      }
     } catch (e) {
       console.warn("D1 ensureUsersTables error:", e);
     }
@@ -497,13 +418,7 @@ export async function getUserByEmail(env, email) {
     }
   }
 
-  // Resilient fallback for primary provisioned accounts if D1 returned null
-  if (!user) {
-    const foundProvisioned = PROVISIONED_ACCOUNTS.find((u) => u.email.toLowerCase() === cleanEmail);
-    if (foundProvisioned) {
-      user = { ...foundProvisioned };
-    }
-  }
+
 
   if (user) {
     user.token_version = Number(user.token_version || 0);
@@ -554,13 +469,7 @@ export async function getUserById(env, id) {
     }
   }
 
-  // Resilient fallback for primary provisioned accounts if D1 returned null
-  if (!user) {
-    const foundProvisioned = PROVISIONED_ACCOUNTS.find((u) => u.id === id);
-    if (foundProvisioned) {
-      user = { ...foundProvisioned };
-    }
-  }
+
 
   if (user) {
     user.token_version = Number(user.token_version || 0);
@@ -624,29 +533,6 @@ export async function getAllUsers(env) {
         tradeCount: u.trade_count || 0,
       }));
 
-      for (const bu of PROVISIONED_ACCOUNTS) {
-        if (!existingEmails.has(bu.email.toLowerCase())) {
-          userList.push({
-            id: bu.id,
-            email: bu.email,
-            role: (bu.role || "client").toUpperCase(),
-            is_active: bu.is_active,
-            status: (bu.is_active === 1 || bu.is_active === true) ? "ACTIVE" : "SUSPENDED",
-            must_change_password: bu.must_change_password,
-            last_login_at: null,
-            lastLoginAt: null,
-            created_at: bu.created_at,
-            createdAt: bu.created_at,
-            updated_at: bu.updated_at,
-            display_name: bu.display_name,
-            displayName: bu.display_name,
-            account_notes: "Provisioned Tenant Account",
-            trade_count: 0,
-            tradeCount: 0,
-          });
-          existingEmails.add(bu.email.toLowerCase());
-        }
-      }
       return userList;
     } catch (err) {
       console.warn("D1 query error in getAllUsers:", err);
@@ -1001,8 +887,9 @@ export async function getAdminNotificationEmail(env) {
     return generalAdminEmail;
   }
 
-  // 5. Deterministic superadmin mailbox fallback
-  return "fjmaresca@gmail.com";
+  // 5. Unconfigured fallback: log server-side warning and return empty string
+  console.warn("ADMIN_NOTIFICATION_EMAIL is not configured — admin notifications will be queued in D1 only");
+  return "";
 }
 
 export async function setAdminNotificationEmail(env, email) {

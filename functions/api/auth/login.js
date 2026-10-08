@@ -19,7 +19,9 @@ import {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // Fail closed if server authentication secret is not configured
+  // Fail closed if server authentication secret is not configured.
+  // Note: Rotating SESSION_SECRET invalidates all outstanding JWTs (signature verification fails),
+  // which is the operational mechanism that revokes sessions minted under compromised secrets.
   let secret;
   try {
     secret = requireSessionSecret(env);
@@ -43,16 +45,13 @@ export async function onRequestPost(context) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Fail closed if D1 database is not configured (unless in local development or for provisioned accounts)
+    // Fail closed if D1 database is not configured (unless in local development)
     if (!env || !env.DB) {
       if (env?.ENVIRONMENT !== "development") {
-        const isProvisioned = ["fjmaresca@gmail.com", "wayneodonohue@gmail.com", "wayneodonuhe@gmail.com", "admin@deltaharvest.local"].includes(cleanEmail);
-        if (!isProvisioned) {
-          return new Response(
-            JSON.stringify({ error: "User database is not configured." }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
-          );
-        }
+        return new Response(
+          JSON.stringify({ error: "User database is not configured." }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
       }
     }
     const clientIp = getClientIp(request);
@@ -91,20 +90,6 @@ export async function onRequestPost(context) {
     let isValid = false;
     if (user.password_salt && user.password_hash) {
       isValid = await verifyPassword(password, user.password_salt, user.password_hash);
-    }
-
-    // Resilient credentials fallback for primary provisioned accounts
-    if (!isValid) {
-      if (cleanEmail === "fjmaresca@gmail.com" && password === "DeltaHarvest2026!") {
-        isValid = true;
-      } else if (
-        (cleanEmail === "wayneodonohue@gmail.com" || cleanEmail === "wayneodonuhe@gmail.com") &&
-        (password === "Whffranklin26" || password === "DeltaHarvest2026!")
-      ) {
-        isValid = true;
-      } else if (cleanEmail === "admin@deltaharvest.local" && password === "DeltaHarvest2026!") {
-        isValid = true;
-      }
     }
 
     if (!isValid) {

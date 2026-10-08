@@ -64,6 +64,11 @@ DeltaHarvest runs in a strict **fail-closed** security posture. If critical secu
   ```
 - **Optional Sender Address:** Set environment variable `EMAIL_FROM`: `DeltaHarvest Security <onboarding@resend.dev>` or your custom verified domain.
 
+### E. Administrator Notification Email (`ADMIN_NOTIFICATION_EMAIL`)
+- **Dashboard Path:** **Workers & Pages** → **daily-stock-analysis** → **Settings** → **Environment variables** → **Add variable** → Name: `ADMIN_NOTIFICATION_EMAIL` → Value: `<administrator-email>`
+- **No-Silent-Drop Guarantee:** If no admin email is configured, inquiries queue in D1, `/api/admin/diagnostics` flags `admin_email_configured: false`, and nothing is silently lost.
+- **Policy:** Never hardcode administrator email addresses or PII in `wrangler.toml` or repository source files.
+
 ---
 
 ## 2. One-Time Initial Admin Seeding & Password Change

@@ -51,6 +51,8 @@ export async function onRequest(context) {
   }
 
   // 3. Inspect session cookie for protected routes
+  // Note: Rotating SESSION_SECRET invalidates all outstanding JWTs (signature verification fails),
+  // immediately revoking all sessions minted under previous/compromised secrets.
   let secret = null;
   try {
     secret = requireSessionSecret(env);

@@ -4,9 +4,6 @@ pages_build_output_dir = "dist"
 
 [vars]
 ENVIRONMENT = "production"
-ADMIN_EMAIL = "admin@deltaharvest.local"
-ADMIN_NOTIFICATION_EMAIL = "fjmaresca@gmail.com"
-SESSION_SECRET = "dh_sec_9f82c4a17b3e0d8f5a6b2c4e1d7a9b3c_prod2026"
 
 [[d1_databases]]
 binding = "DB"
