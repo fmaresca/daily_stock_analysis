@@ -43,8 +43,29 @@ export async function onRequest(context) {
     }
   }
 
-  // 2. Fall back to server-side provisioned key
-  const serverKey = (env.TRADIER_API_KEY || env.TRADIER_API_TOKEN || "").trim();
+  // 2. Fall back to server-side provisioned key (supporting all variable aliases & D1 system_settings)
+  let serverKey = (
+    env?.TRADIER_API_KEY ||
+    env?.TRADIER_API_TOKEN ||
+    env?.["TRADIER_API-TOKEN"] ||
+    env?.TRADIER_TOKEN ||
+    env?.["TRADIER-TOKEN"] ||
+    ""
+  ).trim();
+
+  if (!serverKey && env?.DB) {
+    try {
+      const row = await env.DB.prepare(
+        "SELECT value FROM system_settings WHERE key = 'tradier_api_key' LIMIT 1"
+      ).first();
+      if (row && row.value && row.value.trim()) {
+        serverKey = row.value.trim();
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
+
   const token = clientToken || serverKey;
   const isServerProvisioned = !clientToken && !!serverKey;
 

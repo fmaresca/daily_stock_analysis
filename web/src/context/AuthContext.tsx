@@ -60,14 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Clear any legacy insecure credentials or session blobs from browser storage
+  // Clear any legacy insecure auth session blobs from browser storage
   useEffect(() => {
     try {
       localStorage.removeItem('deltaharvest_auth_user');
       localStorage.removeItem('deltaharvest_local_users');
-      localStorage.removeItem('tradier_api_key');
-      localStorage.removeItem('schwab_app_key');
-      localStorage.removeItem('schwab_app_secret');
     } catch {
       // Ignore storage errors in restricted contexts
     }

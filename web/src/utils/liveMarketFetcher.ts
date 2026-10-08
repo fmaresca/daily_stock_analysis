@@ -133,9 +133,16 @@ export async function fetchTradierTickerData(symbol: string): Promise<TickerChar
   }
 
   try {
-    const key = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) || '';
-    const isEnabled = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_enabled') : null) !== 'false';
-    const useSandbox = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true';
+    const key =
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_api_key') : null) ||
+      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) ||
+      '';
+    const isEnabled =
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_enabled') : null) !== 'false' &&
+      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_enabled') : null) !== 'false';
+    const useSandbox =
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_use_sandbox') : null) === 'true' ||
+      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true';
     if (!key || !isEnabled) return null;
 
     const baseUrl = useSandbox ? 'https://sandbox.tradier.com/v1' : 'https://api.tradier.com/v1';
@@ -391,9 +398,16 @@ export async function fetchTradierQuotesBatch(
 ): Promise<Map<string, { last: number; bid: number; ask: number; volume: number }>> {
   const result = new Map<string, { last: number; bid: number; ask: number; volume: number }>();
   try {
-    const key = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) || '';
-    const isEnabled = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_enabled') : null) !== 'false';
-    const useSandbox = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true';
+    const key =
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_api_key') : null) ||
+      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) ||
+      '';
+    const isEnabled =
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_enabled') : null) !== 'false' &&
+      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_enabled') : null) !== 'false';
+    const useSandbox =
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_use_sandbox') : null) === 'true' ||
+      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true';
     if (!key || !isEnabled) return result;
 
     const baseUrl = useSandbox ? 'https://sandbox.tradier.com/v1' : 'https://api.tradier.com/v1';

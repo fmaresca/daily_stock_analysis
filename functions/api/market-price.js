@@ -38,8 +38,29 @@ export async function onRequest(context) {
     });
   }
 
-  const tradierToken = (env.TRADIER_API_KEY || env.TRADIER_API_TOKEN || '').trim();
-  const useSandbox = (env.TRADIER_USE_SANDBOX || '').toLowerCase() === 'true';
+  let tradierToken = (
+    env?.TRADIER_API_KEY ||
+    env?.TRADIER_API_TOKEN ||
+    env?.["TRADIER_API-TOKEN"] ||
+    env?.TRADIER_TOKEN ||
+    env?.["TRADIER-TOKEN"] ||
+    ""
+  ).trim();
+
+  if (!tradierToken && env?.DB) {
+    try {
+      const row = await env.DB.prepare(
+        "SELECT value FROM system_settings WHERE key = 'tradier_api_key' LIMIT 1"
+      ).first();
+      if (row && row.value && row.value.trim()) {
+        tradierToken = row.value.trim();
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
+
+  const useSandbox = (env?.TRADIER_USE_SANDBOX || '').toLowerCase() === 'true';
   const tradierBaseUrl = useSandbox ? 'https://sandbox.tradier.com/v1' : 'https://api.tradier.com/v1';
 
   // Tier 1: Tradier API (Direct Edge Fetch)

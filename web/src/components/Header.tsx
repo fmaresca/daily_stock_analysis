@@ -107,8 +107,10 @@ export const Header: React.FC<HeaderProps> = ({
   const [isAutoSyncMenuOpen, setIsAutoSyncMenuOpen] = useState(false);
   const [isTradierActive, setIsTradierActive] = useState<boolean>(() => {
     try {
-      const userKey = sessionStorage.getItem('tradier_api_key');
-      const isProv = sessionStorage.getItem('tradier_server_provisioned') === 'true';
+      const userKey = localStorage.getItem('tradier_api_key') || sessionStorage.getItem('tradier_api_key');
+      const isProv =
+        localStorage.getItem('tradier_server_provisioned') === 'true' ||
+        sessionStorage.getItem('tradier_server_provisioned') === 'true';
       return !!userKey || isProv;
     } catch {
       return false;
@@ -118,8 +120,10 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     const checkTradier = () => {
       try {
-        const userKey = sessionStorage.getItem('tradier_api_key');
-        const isProv = sessionStorage.getItem('tradier_server_provisioned') === 'true';
+        const userKey = localStorage.getItem('tradier_api_key') || sessionStorage.getItem('tradier_api_key');
+        const isProv =
+          localStorage.getItem('tradier_server_provisioned') === 'true' ||
+          sessionStorage.getItem('tradier_server_provisioned') === 'true';
         setIsTradierActive(!!userKey || isProv);
       } catch {
         setIsTradierActive(false);
@@ -129,8 +133,11 @@ export const Header: React.FC<HeaderProps> = ({
     fetch('/api/v1/options/tradier/status')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && data.server_provisioned && data.status === 'CONNECTED') {
-          sessionStorage.setItem('tradier_server_provisioned', 'true');
+        if (data && (data.server_provisioned || data.status === 'CONNECTED')) {
+          if (data.server_provisioned) {
+            localStorage.setItem('tradier_server_provisioned', 'true');
+            sessionStorage.setItem('tradier_server_provisioned', 'true');
+          }
           setIsTradierActive(true);
         }
       })

@@ -108,8 +108,13 @@ export const ApiDiagnosticsModal: React.FC<ApiDiagnosticsModalProps> = ({
     const t0 = performance.now();
 
     try {
-      const savedKey = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) || '';
-      const useSandbox = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true';
+      const savedKey =
+        (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_api_key') : null) ||
+        (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_api_key') : null) ||
+        '';
+      const useSandbox =
+        (typeof localStorage !== 'undefined' ? localStorage.getItem('tradier_use_sandbox') : null) === 'true' ||
+        (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tradier_use_sandbox') : null) === 'true';
 
       // 1. Check backend status (handles both server-provisioned key and Authorization header)
       try {

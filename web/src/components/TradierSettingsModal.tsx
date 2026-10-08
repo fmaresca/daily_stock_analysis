@@ -35,17 +35,15 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
     if (!isOpen) return;
 
     try {
-      // Purge any legacy localStorage keys to comply with security rules
-      const legacyKey = localStorage.getItem('tradier_api_key');
-      if (legacyKey) {
-        sessionStorage.setItem('tradier_api_key', legacyKey);
-        localStorage.removeItem('tradier_api_key');
-      }
-
-      // Default to empty string: no client bundle fallback keys
-      const savedKey = sessionStorage.getItem('tradier_api_key') || '';
-      const savedSandbox = (sessionStorage.getItem('tradier_use_sandbox') || localStorage.getItem('tradier_use_sandbox')) === 'true';
-      const savedEnabled = (sessionStorage.getItem('tradier_enabled') || localStorage.getItem('tradier_enabled')) !== 'false';
+      // Support persistent localStorage with sessionStorage fallback
+      const savedKey =
+        localStorage.getItem('tradier_api_key') ||
+        sessionStorage.getItem('tradier_api_key') ||
+        '';
+      const savedSandbox =
+        (localStorage.getItem('tradier_use_sandbox') || sessionStorage.getItem('tradier_use_sandbox')) === 'true';
+      const savedEnabled =
+        (localStorage.getItem('tradier_enabled') || sessionStorage.getItem('tradier_enabled')) !== 'false';
 
       setApiKey(savedKey);
       setUseSandbox(savedSandbox);
@@ -60,18 +58,24 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
       fetch('/api/v1/options/tradier/status', { headers: probeHeaders })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (data && data.server_provisioned && data.status === 'CONNECTED') {
-            setIsServerProvisioned(true);
-            sessionStorage.setItem('tradier_server_provisioned', 'true');
-            if (!savedKey) {
-              setTestStatus('CONNECTED');
-              setLatencyMs(data.latency_ms || null);
-              setSampleQuote(data.sample_quote || null);
-              setTestMessage('Tradier API is active via server-provisioned environment variables (Zero-Knowledge Client).');
+          if (data && (data.server_provisioned || data.status === 'CONNECTED')) {
+            if (data.server_provisioned) {
+              setIsServerProvisioned(true);
+              localStorage.setItem('tradier_server_provisioned', 'true');
+              sessionStorage.setItem('tradier_server_provisioned', 'true');
             }
+            setTestStatus('CONNECTED');
+            setLatencyMs(data.latency_ms || null);
+            setSampleQuote(data.sample_quote || null);
+            setTestMessage(
+              data.server_provisioned
+                ? 'Tradier API is active via Cloudflare Pages Environment Variables / D1 (Zero-Knowledge Client).'
+                : 'Tradier API is active (Primary Market Data Provider).'
+            );
           } else {
             setIsServerProvisioned(false);
             if (!savedKey) {
+              localStorage.removeItem('tradier_server_provisioned');
               sessionStorage.removeItem('tradier_server_provisioned');
             }
           }
@@ -101,11 +105,14 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
     try {
       const trimmed = apiKey.trim();
       if (trimmed) {
+        localStorage.setItem('tradier_api_key', trimmed);
         sessionStorage.setItem('tradier_api_key', trimmed);
       } else {
+        localStorage.removeItem('tradier_api_key');
         sessionStorage.removeItem('tradier_api_key');
       }
-      localStorage.removeItem('tradier_api_key'); // Ensure purged from persistent storage
+      localStorage.setItem('tradier_use_sandbox', useSandbox ? 'true' : 'false');
+      localStorage.setItem('tradier_enabled', isEnabled ? 'true' : 'false');
       sessionStorage.setItem('tradier_use_sandbox', useSandbox ? 'true' : 'false');
       sessionStorage.setItem('tradier_enabled', isEnabled ? 'true' : 'false');
 
@@ -371,7 +378,7 @@ export const TradierSettingsModal: React.FC<TradierSettingsModalProps> = ({
               <p className="text-[10px] text-slate-500 mt-1">
                 {isServerProvisioned && !apiKey
                   ? 'Server-side key is active. Browser storage remains zero-knowledge.'
-                  : 'Key is kept in browser sessionStorage for this session only and is never stored in persistent browser storage.'}
+                  : 'Key is persisted in browser storage and securely transmitted directly to Tradier endpoints.'}
               </p>
             </div>
 
