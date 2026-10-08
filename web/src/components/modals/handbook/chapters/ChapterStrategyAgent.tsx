@@ -87,7 +87,7 @@ export const ChapterStrategyAgent: React.FC<ChapterStrategyAgentProps> = ({ onNa
           <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400">
             <div>📈 <strong className="text-slate-300">Market Price &amp; Technicals</strong> — Yahoo Finance (spot price, SMA-20/50, RSI-14, Bollinger Bands)</div>
             <div>🗞️ <strong className="text-slate-300">Ticker News</strong> — Google News RSS (top 5 recent headlines)</div>
-            <div>🧠 <strong className="text-slate-300">Adanos Sentiment</strong> — Reddit, X, Polymarket, News buzz scores (requires ADANOS_API_KEY)</div>
+            <div>🧠 <strong className="text-slate-300">Adanos Sentiment</strong> — Reddit, X, Polymarket, News buzz scores (requires backend sentiment API key)</div>
             <div>📅 <strong className="text-slate-300">Economic Calendar</strong> — Upcoming FOMC, CPI, NFP, and high-impact macro events</div>
           </div>
         </div>
@@ -96,8 +96,7 @@ export const ChapterStrategyAgent: React.FC<ChapterStrategyAgentProps> = ({ onNa
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
           <span>
             The agent is rate-limited to 30 requests/minute per user. Sentiment data requires the
-            <code className="mx-1 px-1 py-0.5 rounded bg-slate-800 text-amber-200">ADANOS_API_KEY</code>
-            Cloudflare Pages secret to be configured. If not set, the agent gracefully reports
+            Adanos sentiment service key to be configured in Cloudflare Pages environment secrets. If not set, the agent gracefully reports
             sentiment as unavailable and proceeds with technical and news data only.
           </span>
         </div>

@@ -191,18 +191,18 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
                   }}
                   className={`${getSubItemClasses(activeOptionsTab === 'SCHWAB_POSITIONS_UPLOAD')} w-full text-left`}
                   title="Import your positions and cash from Schwab CSV, brokerage screenshot, or clipboard OCR."
-                  aria-label="1. Import Holdings"
+                  aria-label="1. Upload Positions"
                   aria-current={activeOptionsTab === 'SCHWAB_POSITIONS_UPLOAD' ? 'true' : undefined}
                 >
                   <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">1</span>
                   <div className="truncate min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="truncate block font-medium">1. Import Holdings</span>
+                      <span className="truncate block font-medium">1. Upload Positions</span>
                       <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         OCR
                       </span>
                     </div>
-                    <span className="text-[9px] text-slate-500 block">CSV, Screenshot &amp; Clipboard</span>
+                    <span className="text-[9px] text-slate-500 block">Schwab CSV Import</span>
                   </div>
                 </button>
                 {/* Step 2 */}

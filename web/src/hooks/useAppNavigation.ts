@@ -50,6 +50,14 @@ export function parseRouteFromLocation(autoRedirect = false): RouteLocation {
     if (autoRedirect && path !== '/settings/password') window.history.replaceState(null, '', '/settings/password');
     return makeRoute({ tree: 'SETTINGS_PASSWORD', canonicalPath: '/settings/password' });
   }
+  if (path === '/agent' || path === '/ask' || path === '/chat' || path === '/strategy-agent') {
+    if (autoRedirect && path !== '/agent') window.history.replaceState(null, '', '/agent');
+    return makeRoute({ tree: 'AGENT_CHAT', canonicalPath: '/agent' });
+  }
+  if (path === '/recap' || path === '/market-recap' || path === '/market/recap') {
+    if (autoRedirect && path !== '/recap') window.history.replaceState(null, '', '/recap');
+    return makeRoute({ tree: 'MARKET_RECAP', canonicalPath: '/recap' });
+  }
   if (path === '/methodology' || path === '/rules' || path === '/learn/methodology') {
     if (autoRedirect && path !== '/methodology' && path !== '/learn/methodology') window.history.replaceState(null, '', '/methodology');
     return makeRoute({ tree: 'METHODOLOGY', canonicalPath: path === '/learn/methodology' ? '/learn/methodology' : '/methodology' });
@@ -269,6 +277,10 @@ export function useAppNavigation() {
         targetPath = '/admin/users';
       } else if (tree === 'SETTINGS_PASSWORD') {
         targetPath = '/settings/password';
+      } else if (tree === 'AGENT_CHAT') {
+        targetPath = '/agent';
+      } else if (tree === 'MARKET_RECAP') {
+        targetPath = '/recap';
       } else if (tree === 'METHODOLOGY') {
         targetPath = '/methodology';
       } else if (tree === 'FAQ') {

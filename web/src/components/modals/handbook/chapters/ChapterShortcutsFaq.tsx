@@ -427,6 +427,21 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             <li><strong>In-Session Password Rotation:</strong> Authenticated users can rotate credentials at any time directly within their personal tenant workspace using the Password Change modal.</li>
           </ul>
         </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-teal-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-teal-400">📬</span>
+            <span>How does the Scheduled Morning Digest Push work and how do I subscribe?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            The <strong>Scheduled Morning Digest Push</strong> dispatches an automated market pre-opening intelligence briefing before the bell on trading days (scheduled via GitHub Actions at 6:00 AM CT / 11:00 UTC, Mon–Fri):
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Automated Pre-Market Intelligence:</strong> Includes economic catalyst alerts, macro radar, expiring option warnings, and top screened opportunities formatted for quick review.</li>
+            <li><strong>User Profile Opt-In:</strong> Log in to your personal dashboard (<code className="text-cyan-300 font-mono">/profile</code> or User Dashboard) and scroll to <strong>Morning Intelligence Digest</strong>. Toggle the subscription switch on, specify your preferred delivery email, and optionally enter a Discord webhook URL for community/channel notifications.</li>
+            <li><strong>Fail-Safe Dispatch:</strong> The edge engine checks trading day calendars before sending, authenticates via edge secret headers, dispatches via Resend/Discord webhook, and logs run outcomes in SQLite/D1.</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

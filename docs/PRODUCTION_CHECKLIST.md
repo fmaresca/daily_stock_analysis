@@ -140,3 +140,46 @@ Run these verification checks against your deployed domain:
 | `GET /api/admin/diagnostics` (unauthenticated) | HTTP 401 `{"error":"Unauthorized"}` | Diagnostics endpoint protected |
 | `GET /admin/users` (unauthenticated) | HTTP 302 to `/login` | Edge middleware route guard enforcement |
 | Rapid hits to `/api/v1/options/tradier/status` | HTTP 429 with `Retry-After` header | Rate limiter protection |
+
+---
+
+## 5. Scheduled Morning Digest Push Setup
+
+The platform includes an automated pre-market intelligence digest dispatched every trading day at **6:00 AM Central Time (11:00 UTC)**.
+
+### Configuration Steps
+
+1. **Cloudflare Pages Environment Variables:**
+   - In Cloudflare Dashboard → Workers & Pages → `deltaharvest` (or your Pages project) → **Settings** → **Environment Variables**:
+     - `CRON_SECRET`: Set to any random secure string (e.g. generated via `openssl rand -hex 32`).
+     - `RESEND_API_KEY`: Set to your Resend API key (`re_...`) for HTML email delivery.
+
+2. **GitHub Actions Repository Secrets:**
+   - In GitHub Repository → **Settings** → **Secrets and variables** → **Actions**:
+     - `APP_URL`: Set to your production domain, e.g. `https://deltaharvest.pages.dev`.
+     - `CRON_SECRET`: Set to the identical secret value defined in Cloudflare Pages.
+
+3. **Automation Workflow:**
+   - Workflow file: `.github/workflows/morning-digest.yml`
+   - Trigger cadence: Monday through Friday at `0 11 * * 1-5` UTC (6:00 AM US Central / 7:00 AM US Eastern).
+   - Manual Run: GitHub Repository → **Actions** → **Scheduled Morning Market Digest** → **Run workflow** (select `force: true` to bypass weekend/holiday checks).
+   - Alternative Cron: `./scripts/trigger_morning_digest.sh --force` from any external scheduler (crontab, Cloudflare Cron Triggers, etc.).
+
+4. **User Opt-In via Profile:**
+   - Each tenant controls their subscription from their **User Dashboard** profile panel (`/profile`).
+   - Navigate to the **Morning Intelligence Digest** section.
+   - Toggle **Receive Morning Digest** on.
+   - Enter/confirm preferred delivery email address.
+   - (Optional) Enter a **Discord Webhook URL** for community/channel notifications.
+   - Click **Save Preferences**.
+
+5. **Verification & Testing:**
+   - **Test Single Email Delivery:**
+     ```bash
+     curl -X POST "https://deltaharvest.pages.dev/api/scheduled/morning-digest?test_email=your-email@example.com&force=true" \
+       -H "Authorization: Bearer <YOUR_CRON_SECRET>"
+     ```
+   - Admins can also trigger directly while logged into the terminal.
+   - Edge route verifies trading day status via CBOE/US market calendar (unless `force=true`).
+   - Delivery outcomes and subscriber counts are logged to D1 audit storage.
+

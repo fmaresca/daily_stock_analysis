@@ -15,6 +15,9 @@ import {
   Calendar,
   Award,
   Upload,
+  Bell,
+  CheckCircle2,
+  AlertTriangle,
 } from '../icons';
 import { UserTradeItem, UserWatchlistItem, UserPortfolioItem } from '../../types/auth';
 import { OptionsTabType } from '../../types/options';
@@ -43,6 +46,50 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
   const [portfolio, setPortfolio] = useState<UserPortfolioItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Morning Digest Opt-In ────────────────────────────────────────────
+  const [digestOptedIn, setDigestOptedIn] = useState(false);
+  const [digestEmail, setDigestEmail] = useState(user?.email || '');
+  const [digestDiscord, setDigestDiscord] = useState('');
+  const [digestSaving, setDigestSaving] = useState(false);
+  const [digestStatus, setDigestStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+
+  useEffect(() => {
+    fetch('/api/user/digest-preferences', { credentials: 'include' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data) {
+          setDigestOptedIn(Boolean(data.opted_in));
+          setDigestEmail(data.email || user?.email || '');
+          setDigestDiscord(data.discord_webhook_url || '');
+        }
+      })
+      .catch(() => {});
+  }, [user?.email]);
+
+  const handleSaveDigestPrefs = async () => {
+    setDigestSaving(true);
+    setDigestStatus('idle');
+    try {
+      const resp = await fetch('/api/user/digest-preferences', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          opted_in: digestOptedIn,
+          email: digestEmail.trim() || user?.email,
+          discord_webhook_url: digestDiscord.trim(),
+        }),
+      });
+      if (resp.ok) setDigestStatus('saved');
+      else setDigestStatus('error');
+    } catch {
+      setDigestStatus('error');
+    } finally {
+      setDigestSaving(false);
+      setTimeout(() => setDigestStatus('idle'), 3000);
+    }
+  };
 
   const WORKFLOW_STEPS: {
     step: number;
@@ -486,6 +533,100 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
 
       {/* Top of Primary Screen: Daily US Market Recap Digest */}
       <MarketRecapSection />
+
+      {/* ── Morning Email Digest Opt-In ─────────────────────────────────────── */}
+      <div className="p-4 rounded-xl bg-slate-900/90 border border-cyan-500/30 shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0">
+              <Bell className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                Morning Strategy Digest
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                  6:00 AM CT
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Pre-market email with index pulse, VIX, and your watchlist RSI / SMA signals — every US trading day.
+              </p>
+            </div>
+          </div>
+
+          {/* Opt-In Toggle */}
+          <button
+            onClick={() => setDigestOptedIn((v) => !v)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none shrink-0 ${
+              digestOptedIn ? 'bg-cyan-500' : 'bg-slate-700'
+            }`}
+            aria-label={digestOptedIn ? 'Opted in to morning digest' : 'Opt in to morning digest'}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                digestOptedIn ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+
+        {digestOptedIn && (
+          <div className="space-y-2 pt-1 border-t border-slate-800">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Email</label>
+                <input
+                  type="email"
+                  value={digestEmail}
+                  onChange={(e) => setDigestEmail(e.target.value)}
+                  placeholder={user?.email || 'your@email.com'}
+                  className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 focus:border-cyan-500 text-xs text-slate-100 rounded-lg focus:outline-none transition-colors"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Discord Webhook <span className="text-slate-600 normal-case">(optional)</span>
+                </label>
+                <input
+                  type="url"
+                  value={digestDiscord}
+                  onChange={(e) => setDigestDiscord(e.target.value)}
+                  placeholder="https://discord.com/api/webhooks/..."
+                  className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 focus:border-cyan-500 text-xs text-slate-100 rounded-lg focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1">
+          <p className="text-[10px] text-slate-500">
+            {digestOptedIn
+              ? `✅ You will receive a pre-market digest at ${digestEmail || user?.email} on US trading days.`
+              : 'Toggle on to subscribe. Your email is never shared.'}
+          </p>
+          <div className="flex items-center gap-2">
+            {digestStatus === 'saved' && (
+              <span className="flex items-center gap-1 text-[11px] text-emerald-400">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+              </span>
+            )}
+            {digestStatus === 'error' && (
+              <span className="flex items-center gap-1 text-[11px] text-rose-400">
+                <AlertTriangle className="w-3.5 h-3.5" /> Save failed
+              </span>
+            )}
+            <button
+              onClick={handleSaveDigestPrefs}
+              disabled={digestSaving}
+              className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              {digestSaving ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
+              Save Preferences
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Administrative Options Workflow Banner */}
       {isAdminUser && (
