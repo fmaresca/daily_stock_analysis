@@ -1,4 +1,5 @@
 import { authenticateRequest, getAdminNotificationEmail } from "../_auth_utils.js";
+import { getActiveProviderName } from "../_llm.js";
 
 /**
  * Cloudflare Pages Function: GET /api/admin/diagnostics
@@ -65,6 +66,8 @@ export async function onRequestGet(context) {
     env.ADANOS_API_KEY.trim().length > 0
   );
 
+  const llmProvider = getActiveProviderName(env);
+
   return new Response(
     JSON.stringify({
       secret_configured: secretConfigured,
@@ -74,6 +77,7 @@ export async function onRequestGet(context) {
       resend_configured: resendConfigured,
       admin_email_configured: adminEmailConfigured,
       adanos_configured: adanosConfigured,
+      llm_provider: llmProvider,
       environment: environment,
     }),
     {

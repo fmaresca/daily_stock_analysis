@@ -502,6 +502,33 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
               )}
             </button>
 
+            {/* Ask Strategy Agent */}
+            <button
+              onClick={() => {
+                onSelectTree('AGENT_CHAT');
+                onCloseMobile?.();
+              }}
+              className={`${getItemClasses(activeTree === 'AGENT_CHAT')} w-full`}
+              title="Conversational quantitative strategy assistant. Ask about any stock under 8 strategy lenses."
+              aria-label="Ask Strategy Agent"
+              aria-current={activeTree === 'AGENT_CHAT' ? 'true' : undefined}
+            >
+              <BrainCircuit className="w-4 h-4 text-purple-400 shrink-0" />
+              {!isCollapsed && (
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold truncate">Ask Strategy Agent</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      AI
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 light:text-slate-400 font-normal truncate">
+                    8 Strategy Lenses &amp; Q&amp;A
+                  </div>
+                </div>
+              )}
+            </button>
+
             {/* Find Income Trades (Options Income Screener) */}
             <button
               onClick={() => {

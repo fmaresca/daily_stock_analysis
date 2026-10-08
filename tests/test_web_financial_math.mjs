@@ -1198,10 +1198,296 @@ test('20. Adanos Market Sentiment Proxy Contract, Mock Resilience & Security Gre
   }
 });
 
+test('21. Multi-LLM Provider Abstraction, Failover Resilience & Diagnostics Contract', async () => {
+  const { getActiveProviderName, completeLLM } = await import('../functions/api/_llm.js');
+  const diagnosticsModule = await import('../functions/api/admin/diagnostics.js');
+  const authModule = await import('../functions/api/_auth_utils.js');
 
+  // A. Provider Name Resolution Contract
+  assert.strictEqual(getActiveProviderName({}), 'gemini', 'Default without env vars must be gemini');
+  assert.strictEqual(getActiveProviderName({ GEMINI_API_KEY: 'mock_gemini' }), 'gemini');
+  assert.strictEqual(getActiveProviderName({ LLM_API_KEY: 'mock_llm' }), 'openai');
+  assert.strictEqual(getActiveProviderName({ LLM_PROVIDER: 'deepseek', LLM_API_KEY: 'sk_123' }), 'deepseek');
+  assert.strictEqual(getActiveProviderName({ LLM_PROVIDER: 'openai' }), 'openai');
 
+  // B. Mock fetch tests
+  const originalFetch = globalThis.fetch;
+  try {
+    // 1. Default Gemini call test
+    let geminiFetched = false;
+    globalThis.fetch = async (url, options) => {
+      const urlStr = String(url);
+      if (urlStr.includes('generativelanguage.googleapis.com')) {
+        geminiFetched = true;
+        return new Response(JSON.stringify({
+          candidates: [{ content: { parts: [{ text: '{"analysis":"gemini_ok"}' }] } }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('Not found', { status: 404 });
+    };
 
+    const geminiRes = await completeLLM({
+      env: { GEMINI_API_KEY: 'test_gemini_key' },
+      messages: [{ role: 'user', content: 'test options prompt' }],
+      responseFormat: 'json',
+    });
+    assert.strictEqual(geminiFetched, true, 'Must call Gemini API endpoint');
+    assert.strictEqual(geminiRes.provider, 'gemini');
+    assert.strictEqual(geminiRes.text, '{"analysis":"gemini_ok"}');
 
+    // 2. OpenAI-compatible call test
+    let openaiFetched = false;
+    globalThis.fetch = async (url, options) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/chat/completions')) {
+        openaiFetched = true;
+        assert.strictEqual(options.headers.Authorization, 'Bearer test_openai_key');
+        return new Response(JSON.stringify({
+          choices: [{ message: { content: '{"analysis":"openai_ok"}' } }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('Not found', { status: 404 });
+    };
 
+    const openaiRes = await completeLLM({
+      env: {
+        LLM_PROVIDER: 'openai',
+        LLM_API_KEY: 'test_openai_key',
+        LLM_BASE_URL: 'https://api.openai.com/v1',
+        LLM_MODEL: 'gpt-4o-mini'
+      },
+      messages: [{ role: 'user', content: 'test prompt' }],
+      responseFormat: 'json',
+    });
+    assert.strictEqual(openaiFetched, true, 'Must call OpenAI completions endpoint');
+    assert.strictEqual(openaiRes.provider, 'openai');
+    assert.strictEqual(openaiRes.text, '{"analysis":"openai_ok"}');
 
+    // 3. Failover test: primary provider fails -> fallback provider succeeds
+    let primaryAttempted = false;
+    let fallbackAttempted = false;
+    globalThis.fetch = async (url, options) => {
+      const urlStr = String(url);
+      if (urlStr.includes('generativelanguage.googleapis.com')) {
+        primaryAttempted = true;
+        // Primary Gemini fails with 500
+        return new Response(JSON.stringify({ error: 'Gemini temporary overload' }), { status: 500 });
+      }
+      if (urlStr.includes('/chat/completions')) {
+        fallbackAttempted = true;
+        return new Response(JSON.stringify({
+          choices: [{ message: { content: 'fallback_success' } }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('Not found', { status: 404 });
+    };
 
+    const failoverRes = await completeLLM({
+      env: {
+        GEMINI_API_KEY: 'primary_key',
+        LLM_API_KEY: 'fallback_key',
+        LLM_FALLBACK_PROVIDER: 'openai',
+      },
+      messages: [{ role: 'user', content: 'test failover' }],
+    });
+    assert.strictEqual(primaryAttempted, true, 'Primary provider must be attempted');
+    assert.strictEqual(fallbackAttempted, true, 'Fallback provider must be attempted on primary error');
+    assert.strictEqual(failoverRes.provider, 'openai');
+    assert.strictEqual(failoverRes.text, 'fallback_success');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  // C. Diagnostics Contract: llm_provider present and never leaks secret
+  const diagEnv = {
+    ENVIRONMENT: 'development',
+    SESSION_SECRET: 'test-session-secret-diagnostics-llm-2026',
+    LLM_PROVIDER: 'deepseek',
+    LLM_API_KEY: 'sk_secret_should_never_leak_12345',
+  };
+  const adminUser = await authModule.createUser(diagEnv, {
+    email: 'admin_llm_tester@deltaharvest.local',
+    password_hash: 'mockhash',
+    password_salt: 'mocksalt',
+    role: 'admin',
+    is_active: 1,
+    must_change_password: 0,
+    display_name: 'Diag LLM Admin',
+  });
+  const token = await authModule.createSessionToken(
+    { sub: adminUser.id, email: adminUser.email, role: 'admin', tv: adminUser.token_version ?? 0 },
+    diagEnv.SESSION_SECRET
+  );
+  const cookie = authModule.buildSessionCookie(token);
+  const diagReq = new Request('http://localhost/api/admin/diagnostics', {
+    headers: { Cookie: cookie },
+  });
+  const diagRes = await diagnosticsModule.onRequestGet({ request: diagReq, env: diagEnv });
+  assert.strictEqual(diagRes.status, 200);
+  const diagBody = await diagRes.json();
+  assert.strictEqual(diagBody.llm_provider, 'deepseek', 'Diagnostics must report provider name');
+  const diagJsonStr = JSON.stringify(diagBody);
+  assert.ok(!diagJsonStr.includes('sk_secret_should_never_leak_12345'), 'Diagnostics must NEVER leak LLM_API_KEY');
+});
+
+test('22. Feature Expansion Pack Contracts: Agent Q&A, Daily Recap, Morning Push & OCR Import', async () => {
+  // A. Prompt 2: Conversational Strategy Agent Backend & Tooling Contract
+  const { getOrCreateSession, listUserSessions, saveMessage, getSessionMessages } = await import('../functions/api/agent/_agent_db.js');
+  const { executeAgentTool } = await import('../functions/api/agent/_agent_tools.js');
+  const agentChatModule = await import('../functions/api/agent/chat.js');
+  const authModule = await import('../functions/api/_auth_utils.js');
+
+  const testEnv = {
+    ENVIRONMENT: 'development',
+    SESSION_SECRET: 'test-session-secret-agent-suite-2026',
+  };
+
+  // 1. Tenant Isolation: User A cannot see User B's sessions or messages
+  const userA = await authModule.createUser(testEnv, {
+    email: 'user_a@deltaharvest.local',
+    password_hash: 'hash_a',
+    password_salt: 'salt_a',
+    role: 'client',
+  });
+  const userB = await authModule.createUser(testEnv, {
+    email: 'user_b@deltaharvest.local',
+    password_hash: 'hash_b',
+    password_salt: 'salt_b',
+    role: 'client',
+  });
+
+  const sessA = await getOrCreateSession(testEnv, userA.id, null, 'NVDA', 'Trend/Momentum');
+  await saveMessage(testEnv, userA.id, sessA.id, 'user', 'Is NVDA overbought?', 'Trend/Momentum');
+  await saveMessage(testEnv, userA.id, sessA.id, 'assistant', 'NVDA RSI is 62 (14d).', 'Trend/Momentum');
+
+  const userBSessions = await listUserSessions(testEnv, userB.id);
+  assert.strictEqual(userBSessions.length, 0, 'User B must NOT see User A chat sessions');
+
+  const userBMessages = await getSessionMessages(testEnv, userB.id, sessA.id);
+  assert.strictEqual(userBMessages.length, 0, 'User B must NOT see User A session messages');
+
+  // 2. Unauthenticated Chat Request Gate -> 401
+  const unauthReq = new Request('http://localhost/api/agent/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: 'Hello agent' }),
+  });
+  const unauthRes = await agentChatModule.onRequest({ request: unauthReq, env: testEnv });
+  assert.strictEqual(unauthRes.status, 401, 'Unauthenticated POST /api/agent/chat must return 401');
+
+  // 3. Tool Calling Dispatch Contract
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('yahoo.com')) {
+        return new Response(JSON.stringify({
+          chart: {
+            result: [{
+              meta: { regularMarketPrice: 125.50, previousClose: 120.00 },
+              indicators: { quote: [{ close: [115, 118, 120, 122, 125.50] }] }
+            }]
+          }
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('Not found', { status: 404 });
+    };
+
+    const toolRes = await executeAgentTool('get_market_price_and_technicals', JSON.stringify({ symbol: 'NVDA' }), testEnv);
+    assert.strictEqual(toolRes.symbol, 'NVDA');
+    assert.strictEqual(toolRes.spotPrice, 125.50);
+    assert.ok(typeof toolRes.changePct === 'number');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  // B. Prompt 3: Daily Market Recap Core & Edge Caching Contract
+  const { getDailyMarketRecap } = await import('../functions/api/_market_recap_core.js');
+  const marketRecapModule = await import('../functions/api/market-recap.js');
+
+  try {
+    globalThis.fetch = async (url) => {
+      return new Response(JSON.stringify({
+        chart: {
+          result: [{
+            meta: { regularMarketPrice: 550.00, previousClose: 545.00 },
+            indicators: { quote: [{ close: [540, 545, 550] }] }
+          }]
+        }
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    };
+
+    const recapData = await getDailyMarketRecap(true);
+    assert.ok(Array.isArray(recapData.indices));
+    assert.ok(Array.isArray(recapData.sectors));
+    assert.strictEqual(recapData.breadth, undefined, 'Breadth must be omitted if not supplied by upstream');
+
+    // Edge HTTP endpoint test
+    const recapReq = new Request('http://localhost/api/market-recap', { method: 'GET' });
+    const recapRes = await marketRecapModule.onRequest({ request: recapReq, env: testEnv });
+    assert.strictEqual(recapRes.status, 200);
+    const recapJson = await recapRes.json();
+    assert.ok(recapJson.indices.length > 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  // C. Prompt 4: Scheduled Morning Digest & Trading Day Filter
+  const { isUsMarketTradingDay } = await import('../functions/api/scheduled/morning-digest.js');
+  const morningDigestModule = await import('../functions/api/scheduled/morning-digest.js');
+
+  // Verify weekend and holiday checks
+  assert.strictEqual(isUsMarketTradingDay(new Date('2026-07-04T12:00:00Z')), false, 'July 4 must not be trading day');
+  assert.strictEqual(isUsMarketTradingDay(new Date('2026-12-25T12:00:00Z')), false, 'Christmas must not be trading day');
+  assert.strictEqual(isUsMarketTradingDay(new Date('2026-10-10T12:00:00Z')), false, 'Saturday must not be trading day');
+  assert.strictEqual(isUsMarketTradingDay(new Date('2026-10-07T14:00:00Z')), true, 'Wednesday must be trading day');
+
+  // Unauthenticated scheduled run without secret rejected
+  const unauthDigestReq = new Request('http://localhost/api/scheduled/morning-digest', { method: 'POST' });
+  const unauthDigestRes = await morningDigestModule.onRequest({ request: unauthDigestReq, env: { CRON_SECRET: 'supersecret' } });
+  assert.strictEqual(unauthDigestRes.status, 401, 'Scheduled endpoint without secret must return 401');
+
+  // Valid secret execution
+  const authDigestReq = new Request('http://localhost/api/scheduled/morning-digest?force=true', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer supersecret' },
+  });
+  const authDigestRes = await morningDigestModule.onRequest({ request: authDigestReq, env: { CRON_SECRET: 'supersecret' } });
+  assert.strictEqual(authDigestRes.status, 200);
+  const authDigestJson = await authDigestRes.json();
+  assert.strictEqual(authDigestJson.success, true);
+
+  // D. Prompt 5: OCR Holdings Parser & Schwab CSV Bridge Contract
+  const { parseOcrTextToHoldings, convertConfirmedRowsToSchwabCsv } = await import('../web/src/utils/holdingsOcrParser.ts');
+
+  const mockOcrText = `
+Positions for Account 12345678
+Symbol Description Quantity Price Market Value
+NVDA NVIDIA CORP 100 $125.00 $12500.00
+AAPL APPLE INC 50 $220.00 $11000.00
+Cash & Money Market $45000.00
+BLUR 0
+`;
+
+  const parsedHoldings = parseOcrTextToHoldings(mockOcrText);
+  assert.strictEqual(parsedHoldings.rows.length, 3);
+  const nvdaRow = parsedHoldings.rows.find(r => r.symbol === 'NVDA');
+  assert.ok(nvdaRow);
+  assert.strictEqual(nvdaRow.quantity, 100);
+  assert.strictEqual(nvdaRow.costBasis, 125.00);
+  assert.strictEqual(nvdaRow.isLowConfidence, false);
+
+  const blurRow = parsedHoldings.rows.find(r => r.symbol === 'BLUR');
+  assert.ok(blurRow);
+  assert.strictEqual(blurRow.isLowConfidence, true, 'Zero-quantity row must be flagged as low confidence');
+
+  // Convert confirmed rows to Schwab CSV format
+  const confirmedRows = [nvdaRow, parsedHoldings.rows.find(r => r.symbol === 'AAPL')];
+  const generatedCsv = convertConfirmedRowsToSchwabCsv(confirmedRows, 'OCR Account', 45000);
+  assert.ok(generatedCsv.includes('"Positions for account OCR Account as of 04:00 PM ET, 2026/01/01"'));
+  assert.ok(generatedCsv.includes('Symbol,Description,Qty (Quantity)'));
+  assert.ok(generatedCsv.includes('NVDA,NVDA INC,"100",125.00'));
+  assert.ok(generatedCsv.includes('AAPL,AAPL INC,"50",220.00'));
+  assert.ok(generatedCsv.includes('Cash & Cash Investments'));
+  assert.ok(generatedCsv.includes('Positions Total'));
+});

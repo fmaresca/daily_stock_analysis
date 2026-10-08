@@ -5,15 +5,17 @@
  * Protects user API keys and runs at edge with zero overage risk on Cloudflare Pages.
  */
 
+import { completeLLM } from "./_llm.js";
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // Retrieve Google Gemini API Key from Cloudflare Pages environment variables
-  const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) {
+  // Retrieve API Key from Cloudflare Pages environment variables
+  const hasKey = Boolean(env.GEMINI_API_KEY || env.GOOGLE_API_KEY || env.LLM_API_KEY || env.OPENAI_API_KEY);
+  if (!hasKey) {
     return new Response(
       JSON.stringify({
-        error: "Missing GEMINI_API_KEY environment variable in Cloudflare Pages. Please set GEMINI_API_KEY in Settings > Environment Variables, or use the 'Copy Prompt for Gemini Pro Plan' bridge to analyze in gemini.google.com at zero cost."
+        error: "Missing GEMINI_API_KEY / LLM_API_KEY environment variable in Cloudflare Pages. Please set GEMINI_API_KEY in Settings > Environment Variables, or use the 'Copy Prompt for Gemini Pro Plan' bridge to analyze in gemini.google.com at zero cost."
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
@@ -34,9 +36,6 @@ export async function onRequestPost(context) {
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
-
-    // Default to gemini-2.5-flash or gemini-3.8-flash based on environment / user override
-    const targetModel = modelOverride || env.GEMINI_MODEL || "gemini-2.5-flash";
 
     // Format the institutional quantitative prompt enforcing strict income discipline & extended thinking
     const promptTemplate = `You are an institutional derivatives portfolio manager and quantitative options analyst specializing in conservative weekly income generation through Cash-Secured Puts (CSPs) and Covered Calls (CCs).
@@ -103,55 +102,32 @@ Return ONLY a valid, raw JSON object (no surrounding Markdown wrappers, no \`\`\
   ]
 }`;
 
-    // Direct edge fetch to Google Generative Language REST API
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
-
-    const payload = {
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: promptTemplate }]
-        }
-      ],
-      generationConfig: {
+    let llmResponse;
+    try {
+      llmResponse = await completeLLM({
+        env,
+        messages: [{ role: "user", content: promptTemplate }],
         temperature: 0.1,
-        // Mandatory Extended Thinking level configuration
-        thinking_config: {
-          thinking_level: "HIGH"
-        },
-        response_mime_type: "application/json"
-      }
-    };
-
-    const apiResponse = await fetch(geminiEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text();
-      // Handle rate limit specifically
-      if (apiResponse.status === 429) {
+        responseFormat: "json",
+        modelOverride,
+        thinkingLevel: "HIGH",
+      });
+    } catch (err) {
+      if (err.message && err.message.includes("429")) {
         return new Response(
           JSON.stringify({
-            error: "Google AI Studio rate limit reached (HTTP 429). You are protected with zero billing! Please wait a moment, or use the 'Copy Prompt for Gemini Pro Plan' button to run unlimited analyses inside gemini.google.com with your paid consumer subscription."
+            error: "AI Provider rate limit reached (HTTP 429). You are protected with zero billing! Please wait a moment, or use the 'Copy Prompt for Gemini Pro Plan' button to run unlimited analyses inside gemini.google.com with your paid consumer subscription."
           }),
           { status: 429, headers: { "Content-Type": "application/json" } }
         );
       }
-
       return new Response(
-        JSON.stringify({ error: `Gemini API error (${apiResponse.status}): ${errorText}` }),
-        { status: apiResponse.status, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: `AI provider error: ${err.message}` }),
+        { status: 502, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const data = await apiResponse.json();
-
-    // Extract model response text
-    const candidatePart = data?.candidates?.[0]?.content?.parts?.find((p) => p.text);
-    const rawText = candidatePart?.text || "{}";
+    const rawText = llmResponse?.text || "{}";
 
     let parsedResult;
     try {

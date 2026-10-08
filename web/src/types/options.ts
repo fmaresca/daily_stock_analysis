@@ -438,7 +438,8 @@ export type MenuTreeType =
   | 'LOGIN'
   | 'DASHBOARD'
   | 'ADMIN_USERS'
-  | 'SETTINGS_PASSWORD';
+  | 'SETTINGS_PASSWORD'
+  | 'AGENT_CHAT';
 
 export type WorkflowStepType =
   | 'SCHWAB_POSITIONS_UPLOAD'

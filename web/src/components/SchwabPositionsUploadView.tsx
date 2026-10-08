@@ -22,6 +22,13 @@ import { getSamplePortfolioBook } from '../utils/portfolioStressTest';
 import { TaxLedgerState } from '../types/options';
 import { autoSyncSchwabPortfolioPrices } from '../utils/liveMarketFetcher';
 import { executeWeeklyWorkflowCleanReset } from '../utils/weeklyWorkflowReset';
+import {
+  performHoldingsOcr,
+  parseOcrTextToHoldings,
+  convertConfirmedRowsToSchwabCsv,
+  ParsedHoldingsRow,
+} from '../utils/holdingsOcrParser';
+import { HoldingsOcrReviewModal } from './holdings/HoldingsOcrReviewModal';
 
 interface SchwabPositionsUploadViewProps {
   onNavigateToCashLedger: () => void;
@@ -36,6 +43,13 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string>('');
   const [resetNotice, setResetNotice] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
+
+  // Prompt 5 OCR States
+  const [isOcrProcessing, setIsOcrProcessing] = useState<boolean>(false);
+  const [ocrStatusText, setOcrStatusText] = useState<string>('');
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState<boolean>(false);
+  const [candidateOcrRows, setCandidateOcrRows] = useState<ParsedHoldingsRow[]>([]);
+  const [detectedCashFromOcr, setDetectedCashFromOcr] = useState<number>(0);
 
   const handleManualReset = () => {
     executeWeeklyWorkflowCleanReset();
@@ -106,9 +120,68 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
     }
   };
 
+  // OCR Image Processing (Prompt 5)
+  const processImageFile = async (file: File | Blob, filename: string) => {
+    setIsOcrProcessing(true);
+    setOcrStatusText('Scanning brokerage screenshot with client-side Tesseract.js (in-browser only)...');
+    setErrorMessage('');
+
+    try {
+      const ocrResult = await performHoldingsOcr(file, (p) => {
+        setOcrStatusText(`Extracting holdings text: ${Math.round(p * 100)}% complete...`);
+      });
+
+      const parsed = parseOcrTextToHoldings(ocrResult.text);
+
+      if (parsed.rows.length === 0) {
+        setErrorMessage('No valid stock ticker positions recognized in the screenshot. Please verify image clarity or upload CSV.');
+        return;
+      }
+
+      setCandidateOcrRows(parsed.rows);
+      setDetectedCashFromOcr(parsed.detectedCash);
+      setRawFileName(filename);
+      setIsReviewModalOpen(true);
+    } catch (err: any) {
+      console.error('Holdings OCR processing failed:', err);
+      setErrorMessage(`Failed to process screenshot: ${err.message || 'Image recognition error'}`);
+    } finally {
+      setIsOcrProcessing(false);
+      setOcrStatusText('');
+    }
+  };
+
+  // Clipboard Paste Listener (Ctrl+V)
+  React.useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            e.preventDefault();
+            processImageFile(blob, 'Pasted-Screenshot.png');
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name)) {
+      processImageFile(file, file.name);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       const text = (evt.target?.result as string) || '';
@@ -117,17 +190,34 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
     reader.readAsText(file);
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processImageFile(file, file.name);
+  };
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
+
+    if (file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name)) {
+      processImageFile(file, file.name);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       const text = (evt.target?.result as string) || '';
       processCsvText(text, file.name);
     };
     reader.readAsText(file);
+  };
+
+  const handleConfirmOcrHoldings = (confirmedRows: ParsedHoldingsRow[], cashAmount: number) => {
+    const csvText = convertConfirmedRowsToSchwabCsv(confirmedRows, 'Brokerage Screenshot', cashAmount);
+    processCsvText(csvText, rawFileName || 'Screenshot-Positions-Import.csv');
   };
 
   const handleLoadBaseline = async () => {
@@ -255,12 +345,20 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
 
         <div className="space-y-1">
           <h3 className="text-base font-bold text-white">
-            Upload Charles Schwab Positions Export (.csv)
+            Upload Charles Schwab Positions (.csv) or Brokerage Screenshot
           </h3>
           <p className="text-xs text-slate-400 max-w-md">
-            Drag and drop your exported <code className="text-cyan-300 bg-slate-900 px-1.5 py-0.5 rounded">Positions-*.csv</code> here, or browse from your computer.
+            Drag and drop your exported <code className="text-cyan-300 bg-slate-900 px-1.5 py-0.5 rounded">Positions-*.csv</code> or brokerage screenshot image here, or paste directly from clipboard (<kbd className="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded font-mono text-[10px]">Ctrl+V</kbd>).
           </p>
         </div>
+
+        {/* OCR Progress Banner */}
+        {isOcrProcessing && (
+          <div className="w-full max-w-md p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 text-xs flex items-center justify-center space-x-2 animate-pulse">
+            <RefreshCw className="w-4 h-4 animate-spin text-cyan-400" />
+            <span>{ocrStatusText || 'Running client-side Tesseract.js OCR...'}</span>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <label className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/30 cursor-pointer flex items-center space-x-2 transition-all">
@@ -270,6 +368,17 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
               type="file"
               accept=".csv"
               onChange={handleFileUpload}
+              className="hidden"
+            />
+          </label>
+
+          <label className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-600/30 cursor-pointer flex items-center space-x-2 transition-all">
+            <Sparkles className="w-4 h-4" />
+            <span>Upload Screenshot (Image)</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
               className="hidden"
             />
           </label>
@@ -290,6 +399,15 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
           </div>
         )}
       </div>
+
+      {/* Human-in-the-Loop OCR Review Modal */}
+      <HoldingsOcrReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        initialRows={candidateOcrRows}
+        detectedCash={detectedCashFromOcr}
+        onConfirm={handleConfirmOcrHoldings}
+      />
 
       {/* 3. Ingestion Summary Breakdown (Visible after upload or baseline load) */}
       {parsedData && (

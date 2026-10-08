@@ -19,10 +19,10 @@ import {
 import { UserTradeItem, UserWatchlistItem, UserPortfolioItem } from '../../types/auth';
 import { OptionsTabType } from '../../types/options';
 import { PasswordChangeView } from './PasswordChangeView';
-
 import { LIVING_TRUST_OPTIONS_POSITIONS } from '../../utils/portfolioStressTest';
 import { getStoredCapitalState, getStoredTaxLedgerState, getNextWeeklyExpiration } from '../../utils/capitalAndTaxLedger';
 import { getSchwabImportedEquities } from '../../utils/schwabPositionsParser';
+import { MarketRecapSection } from '../market/MarketRecapSection';
 
 interface UserDashboardViewProps {
   onNavigateToScreener?: () => void;
@@ -483,6 +483,9 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Top of Primary Screen: Daily US Market Recap Digest */}
+      <MarketRecapSection />
 
       {/* Administrative Options Workflow Banner */}
       {isAdminUser && (

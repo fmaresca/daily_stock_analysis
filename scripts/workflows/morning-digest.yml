@@ -1,0 +1,42 @@
+name: Scheduled Morning Analysis & Digest Push
+
+on:
+  schedule:
+    # Weekdays at 11:00 UTC = 6:00 AM CT (Central Time)
+    - cron: '0 11 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force run even if holiday or weekend'
+        required: false
+        default: 'false'
+
+jobs:
+  morning-digest:
+    name: Dispatch Morning Digest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cloudflare Pages Scheduled Digest Endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL || 'https://deltaharvest.pages.dev' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          FORCE_PARAM=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            FORCE_PARAM="?force=true"
+          fi
+          echo "Triggering morning digest at ${APP_URL}/api/scheduled/morning-digest${FORCE_PARAM}..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${APP_URL}/api/scheduled/morning-digest${FORCE_PARAM}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json")
+          
+          HTTP_BODY=$(echo "$RESPONSE" | sed '$d')
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+          
+          echo "HTTP Response Status: ${HTTP_STATUS}"
+          echo "Response Body: ${HTTP_BODY}"
+          
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "::error::Morning digest execution failed with status ${HTTP_STATUS}"
+            exit 1
+          fi

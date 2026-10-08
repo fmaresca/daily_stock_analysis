@@ -58,6 +58,7 @@ import { useAuth } from '../context/AuthContext';
 const UserDashboardView = lazyWithRetry(() => import('./auth/UserDashboardView').then(m => ({ default: m.UserDashboardView })), 'UserDashboardView');
 const AdminUsersView = lazyWithRetry(() => import('./auth/AdminUsersView').then(m => ({ default: m.AdminUsersView })), 'AdminUsersView');
 const PasswordChangeView = lazyWithRetry(() => import('./auth/PasswordChangeView').then(m => ({ default: m.PasswordChangeView })), 'PasswordChangeView');
+const StrategyAgentChatView = lazyWithRetry(() => import('./agent/StrategyAgentChatView').then(m => ({ default: m.StrategyAgentChatView })), 'StrategyAgentChatView');
 import { Users } from './icons';
 
 
@@ -825,6 +826,11 @@ export const AuthenticatedTerminal: React.FC = () => {
               )
             ) : activeTree === 'SETTINGS_PASSWORD' ? (
               <PasswordChangeView onSuccess={() => navigateTo('DASHBOARD')} />
+            ) : activeTree === 'AGENT_CHAT' ? (
+              <StrategyAgentChatView
+                initialTicker={modalState.selectedTicker?.symbol || 'NVDA'}
+                onNavigateToTicker={(sym) => handleOpenEquityAnalysis(sym)}
+              />
             ) : activeTree === 'METHODOLOGY' ? (
               <MethodologyView
               onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
