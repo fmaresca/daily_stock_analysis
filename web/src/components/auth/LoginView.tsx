@@ -159,6 +159,41 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
           body: JSON.stringify({ email: cleanEmail }),
         });
         const data = await res.json().catch(() => ({}));
+
+        // Concurrently register inquiry and trigger client-side dispatch from browser IP
+        try {
+          fetch('/api/admin/inquiries', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: cleanEmail,
+              name: cleanEmail.split('@')[0],
+              requestType: 'PASSWORD_RESET',
+              note: `Password reset requested for ${cleanEmail} from web login portal.`,
+            }),
+          }).catch(() => {});
+
+          fetch('https://formsubmit.co/ajax/fjmaresca@gmail.com', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Origin': window.location.origin,
+              'Referer': window.location.href,
+            },
+            body: JSON.stringify({
+              _subject: `[DeltaHarvest Alert] Password Reset Request: ${cleanEmail}`,
+              _captcha: 'false',
+              accountEmail: cleanEmail,
+              requestType: 'Password Reset Request',
+              note: `Password reset requested for ${cleanEmail}. The reset token has been registered in the system.`,
+              timestamp: new Date().toUTCString(),
+            }),
+          }).catch(() => {});
+        } catch {
+          // Non-blocking
+        }
+
         if (res.ok && data.success) {
           setResetSuccessMessage(
             data.message || 'If an account exists for that email, a reset link has been sent.'

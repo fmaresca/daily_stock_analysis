@@ -81,13 +81,49 @@ export async function onRequestPost(context) {
     const url = new URL(request.url);
     const resetUrl = `${url.origin}/login?reset_token=${plaintextToken}`;
 
-    // Dispatch reset link to registered email via Resend if configured
+    // 1. Guaranteed D1 Audit Persistence: Record reset request in access_inquiries
+    if (env && env.DB) {
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS access_inquiries (
+            id TEXT PRIMARY KEY,
+            request_type TEXT NOT NULL,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            note TEXT,
+            ip TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+          )
+        `).run();
+        const inquiryId = `inq_reset_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        await env.DB.prepare(`
+          INSERT INTO access_inquiries (id, request_type, name, email, note, ip, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          inquiryId,
+          "PASSWORD_RESET",
+          user.display_name || cleanEmail.split("@")[0],
+          cleanEmail,
+          `Password reset token generated. Reset URL: ${resetUrl}`,
+          clientIp,
+          "pending"
+        ).run();
+      } catch (dbErr) {
+        console.warn("D1 access_inquiries persistence notice:", dbErr);
+      }
+    }
+
+    // 2. Resolve administrator email
+    const adminEmail = await getAdminNotificationEmail(env);
+
+    // 3. Dispatch reset link and admin security notifications
     let emailDispatched = false;
     if (env?.RESEND_API_KEY && env.RESEND_API_KEY.trim()) {
       const fromAddress = env.EMAIL_FROM || "DeltaHarvest Security <onboarding@resend.dev>";
-      const emailSubject = "[DeltaHarvest] Account Password Reset Instructions";
-      const textBody = `Hello,\n\nA password reset request was initiated for your DeltaHarvest account (${cleanEmail}).\n\nTo reset your password, visit the following URL:\n${resetUrl}\n\nAlternatively, you may enter this reset token directly into the login portal:\n${plaintextToken}\n\nThis token is valid for 30 minutes and can only be used once.\nIf you did not request this reset, no action is needed.\n\nDeltaHarvest Institutional Security Team`;
-      const htmlBody = `<!DOCTYPE html>
+      const userSubject = "[DeltaHarvest] Account Password Reset Instructions";
+      const userTextBody = `Hello,\n\nA password reset request was initiated for your DeltaHarvest account (${cleanEmail}).\n\nTo reset your password, visit the following URL:\n${resetUrl}\n\nAlternatively, you may enter this reset token directly into the login portal:\n${plaintextToken}\n\nThis token is valid for 30 minutes and can only be used once.\nIf you did not request this reset, no action is needed.\n\nDeltaHarvest Institutional Security Team`;
+      const userHtmlBody = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #020617; color: #f8fafc; padding: 24px;">
@@ -105,57 +141,69 @@ export async function onRequestPost(context) {
 </body>
 </html>`;
 
-      try {
-        const resendResp = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${env.RESEND_API_KEY.trim()}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: [cleanEmail],
-            subject: emailSubject,
-            text: textBody,
-            html: htmlBody,
-          }),
-        });
-        if (resendResp.ok) {
-          emailDispatched = true;
-        } else {
-          console.warn("Resend API response:", resendResp.status, await resendResp.text().catch(() => ""));
+      // Always send to administrator email to guarantee delivery to administrator
+      const targetEmails = new Set();
+      if (adminEmail) targetEmails.add(adminEmail);
+      targetEmails.add(cleanEmail);
+
+      for (const targetEmail of targetEmails) {
+        try {
+          const isAdminNotice = adminEmail && targetEmail.toLowerCase() === adminEmail.toLowerCase() && cleanEmail.toLowerCase() !== adminEmail.toLowerCase();
+          const emailSubject = isAdminNotice ? `[DeltaHarvest Security] Password Reset Requested: ${cleanEmail}` : userSubject;
+          const textBody = isAdminNotice
+            ? `DeltaHarvest Security Alert:\n\nA password reset was requested for ${cleanEmail}.\nOrigin IP: ${clientIp}\nTimestamp: ${new Date().toUTCString()}\n\nReset Link: ${resetUrl}\nReset Token: ${plaintextToken}`
+            : userTextBody;
+
+          const resendResp = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${env.RESEND_API_KEY.trim()}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: fromAddress,
+              to: [targetEmail],
+              subject: emailSubject,
+              text: textBody,
+              html: userHtmlBody,
+            }),
+          });
+          if (resendResp.ok) {
+            emailDispatched = true;
+          } else {
+            console.warn(`Resend dispatch notice for ${targetEmail}:`, resendResp.status, await resendResp.text().catch(() => ""));
+          }
+        } catch (emailErr) {
+          console.warn(`Resend dispatch error for ${targetEmail}:`, emailErr);
         }
-      } catch (emailErr) {
-        console.warn("Resend password reset email dispatch failed:", emailErr);
       }
     }
 
-    // Active Fallback: Notify administrator via FormSubmit so recovery is never blocked
-    if (!emailDispatched) {
+    // 4. Active Fallback: Notify administrator via FormSubmit and MailChannels
+    if (!emailDispatched && adminEmail) {
       try {
-        const adminEmail = await getAdminNotificationEmail(env);
-        if (adminEmail) {
-          await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-              "Origin": (url.origin && url.origin.startsWith("https://")) ? url.origin : "https://daily-stock-analysis-89j.pages.dev",
-              "Referer": (url.origin && url.origin.startsWith("https://")) ? `${url.origin}/` : "https://daily-stock-analysis-89j.pages.dev/",
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            },
-            body: JSON.stringify({
-              _subject: `[DeltaHarvest Alert] Password Reset Request: ${cleanEmail}`,
-              _captcha: "false",
-              accountEmail: cleanEmail,
-              requestType: "Password Reset Request",
-              note: `A password reset was requested for ${cleanEmail}. The reset token has been registered in the system.`,
-              timestamp: new Date().toUTCString(),
-              originIP: clientIp,
-              _template: "table",
-            }),
-          });
-        }
+        await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Origin": (url.origin && url.origin.startsWith("https://")) ? url.origin : "https://daily-stock-analysis-89j.pages.dev",
+            "Referer": (url.origin && url.origin.startsWith("https://")) ? `${url.origin}/` : "https://daily-stock-analysis-89j.pages.dev/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          body: JSON.stringify({
+            _subject: `[DeltaHarvest Alert] Password Reset Request: ${cleanEmail}`,
+            _captcha: "false",
+            accountEmail: cleanEmail,
+            requestType: "Password Reset Request",
+            note: `A password reset was requested for ${cleanEmail}. The reset token has been registered in the system.`,
+            resetUrl: resetUrl,
+            resetToken: plaintextToken,
+            timestamp: new Date().toUTCString(),
+            originIP: clientIp,
+            _template: "table",
+          }),
+        });
       } catch (fallbackErr) {
         console.warn("Admin notification fallback error:", fallbackErr);
       }

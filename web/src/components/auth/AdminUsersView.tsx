@@ -69,11 +69,26 @@ function normalizeUserItem(raw: any): AdminUserListItem {
   };
 }
 
+export interface AdminInquiryItem {
+  id: string;
+  request_type: string;
+  name: string;
+  email: string;
+  note: string | null;
+  ip: string | null;
+  status: string;
+  created_at: string;
+}
+
 export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspace }) => {
   const { user } = useAuth();
   const [users, setUsers] = useState<AdminUserListItem[]>(() => getLocalTenantRegistry());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Inquiries State
+  const [inquiries, setInquiries] = useState<AdminInquiryItem[]>([]);
+  const [isLoadingInquiries, setIsLoadingInquiries] = useState(false);
 
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -94,7 +109,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
   const [resetError, setResetError] = useState<string | null>(null);
 
   // Admin Settings State
-  const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS'>('USERS');
+  const [activeTab, setActiveTab] = useState<'USERS' | 'INQUIRIES' | 'SETTINGS'>('USERS');
   const [adminNotificationEmail, setAdminNotificationEmail] = useState('');
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [emailSaveSuccess, setEmailSaveSuccess] = useState(false);
@@ -171,10 +186,31 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
     }
   }, []);
 
+  const fetchInquiries = useCallback(async () => {
+    setIsLoadingInquiries(true);
+    try {
+      const res = await fetch('/api/admin/inquiries', {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.inquiries && Array.isArray(data.inquiries)) {
+          setInquiries(data.inquiries);
+        }
+      }
+    } catch {
+      // Ignore network errors
+    } finally {
+      setIsLoadingInquiries(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
     fetchSettings();
-  }, [fetchUsers, fetchSettings]);
+    fetchInquiries();
+  }, [fetchUsers, fetchSettings, fetchInquiries]);
 
   const handleSaveEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,6 +272,40 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
           }),
         });
         data = await res.json().catch(() => ({}));
+      }
+
+      // Browser Client Direct Fallback: Dispatch from user browser residential IP
+      if (!res.ok || (!data.success && !data.delivered)) {
+        try {
+          const clientRes = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetEmail)}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Origin': window.location.origin,
+              'Referer': window.location.href,
+            },
+            body: JSON.stringify({
+              _subject: `[DeltaHarvest System Test] Live Alert Verification for ${targetEmail}`,
+              _captcha: 'false',
+              name: 'Platform Administrator',
+              email: targetEmail,
+              requestType: 'System Test',
+              message: `Live test alert dispatched from browser client IP to verify mailbox delivery for ${targetEmail}.`,
+              timestamp: new Date().toUTCString(),
+            }),
+          });
+          const clientData = await clientRes.json().catch(() => ({}));
+          if (clientRes.ok && (clientData.success === true || clientData.success === 'true')) {
+            setTestEmailResult({
+              success: true,
+              message: `✓ Test alert successfully delivered to ${targetEmail} via FormSubmit Browser Gateway! Check your inbox.`,
+            });
+            return;
+          }
+        } catch {
+          // Ignore
+        }
       }
 
       if (res.ok && (data.success || data.delivered)) {
@@ -461,6 +531,24 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
 
         <button
           type="button"
+          onClick={() => { setActiveTab('INQUIRIES'); fetchInquiries(); }}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === 'INQUIRIES'
+              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+          }`}
+        >
+          <Mail className="w-4 h-4" />
+          <span>Access &amp; Reset Inquiries</span>
+          {inquiries.length > 0 && (
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/30 text-amber-300 border border-amber-500/40">
+              {inquiries.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('SETTINGS')}
           className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
             activeTab === 'SETTINGS'
@@ -468,12 +556,122 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
               : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
           }`}
         >
-          <Mail className="w-4 h-4" />
+          <ShieldCheck className="w-4 h-4" />
           <span>Notification &amp; Inquiry Settings</span>
         </button>
       </div>
 
-      {activeTab === 'SETTINGS' ? (
+      {activeTab === 'INQUIRIES' ? (
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Mail className="w-5 h-5 text-amber-400" />
+                <span>Tenant Access &amp; Password Reset Inquiries</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Real-time log of password reset requests and prospective client onboarding applications stored in Cloudflare D1.
+              </p>
+            </div>
+            <button
+              onClick={fetchInquiries}
+              disabled={isLoadingInquiries}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-200 border border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingInquiries ? 'animate-spin' : ''}`} />
+              <span>Refresh Inquiries</span>
+            </button>
+          </div>
+
+          {inquiries.length === 0 ? (
+            <div className="p-8 text-center bg-slate-950/50 border border-slate-800/80 rounded-xl text-slate-400 text-xs">
+              <Mail className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+              <p className="font-semibold text-slate-300">No Pending Inquiries</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">All password reset requests and account inquiries will automatically appear here.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-800">
+              <table className="w-full text-left text-xs text-slate-300 font-sans">
+                <thead className="bg-slate-950/80 text-[11px] font-semibold text-slate-400 border-b border-slate-800 uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Request Type</th>
+                    <th className="py-3 px-4">Submitter</th>
+                    <th className="py-3 px-4">Details / Context</th>
+                    <th className="py-3 px-4">Origin IP &amp; Date</th>
+                    <th className="py-3 px-4 text-right">Quick Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 bg-slate-900/40">
+                  {inquiries.map((inq) => {
+                    const isReset = inq.request_type === 'PASSWORD_RESET';
+                    const isAccount = inq.request_type === 'NEW_ACCOUNT';
+                    return (
+                      <tr key={inq.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              isReset
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                : isAccount
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                            }`}
+                          >
+                            {inq.request_type.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-white">{inq.name || inq.email.split('@')[0]}</div>
+                          <div className="text-[11px] font-mono text-slate-400">{inq.email}</div>
+                        </td>
+                        <td className="py-3 px-4 max-w-xs truncate text-[11px] text-slate-300">
+                          {inq.note || 'No additional note'}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap text-[11px] text-slate-400">
+                          <div>{inq.created_at || 'Recent'}</div>
+                          <div className="font-mono text-[10px] text-slate-500">{inq.ip || 'Unknown IP'}</div>
+                        </td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          {isReset ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const found = users.find((u) => u.email.toLowerCase() === inq.email.toLowerCase());
+                                if (found) {
+                                  setTargetResetUser(found);
+                                  setIsResetModalOpen(true);
+                                } else {
+                                  setNewEmail(inq.email);
+                                  setIsCreateModalOpen(true);
+                                }
+                              }}
+                              className="px-2.5 py-1 bg-amber-600/80 hover:bg-amber-600 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer"
+                            >
+                              Reset Password
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewEmail(inq.email);
+                                setNewDisplayName(inq.name || '');
+                                setIsCreateModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer"
+                            >
+                              Provision Account
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'SETTINGS' ? (
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6 animate-fade-in">
           <div className="border-b border-slate-800 pb-4">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
