@@ -71,7 +71,12 @@ export async function onRequestPost(context) {
 
     const user = await getUserByEmail(env, cleanEmail);
 
+    // Fixed synthetic PBKDF2 vector for constant-time negative login (prevents account enumeration via timing)
+    const DUMMY_SALT = "4217e83f8be333b78ecf181e43ca87de";
+    const DUMMY_HASH = "9e445d72914a8a1fb2b9a248fd23175219669e98b03188b3c5124e814fb9b50b";
+
     if (!user) {
+      await verifyPassword(password, DUMMY_SALT, DUMMY_HASH);
       return new Response(
         JSON.stringify({ error: "Invalid email or password." }),
         { status: 401, headers: { "Content-Type": "application/json" } }

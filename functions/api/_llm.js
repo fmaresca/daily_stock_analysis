@@ -466,7 +466,7 @@ async function callGemini({
   if (model === "gemini-2.5-flash" || model === "gemini/gemini-2.5-flash") {
     model = "gemini-3.8-flash";
   }
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
   // Convert messages to Gemini contents format
   const contents = [];
@@ -593,7 +593,10 @@ async function callGemini({
   try {
     resp = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
       body: JSON.stringify(bodyPayload),
       signal: controller.signal,
     });

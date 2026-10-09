@@ -160,9 +160,11 @@ export async function onRequest(context) {
 
   // 1. Authorization Gate
   const authHeader = request.headers.get("Authorization") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const configuredCronSecret = typeof env?.CRON_SECRET === "string" ? env.CRON_SECRET.trim() : "";
+
   const isCronSecretValid = Boolean(
-    env?.CRON_SECRET &&
-    authHeader.replace("Bearer ", "").trim() === env.CRON_SECRET.trim()
+    configuredCronSecret && token && token === configuredCronSecret
   );
 
   let isAdmin = false;
@@ -174,8 +176,11 @@ export async function onRequest(context) {
       isAdmin = true;
       userContext = auth.user;
     } else {
+      const errorMsg = configuredCronSecret
+        ? "Unauthorized. Scheduled endpoint requires CRON_SECRET or Admin authentication."
+        : "Cron authentication is not configured.";
       return new Response(
-        JSON.stringify({ error: "Unauthorized. Scheduled endpoint requires CRON_SECRET or Admin authentication." }),
+        JSON.stringify({ error: errorMsg }),
         { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }

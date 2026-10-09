@@ -231,37 +231,14 @@ const localMemoryDb = {
   settings: {},
 };
 
-export const dynamicUserOverrides = new Map();
 export const localMemoryResetTokens = new Map();
 
-export function applyPasswordOverride(emailOrId, hashHex, saltHex, mustChange = 0) {
-  const cleanKey = String(emailOrId).trim().toLowerCase();
-  const now = new Date().toISOString();
-  const existing = dynamicUserOverrides.get(cleanKey);
-  const nextTv = ((existing && existing.token_version !== undefined) ? existing.token_version : 0) + 1;
-  const overrideData = {
-    password_hash: hashHex,
-    password_salt: saltHex,
-    must_change_password: mustChange,
-    token_version: nextTv,
-    updated_at: now,
-  };
+let schemaEnsured = false;
+let resetSchemaEnsured = false;
 
-  dynamicUserOverrides.set(cleanKey, overrideData);
-
-  // Sync into localMemoryDb.users for local dev
-  for (const u of localMemoryDb.users) {
-    if (u.id === emailOrId || u.email.toLowerCase() === cleanKey) {
-      u.password_hash = hashHex;
-      u.password_salt = saltHex;
-      u.must_change_password = mustChange;
-      u.token_version = (u.token_version || 0) + 1;
-      overrideData.token_version = u.token_version;
-      u.updated_at = now;
-      dynamicUserOverrides.set(u.id, overrideData);
-      dynamicUserOverrides.set(u.email.toLowerCase(), overrideData);
-    }
-  }
+export function _resetSchemaEnsuredForTest() {
+  schemaEnsured = false;
+  resetSchemaEnsured = false;
 }
 
 // ==========================================
@@ -269,6 +246,7 @@ export function applyPasswordOverride(emailOrId, hashHex, saltHex, mustChange = 
 // ==========================================
 
 export async function ensureUsersTables(env) {
+  if (schemaEnsured) return;
   if (env && env.DB) {
     try {
       await env.DB.prepare(`
@@ -309,7 +287,8 @@ export async function ensureUsersTables(env) {
           created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
         )
       `).run();
-
+      schemaEnsured = true;
+      resetSchemaEnsured = true;
     } catch (e) {
       console.warn("D1 ensureUsersTables error:", e);
     }
@@ -317,6 +296,7 @@ export async function ensureUsersTables(env) {
 }
 
 export async function ensurePasswordResetTable(env) {
+  if (resetSchemaEnsured) return;
   if (env && env.DB) {
     try {
       await env.DB.prepare(`
@@ -327,6 +307,7 @@ export async function ensurePasswordResetTable(env) {
           created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
         )
       `).run();
+      resetSchemaEnsured = true;
     } catch (e) {
       console.warn("D1 ensurePasswordResetTable error:", e);
     }
@@ -336,6 +317,14 @@ export async function ensurePasswordResetTable(env) {
 export async function storePasswordResetToken(env, tokenHash, userId, expiresInMinutes = 30) {
   const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString();
   const createdAt = new Date().toISOString();
+
+  // Bounded in-memory reset-token cache: sweep expired entries to prevent memory growth
+  const nowIso = new Date().toISOString();
+  for (const [key, val] of localMemoryResetTokens.entries()) {
+    if (val && val.expiresAt && val.expiresAt < nowIso) {
+      localMemoryResetTokens.delete(key);
+    }
+  }
 
   // Edge memory cache for multi-environment resilience
   localMemoryResetTokens.set(tokenHash, { userId, expiresAt, createdAt });
@@ -422,27 +411,6 @@ export async function getUserByEmail(env, email) {
 
   if (user) {
     user.token_version = Number(user.token_version || 0);
-    if (dynamicUserOverrides.has(cleanEmail)) {
-      const override = dynamicUserOverrides.get(cleanEmail);
-      user = {
-        ...user,
-        password_hash: override.password_hash,
-        password_salt: override.password_salt,
-        must_change_password: override.must_change_password,
-        token_version: override.token_version !== undefined ? override.token_version : user.token_version,
-        updated_at: override.updated_at || user.updated_at,
-      };
-    } else if (dynamicUserOverrides.has(user.id)) {
-      const override = dynamicUserOverrides.get(user.id);
-      user = {
-        ...user,
-        password_hash: override.password_hash,
-        password_salt: override.password_salt,
-        must_change_password: override.must_change_password,
-        token_version: override.token_version !== undefined ? override.token_version : user.token_version,
-        updated_at: override.updated_at || user.updated_at,
-      };
-    }
   }
 
   return user;
@@ -473,28 +441,6 @@ export async function getUserById(env, id) {
 
   if (user) {
     user.token_version = Number(user.token_version || 0);
-    const cleanEmail = (user.email || "").toLowerCase();
-    if (dynamicUserOverrides.has(cleanEmail)) {
-      const override = dynamicUserOverrides.get(cleanEmail);
-      user = {
-        ...user,
-        password_hash: override.password_hash,
-        password_salt: override.password_salt,
-        must_change_password: override.must_change_password,
-        token_version: override.token_version !== undefined ? override.token_version : user.token_version,
-        updated_at: override.updated_at || user.updated_at,
-      };
-    } else if (dynamicUserOverrides.has(id)) {
-      const override = dynamicUserOverrides.get(id);
-      user = {
-        ...user,
-        password_hash: override.password_hash,
-        password_salt: override.password_salt,
-        must_change_password: override.must_change_password,
-        token_version: override.token_version !== undefined ? override.token_version : user.token_version,
-        updated_at: override.updated_at || user.updated_at,
-      };
-    }
   }
 
   return user;
@@ -630,7 +576,16 @@ export async function updateUserPassword(env, userId, newHash, newSalt) {
     }
   }
 
-  applyPasswordOverride(userId, newHash, newSalt, 0);
+  // Sync into localMemoryDb for local development
+  for (const u of localMemoryDb.users) {
+    if (u.id === userId || u.email.toLowerCase() === String(userId).trim().toLowerCase()) {
+      u.password_hash = newHash;
+      u.password_salt = newSalt;
+      u.must_change_password = 0;
+      u.token_version = (u.token_version || 0) + 1;
+      u.updated_at = now;
+    }
+  }
   return true;
 }
 
@@ -649,7 +604,16 @@ export async function resetUserPasswordAdmin(env, userId, newHash, newSalt, forc
     }
   }
 
-  applyPasswordOverride(userId, newHash, newSalt, forceReset ? 1 : 0);
+  // Sync into localMemoryDb for local development
+  for (const u of localMemoryDb.users) {
+    if (u.id === userId || u.email.toLowerCase() === String(userId).trim().toLowerCase()) {
+      u.password_hash = newHash;
+      u.password_salt = newSalt;
+      u.must_change_password = forceReset ? 1 : 0;
+      u.token_version = (u.token_version || 0) + 1;
+      u.updated_at = now;
+    }
+  }
   return true;
 }
 
@@ -670,7 +634,16 @@ export async function resetUserPasswordByEmail(env, email, newHash, newSalt, for
     }
   }
 
-  applyPasswordOverride(cleanEmail, newHash, newSalt, forceReset ? 1 : 0);
+  // Sync into localMemoryDb for local development
+  for (const u of localMemoryDb.users) {
+    if (u.email.toLowerCase() === cleanEmail) {
+      u.password_hash = newHash;
+      u.password_salt = newSalt;
+      u.must_change_password = forceReset ? 1 : 0;
+      u.token_version = (u.token_version || 0) + 1;
+      u.updated_at = now;
+    }
+  }
   return true;
 }
 

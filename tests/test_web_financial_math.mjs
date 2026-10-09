@@ -1863,3 +1863,181 @@ test('24. Section 1256 Derivatives Tax Engine Benchmark & Invariants', async () 
   assert.ok(comp.disclaimer.includes('not tax advice'));
 });
 
+test('25. Post-Commit Security Hardening, Timing Resilience, Bounded Caches & Grep Gates', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const { execSync } = await import('node:child_process');
+
+  // A. Prompt 1 & 5 Gate 1: No resetToken, resetUrl, token_hash, or plaintextToken near formsubmit.co in functions/
+  const functionsDir = fileURLToPath(new URL('../functions', import.meta.url));
+  const functionFiles = [];
+  function walkDir(dir) {
+    for (const f of fs.readdirSync(dir)) {
+      const full = path.join(dir, f);
+      if (fs.statSync(full).isDirectory()) walkDir(full);
+      else if (f.endsWith('.js') || f.endsWith('.ts')) functionFiles.push(full);
+    }
+  }
+  walkDir(functionsDir);
+
+  const resetTokenRegex = /(?:reset[_-]?token|reset[_-]?url|token[_-]?hash|plaintextToken)/i;
+  for (const fPath of functionFiles) {
+    const lines = fs.readFileSync(fPath, 'utf-8').split(/\r?\n/);
+    lines.forEach((line, idx) => {
+      if (line.includes('formsubmit.co')) {
+        // Find the boundary of the fetch call block for formsubmit.co
+        const start = Math.max(0, idx - 10);
+        const end = Math.min(lines.length, idx + 30);
+        const windowText = lines.slice(start, end).join('\n');
+        assert.ok(
+          !resetTokenRegex.test(windowText),
+          `SECURITY GATE FAILED: Token/URL material found within formsubmit.co fetch call in ${fPath}:${idx + 1}`
+        );
+      }
+    });
+  }
+
+  // Positive control for Gate 1: A fixture with resetToken within 40 lines of formsubmit.co MUST trigger failure
+  const mockVulnerableSnippet = `
+    const resetToken = "sensitive_test_token_123";
+    await fetch("https://formsubmit.co/ajax/test", { body: JSON.stringify({ resetToken }) });
+  `;
+  assert.ok(
+    resetTokenRegex.test(mockVulnerableSnippet),
+    'Positive control: Gate 1 detector must flag token near formsubmit.co'
+  );
+
+  // B. Prompt 2: Dead password-override machinery removed & Constant-time login contract
+  const authUtils = await import('../functions/api/_auth_utils.js');
+  assert.strictEqual(authUtils.applyPasswordOverride, undefined, 'applyPasswordOverride must NOT be exported or exist');
+  assert.strictEqual(authUtils.dynamicUserOverrides, undefined, 'dynamicUserOverrides must NOT be exported or exist');
+
+  const loginModule = await import('../functions/api/auth/login.js');
+  const testEnv = {
+    ENVIRONMENT: 'development',
+    SESSION_SECRET: 'test-session-secret-login-hardness-2026',
+  };
+
+  const realSalt = authUtils.generateRandomSalt(16);
+  const realHash = await authUtils.hashPassword('CorrectPassword123!', realSalt);
+  await authUtils.createUser(testEnv, {
+    email: 'real_test_user@deltaharvest.local',
+    password_hash: realHash,
+    password_salt: realSalt,
+    role: 'client',
+    is_active: 1,
+  });
+
+  // Call login with wrong password for existing user
+  const wrongPassReq = new Request('http://localhost/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'real_test_user@deltaharvest.local', password: 'WrongPassword999!' }),
+  });
+  const wrongPassRes = await loginModule.onRequestPost({ request: wrongPassReq, env: testEnv });
+  assert.strictEqual(wrongPassRes.status, 401);
+  const wrongPassBody = await wrongPassRes.text();
+
+  // Call login with nonexistent email
+  const missingUserReq = new Request('http://localhost/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'nonexistent_user_abc@deltaharvest.local', password: 'WrongPassword999!' }),
+  });
+  const missingUserRes = await loginModule.onRequestPost({ request: missingUserReq, env: testEnv });
+  assert.strictEqual(missingUserRes.status, 401);
+  const missingUserBody = await missingUserRes.text();
+
+  // Assert byte-identical response body between wrong password and missing user
+  assert.strictEqual(wrongPassBody, missingUserBody, 'Responses for nonexistent user and wrong password must be byte-identical');
+
+  // Verify change-password.js console.warn does not leak error interpolation
+  const changePwdCode = fs.readFileSync(fileURLToPath(new URL('../functions/api/user/change-password.js', import.meta.url)), 'utf-8');
+  assert.ok(!changePwdCode.includes('tokenErr.message'), 'change-password.js must NOT interpolate tokenErr.message into logs');
+
+  // C. Prompt 3: Hot-path DDL once-per-isolate guard, Bounded token cache & Morning digest safe secret check
+  let prepareCallCount = 0;
+  const mockD1 = {
+    prepare: (query) => {
+      prepareCallCount++;
+      return {
+        bind: () => ({ run: async () => ({}), first: async () => null, all: async () => ({ results: [] }) }),
+        run: async () => ({}),
+        first: async () => null,
+        all: async () => ({ results: [] }),
+      };
+    },
+  };
+
+  authUtils._resetSchemaEnsuredForTest();
+  await authUtils.getUserByEmail({ DB: mockD1 }, 'test_ddl_1@example.com');
+  const countAfterFirst = prepareCallCount;
+  assert.ok(countAfterFirst > 1, 'First call runs schema DDL statements');
+
+  await authUtils.getUserByEmail({ DB: mockD1 }, 'test_ddl_2@example.com');
+  // Second call must NOT re-issue CREATE TABLE DDL; only the SELECT query is prepared
+  assert.strictEqual(prepareCallCount, countAfterFirst + 1, 'Second call must only prepare SELECT query (no DDL)');
+
+  // Bounded reset-token cache: expired tokens evicted on store
+  authUtils.localMemoryResetTokens.clear();
+  const pastDate = new Date(Date.now() - 100000).toISOString();
+  authUtils.localMemoryResetTokens.set('expired_hash_1', { userId: 'u1', expiresAt: pastDate });
+  authUtils.localMemoryResetTokens.set('expired_hash_2', { userId: 'u2', expiresAt: pastDate });
+  assert.strictEqual(authUtils.localMemoryResetTokens.size, 2);
+
+  await authUtils.storePasswordResetToken({}, 'new_active_hash', 'u3', 30);
+  assert.strictEqual(authUtils.localMemoryResetTokens.has('expired_hash_1'), false, 'Expired token 1 must be evicted');
+  assert.strictEqual(authUtils.localMemoryResetTokens.has('expired_hash_2'), false, 'Expired token 2 must be evicted');
+  assert.strictEqual(authUtils.localMemoryResetTokens.has('new_active_hash'), true, 'New active token must be present');
+  assert.strictEqual(authUtils.localMemoryResetTokens.size, 1);
+
+  // Morning digest cron secret null-safety
+  const morningDigestModule = await import('../functions/api/scheduled/morning-digest.js');
+  const unsetCronReq = new Request('http://localhost/api/scheduled/morning-digest', { method: 'POST' });
+  const unsetCronRes = await morningDigestModule.onRequest({ request: unsetCronReq, env: {} });
+  assert.strictEqual(unsetCronRes.status, 401, 'Unset CRON_SECRET must return clean 401');
+  const unsetCronJson = await unsetCronRes.json();
+  assert.strictEqual(unsetCronJson.error, 'Cron authentication is not configured.');
+
+  // Gemini API key header transport (x-goog-api-key)
+  const llmCode = fs.readFileSync(fileURLToPath(new URL('../functions/api/_llm.js', import.meta.url)), 'utf-8');
+  assert.ok(llmCode.includes('"x-goog-api-key": apiKey'), 'callGemini must pass apiKey via x-goog-api-key header');
+  assert.ok(!llmCode.includes(':generateContent?key='), 'callGemini must NOT pass apiKey as ?key= URL query param');
+
+  // D. Prompt 5 CI Regression Grep Gates across repository
+  const rootDir = process.cwd();
+  const trackedFiles = execSync('git ls-files', { encoding: 'utf-8' })
+    .split(/\r?\n/)
+    .filter(Boolean);
+
+  for (const file of trackedFiles) {
+    const fullPath = path.join(rootDir, file);
+    if (!fs.existsSync(fullPath)) continue;
+    const content = fs.readFileSync(fullPath, 'utf-8');
+
+    // Gate 2: No personal gmail literals in web/src or functions/
+    if (file.startsWith('web/src/') || file.startsWith('functions/')) {
+      assert.ok(
+        !content.includes('fjmaresca@gmail.com'),
+        `SECURITY GATE 2 FAILED: Personal admin email leaked in tracked file ${file}`
+      );
+    }
+
+    // Gate 3: No DEFAULT_SECRET, PROVISIONED_ACCOUNTS, or applyPasswordOverride in functions/ or web/src
+    if (file.startsWith('web/src/') || file.startsWith('functions/')) {
+      assert.ok(!content.includes('DEFAULT_SECRET'), `SECURITY GATE 3 FAILED: DEFAULT_SECRET found in ${file}`);
+      assert.ok(!content.includes('PROVISIONED_ACCOUNTS'), `SECURITY GATE 3 FAILED: PROVISIONED_ACCOUNTS found in ${file}`);
+      assert.ok(!content.includes('applyPasswordOverride'), `SECURITY GATE 3 FAILED: applyPasswordOverride found in ${file}`);
+    }
+
+    // Gate 4: No SESSION_SECRET assignments in wrangler.toml or tracked config
+    if (file.endsWith('.toml') || (file.endsWith('.env') && !file.endsWith('.example'))) {
+      assert.ok(
+        !/SESSION_SECRET\s*=\s*["'][^"']+["']/.test(content),
+        `SECURITY GATE 4 FAILED: SESSION_SECRET value assignment found in config file ${file}`
+      );
+    }
+  }
+});
+

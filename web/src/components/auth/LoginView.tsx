@@ -172,24 +172,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               note: `Password reset requested for ${cleanEmail} from web login portal.`,
             }),
           }).catch(() => {});
-
-          fetch('https://formsubmit.co/ajax/fjmaresca@gmail.com', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Origin': window.location.origin,
-              'Referer': window.location.href,
-            },
-            body: JSON.stringify({
-              _subject: `[DeltaHarvest Alert] Password Reset Request: ${cleanEmail}`,
-              _captcha: 'false',
-              accountEmail: cleanEmail,
-              requestType: 'Password Reset Request',
-              note: `Password reset requested for ${cleanEmail}. The reset token has been registered in the system.`,
-              timestamp: new Date().toUTCString(),
-            }),
-          }).catch(() => {});
         } catch {
           // Non-blocking
         }

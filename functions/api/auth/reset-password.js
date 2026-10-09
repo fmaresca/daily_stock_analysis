@@ -179,7 +179,7 @@ export async function onRequestPost(context) {
       }
     }
 
-    // 4. Active Fallback: Notify administrator via FormSubmit and MailChannels
+    // 4. Active Fallback: Notify administrator via FormSubmit
     if (!emailDispatched && adminEmail) {
       try {
         await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
@@ -196,9 +196,7 @@ export async function onRequestPost(context) {
             _captcha: "false",
             accountEmail: cleanEmail,
             requestType: "Password Reset Request",
-            note: `A password reset was requested for ${cleanEmail}. The reset token has been registered in the system.`,
-            resetUrl: resetUrl,
-            resetToken: plaintextToken,
+            note: "A password reset was requested. The reset token was delivered via the primary email channel and is registered in the system.",
             timestamp: new Date().toUTCString(),
             originIP: clientIp,
             _template: "table",

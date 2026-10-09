@@ -76,7 +76,7 @@ export async function onRequestPost(context) {
       );
       cookieHeader = buildSessionCookie(newToken);
     } catch (tokenErr) {
-      console.warn("Notice: Session secret unavailable or token creation skipped:", tokenErr.message);
+      console.warn("Notice: Session secret unavailable or token creation skipped.");
     }
 
     const headers = { "Content-Type": "application/json" };
