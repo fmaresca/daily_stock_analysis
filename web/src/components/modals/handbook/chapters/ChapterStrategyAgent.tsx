@@ -157,7 +157,7 @@ export const ChapterStrategyAgent: React.FC<ChapterStrategyAgentProps> = ({ onNa
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
           {[
-            { env: 'GEMINI_API_KEY', desc: 'Google Gemini (default, gemini-2.5-flash)' },
+            { env: 'GEMINI_API_KEY', desc: 'Google Gemini (default, gemini-3.8-flash)' },
             { env: 'LLM_PROVIDER + LLM_API_KEY + LLM_BASE_URL', desc: 'OpenAI-compatible (DeepSeek, Qwen, Ollama, OpenAI)' },
             { env: 'ANTHROPIC_API_KEY', desc: 'Anthropic Claude (claude-3-5-sonnet)' },
             { env: 'LLM_FALLBACK_PROVIDER', desc: 'Automatic failover if primary provider errors' },

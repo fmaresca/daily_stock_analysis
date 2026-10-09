@@ -72,8 +72,75 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
   const [isLoadingSessions, setIsLoadingSessions] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Gemini API Key Management
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState<boolean>(false);
+  const [apiKeyInput, setApiKeyInput] = useState<string>(() => {
+    return localStorage.getItem('deltaharvest_gemini_api_key') || '';
+  });
+  const [isKeyConfigured, setIsKeyConfigured] = useState<boolean>(false);
+  const [isSavingKey, setIsSavingKey] = useState<boolean>(false);
+  const [keySaveMessage, setKeySaveMessage] = useState<{ text: string; success: boolean } | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Check key configuration status on mount
+  useEffect(() => {
+    fetch('/api/agent/chat?action=key_status', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.configured || localStorage.getItem('deltaharvest_gemini_api_key')) {
+          setIsKeyConfigured(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveApiKey = async () => {
+    setIsSavingKey(true);
+    setKeySaveMessage(null);
+    const cleanKey = apiKeyInput.trim();
+    try {
+      if (cleanKey) {
+        localStorage.setItem('deltaharvest_gemini_api_key', cleanKey);
+      } else {
+        localStorage.removeItem('deltaharvest_gemini_api_key');
+      }
+
+      const res = await fetch('/api/agent/chat?action=save_key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ apiKey: cleanKey }),
+      });
+
+      if (res.ok) {
+        setIsKeyConfigured(Boolean(cleanKey));
+        setKeySaveMessage({
+          text: cleanKey ? 'Gemini API Key successfully saved and activated!' : 'API Key cleared. Edge Quantitative Mode active.',
+          success: true,
+        });
+        setTimeout(() => {
+          setIsKeyModalOpen(false);
+          setKeySaveMessage(null);
+        }, 1500);
+      } else {
+        throw new Error('Server persistence failed');
+      }
+    } catch {
+      setIsKeyConfigured(Boolean(cleanKey));
+      setKeySaveMessage({
+        text: 'Key saved locally in browser session.',
+        success: true,
+      });
+      setTimeout(() => {
+        setIsKeyModalOpen(false);
+        setKeySaveMessage(null);
+      }, 1500);
+    } finally {
+      setIsSavingKey(false);
+    }
+  };
 
   // Auto-scroll messages container
   const scrollToBottom = useCallback(() => {
@@ -194,15 +261,22 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
     setMessages((prev) => [...prev, assistantMessage]);
 
     try {
+      const storedKey = apiKeyInput.trim() || localStorage.getItem('deltaharvest_gemini_api_key') || '';
+      const requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (storedKey) {
+        requestHeaders['x-gemini-api-key'] = storedKey;
+      }
+
       const response = await fetch('/api/agent/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: requestHeaders,
         credentials: 'include',
         body: JSON.stringify({
           sessionId: currentSessionId || undefined,
           ticker,
           lens: selectedLens,
           message: text,
+          geminiApiKey: storedKey || undefined,
         }),
       });
 
@@ -474,6 +548,29 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
               })}
             </div>
           </div>
+
+          {/* Gemini AI Key Status Button */}
+          <button
+            onClick={() => setIsKeyModalOpen(true)}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+              isKeyConfigured || apiKeyInput.trim()
+                ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40'
+                : 'bg-amber-950/60 border-amber-500/40 text-amber-300 hover:bg-amber-900/40'
+            }`}
+            title="Configure Google Gemini API key or view active AI status"
+          >
+            {isKeyConfigured || apiKeyInput.trim() ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Gemini AI Active</span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span>Edge Mode · Set AI Key</span>
+              </>
+            )}
+          </button>
         </div>
 
         {/* Messages Stream Container */}
@@ -607,6 +704,92 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 3. Gemini API Key Configuration Modal */}
+      {isKeyModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2">
+                <BrainCircuit className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-sm font-bold text-white">Google Gemini AI Settings</h3>
+              </div>
+              <button
+                onClick={() => setIsKeyModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              DeltaHarvest connects to <strong>Google Gemini 2.5 Flash</strong> for neural options strategy reasoning.
+              You can paste your API key below (persisted in your database &amp; browser) or set it in Cloudflare Pages (<code className="font-mono text-cyan-300">GEMINI_API_KEY</code>).
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Gemini API Key
+              </label>
+              <input
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl text-xs font-mono text-slate-200 focus:outline-none"
+              />
+              <div className="flex items-center justify-between text-[11px] pt-1">
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-400 hover:underline flex items-center space-x-1"
+                >
+                  <span>Get a free key from Google AI Studio</span>
+                  <ExternalLink className="w-3 h-3 inline" />
+                </a>
+                {apiKeyInput && (
+                  <button
+                    onClick={() => setApiKeyInput('')}
+                    className="text-rose-400 hover:text-rose-300 cursor-pointer text-[10px]"
+                  >
+                    Clear key
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {keySaveMessage && (
+              <div
+                className={`p-2.5 rounded-lg text-xs flex items-center space-x-2 ${
+                  keySaveMessage.success
+                    ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-300'
+                    : 'bg-rose-950/60 border border-rose-500/40 text-rose-300'
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{keySaveMessage.text}</span>
+              </div>
+            )}
+
+            <div className="pt-2 flex items-center justify-end space-x-2">
+              <button
+                onClick={() => setIsKeyModalOpen(false)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveApiKey}
+                disabled={isSavingKey}
+                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-900/30 cursor-pointer disabled:opacity-50"
+              >
+                {isSavingKey ? 'Saving...' : 'Save & Activate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

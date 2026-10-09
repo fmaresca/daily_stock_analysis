@@ -22,7 +22,13 @@ export function getActiveProviderName(env = {}) {
   if (env?.LLM_PROVIDER && typeof env.LLM_PROVIDER === "string" && env.LLM_PROVIDER.trim()) {
     return env.LLM_PROVIDER.trim().toLowerCase();
   }
-  if (env?.GEMINI_API_KEY || env?.GOOGLE_API_KEY) {
+  if (
+    env?.GEMINI_API_KEY ||
+    env?.GEMINI_API_KEYS ||
+    env?.GOOGLE_API_KEY ||
+    env?.GOOGLE_GEMINI_API_KEY ||
+    env?.GEMINI_TOKEN
+  ) {
     return "gemini";
   }
   if (env?.LLM_API_KEY || env?.OPENAI_API_KEY) {
@@ -32,6 +38,38 @@ export function getActiveProviderName(env = {}) {
     return "anthropic";
   }
   return "gemini";
+}
+
+/**
+ * Resolves Gemini API key across env vars, comma-separated lists, and D1 system_settings.
+ * @param {Record<string, any>} env
+ * @returns {Promise<string>}
+ */
+export async function resolveGeminiApiKey(env = {}) {
+  let key = (
+    env?.GEMINI_API_KEY ||
+    env?.GEMINI_API_KEYS ||
+    env?.GOOGLE_API_KEY ||
+    env?.GOOGLE_GEMINI_API_KEY ||
+    env?.GEMINI_TOKEN ||
+    ""
+  );
+  if (typeof key === "string" && key.includes(",")) {
+    key = key.split(",")[0].trim();
+  }
+  if (!key && env?.DB && typeof env.DB.prepare === "function") {
+    try {
+      const row = await env.DB.prepare(
+        "SELECT value FROM system_settings WHERE key IN ('gemini_api_key', 'GEMINI_API_KEY', 'google_api_key', 'llm_api_key') ORDER BY updated_at DESC LIMIT 1"
+      ).first();
+      if (row?.value && typeof row.value === "string" && row.value.trim()) {
+        key = row.value.trim().split(",")[0].trim();
+      }
+    } catch {
+      // non-blocking
+    }
+  }
+  return (key || "").trim();
 }
 
 /**
@@ -158,12 +196,15 @@ async function callGemini({
   thinkingLevel,
   timeoutMs,
 }) {
-  const apiKey = env.GEMINI_API_KEY || env.GOOGLE_API_KEY;
+  const apiKey = await resolveGeminiApiKey(env);
   if (!apiKey) {
     throw new Error("Missing GEMINI_API_KEY environment variable in Cloudflare Pages.");
   }
 
-  const model = modelOverride || env.GEMINI_MODEL || "gemini-2.5-flash";
+  let model = modelOverride || env.GEMINI_MODEL || "gemini-3.8-flash";
+  if (model === "gemini-2.5-flash" || model === "gemini/gemini-2.5-flash") {
+    model = "gemini-3.8-flash";
+  }
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   // Convert messages to Gemini contents format
