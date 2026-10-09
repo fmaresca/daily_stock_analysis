@@ -1182,10 +1182,14 @@ test('20. Adanos Market Sentiment Proxy Contract, Mock Resilience & Security Gre
     if (!fs.existsSync(fullPath)) continue;
     const content = fs.readFileSync(fullPath, 'utf-8');
 
-    // Rule A: The literal key prefix sk_live_ followed by 32 hex chars must never appear
+    // Rule A: The literal key prefix sk_live_ and third-party API key prefixes must never appear
     assert.ok(
-      !/sk_live_[0-9a-fA-F]{32}/i.test(content),
-      `SECURITY GATE FAILED: Live Adanos API key pattern found in tracked file ${file}`
+      !/sk_live_[0-9a-fA-F]{32}/i.test(content) &&
+      !/gsk_[a-zA-Z0-9]{20,}/i.test(content) &&
+      !/csk-[a-zA-Z0-9]{20,}/i.test(content) &&
+      !/sk-or-v1-[a-zA-Z0-9]{20,}/i.test(content) &&
+      !/nvapi-[a-zA-Z0-9]{20,}/i.test(content),
+      `SECURITY GATE FAILED: Live API key pattern found in tracked file ${file}`
     );
 
     // Rule B: ADANOS_API_KEY must appear only in functions/ and docs/, NEVER in web/src
@@ -1263,47 +1267,184 @@ test('21. Multi-LLM Provider Abstraction, Failover Resilience & Diagnostics Cont
     assert.strictEqual(openaiRes.provider, 'openai');
     assert.strictEqual(openaiRes.text, '{"analysis":"openai_ok"}');
 
-    // 3. Failover test: primary provider fails -> fallback provider succeeds
-    let primaryAttempted = false;
-    let fallbackAttempted = false;
+    // 3. Numbered Slot Failover test: primary 429 -> slot 1 succeeds
+    let primary429Attempted = false;
+    let slot1Attempted = false;
     globalThis.fetch = async (url, options) => {
       const urlStr = String(url);
       if (urlStr.includes('generativelanguage.googleapis.com')) {
-        primaryAttempted = true;
-        // Primary Gemini fails with 500
-        return new Response(JSON.stringify({ error: 'Gemini temporary overload' }), { status: 500 });
+        primary429Attempted = true;
+        return new Response(JSON.stringify({ error: 'Rate limit reached' }), { status: 429 });
       }
-      if (urlStr.includes('/chat/completions')) {
-        fallbackAttempted = true;
+      if (urlStr.includes('api.groq.com')) {
+        slot1Attempted = true;
+        assert.strictEqual(options.headers.Authorization, 'Bearer test_groq_key_1');
         return new Response(JSON.stringify({
-          choices: [{ message: { content: 'fallback_success' } }]
+          choices: [{ message: { content: 'groq_slot1_success' } }]
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       return new Response('Not found', { status: 404 });
     };
 
-    const failoverRes = await completeLLM({
+    const failover429Res = await completeLLM({
       env: {
         GEMINI_API_KEY: 'primary_key',
-        LLM_API_KEY: 'fallback_key',
-        LLM_FALLBACK_PROVIDER: 'openai',
+        LLM_FALLBACK_1_PROVIDER: 'openai-compatible',
+        LLM_FALLBACK_1_BASE_URL: 'https://api.groq.com/openai/v1',
+        LLM_FALLBACK_1_API_KEY: 'test_groq_key_1',
+        LLM_FALLBACK_1_MODEL: 'llama-3.3-70b-versatile',
       },
-      messages: [{ role: 'user', content: 'test failover' }],
+      messages: [{ role: 'user', content: 'test 429 failover' }],
     });
-    assert.strictEqual(primaryAttempted, true, 'Primary provider must be attempted');
-    assert.strictEqual(fallbackAttempted, true, 'Fallback provider must be attempted on primary error');
-    assert.strictEqual(failoverRes.provider, 'openai');
-    assert.strictEqual(failoverRes.text, 'fallback_success');
+    assert.strictEqual(primary429Attempted, true, 'Primary must be attempted first');
+    assert.strictEqual(slot1Attempted, true, 'Slot 1 must be attempted on 429');
+    assert.strictEqual(failover429Res.provider, 'groq');
+    assert.strictEqual(failover429Res.text, 'groq_slot1_success');
+
+    // 4. Iron Rule #2: Primary 400 (Bad Request) -> Surfaces immediately, NO failover attempted!
+    let primary400Attempted = false;
+    let fallback400Attempted = false;
+    globalThis.fetch = async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('generativelanguage.googleapis.com')) {
+        primary400Attempted = true;
+        return new Response(JSON.stringify({ error: 'Invalid argument or request shape' }), { status: 400 });
+      }
+      if (urlStr.includes('api.groq.com')) {
+        fallback400Attempted = true;
+        return new Response(JSON.stringify({ choices: [{ message: { content: 'should_not_run' } }] }), { status: 200 });
+      }
+      return new Response('Not found', { status: 404 });
+    };
+
+    let errorThrown400 = null;
+    try {
+      await completeLLM({
+        env: {
+          GEMINI_API_KEY: 'primary_key',
+          LLM_FALLBACK_1_PROVIDER: 'openai-compatible',
+          LLM_FALLBACK_1_BASE_URL: 'https://api.groq.com/openai/v1',
+          LLM_FALLBACK_1_API_KEY: 'test_groq_key_1',
+          LLM_FALLBACK_1_MODEL: 'llama-3.3-70b-versatile',
+        },
+        messages: [{ role: 'user', content: 'malformed test request' }],
+      });
+    } catch (e) {
+      errorThrown400 = e;
+    }
+    assert.ok(errorThrown400, '400 error must be thrown');
+    assert.strictEqual(primary400Attempted, true, 'Primary was attempted');
+    assert.strictEqual(fallback400Attempted, false, 'Iron Rule #2: Fallback MUST NOT be attempted on 400!');
+    assert.ok(errorThrown400.message.includes('400'), 'Error message must reflect 400 status');
+
+    // 5. OpenRouter Special Case Headers Contract
+    let openrouterHeadersChecked = false;
+    globalThis.fetch = async (url, options) => {
+      const urlStr = String(url);
+      if (urlStr.includes('openrouter.ai')) {
+        openrouterHeadersChecked = true;
+        assert.strictEqual(options.headers['HTTP-Referer'], 'https://deltaharvest.app');
+        assert.strictEqual(options.headers['X-Title'], 'DeltaHarvest');
+        return new Response(JSON.stringify({
+          choices: [{ message: { content: 'openrouter_ok' } }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('Not found', { status: 404 });
+    };
+
+    const openrouterRes = await completeLLM({
+      env: {
+        LLM_PROVIDER: 'openai',
+        LLM_API_KEY: 'test_openrouter_key',
+        LLM_BASE_URL: 'https://openrouter.ai/api/v1',
+        LLM_MODEL: 'openrouter/free',
+        APP_URL: 'https://deltaharvest.app',
+      },
+      messages: [{ role: 'user', content: 'test openrouter headers' }],
+    });
+    assert.strictEqual(openrouterHeadersChecked, true, 'OpenRouter must receive HTTP-Referer and X-Title headers');
+    assert.strictEqual(openrouterRes.text, 'openrouter_ok');
+
+    // 6. Slot 1 (Groq) Tool Calling Preservation Contract
+    let toolCallReceived = false;
+    globalThis.fetch = async (url, options) => {
+      const urlStr = String(url);
+      if (urlStr.includes('api.groq.com')) {
+        toolCallReceived = true;
+        return new Response(JSON.stringify({
+          choices: [{
+            message: {
+              content: null,
+              tool_calls: [{
+                id: 'call_groq_123',
+                function: {
+                  name: 'get_options_preflight_checklist',
+                  arguments: '{"symbol":"NVDA"}'
+                }
+              }]
+            }
+          }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('Not found', { status: 404 });
+    };
+
+    const groqToolRes = await completeLLM({
+      env: {
+        LLM_PROVIDER: 'openai',
+        LLM_BASE_URL: 'https://api.groq.com/openai/v1',
+        LLM_API_KEY: 'test_groq_key_tool',
+        LLM_MODEL: 'llama-3.3-70b-versatile',
+      },
+      messages: [{ role: 'user', content: 'Audit NVDA options' }],
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'get_options_preflight_checklist',
+          description: '5-point options preflight checklist',
+          parameters: { type: 'object', properties: { symbol: { type: 'string' } } }
+        }
+      }]
+    });
+    assert.strictEqual(toolCallReceived, true, 'Groq slot must receive tool calling payload');
+    assert.ok(Array.isArray(groqToolRes.toolCalls) && groqToolRes.toolCalls.length === 1);
+    assert.strictEqual(groqToolRes.toolCalls[0].name, 'get_options_preflight_checklist');
   } finally {
     globalThis.fetch = originalFetch;
   }
 
-  // C. Diagnostics Contract: llm_provider present and never leaks secret
+  // C. Numbered Slot Parsing Stops at First Gap Contract
+  const { getFallbackSlots } = await import('../functions/api/_llm.js');
+  const gapEnv = {
+    LLM_FALLBACK_1_PROVIDER: 'openai-compatible',
+    LLM_FALLBACK_1_BASE_URL: 'https://api.groq.com/openai/v1',
+    LLM_FALLBACK_1_API_KEY: 'key_1',
+    LLM_FALLBACK_1_MODEL: 'llama-3.3-70b-versatile',
+    // Slot 2 is intentionally omitted (gap)
+    LLM_FALLBACK_3_PROVIDER: 'openai-compatible',
+    LLM_FALLBACK_3_BASE_URL: 'https://openrouter.ai/api/v1',
+    LLM_FALLBACK_3_API_KEY: 'key_3',
+    LLM_FALLBACK_3_MODEL: 'openrouter/free',
+  };
+  const parsedSlots = getFallbackSlots(gapEnv);
+  assert.strictEqual(parsedSlots.length, 1, 'Slot parsing MUST stop at the first missing slot');
+  assert.strictEqual(parsedSlots[0].slot, 1);
+  assert.strictEqual(parsedSlots[0].name, 'groq');
+
+  // D. Diagnostics Contract: llm_chain present and never leaks secret
   const diagEnv = {
     ENVIRONMENT: 'development',
     SESSION_SECRET: 'test-session-secret-diagnostics-llm-2026',
-    LLM_PROVIDER: 'deepseek',
-    LLM_API_KEY: 'sk_secret_should_never_leak_12345',
+    LLM_PROVIDER: 'gemini',
+    GEMINI_API_KEY: 'mock_gemini_key',
+    LLM_FALLBACK_1_PROVIDER: 'openai-compatible',
+    LLM_FALLBACK_1_BASE_URL: 'https://api.groq.com/openai/v1',
+    LLM_FALLBACK_1_API_KEY: 'gsk_secret_should_never_leak_12345',
+    LLM_FALLBACK_1_MODEL: 'llama-3.3-70b-versatile',
+    LLM_FALLBACK_2_PROVIDER: 'openai-compatible',
+    LLM_FALLBACK_2_BASE_URL: 'https://api.cerebras.ai/v1',
+    LLM_FALLBACK_2_API_KEY: 'csk-secret_should_never_leak_67890',
+    LLM_FALLBACK_2_MODEL: 'llama-3.3-70b',
   };
   const adminUser = await authModule.createUser(diagEnv, {
     email: 'admin_llm_tester@deltaharvest.local',
@@ -1319,15 +1460,52 @@ test('21. Multi-LLM Provider Abstraction, Failover Resilience & Diagnostics Cont
     diagEnv.SESSION_SECRET
   );
   const cookie = authModule.buildSessionCookie(token);
+
   const diagReq = new Request('http://localhost/api/admin/diagnostics', {
     headers: { Cookie: cookie },
   });
   const diagRes = await diagnosticsModule.onRequestGet({ request: diagReq, env: diagEnv });
   assert.strictEqual(diagRes.status, 200);
   const diagBody = await diagRes.json();
-  assert.strictEqual(diagBody.llm_provider, 'deepseek', 'Diagnostics must report provider name');
+  assert.strictEqual(diagBody.llm_provider, 'gemini', 'Diagnostics must report provider name');
+  assert.deepStrictEqual(diagBody.llm_chain, ['groq', 'cerebras'], 'Diagnostics must report configured provider names');
   const diagJsonStr = JSON.stringify(diagBody);
-  assert.ok(!diagJsonStr.includes('sk_secret_should_never_leak_12345'), 'Diagnostics must NEVER leak LLM_API_KEY');
+  assert.ok(!diagJsonStr.includes('gsk_secret_should_never_leak_12345'), 'Diagnostics must NEVER leak Groq key');
+  assert.ok(!diagJsonStr.includes('csk-secret_should_never_leak_67890'), 'Diagnostics must NEVER leak Cerebras key');
+
+  // E. Admin Endpoint Contract: GET /api/admin/llm-chain-test
+  const chainTestModule = await import('../functions/api/admin/llm-chain-test.js');
+  const origFetchForAdmin = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('api.groq.com') || urlStr.includes('api.cerebras.ai')) {
+        return new Response(JSON.stringify({
+          choices: [{ message: { content: 'pong' } }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('Not found', { status: 404 });
+    };
+
+    const chainReq = new Request('http://localhost/api/admin/llm-chain-test', {
+      headers: { Cookie: cookie },
+    });
+    const chainRes = await chainTestModule.onRequestGet({ request: chainReq, env: diagEnv });
+    assert.strictEqual(chainRes.status, 200);
+    const chainBody = await chainRes.json();
+    assert.strictEqual(chainBody.length, 2);
+    assert.strictEqual(chainBody[0].slot, 1);
+    assert.strictEqual(chainBody[0].provider, 'groq');
+    assert.strictEqual(chainBody[0].ok, true);
+    assert.strictEqual(chainBody[1].slot, 2);
+    assert.strictEqual(chainBody[1].provider, 'cerebras');
+    assert.strictEqual(chainBody[1].ok, true);
+
+    const chainStr = JSON.stringify(chainBody);
+    assert.ok(!chainStr.includes('gsk_secret'), 'Chain test must NEVER leak key strings');
+  } finally {
+    globalThis.fetch = origFetchForAdmin;
+  }
 });
 
 test('22. Feature Expansion Pack Contracts: Agent Q&A, Daily Recap, Morning Push & OCR Import', async () => {

@@ -3,15 +3,30 @@
  * 
  * Supports:
  * - Google Gemini (default, zero-breaking change with GEMINI_API_KEY)
- * - OpenAI-compatible endpoints (DeepSeek, Qwen, Ollama, OpenAI via LLM_BASE_URL + LLM_API_KEY + LLM_MODEL)
- * - Anthropic Claude (via ANTHROPIC_API_KEY + ANTHROPIC_MODEL)
+ * - Numbered multi-provider failover chain (LLM_FALLBACK_1..9 with comma-separated multi-key rotation)
+ * - OpenAI-compatible endpoints (Groq, Cerebras, OpenRouter, Mistral, NVIDIA NIM, Cohere, DeepSeek, etc.)
+ * - Cloudflare Workers AI (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN)
+ * - Anthropic Claude (ANTHROPIC_API_KEY + ANTHROPIC_MODEL)
  * 
- * Features:
- * - Dynamic provider selection via LLM_PROVIDER
- * - 1-retry automatic failover via LLM_FALLBACK_PROVIDER
- * - Sanitized latency & provider observability (ZERO key/prompt leakage)
- * - Standardized tool-calling and JSON formatting
+ * Iron Rules:
+ * 1. Zero key leakage in chat, code, logs, test fixtures, or responses.
+ * 2. Fail over on 401 / 429 / 5xx / network timeout — NEVER on 400 (surface 400s immediately).
+ * 3. Default path unchanged: with no fallback env vars set, behavior is byte-identical to today.
+ * 4. Per-attempt timeout so hanging providers do not stall the chain; log provider name + latency only.
  */
+
+/**
+ * Sanitizes any potential API key or token substrings from text/errors.
+ * @param {string} text
+ * @returns {string}
+ */
+export function sanitizeKeyLeakage(text) {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .replace(/Bearer\s+[A-Za-z0-9_\-\.]+/gi, "Bearer [REDACTED]")
+    .replace(/\b(gsk_|csk-|sk-or-v1-|sk-or-|nvapi-|sk-)[A-Za-z0-9_\-\.]{8,}\b/gi, "[REDACTED_KEY]")
+    .replace(/[a-f0-9]{32,}/gi, (m) => m.length >= 32 ? "[REDACTED_HEX]" : m);
+}
 
 /**
  * Resolves the primary active LLM provider name without exposing key material.
@@ -73,7 +88,160 @@ export async function resolveGeminiApiKey(env = {}) {
 }
 
 /**
- * Standardized LLM completion interface.
+ * Selects an API key from a potentially comma-separated multi-key string for intra-slot rotation.
+ * @param {string} rawKey
+ * @returns {string}
+ */
+export function resolveSlotApiKey(rawKey) {
+  if (!rawKey || typeof rawKey !== "string") return "";
+  const parts = rawKey.split(",").map(k => k.trim()).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0];
+  // Uniform rotation across available keys
+  const idx = Math.floor(Math.random() * parts.length);
+  return parts[idx];
+}
+
+/**
+ * Default slot conventions for the 7-provider failover chain.
+ * Overridable via LLM_FALLBACK_<n>_PROVIDER, LLM_FALLBACK_<n>_BASE_URL, LLM_FALLBACK_<n>_MODEL.
+ */
+export const DEFAULT_SLOT_CONFIGS = {
+  1: {
+    provider: "openai-compatible",
+    name: "groq",
+    baseUrl: "https://api.groq.com/openai/v1",
+    model: "llama-3.3-70b-versatile",
+  },
+  2: {
+    provider: "openai-compatible",
+    name: "cerebras",
+    baseUrl: "https://api.cerebras.ai/v1",
+    model: "llama-3.3-70b",
+  },
+  3: {
+    provider: "openai-compatible",
+    name: "openrouter",
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: "openrouter/free",
+  },
+  4: {
+    provider: "openai-compatible",
+    name: "mistral",
+    baseUrl: "https://api.mistral.ai/v1",
+    model: "mistral-small-latest",
+  },
+  5: {
+    provider: "openai-compatible",
+    name: "nvidia",
+    baseUrl: "https://integrate.api.nvidia.com/v1",
+    model: "meta/llama-3.3-70b-instruct",
+  },
+  6: {
+    provider: "cloudflare-workers-ai",
+    name: "cloudflare-workers-ai",
+    baseUrl: "",
+    model: "@cf/meta/llama-3.1-8b-instruct",
+  },
+  7: {
+    provider: "openai-compatible",
+    name: "cohere",
+    baseUrl: "https://api.cohere.com/compatibility/v1",
+    model: "command-r-plus",
+  },
+};
+
+/**
+ * Parses numbered fallback slots (LLM_FALLBACK_1..9) stopping at the first missing slot.
+ * @param {Record<string, any>} env
+ * @returns {Array<{slot: number, providerType: string, name: string, baseUrl: string, apiKey: string, model: string}>}
+ */
+export function getFallbackSlots(env = {}) {
+  const slots = [];
+  for (let n = 1; n <= 9; n++) {
+    const def = DEFAULT_SLOT_CONFIGS[n] || {};
+
+    const providerRaw = (env[`LLM_FALLBACK_${n}_PROVIDER`] || def.provider || "").trim();
+    const apiKeyRaw = (env[`LLM_FALLBACK_${n}_API_KEY`] || "").trim();
+    const baseUrlRaw = (env[`LLM_FALLBACK_${n}_BASE_URL`] || def.baseUrl || "").trim();
+    const modelRaw = (env[`LLM_FALLBACK_${n}_MODEL`] || def.model || "").trim();
+
+    // Check if slot n exists in env (key provided or explicit provider/base_url env var set)
+    const isConfiguredInEnv = Boolean(
+      apiKeyRaw ||
+      env[`LLM_FALLBACK_${n}_PROVIDER`] ||
+      env[`LLM_FALLBACK_${n}_BASE_URL`] ||
+      env[`LLM_FALLBACK_${n}_MODEL`] ||
+      (def.provider === "cloudflare-workers-ai" && env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN)
+    );
+
+    if (!isConfiguredInEnv) {
+      break; // Stop parsing at first gap
+    }
+
+    const providerLower = providerRaw.toLowerCase();
+    let providerType = "openai-compatible";
+    if (providerLower === "cloudflare-workers-ai" || providerLower === "cf-workers-ai") {
+      providerType = "cloudflare-workers-ai";
+    } else if (providerLower === "anthropic") {
+      providerType = "anthropic";
+    } else if (providerLower === "gemini") {
+      providerType = "gemini";
+    } else {
+      providerType = "openai-compatible";
+    }
+
+    // Derive display name for diagnostics and chain tests
+    let friendlyName = def.name || (providerLower && providerLower !== "openai-compatible" ? providerLower : "");
+    const bUrl = baseUrlRaw.toLowerCase();
+    if (bUrl.includes("groq.com") || providerLower.includes("groq")) {
+      friendlyName = "groq";
+    } else if (bUrl.includes("cerebras.ai") || providerLower.includes("cerebras")) {
+      friendlyName = "cerebras";
+    } else if (bUrl.includes("openrouter.ai") || providerLower.includes("openrouter")) {
+      friendlyName = "openrouter";
+    } else if (bUrl.includes("mistral.ai") || providerLower.includes("mistral")) {
+      friendlyName = "mistral";
+    } else if (bUrl.includes("nvidia.com") || providerLower.includes("nvidia")) {
+      friendlyName = "nvidia";
+    } else if (providerType === "cloudflare-workers-ai" || bUrl.includes("cloudflare.com")) {
+      friendlyName = "cloudflare-workers-ai";
+    } else if (bUrl.includes("cohere.com") || providerLower.includes("cohere")) {
+      friendlyName = "cohere";
+    } else if (!friendlyName) {
+      friendlyName = providerType;
+    }
+
+    slots.push({
+      slot: n,
+      providerType,
+      name: friendlyName,
+      baseUrl: baseUrlRaw,
+      apiKey: apiKeyRaw,
+      model: modelRaw,
+    });
+  }
+  return slots;
+}
+
+/**
+ * Checks whether an error is a non-retryable 400 request-shape bug.
+ * Iron Rule #2: Fail over on 401 / 429 / 5xx / network timeout — NEVER on 400.
+ * @param {any} err
+ * @returns {boolean}
+ */
+export function isNonRetryableError(err) {
+  if (!err) return false;
+  if (err.status === 400 || err.statusCode === 400) return true;
+  const msg = String(err.message || "");
+  if (msg.includes("(400)") || msg.includes("HTTP 400") || /\bstatus:\s*400\b/i.test(msg)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Standardized LLM completion interface with 7+ provider failover chain.
  * 
  * @param {Object} options
  * @param {Record<string, any>} options.env Cloudflare Pages environment
@@ -85,7 +253,7 @@ export async function resolveGeminiApiKey(env = {}) {
  * @param {"json" | "text"} [options.responseFormat]
  * @param {string} [options.modelOverride]
  * @param {string} [options.providerOverride]
- * @param {string} [options.thinkingLevel] e.g. "HIGH" for Gemini Extended Thinking
+ * @param {string} [options.thinkingLevel]
  * @param {number} [options.timeoutMs]
  * @returns {Promise<{text: string, toolCalls?: Array<any>, provider: string, model: string, latencyMs: number}>}
  */
@@ -103,10 +271,11 @@ export async function completeLLM({
   timeoutMs = 45000,
 }) {
   const primaryProvider = (providerOverride || getActiveProviderName(env)).toLowerCase();
-  const fallbackProvider = env?.LLM_FALLBACK_PROVIDER
-    ? env.LLM_FALLBACK_PROVIDER.trim().toLowerCase()
-    : null;
+  const fallbackSlots = getFallbackSlots(env);
 
+  let lastError = null;
+
+  // 1. Attempt Primary Provider
   try {
     return await executeProviderCall({
       provider: primaryProvider,
@@ -122,13 +291,21 @@ export async function completeLLM({
       timeoutMs,
     });
   } catch (primaryErr) {
-    console.warn(`[LLM] Primary provider (${primaryProvider}) failed: ${primaryErr.message}`);
+    // Iron Rule #2: If 400, surface immediately — do NOT fail over
+    if (isNonRetryableError(primaryErr)) {
+      throw primaryErr;
+    }
+    lastError = primaryErr;
+    console.warn(`[LLM] Primary provider (${primaryProvider}) failed: ${sanitizeKeyLeakage(primaryErr.message)}`);
+  }
 
-    if (fallbackProvider && fallbackProvider !== primaryProvider) {
-      console.info(`[LLM] Initiating failover to fallback provider: ${fallbackProvider}`);
+  // 2. Walk Numbered Fallback Chain (Slots 1..9)
+  if (fallbackSlots.length > 0) {
+    for (const slot of fallbackSlots) {
       try {
-        return await executeProviderCall({
-          provider: fallbackProvider,
+        console.info(`[LLM] Initiating failover to slot ${slot.slot} (${slot.name}): model=${slot.model || "default"}`);
+        return await executeSlotCall({
+          slot,
           env,
           system,
           messages,
@@ -136,22 +313,105 @@ export async function completeLLM({
           maxTokens,
           temperature,
           responseFormat,
-          modelOverride: "", // Clear modelOverride so fallback uses its native default
+          thinkingLevel,
+          timeoutMs: Math.min(timeoutMs, 30000), // Per-attempt timeout guard
+        });
+      } catch (slotErr) {
+        // Iron Rule #2: If 400, surface immediately
+        if (isNonRetryableError(slotErr)) {
+          throw slotErr;
+        }
+        lastError = slotErr;
+        console.warn(`[LLM] Fallback slot ${slot.slot} (${slot.name}) failed: ${sanitizeKeyLeakage(slotErr.message)}`);
+      }
+    }
+  } else if (env?.LLM_FALLBACK_PROVIDER) {
+    // Legacy single fallback provider compatibility
+    const legacyFallback = env.LLM_FALLBACK_PROVIDER.trim().toLowerCase();
+    if (legacyFallback !== primaryProvider) {
+      console.info(`[LLM] Initiating failover to legacy fallback provider: ${legacyFallback}`);
+      try {
+        return await executeProviderCall({
+          provider: legacyFallback,
+          env,
+          system,
+          messages,
+          tools,
+          maxTokens,
+          temperature,
+          responseFormat,
+          modelOverride: "",
           thinkingLevel,
           timeoutMs,
         });
-      } catch (fallbackErr) {
-        console.error(`[LLM] Fallback provider (${fallbackProvider}) also failed: ${fallbackErr.message}`);
-        throw new Error(`LLM provider '${primaryProvider}' failed (${primaryErr.message}) and fallback '${fallbackProvider}' failed (${fallbackErr.message})`);
+      } catch (legacyErr) {
+        if (isNonRetryableError(legacyErr)) {
+          throw legacyErr;
+        }
+        console.error(`[LLM] Legacy fallback (${legacyFallback}) also failed: ${sanitizeKeyLeakage(legacyErr.message)}`);
+        throw new Error(`LLM primary '${primaryProvider}' failed (${sanitizeKeyLeakage(lastError?.message || "")}) and fallback '${legacyFallback}' failed (${sanitizeKeyLeakage(legacyErr.message)})`);
       }
     }
-
-    throw primaryErr;
   }
+
+  // All providers in chain exhausted
+  throw lastError || new Error(`All LLM providers in failover chain exhausted`);
 }
 
 /**
- * Dispatch call to specific provider implementation.
+ * Dispatches an execution against a specific numbered slot.
+ */
+async function executeSlotCall(params) {
+  const { slot, env } = params;
+  const startTime = Date.now();
+
+  const apiKey = resolveSlotApiKey(slot.apiKey);
+  let result;
+
+  if (slot.providerType === "cloudflare-workers-ai") {
+    result = await callCloudflareWorkersAi({
+      ...params,
+      apiKeyOverride: apiKey,
+      modelOverride: slot.model,
+      baseUrlOverride: slot.baseUrl,
+    });
+  } else if (slot.providerType === "anthropic") {
+    result = await callAnthropic({
+      ...params,
+      apiKeyOverride: apiKey,
+      modelOverride: slot.model,
+      baseUrlOverride: slot.baseUrl,
+    });
+  } else if (slot.providerType === "gemini") {
+    result = await callGemini({
+      ...params,
+      apiKeyOverride: apiKey,
+      modelOverride: slot.model,
+    });
+  } else {
+    // Default to OpenAI-compatible
+    result = await callOpenAICompatible({
+      ...params,
+      apiKeyOverride: apiKey,
+      baseUrlOverride: slot.baseUrl,
+      modelOverride: slot.model,
+    });
+  }
+
+  const latencyMs = Date.now() - startTime;
+  const preview = (result.text || "").slice(0, 60).replace(/[\r\n]+/g, " ");
+  console.info(`[LLM] Slot: ${slot.slot} | Provider: ${slot.name} | Model: ${result.model} | Latency: ${latencyMs}ms | Preview: "${preview}..."`);
+
+  return {
+    ...result,
+    slot: slot.slot,
+    provider: slot.name,
+    latencyMs,
+  };
+}
+
+/**
+ * Dispatch call to specific primary provider implementation.
  */
 async function executeProviderCall(params) {
   const { provider } = params;
@@ -164,13 +424,13 @@ async function executeProviderCall(params) {
     result = await callOpenAICompatible(params);
   } else if (provider === "anthropic") {
     result = await callAnthropic(params);
+  } else if (provider === "cloudflare-workers-ai") {
+    result = await callCloudflareWorkersAi(params);
   } else {
-    // If unknown name, default to OpenAI-compatible
     result = await callOpenAICompatible(params);
   }
 
   const latencyMs = Date.now() - startTime;
-  // Truncated preview for diagnostic log, NEVER logging keys or long prompt contents
   const preview = (result.text || "").slice(0, 60).replace(/[\r\n]+/g, " ");
   console.info(`[LLM] Provider: ${provider} | Model: ${result.model} | Latency: ${latencyMs}ms | Preview: "${preview}..."`);
 
@@ -195,8 +455,9 @@ async function callGemini({
   modelOverride,
   thinkingLevel,
   timeoutMs,
+  apiKeyOverride,
 }) {
-  const apiKey = await resolveGeminiApiKey(env);
+  const apiKey = apiKeyOverride || await resolveGeminiApiKey(env);
   if (!apiKey) {
     throw new Error("Missing GEMINI_API_KEY environment variable in Cloudflare Pages.");
   }
@@ -210,7 +471,6 @@ async function callGemini({
   // Convert messages to Gemini contents format
   const contents = [];
   for (const m of messages) {
-    // 1. Tool execution result (role: "tool" or has tool_call_id)
     if (m.role === "tool" || m.tool_call_id) {
       let responseObj;
       try {
@@ -237,7 +497,6 @@ async function callGemini({
       continue;
     }
 
-    // 2. Assistant message with function calls
     if (m.tool_calls && Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
       const parts = [];
       if (m.content && typeof m.content === "string" && m.content.trim()) {
@@ -269,7 +528,6 @@ async function callGemini({
       continue;
     }
 
-    // 3. Standard text conversation message (must have non-empty text)
     const role = (m.role === "assistant" || m.role === "model") ? "model" : "user";
     const textContent = (typeof m.content === "string" ? m.content.trim() : "") || (m.content ? String(m.content) : "");
     if (textContent) {
@@ -280,7 +538,6 @@ async function callGemini({
     }
   }
 
-  // Ensure contents has at least one valid message
   if (contents.length === 0) {
     contents.push({
       role: "user",
@@ -314,7 +571,6 @@ async function callGemini({
     };
   }
 
-  // Convert tools to Gemini functionDeclarations format if provided
   if (Array.isArray(tools) && tools.length > 0) {
     bodyPayload.tools = [{
       function_declarations: tools.map(t => {
@@ -344,7 +600,9 @@ async function callGemini({
   } catch (err) {
     clearTimeout(timer);
     if (err.name === "AbortError") {
-      throw new Error(`Gemini request timed out after ${timeoutMs}ms`);
+      const timeoutErr = new Error(`Gemini request timed out after ${timeoutMs}ms`);
+      timeoutErr.name = "TimeoutError";
+      throw timeoutErr;
     }
     throw err;
   } finally {
@@ -353,10 +611,10 @@ async function callGemini({
 
   if (!resp.ok) {
     const errorText = await resp.text();
-    if (resp.status === 429) {
-      throw new Error(`Google AI Studio rate limit reached (HTTP 429).`);
-    }
-    throw new Error(`Gemini API error (${resp.status}): ${errorText}`);
+    const sanitizedError = sanitizeKeyLeakage(errorText);
+    const err = new Error(`Gemini API error (${resp.status}): ${sanitizedError}`);
+    err.status = resp.status;
+    throw err;
   }
 
   const data = await resp.json();
@@ -390,7 +648,7 @@ async function callGemini({
 }
 
 /**
- * OpenAI-compatible REST Implementation (DeepSeek, Qwen, Ollama, OpenAI)
+ * OpenAI-compatible REST Implementation (Groq, Cerebras, OpenRouter, Mistral, NVIDIA NIM, Cohere, etc.)
  */
 async function callOpenAICompatible({
   env,
@@ -401,14 +659,16 @@ async function callOpenAICompatible({
   temperature,
   responseFormat,
   modelOverride,
+  baseUrlOverride,
+  apiKeyOverride,
   timeoutMs,
 }) {
-  const apiKey = env.LLM_API_KEY || env.OPENAI_API_KEY;
+  const apiKey = apiKeyOverride || env.LLM_API_KEY || env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error("Missing LLM_API_KEY environment variable for OpenAI-compatible provider.");
   }
 
-  const baseUrl = (env.LLM_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
+  const baseUrl = (baseUrlOverride || env.LLM_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
   const model = modelOverride || env.LLM_MODEL || "gpt-4o-mini";
   const endpoint = `${baseUrl}/chat/completions`;
 
@@ -423,11 +683,11 @@ async function callOpenAICompatible({
         role: "tool",
         tool_call_id: m.tool_call_id,
         name: m.name,
-        content: m.content,
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
       });
     } else {
       formattedMessages.push({
-        role: m.role,
+        role: m.role === "model" ? "assistant" : m.role,
         content: m.content,
       });
     }
@@ -458,6 +718,17 @@ async function callOpenAICompatible({
     });
   }
 
+  const headers = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${apiKey}`,
+  };
+
+  // OpenRouter special case headers per documented convention
+  if (baseUrl.includes("openrouter.ai")) {
+    headers["HTTP-Referer"] = env.APP_URL || "https://deltaharvest.app";
+    headers["X-Title"] = "DeltaHarvest";
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -465,17 +736,16 @@ async function callOpenAICompatible({
   try {
     resp = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
   } catch (err) {
     clearTimeout(timer);
     if (err.name === "AbortError") {
-      throw new Error(`OpenAI-compatible request timed out after ${timeoutMs}ms`);
+      const timeoutErr = new Error(`OpenAI-compatible request timed out after ${timeoutMs}ms`);
+      timeoutErr.name = "TimeoutError";
+      throw timeoutErr;
     }
     throw err;
   } finally {
@@ -484,7 +754,10 @@ async function callOpenAICompatible({
 
   if (!resp.ok) {
     const errorText = await resp.text();
-    throw new Error(`OpenAI-compatible API error (${resp.status}): ${errorText}`);
+    const sanitizedError = sanitizeKeyLeakage(errorText);
+    const err = new Error(`OpenAI-compatible API error (${resp.status}): ${sanitizedError}`);
+    err.status = resp.status;
+    throw err;
   }
 
   const data = await resp.json();
@@ -495,12 +768,95 @@ async function callOpenAICompatible({
   const toolCalls = (message.tool_calls || []).map(tc => ({
     id: tc.id,
     name: tc.function?.name,
-    arguments: tc.function?.arguments || "{}",
+    arguments: typeof tc.function?.arguments === "string" ? tc.function.arguments : JSON.stringify(tc.function?.arguments || {}),
   }));
 
   return {
     text: textResult,
     toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+    model,
+    raw: data,
+  };
+}
+
+/**
+ * Cloudflare Workers AI REST Implementation
+ */
+async function callCloudflareWorkersAi({
+  env,
+  system,
+  messages,
+  maxTokens,
+  temperature,
+  modelOverride,
+  apiKeyOverride,
+  baseUrlOverride,
+  timeoutMs,
+}) {
+  const accountId = env.CLOUDFLARE_ACCOUNT_ID || baseUrlOverride;
+  const apiToken = apiKeyOverride || env.CLOUDFLARE_API_TOKEN;
+  if (!accountId || !apiToken) {
+    throw new Error("Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN for Cloudflare Workers AI.");
+  }
+
+  const model = modelOverride || env.CLOUDFLARE_AI_MODEL || "@cf/meta/llama-3.1-8b-instruct";
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`;
+
+  const formattedMessages = [];
+  if (system && typeof system === "string" && system.trim()) {
+    formattedMessages.push({ role: "system", content: system.trim() });
+  }
+
+  for (const m of messages) {
+    formattedMessages.push({
+      role: m.role === "assistant" || m.role === "model" ? "assistant" : (m.role === "system" ? "system" : "user"),
+      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+    });
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let resp;
+  try {
+    resp = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: formattedMessages,
+        max_tokens: maxTokens || 2048,
+        temperature: typeof temperature === "number" ? temperature : 0.2,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.name === "AbortError") {
+      const timeoutErr = new Error(`Cloudflare Workers AI request timed out after ${timeoutMs}ms`);
+      timeoutErr.name = "TimeoutError";
+      throw timeoutErr;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!resp.ok) {
+    const errorText = await resp.text();
+    const sanitizedError = sanitizeKeyLeakage(errorText);
+    const err = new Error(`Cloudflare Workers AI API error (${resp.status}): ${sanitizedError}`);
+    err.status = resp.status;
+    throw err;
+  }
+
+  const data = await resp.json();
+  const textResult = data?.result?.response || data?.response || data?.choices?.[0]?.message?.content || "";
+
+  return {
+    text: textResult,
     model,
     raw: data,
   };
@@ -517,19 +873,21 @@ async function callAnthropic({
   maxTokens,
   temperature,
   modelOverride,
+  apiKeyOverride,
+  baseUrlOverride,
   timeoutMs,
 }) {
-  const apiKey = env.ANTHROPIC_API_KEY;
+  const apiKey = apiKeyOverride || env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error("Missing ANTHROPIC_API_KEY environment variable.");
   }
 
-  const baseUrl = (env.ANTHROPIC_BASE_URL || "https://api.anthropic.com/v1").replace(/\/+$/, "");
+  const baseUrl = (baseUrlOverride || env.ANTHROPIC_BASE_URL || "https://api.anthropic.com/v1").replace(/\/+$/, "");
   const model = modelOverride || env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022";
   const endpoint = `${baseUrl}/messages`;
 
   const formattedMessages = messages.map(m => ({
-    role: m.role === "assistant" ? "assistant" : "user",
+    role: m.role === "assistant" || m.role === "model" ? "assistant" : "user",
     content: m.content,
   }));
 
@@ -573,7 +931,9 @@ async function callAnthropic({
   } catch (err) {
     clearTimeout(timer);
     if (err.name === "AbortError") {
-      throw new Error(`Anthropic request timed out after ${timeoutMs}ms`);
+      const timeoutErr = new Error(`Anthropic request timed out after ${timeoutMs}ms`);
+      timeoutErr.name = "TimeoutError";
+      throw timeoutErr;
     }
     throw err;
   } finally {
@@ -582,7 +942,10 @@ async function callAnthropic({
 
   if (!resp.ok) {
     const errorText = await resp.text();
-    throw new Error(`Anthropic API error (${resp.status}): ${errorText}`);
+    const sanitizedError = sanitizeKeyLeakage(errorText);
+    const err = new Error(`Anthropic API error (${resp.status}): ${sanitizedError}`);
+    err.status = resp.status;
+    throw err;
   }
 
   const data = await resp.json();
@@ -607,4 +970,42 @@ async function callAnthropic({
     model,
     raw: data,
   };
+}
+
+/**
+ * Admin Test Tool: Attempts a single lightweight completion for one configured slot.
+ * Returns { slot, provider, model, ok, latencyMs, error } - NEVER leaks keys!
+ * 
+ * @param {Record<string, any>} env
+ * @param {Object} slot
+ * @returns {Promise<{slot: number, provider: string, model: string, ok: boolean, latencyMs: number, error?: string}>}
+ */
+export async function testFallbackSlot(env, slot) {
+  const startTime = Date.now();
+  try {
+    await executeSlotCall({
+      slot,
+      env,
+      messages: [{ role: "user", content: "ping" }],
+      maxTokens: 5,
+      temperature: 0,
+      timeoutMs: 15000,
+    });
+    return {
+      slot: slot.slot,
+      provider: slot.name,
+      model: slot.model,
+      ok: true,
+      latencyMs: Date.now() - startTime,
+    };
+  } catch (err) {
+    return {
+      slot: slot.slot,
+      provider: slot.name,
+      model: slot.model,
+      ok: false,
+      latencyMs: Date.now() - startTime,
+      error: sanitizeKeyLeakage(err.message || "Unknown error"),
+    };
+  }
 }

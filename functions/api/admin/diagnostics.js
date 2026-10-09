@@ -1,5 +1,5 @@
 import { authenticateRequest, getAdminNotificationEmail } from "../_auth_utils.js";
-import { getActiveProviderName } from "../_llm.js";
+import { getActiveProviderName, getFallbackSlots } from "../_llm.js";
 
 /**
  * Cloudflare Pages Function: GET /api/admin/diagnostics
@@ -67,6 +67,8 @@ export async function onRequestGet(context) {
   );
 
   const llmProvider = getActiveProviderName(env);
+  const fallbackSlots = getFallbackSlots(env);
+  const llmChain = fallbackSlots.map(s => s.name || s.providerType);
 
   return new Response(
     JSON.stringify({
@@ -78,6 +80,7 @@ export async function onRequestGet(context) {
       admin_email_configured: adminEmailConfigured,
       adanos_configured: adanosConfigured,
       llm_provider: llmProvider,
+      llm_chain: llmChain,
       environment: environment,
     }),
     {

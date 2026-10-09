@@ -209,3 +209,27 @@ The platform includes an automated pre-market intelligence digest dispatched eve
 - **Dashboard Path:** **Workers & Pages** → **daily-stock-analysis** → **Settings** → **Environment variables** → **Add Secret** → Name: `GEMINI_API_KEY`
 - **Active Model:** Google Gemini 3.8 Flash (`gemini-3.8-flash`). (Note: `gemini-2.5-flash` has been deprecated by Google and is automatically aliased to `gemini-3.8-flash`).
 
+---
+
+## 7. Multi-Provider LLM Failover Chain (Numbered Slots 1..7)
+
+DeltaHarvest implements a resilient 7-provider failover chain behind `functions/api/_llm.js`. When the primary Google Gemini model encounters rate limits (HTTP 429), server errors (HTTP 5xx), or network timeouts, execution automatically cascades sequentially across configured fallback slots:
+
+| Slot | Provider | Default Model | Console / Key Generation | Dashboard Secret Name |
+| :---: | :--- | :--- | :--- | :--- |
+| **1** | **Groq** | `llama-3.3-70b-versatile` | [console.groq.com/keys](https://console.groq.com/keys) | `LLM_FALLBACK_1_API_KEY` |
+| **2** | **Cerebras** | `llama-3.3-70b` | [cloud.cerebras.ai](https://cloud.cerebras.ai/) | `LLM_FALLBACK_2_API_KEY` |
+| **3** | **OpenRouter** | `openrouter/free` | [openrouter.ai/keys](https://openrouter.ai/keys) | `LLM_FALLBACK_3_API_KEY` |
+| **4** | **Mistral** | `mistral-small-latest` | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) | `LLM_FALLBACK_4_API_KEY` |
+| **5** | **NVIDIA NIM** | `meta/llama-3.3-70b-instruct` | [build.nvidia.com/settings/api-keys](https://build.nvidia.com/settings/api-keys) | `LLM_FALLBACK_5_API_KEY` |
+| **6** | **Cloudflare Workers AI** | `@cf/meta/llama-3.1-8b-instruct` | [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) | `CLOUDFLARE_API_TOKEN` & `CLOUDFLARE_ACCOUNT_ID` |
+| **7** | **Cohere** | `command-r-plus` | [dashboard.cohere.com/api-keys](https://dashboard.cohere.com/api-keys) | `LLM_FALLBACK_7_API_KEY` |
+
+### Iron Failover Rules:
+1. **Request-Shape Protection (HTTP 400):** If an upstream returns HTTP 400 (Bad Request), the error is surfaced **immediately** to the user. Failover is strictly suppressed because request-shape bugs cannot be resolved by switching providers.
+2. **Failover Triggers:** Cascades on HTTP 401, HTTP 429, HTTP 5xx, or network timeouts.
+3. **Admin Verification Endpoint:** Authenticated administrators can test configured slots live at:
+   `GET /api/admin/llm-chain-test` (returns `[{ slot, provider, model, ok, latencyMs }]` — provider/model names only, zero key leakage).
+4. **Diagnostics Endpoint:** `GET /api/admin/diagnostics` reports active chain slots in `llm_chain: ["groq", "cerebras", ...]`.
+
+
