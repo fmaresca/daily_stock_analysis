@@ -36,6 +36,7 @@ interface TickerAuditModalProps {
   availableTickers?: TickerMeta[];
   onClose: () => void;
   onOpenSimulator?: (ticker: string) => void;
+  onUpdateTicker?: (ticker: TickerMeta) => void;
 }
 
 /**
@@ -142,6 +143,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   availableTickers,
   onClose,
   onOpenSimulator,
+  onUpdateTicker,
 }) => {
   const [activeTicker, setActiveTicker] = useState<TickerMeta | null>(ticker);
   const [activeOpportunities, setActiveOpportunities] = useState<OptionOpportunity[]>(opportunities || []);
@@ -358,7 +360,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
     setFetchError(null);
 
     try {
-      const updatedTicker = await fetchAndBuildTickerMeta(sym, availableTickers);
+      const updatedTicker = await fetchAndBuildTickerMeta(sym, availableTickers, true);
       const spot = updatedTicker.spot_price || 100.0;
       const lowerBb = updatedTicker.lower_bb || spot * 0.93;
       const upperBb = updatedTicker.upper_bb || spot * 1.07;
@@ -374,6 +376,9 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
       setActiveTicker(updatedTicker);
       setActiveOpportunities((prev) => [...prev.filter((o) => o.symbol.toUpperCase() !== sym), ...activeOpps]);
       setInputSymbol(sym);
+      if (onUpdateTicker) {
+        onUpdateTicker(updatedTicker);
+      }
     } catch (err: any) {
       setFetchError(`Error fetching quote for "${sym}": ${err?.message || 'Network error'}`);
     } finally {
@@ -649,7 +654,10 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
               <button
                 key={sym}
                 type="button"
-                onClick={() => handleFetchSymbol(sym)}
+                onClick={() => {
+                  setInputSymbol(sym);
+                  handleFetchSymbol(sym);
+                }}
                 disabled={isFetching}
                 className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all cursor-pointer ${
                   activeTicker.symbol === sym

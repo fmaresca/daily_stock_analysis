@@ -79,8 +79,15 @@ export async function onRequest(context) {
       let quote = qData?.quotes?.quote;
       if (Array.isArray(quote) && quote.length > 0) quote = quote[0];
 
-      if (quote && (quote.last > 0 || quote.close > 0 || quote.prevclose > 0)) {
-        const spotPrice = Number(quote.last) || Number(quote.close) || Number(quote.prevclose) || 0;
+      if (quote && (quote.last > 0 || quote.close > 0 || quote.prevclose > 0 || quote.bid > 0 || quote.ask > 0)) {
+        const spotPrice =
+          Number(quote.last) ||
+          Number(quote.close) ||
+          Number(quote.prevclose) ||
+          (quote.bid && quote.ask ? (Number(quote.bid) + Number(quote.ask)) / 2 : 0) ||
+          Number(quote.bid) ||
+          Number(quote.ask) ||
+          0;
         let avgVolume = Number(quote.volume) || Number(quote.average_volume) || 20000000;
 
         // Fetch daily history concurrently with short 2s timeout

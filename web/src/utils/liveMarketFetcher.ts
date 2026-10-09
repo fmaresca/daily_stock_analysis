@@ -267,7 +267,7 @@ export async function fetchTickerChartData(symbol: string): Promise<TickerChartD
   // Tier 0: First-Party Edge Proxy (/api/market-price) on Cloudflare Pages (zero CORS, Tradier NBBO + Yahoo edge fetch)
   try {
     const edgeController = new AbortController();
-    const edgeTimeout = setTimeout(() => edgeController.abort(), 3500);
+    const edgeTimeout = setTimeout(() => edgeController.abort(), 7000);
     const edgeResp = await fetch(`/api/market-price?symbol=${encodeURIComponent(sym)}`, {
       headers: { Accept: 'application/json' },
       signal: edgeController.signal,
@@ -973,19 +973,19 @@ export async function autoSyncSchwabPortfolioPrices(
  */
 export async function fetchAndBuildTickerMeta(
   symbol: string,
-  universe?: TickerMeta[]
+  universe?: TickerMeta[],
+  forceRefresh: boolean = true
 ): Promise<TickerMeta> {
   const sym = symbol.toUpperCase().trim().replace(/[^A-Z0-9.\-_]/g, '');
   if (!sym) {
     throw new Error('Valid stock symbol required');
   }
 
-  // 1. If symbol is already in the universe with full data, return it directly
-  if (universe) {
-    const existing = universe.find((t) => t.symbol.toUpperCase() === sym);
-    if (existing && existing.spot_price > 0 && existing.lower_bb > 0) {
-      return existing;
-    }
+  const existing = universe?.find((t) => t.symbol.toUpperCase() === sym);
+
+  // 1. If not forcing refresh and existing ticker already has full data, return it directly
+  if (!forceRefresh && existing && existing.spot_price > 0 && existing.lower_bb > 0) {
+    return existing;
   }
 
   // 2. Fetch real-time chart data & closes
@@ -997,6 +997,8 @@ export async function fetchAndBuildTickerMeta(
   const spot =
     chartData?.spotPrice && chartData.spotPrice > 0
       ? chartData.spotPrice
+      : existing?.spot_price && existing.spot_price > 0
+      ? existing.spot_price
       : intel?.targetPrice
       ? Math.round(intel.targetPrice * 0.9 * 100) / 100
       : 100.0;
@@ -1077,8 +1079,8 @@ export async function fetchAndBuildTickerMeta(
 
   const builtTicker: TickerMeta = {
     symbol: sym,
-    name: intel?.name || `${sym} Inc.`,
-    sector: intel?.sector || profile.sector,
+    name: existing?.name || intel?.name || `${sym} Inc.`,
+    sector: existing?.sector || intel?.sector || profile.sector,
     liquidity_tier: liquidityTier,
     spot_price: spot,
     avg_volume_30: avgVolume30,
@@ -1092,8 +1094,8 @@ export async function fetchAndBuildTickerMeta(
     hv_30: hv30,
     iv_current: ivCurrent,
     iv_rank: ivRank,
-    earnings_within_7d: false,
-    next_earnings_date: 'N/A',
+    earnings_within_7d: existing?.earnings_within_7d || false,
+    next_earnings_date: existing?.next_earnings_date || 'N/A',
     has_weeklys: hasCboeWeekly,
     expiration_cadence: hasCboeWeekly ? 'Daily / Multi-Weekly' : 'Monthly Only',
     in_cboe_registry: hasCboeWeekly,
@@ -1103,10 +1105,10 @@ export async function fetchAndBuildTickerMeta(
     nearest_expiration_date: targetExpStr,
     days_to_nearest_expiration: targetDte,
     barchart_opinion: barchartOpinion,
-    analyst_intelligence: intel?.analystTargets,
-    corporate_actions: intel?.corporateActions,
-    prediction_markets: intel?.predictionMarkets,
-    social_sentiment: intel?.socialSentiment,
+    analyst_intelligence: existing?.analyst_intelligence || intel?.analystTargets,
+    corporate_actions: existing?.corporate_actions || intel?.corporateActions,
+    prediction_markets: existing?.prediction_markets || intel?.predictionMarkets,
+    social_sentiment: existing?.social_sentiment || intel?.socialSentiment,
   };
 
   return builtTicker;

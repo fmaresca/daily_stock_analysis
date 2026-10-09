@@ -569,19 +569,21 @@ export const AuthenticatedTerminal: React.FC = () => {
   const handleOpenEquityAnalysis = async (symbol?: string) => {
     const sym = (symbol || activeChartSymbol || (filteredTickers[0]?.symbol) || 'TSLA').toUpperCase().trim();
     const existing = universeTickers.find((t) => t.symbol === sym) || filteredTickers.find((t) => t.symbol === sym);
-    if (existing && existing.spot_price > 0 && existing.lower_bb > 0) {
+    // Open immediately with existing data if present for zero-latency response
+    if (existing) {
       setSelectedTicker(existing);
-      return;
     }
     try {
-      const built = await fetchAndBuildTickerMeta(sym, universeTickers);
+      const built = await fetchAndBuildTickerMeta(sym, universeTickers, true);
       handleAddCustomTickerMeta(built);
       setSelectedTicker(built);
     } catch (e) {
       console.warn(`Failed to fetch live data for ${sym}, using fallback:`, e);
-      const fallback = createFallbackTickerMeta(sym);
-      handleAddCustomTickerMeta(fallback);
-      setSelectedTicker(fallback);
+      if (!existing) {
+        const fallback = createFallbackTickerMeta(sym);
+        handleAddCustomTickerMeta(fallback);
+        setSelectedTicker(fallback);
+      }
     }
   };
 
@@ -1218,9 +1220,16 @@ export const AuthenticatedTerminal: React.FC = () => {
           isOpen={modalState.isCommandPaletteOpen}
           onClose={() => setIsCommandPaletteOpen(false)}
           tickers={universeTickers}
-          onSelectTicker={(t) => {
+          onSelectTicker={async (t) => {
             handleAddCustomTickerMeta(t);
             setSelectedTicker(t);
+            try {
+              const fresh = await fetchAndBuildTickerMeta(t.symbol, universeTickers, true);
+              handleAddCustomTickerMeta(fresh);
+              setSelectedTicker(fresh);
+            } catch {
+              // Retain t
+            }
           }}
           onNavigateTree={(tree, tab) => {
             if (tree === 'WORKFLOW') {

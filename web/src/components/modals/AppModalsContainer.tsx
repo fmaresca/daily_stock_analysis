@@ -91,7 +91,7 @@ export interface AppModalsContainerProps {
   handleUpdateGroupTickers: (id: string, tickers: string[]) => void;
   universeTickers: TickerMeta[];
   allUniverseOpportunities: OptionOpportunity[];
-  handleAddCustomTickerMeta: (symbol: string) => void;
+  handleAddCustomTickerMeta: (tickerInput: string | TickerMeta) => void;
   handleLiveRecalculate: (tickers: string[]) => Promise<void>;
   isRecalculating: boolean;
   summary: ScreenerSummary | null;
@@ -289,6 +289,7 @@ export const AppModalsContainer: React.FC<AppModalsContainerProps> = ({
             opportunities={allUniverseOpportunities}
             availableTickers={universeTickers}
             onClose={() => setSelectedTicker(null)}
+            onUpdateTicker={handleAddCustomTickerMeta}
             onOpenSimulator={(sym) => {
               setSelectedTicker(null);
               if (openSimulator) {
