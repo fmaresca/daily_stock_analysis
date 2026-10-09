@@ -83,21 +83,42 @@ export const ChapterStrategyAgent: React.FC<ChapterStrategyAgentProps> = ({ onNa
         </div>
 
         <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2 text-xs">
-          <div className="font-bold text-white">Live Tools the Agent Calls</div>
-          <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400">
-            <div>📈 <strong className="text-slate-300">Market Price &amp; Technicals</strong> — Yahoo Finance (spot price, SMA-20/50, RSI-14, Bollinger Bands)</div>
-            <div>🗞️ <strong className="text-slate-300">Ticker News</strong> — Google News RSS (top 5 recent headlines)</div>
-            <div>🧠 <strong className="text-slate-300">Adanos Sentiment</strong> — Reddit, X, Polymarket, News buzz scores (requires backend sentiment API key)</div>
-            <div>📅 <strong className="text-slate-300">Economic Calendar</strong> — Upcoming FOMC, CPI, NFP, and high-impact macro events</div>
+          <div className="font-bold text-white">Live Tools the Agent Calls (Zero Fabrication)</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] text-slate-400">
+            <div>📈 <strong className="text-slate-300">Market Price &amp; Technicals</strong> — Spot price, SMA-20/50, RSI-14, Bollinger Bands.</div>
+            <div>📋 <strong className="text-slate-300">5-Point Options Pre-Flight Underwriting</strong> — 5-pillar checks: Binary events, CBOE cadence, spread efficiency, IV rank edge, and buffer cushion.</div>
+            <div>🔍 <strong className="text-slate-300">Deep Financial Catalysts &amp; Web Search</strong> — Live search via Tavily, Brave Search, or Google News RSS.</div>
+            <div>🗞️ <strong className="text-slate-300">Ticker News</strong> — Google News RSS (top recent headlines).</div>
+            <div>🧠 <strong className="text-slate-300">Adanos Sentiment</strong> — Reddit, X, and News buzz scores.</div>
+            <div>📅 <strong className="text-slate-300">Economic Calendar</strong> — Upcoming FOMC, CPI, NFP, and high-impact macro events.</div>
           </div>
+        </div>
+
+        {/* Playbooks & Journal Sub-section */}
+        <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 space-y-2 text-xs">
+          <div className="font-bold text-emerald-300 flex items-center gap-1.5">
+            <span>🛡️ Declarative Options Strategy Playbooks &amp; Signal Journal (v3.6)</span>
+          </div>
+          <p className="text-[11px] text-slate-300 leading-relaxed">
+            The agent now supports 5 declarative options playbooks tailored to quantitative execution:
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-400">
+            <div>• <strong className="text-slate-200">Conservative CSP (15Δ)</strong>: 30–45 DTE, &gt;7% downside cushion.</div>
+            <div>• <strong className="text-slate-200">Momentum Covered Call (22Δ)</strong>: 14–28 DTE, above 20-day SMA.</div>
+            <div>• <strong className="text-slate-200">PMCC Compounder (80/20Δ)</strong>: 90+ DTE LEAPS call + short call.</div>
+            <div>• <strong className="text-slate-200">Post-Earnings IV Crush</strong>: 48h post-earnings high IV extraction.</div>
+            <div>• <strong className="text-slate-200">Capitulation Bounce</strong>: RSI &lt;30 + Lower Bollinger Band test.</div>
+          </div>
+          <p className="text-[10px] text-emerald-400 font-semibold pt-1">
+            📌 Click &quot;Track in Journal&quot; inside any agent recommendation or Single-Stock Audit to persist the trade setup to the Options Signal Journal (Cloudflare D1).
+          </p>
         </div>
 
         <div className="flex items-start space-x-2 p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-[11px] text-amber-300">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
           <span>
             The agent is rate-limited to 30 requests/minute per user. Sentiment data requires the
-            Adanos sentiment service key to be configured in Cloudflare Pages environment secrets. If not set, the agent gracefully reports
-            sentiment as unavailable and proceeds with technical and news data only.
+            Adanos sentiment service key, and deep web search prioritizes Tavily or Brave Search when configured in Cloudflare Pages environment secrets. If not set, the agent gracefully falls back to Google News RSS and deterministic edge quantitative models.
           </span>
         </div>
       </div>

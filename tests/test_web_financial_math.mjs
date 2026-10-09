@@ -1491,3 +1491,140 @@ BLUR 0
   assert.ok(generatedCsv.includes('Cash & Cash Investments'));
   assert.ok(generatedCsv.includes('Positions Total'));
 });
+
+test('23. Institutional v3.6 Capabilities: 5-Point Pre-Flight, Discord Gateway, Playbooks, Journal & Deep Search', async () => {
+  // A. 5-Point Options Pre-Flight Underwriting Evaluator & UI Component Contract
+  const evaluatorCode = fs.readFileSync(fileURLToPath(new URL('../web/src/utils/optionsPreFlightEvaluator.ts', import.meta.url)), 'utf-8');
+  assert.ok(evaluatorCode.includes('export function evaluateOptionsPreFlight'), 'Evaluator must export evaluateOptionsPreFlight');
+  assert.ok(evaluatorCode.includes('binary_events'), 'Evaluator must inspect binary events');
+  assert.ok(evaluatorCode.includes('cboe_cadence'), 'Evaluator must verify CBOE weekly cadence');
+  assert.ok(evaluatorCode.includes('liquidity_spread'), 'Evaluator must inspect spread & volume');
+  assert.ok(evaluatorCode.includes('iv_rank'), 'Evaluator must check IV Rank');
+  assert.ok(evaluatorCode.includes('technical_buffer'), 'Evaluator must evaluate technical cushion');
+  assert.ok(evaluatorCode.includes("overallRating = 'PRIME'"), 'Evaluator must calculate PRIME status');
+  assert.ok(evaluatorCode.includes("overallRating = 'AVOID'"), 'Evaluator must calculate AVOID status');
+
+  const preFlightCardCode = fs.readFileSync(fileURLToPath(new URL('../web/src/components/modals/tickerAudit/OptionsPreFlightCard.tsx', import.meta.url)), 'utf-8');
+  assert.ok(preFlightCardCode.includes('OptionsPreFlightCard'), 'Pre-flight scorecard UI card must exist');
+  assert.ok(preFlightCardCode.includes('Options Pre-Flight Execution Scorecard'), 'Pre-flight scorecard must title pre-flight checks');
+  assert.ok(preFlightCardCode.includes('onPinToJournal') && preFlightCardCode.includes('Options Signal Journal'), 'Pre-flight scorecard must wire into Signal Journal');
+
+  // B. Declarative Strategy Playbooks Engine
+  const { STRATEGY_PLAYBOOKS, getPlaybookById, evaluatePlaybookSuitability } = await import('../functions/api/agent/_playbooks.js');
+  assert.strictEqual(STRATEGY_PLAYBOOKS.length, 5);
+  assert.ok(getPlaybookById('conservative_income_csp'));
+  assert.ok(getPlaybookById('aggressive_momentum_cc'));
+  assert.ok(getPlaybookById('pmcc_growth_compounder'));
+  assert.ok(getPlaybookById('earnings_vol_crush_post'));
+  assert.ok(getPlaybookById('mean_reversion_oversold_bounce'));
+
+  const cspPlaybook = getPlaybookById('conservative_income_csp');
+  assert.ok(cspPlaybook.targetDelta.includes('15Δ'));
+  assert.strictEqual(cspPlaybook.category, 'Income');
+  assert.ok(cspPlaybook.minCushionPct >= 6.0);
+
+  const suitability = evaluatePlaybookSuitability({ spotPrice: 100, sma20: 95, rsi14: 55, ivRank: 40 });
+  assert.strictEqual(suitability.length, 5);
+  assert.ok(suitability[0].playbookId);
+  assert.ok(typeof suitability[0].confidence === 'number');
+
+  // C. Serverless Discord Bot Gateway Contract
+  const discordBotModule = await import('../functions/api/bot/discord.js');
+  assert.ok(typeof discordBotModule.onRequestGet === 'function');
+  assert.ok(typeof discordBotModule.onRequestPost === 'function');
+
+  // GET probe
+  const probeReq = new Request('http://localhost/api/bot/discord', { method: 'GET' });
+  const probeRes = await discordBotModule.onRequestGet({ request: probeReq, env: {} });
+  assert.strictEqual(probeRes.status, 200);
+  const probeData = await probeRes.json();
+  assert.strictEqual(probeData.service, 'DeltaHarvest Discord Bot Gateway');
+  assert.strictEqual(probeData.status, 'ok');
+
+  // POST Type 1 PING -> PONG
+  const pingReq = new Request('http://localhost/api/bot/discord', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 1 }),
+  });
+  const pingRes = await discordBotModule.onRequestPost({ request: pingReq, env: {} });
+  assert.strictEqual(pingRes.status, 200);
+  const pingData = await pingRes.json();
+  assert.strictEqual(pingData.type, 1, 'Type 1 PING must return Type 1 PONG');
+
+  // POST Type 2 Command: /ping
+  const cmdReq = new Request('http://localhost/api/bot/discord', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 2,
+      data: { name: 'ping', options: [] },
+    }),
+  });
+  const cmdRes = await discordBotModule.onRequestPost({ request: cmdReq, env: {} });
+  assert.strictEqual(cmdRes.status, 200);
+  const cmdData = await cmdRes.json();
+  assert.strictEqual(cmdData.type, 4); // CHANNEL_MESSAGE_WITH_SOURCE
+  assert.ok(cmdData.data.content.includes('Pong!'));
+
+  // POST Type 2 Command: /recap
+  const recapCmdReq = new Request('http://localhost/api/bot/discord', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 2,
+      data: { name: 'recap', options: [] },
+    }),
+  });
+  const recapCmdRes = await discordBotModule.onRequestPost({ request: recapCmdReq, env: {} });
+  assert.strictEqual(recapCmdRes.status, 200);
+  const recapCmdData = await recapCmdRes.json();
+  assert.strictEqual(recapCmdData.type, 4);
+  assert.ok(recapCmdData.data.embeds?.[0]?.title.includes('Daily Market Recap'));
+
+  // D. Options Signal Journal API Contract
+  const journalModule = await import('../functions/api/options/journal.js');
+  assert.ok(typeof journalModule.onRequestGet === 'function');
+  assert.ok(typeof journalModule.onRequestPost === 'function');
+  assert.ok(typeof journalModule.onRequestPatch === 'function');
+  assert.ok(typeof journalModule.onRequestDelete === 'function');
+
+  // Create journal entry via POST
+  const createJournalReq = new Request('http://localhost/api/options/journal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      symbol: 'NVDA',
+      strategy: 'CSP',
+      strike: 115,
+      expiration: '2026-10-23',
+      deltaTarget: '15Δ',
+      notes: 'Conservative income buffer',
+    }),
+  });
+  const createJournalRes = await journalModule.onRequestPost({ request: createJournalReq, env: {} });
+  assert.strictEqual(createJournalRes.status, 200);
+  const createdEntry = await createJournalRes.json();
+  assert.strictEqual(createdEntry.success, true);
+  assert.strictEqual(createdEntry.entry.symbol, 'NVDA');
+  assert.strictEqual(createdEntry.entry.strike, 115);
+
+  // List journal entries via GET
+  const listJournalReq = new Request('http://localhost/api/options/journal?symbol=NVDA', { method: 'GET' });
+  const listJournalRes = await journalModule.onRequestGet({ request: listJournalReq, env: {} });
+  assert.strictEqual(listJournalRes.status, 200);
+  const listData = await listJournalRes.json();
+  assert.ok(listData.entries.some(e => e.symbol === 'NVDA'));
+
+  // E. Agent Tools Deep Catalyst Search & Pre-Flight Checklist
+  const { searchFinancialCatalysts, getOptionsPreFlightChecklist } = await import('../functions/api/agent/_agent_tools.js');
+  const catalystResult = await searchFinancialCatalysts('earnings', 'NVDA', {});
+  assert.strictEqual(catalystResult.symbol, 'NVDA');
+  assert.ok(catalystResult.provider);
+
+  const preflightToolResult = await getOptionsPreFlightChecklist('AAPL', {});
+  assert.strictEqual(preflightToolResult.symbol, 'AAPL');
+  assert.ok(typeof preflightToolResult.score === 'number');
+  assert.ok(preflightToolResult.rating === 'PRIME' || preflightToolResult.rating === 'CONDITIONAL');
+});
+

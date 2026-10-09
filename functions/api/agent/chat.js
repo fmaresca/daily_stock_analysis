@@ -29,6 +29,7 @@ import {
   deleteUserSession,
 } from "./_agent_db.js";
 import { AGENT_TOOLS, executeAgentTool } from "./_agent_tools.js";
+import { STRATEGY_PLAYBOOKS, getPlaybookById } from "./_playbooks.js";
 
 const VALID_LENSES = [
   "Trend/Momentum",
@@ -41,7 +42,15 @@ const VALID_LENSES = [
   "Risk/Defensive",
 ];
 
-function buildSystemPrompt(activeLens, tickerContext) {
+function buildSystemPrompt(activeLens, tickerContext, playbookId) {
+  const selectedPlaybook = playbookId ? getPlaybookById(playbookId) : null;
+  const playbookSection = selectedPlaybook ? `
+### ACTIVE STRATEGY PLAYBOOK
+Playbook: ${selectedPlaybook.name} (${selectedPlaybook.category})
+Target Delta: ${selectedPlaybook.targetDelta} | Min Cushion: ${selectedPlaybook.minCushionPct}% | IV Rank Goal: ${selectedPlaybook.idealIvRank}
+${selectedPlaybook.instructions}
+` : "";
+
   return `You are DeltaHarvest's Senior Institutional Equity & Derivatives Strategy Assistant.
 You specialize in conservative, quantitative options and equity analysis for US markets.
 
@@ -57,13 +66,14 @@ Available Strategy Lenses:
 6. Event-Driven (Earnings): Focus on upcoming earnings calendar risks, implied volatility rush/crush, and binary risk mitigation.
 7. Sentiment/Positioning: Focus on retail crowd positioning, social sentiment (Reddit/X/News buzz via Adanos), and contrarian signals.
 8. Risk/Defensive: Focus on capital preservation, downside cushions, stop-loss benchmarks, and cash-secured buffer.
-
+${playbookSection}
 ### CRITICAL RULES & CITATION MANDATE
-1. NEVER INVENT OR GUESS NUMBERS. Every price, moving average, RSI, yield, or sentiment metric you state MUST come directly from a tool call (e.g. get_market_price_and_technicals, get_market_sentiment).
-2. Always cite the exact source of figures inline: e.g. "Spot price $124.50 (Yahoo)", "RSI 68.2 (14d)", "20-day SMA $118.40", "Reddit sentiment score +0.45 (Adanos)".
-3. If a tool returns an error or is unconfigured, state the unavailability transparently rather than guessing.
-4. Answer concisely with clear institutional formatting (markdown headings, bullet points, quantitative takeaways).
-5. Always begin or end your analysis explicitly noting the lens used, and encourage the user to compare alternative lenses if appropriate.
+1. NEVER INVENT OR GUESS NUMBERS. Every price, moving average, RSI, yield, or sentiment metric you state MUST come directly from a tool call (e.g. get_market_price_and_technicals, get_options_preflight_checklist, get_market_sentiment).
+2. When advising on Cash-Secured Puts (CSP) or Covered Calls (CC), call get_options_preflight_checklist to verify binary earnings risk, weekly liquidity, volume, and technical buffer before finalizing strike targets.
+3. For deep corporate filings or analyst updates, call search_financial_catalysts.
+4. Always cite the exact source of figures inline: e.g. "Spot price $124.50 (Yahoo)", "RSI 68.2 (14d)", "20-day SMA $118.40", "Pre-flight score 4.5/5.0 (DeltaHarvest Matrix)".
+5. Answer concisely with clear institutional formatting (markdown headings, bullet points, quantitative takeaways).
+6. Always begin or end your analysis explicitly noting the lens used, and encourage the user to compare alternative lenses if appropriate.
 ${tickerContext ? `Currently focused ticker context: ${tickerContext}` : ""}`;
 }
 
@@ -420,6 +430,13 @@ async function handleGet(context, user) {
     );
   }
 
+  if (url.searchParams.get("action") === "playbooks") {
+    return new Response(JSON.stringify({ playbooks: STRATEGY_PLAYBOOKS }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
   const sessionId = url.searchParams.get("sessionId");
 
   if (sessionId) {
@@ -502,7 +519,7 @@ async function handlePost(context, user) {
     });
   }
 
-  const { sessionId: reqSessionId, ticker = "", message = "", lens: reqLens } = body;
+  const { sessionId: reqSessionId, ticker = "", message = "", lens: reqLens, playbook: reqPlaybook } = body;
 
   if (!message || typeof message !== "string" || !message.trim()) {
     return new Response(JSON.stringify({ error: "Message content cannot be empty" }), {
@@ -560,7 +577,7 @@ async function handlePost(context, user) {
   // Build System Prompt
   const explicitTicker = extractTickerFromMessage(cleanMessage, null);
   const targetTicker = explicitTicker || cleanTicker || session.ticker || "SPY";
-  const systemPrompt = buildSystemPrompt(activeLens, targetTicker);
+  const systemPrompt = buildSystemPrompt(activeLens, targetTicker, reqPlaybook);
 
   // Set up SSE TransformStream
   const { readable, writable } = new TransformStream();

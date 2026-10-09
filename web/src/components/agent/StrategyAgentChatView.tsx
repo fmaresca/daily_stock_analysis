@@ -47,12 +47,20 @@ const STRATEGY_LENSES = [
   { id: 'Risk/Defensive', label: 'Risk / Defensive', desc: 'Capital preservation & downside buffer cushion' },
 ] as const;
 
+const PLAYBOOKS = [
+  { id: 'conservative_income_csp', name: '🛡️ Conservative CSP (15Δ)', delta: '15Δ' },
+  { id: 'aggressive_momentum_cc', name: '🎯 Momentum CC (22Δ)', delta: '22Δ' },
+  { id: 'pmcc_growth_compounder', name: '⚡ PMCC Compounder (80/20Δ)', delta: 'Diagonal' },
+  { id: 'earnings_vol_crush_post', name: '📉 Post-Earnings Crush', delta: 'Post-Event' },
+  { id: 'mean_reversion_oversold_bounce', name: '🔄 Capitulation Bounce', delta: '2σ Rail' },
+];
+
 const QUICK_PROMPTS = [
-  'Is this stock overbought on RSI and Bollinger Bands?',
-  'What is the downside cushion to major moving averages?',
-  'Analyze this ticker under a Mean-Reversion lens.',
-  'What are the upcoming binary risks or macro catalysts?',
-  'What is the current crowd sentiment and buzz level?',
+  'Run the 5-Point Options Pre-Flight Underwriting Scorecard.',
+  'What is the recommended strike and downside cushion for a Cash-Secured Put?',
+  'What are upcoming binary earnings risks or macro catalysts?',
+  'Evaluate this stock under a Covered Call momentum resistance lens.',
+  'What is the current crowd sentiment and buzz level on Reddit & X?',
 ];
 
 export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
@@ -66,6 +74,8 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
   const [isEditingTicker, setIsEditingTicker] = useState<boolean>(false);
   const [tickerInput, setTickerInput] = useState<string>(initialTicker.toUpperCase());
   const [selectedLens, setSelectedLens] = useState<string>('Trend/Momentum');
+  const [selectedPlaybook, setSelectedPlaybook] = useState<string>('conservative_income_csp');
+  const [journalStatus, setJournalStatus] = useState<string | null>(null);
   const [inputText, setInputText] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [activeToolStatus, setActiveToolStatus] = useState<string | null>(null);
@@ -83,6 +93,32 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Quick Action: Pin trade idea to Options Signal Journal
+  const handlePinToJournal = async (sym: string, strategy: string = 'CSP') => {
+    try {
+      setJournalStatus('Saving to Signal Journal...');
+      const res = await fetch('/api/options/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          symbol: sym,
+          strategy,
+          notes: `Tracked from Strategy Agent (${selectedLens} lens, ${selectedPlaybook} playbook)`,
+        }),
+      });
+      if (res.ok) {
+        setJournalStatus(`✅ ${sym} successfully pinned to Signal Journal!`);
+        setTimeout(() => setJournalStatus(null), 3000);
+      } else {
+        throw new Error('Journal save failed');
+      }
+    } catch {
+      setJournalStatus(`⚠️ Could not save to journal. Check sign-in status.`);
+      setTimeout(() => setJournalStatus(null), 3000);
+    }
+  };
 
   // Check key configuration status on mount
   useEffect(() => {
@@ -275,6 +311,7 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
           sessionId: currentSessionId || undefined,
           ticker,
           lens: selectedLens,
+          playbook: selectedPlaybook,
           message: text,
           geminiApiKey: storedKey || undefined,
         }),
@@ -573,6 +610,34 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
           </button>
         </div>
 
+        {/* Strategy Playbook Pills Bar */}
+        <div className="px-3 py-2 border-b border-slate-800/80 bg-slate-950/40 flex items-center justify-between gap-2 overflow-x-auto">
+          <div className="flex items-center space-x-1.5 min-w-0">
+            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider whitespace-nowrap">Playbook:</span>
+            {PLAYBOOKS.map((pb) => {
+              const isSelected = selectedPlaybook === pb.id;
+              return (
+                <button
+                  key={pb.id}
+                  onClick={() => setSelectedPlaybook(pb.id)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-600/90 text-white font-bold shadow-md shadow-emerald-950/60 border border-emerald-400/50'
+                      : 'bg-slate-800/60 hover:bg-slate-800 text-slate-400 border border-slate-700/60'
+                  }`}
+                >
+                  <span>{pb.name}</span>
+                </button>
+              );
+            })}
+          </div>
+          {journalStatus && (
+            <div className="text-[11px] text-emerald-300 font-medium px-2.5 py-1 bg-emerald-950/80 border border-emerald-500/40 rounded-lg animate-fade-in whitespace-nowrap shadow-sm">
+              {journalStatus}
+            </div>
+          )}
+        </div>
+
         {/* Messages Stream Container */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
           {messages.length === 0 ? (
@@ -636,6 +701,20 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
                     <div className="whitespace-pre-wrap font-sans space-y-2">
                       {m.content}
                     </div>
+                    {!isUser && m.content && (
+                      <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500 font-mono text-[10px]">
+                          Target: ${ticker} · {PLAYBOOKS.find((p) => p.id === selectedPlaybook)?.delta}
+                        </span>
+                        <button
+                          onClick={() => handlePinToJournal(ticker, selectedPlaybook.includes('cc') ? 'CC' : 'CSP')}
+                          className="px-2.5 py-1 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 hover:text-white rounded-lg text-[10px] font-semibold flex items-center space-x-1 cursor-pointer transition-all shadow-sm"
+                          title="Pin recommended strike setup into Options Signal Journal"
+                        >
+                          <span>📌 Track in Journal</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -723,7 +802,7 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              DeltaHarvest connects to <strong>Google Gemini 2.5 Flash</strong> for neural options strategy reasoning.
+              DeltaHarvest connects to <strong>Google Gemini 3.8 Flash</strong> for neural options strategy reasoning.
               You can paste your API key below (persisted in your database &amp; browser) or set it in Cloudflare Pages (<code className="font-mono text-cyan-300">GEMINI_API_KEY</code>).
             </p>
 

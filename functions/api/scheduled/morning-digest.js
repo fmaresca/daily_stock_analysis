@@ -19,7 +19,7 @@
 
 import { authenticateRequest } from "../_auth_utils.js";
 import { getDailyMarketRecap } from "../_market_recap_core.js";
-import { getMarketPriceAndTechnicals } from "../agent/_agent_tools.js";
+import { getMarketPriceAndTechnicals, getOptionsPreFlightChecklist } from "../agent/_agent_tools.js";
 
 /**
  * Checks if a given date is a US equity market trading day.
@@ -87,6 +87,7 @@ function composeDigestEmailHtml({ userEmail, recap, watchlistData, runDate }) {
     const rsiText = item.rsi14 !== null ? item.rsi14 : "N/A";
     const rsiColor = item.rsi14 !== null && item.rsi14 > 70 ? "#ef4444" : item.rsi14 !== null && item.rsi14 < 30 ? "#10b981" : "#cbd5e1";
     const cushionText = item.sma20 ? `${Math.round(((item.spotPrice - item.sma20) / item.sma20) * 1000) / 10}%` : "N/A";
+    const preflightBadge = item.preflightRating === "PRIME" ? "#10b981" : item.preflightRating === "CONDITIONAL" ? "#f59e0b" : "#94a3b8";
 
     return `
       <tr>
@@ -94,6 +95,7 @@ function composeDigestEmailHtml({ userEmail, recap, watchlistData, runDate }) {
         <td style="padding: 10px; border-bottom: 1px solid #1e293b; font-family: monospace; color: #f8fafc;">$${item.spotPrice.toFixed(2)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #1e293b; font-family: monospace; font-weight: bold; color: ${color};">${isUp ? "+" : ""}${item.changePct.toFixed(2)}%</td>
         <td style="padding: 10px; border-bottom: 1px solid #1e293b; font-family: monospace; color: ${rsiColor};">${rsiText}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #1e293b; font-family: monospace; color: ${preflightBadge}; font-weight: bold;">${item.preflightScore} ${item.preflightRating}</td>
         <td style="padding: 10px; border-bottom: 1px solid #1e293b; font-family: monospace; color: #94a3b8;">${cushionText}</td>
         <td style="padding: 10px; border-bottom: 1px solid #1e293b; font-size: 11px; color: ${item.alert ? "#f59e0b" : "#10b981"};">${item.signal}</td>
       </tr>
@@ -131,6 +133,7 @@ function composeDigestEmailHtml({ userEmail, recap, watchlistData, runDate }) {
             <th style="padding: 8px 10px;">Spot</th>
             <th style="padding: 8px 10px;">Change</th>
             <th style="padding: 8px 10px;">14d RSI</th>
+            <th style="padding: 8px 10px;">Pre-Flight</th>
             <th style="padding: 8px 10px;">20 SMA Buffer</th>
             <th style="padding: 8px 10px;">Signal / Status</th>
           </tr>
@@ -271,12 +274,26 @@ export async function onRequest(context) {
             alert = true;
           }
 
+          let preflightScore = "N/A";
+          let preflightRating = "";
+          try {
+            const pf = await getOptionsPreFlightChecklist(sym, env);
+            if (pf && typeof pf.score === "number") {
+              preflightScore = `${pf.score}/5.0`;
+              preflightRating = pf.rating || "";
+            }
+          } catch {
+            // graceful fallback
+          }
+
           watchlistData.push({
             symbol: sym,
             spotPrice: quote.spotPrice,
             changePct: quote.changePct,
             rsi14: quote.rsi14,
             sma20: quote.sma20,
+            preflightScore,
+            preflightRating,
             signal,
             alert,
           });
@@ -327,11 +344,15 @@ export async function onRequest(context) {
       // 7. Push to user's optional Discord Webhook
       if (user.discord_webhook_url && user.discord_webhook_url.startsWith("https://discord.com/api/webhooks/")) {
         try {
+          const lines = watchlistData.map((w) =>
+            `• **${w.symbol}** ($${w.spotPrice.toFixed(2)}): Pre-Flight **${w.preflightScore} ${w.preflightRating}** | 14d RSI ${w.rsi14 ?? 'N/A'} | ${w.signal}`
+          ).join('\n');
+
           await fetch(user.discord_webhook_url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              content: `**[DeltaHarvest Morning Strategy Digest • ${todayStr}]**\nPre-market review generated for ${user.email}. SPY: $${recap?.indices?.[0]?.price || 'N/A'}, VIX: ${recap?.vix?.value || 'N/A'}.\nWatchlist items: ${watchlistData.map(w => `${w.symbol} ($${w.spotPrice})`).join(', ')}`,
+              content: `🌅 **[DeltaHarvest Morning Strategy Digest • ${todayStr}]**\nMacro Regime: **SPY** $${recap?.indices?.[0]?.price?.toFixed(2) || 'N/A'} | **CBOE VIX** ${recap?.vix?.value?.toFixed(2) || 'N/A'}\n\n**Watchlist Underwriting Signals:**\n${lines || 'No active watchlist tickers.'}\n\n*Review full quantitative analytics in DeltaHarvest.*`,
             }),
           });
         } catch (dErr) {

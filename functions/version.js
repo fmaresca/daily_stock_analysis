@@ -21,7 +21,7 @@ export async function onRequestGet(context) {
   return new Response(
     JSON.stringify({
       app: "DeltaHarvest Institutional",
-      version: "3.5",
+      version: "3.6",
       buildId: `dh-${commitSha.substring(0, 7)}-live`,
       commit: commitSha.substring(0, 7),
       branch,

@@ -183,3 +183,29 @@ The platform includes an automated pre-market intelligence digest dispatched eve
    - Edge route verifies trading day status via CBOE/US market calendar (unless `force=true`).
    - Delivery outcomes and subscriber counts are logged to D1 audit storage.
 
+---
+
+## 6. Interactive Discord Bot & Strategy Search Providers (v3.6)
+
+### A. Discord Interactions Gateway (`DISCORD_PUBLIC_KEY`)
+- **Dashboard Path:** **Workers & Pages** → **daily-stock-analysis** → **Settings** → **Environment variables** → **Add Secret** → Name: `DISCORD_PUBLIC_KEY`
+- **Source:** From Discord Developer Portal → Application → General Information → **Public Key**.
+- **Interactions URL:** In Discord Developer Portal, set **Interactions Endpoint URL** to:
+  `https://your-domain.pages.dev/api/bot/discord`
+- **Supported Slash Commands:**
+  - `/options <symbol>`: Comprehensive options analysis card with 15Δ/22Δ strikes.
+  - `/csp <symbol>`: Cash-Secured Put income boundaries & downside cushion.
+  - `/cc <symbol>`: Covered Call resistance target & annualized yield.
+  - `/checklist <symbol>`: 5-Point Options Pre-Flight Underwriting Scorecard.
+  - `/recap`: Macro index and CBOE VIX pulse summary.
+- **Verification:** Discord automatically sends a signed PING upon URL entry; Cloudflare Pages responds with PONG via native Ed25519 Web Crypto.
+
+### B. Deep Catalyst Search (`TAVILY_API_KEY` or `BRAVE_API_KEY`)
+- **Dashboard Path:** **Workers & Pages** → **daily-stock-analysis** → **Settings** → **Environment variables** → **Add Secret** → Name: `TAVILY_API_KEY` (or `BRAVE_API_KEY`)
+- **Purpose:** Enables the Strategy Agent to execute live web queries (`search_financial_catalysts`) for breaking earnings releases, guidance revisions, FDA events, and corporate actions.
+- **Fallback:** If neither key is configured, the agent automatically falls back to live Google News RSS headlines and edge quantitative models.
+
+### C. Google Gemini AI Model (`GEMINI_API_KEY`)
+- **Dashboard Path:** **Workers & Pages** → **daily-stock-analysis** → **Settings** → **Environment variables** → **Add Secret** → Name: `GEMINI_API_KEY`
+- **Active Model:** Google Gemini 3.8 Flash (`gemini-3.8-flash`). (Note: `gemini-2.5-flash` has been deprecated by Google and is automatically aliased to `gemini-3.8-flash`).
+

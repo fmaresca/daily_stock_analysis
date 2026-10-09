@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Activity,
   Flame,
@@ -18,6 +18,8 @@ import { calculateMarketChameleonPattern } from '../../../utils/securityIntellig
 import { SocialShareToolbar } from '../../trading/SocialShareToolbar';
 import { NewsCompactFeed } from '../../NewsCompactFeed';
 import { MarketSentimentSection } from '../../MarketSentimentSection';
+import { evaluateOptionsPreFlight } from '../../../utils/optionsPreFlightEvaluator';
+import { OptionsPreFlightCard } from './OptionsPreFlightCard';
 
 interface TickerOptionsTechTabProps {
   ticker: TickerMeta;
@@ -76,8 +78,25 @@ export const TickerOptionsTechTab: React.FC<TickerOptionsTechTabProps> = ({
   marketSentiment,
   isSentimentLoading,
 }) => {
+  const preFlightAudit = useMemo(() => {
+    return evaluateOptionsPreFlight(
+      ticker,
+      spotPrice,
+      ivRank,
+      sma20,
+      undefined,
+      rsi14,
+      avgVolume30,
+      bestCSP,
+      bestCC
+    );
+  }, [ticker, spotPrice, ivRank, sma20, rsi14, avgVolume30, bestCSP, bestCC]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
+      {/* PRE-FLIGHT READINESS SCORECARD */}
+      <OptionsPreFlightCard audit={preFlightAudit} />
+
       {/* SECTION 1: Volatility Profile */}
       <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
         <div className="flex items-center justify-between">

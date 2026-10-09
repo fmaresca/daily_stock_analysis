@@ -358,7 +358,7 @@ Return ONLY a valid, raw JSON object (no surrounding Markdown wrappers, no \`\`\
               type="text"
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              placeholder="e.g. gemini-2.5-flash or gemini-3.8-flash"
+              placeholder="e.g. gemini-3.8-flash"
               className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-amber-500"
             />
           </div>

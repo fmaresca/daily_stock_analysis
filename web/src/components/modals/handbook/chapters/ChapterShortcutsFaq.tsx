@@ -437,9 +437,56 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             The <strong>Scheduled Morning Digest Push</strong> dispatches an automated market pre-opening intelligence briefing before the bell on trading days (scheduled via GitHub Actions at 6:00 AM CT / 11:00 UTC, Mon–Fri):
           </p>
           <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
-            <li><strong>Automated Pre-Market Intelligence:</strong> Includes economic catalyst alerts, macro radar, expiring option warnings, and top screened opportunities formatted for quick review.</li>
+            <li><strong>Automated Pre-Market Intelligence:</strong> Includes economic catalyst alerts, macro radar, expiring option warnings, 5-point Pre-Flight checklist scoring, and top screened opportunities formatted for quick review.</li>
             <li><strong>User Profile Opt-In:</strong> Log in to your personal dashboard (<code className="text-cyan-300 font-mono">/profile</code> or User Dashboard) and scroll to <strong>Morning Intelligence Digest</strong>. Toggle the subscription switch on, specify your preferred delivery email, and optionally enter a Discord webhook URL for community/channel notifications.</li>
             <li><strong>Fail-Safe Dispatch:</strong> The edge engine checks trading day calendars before sending, authenticates via edge secret headers, dispatches via Resend/Discord webhook, and logs run outcomes in SQLite/D1.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-emerald-400">📋</span>
+            <span>What is the 5-Point Options Pre-Flight Underwriting Scorecard (v3.6)?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Located at the top of the Single-Stock Audit Options &amp; Technicals tab, the <strong>5-Point Pre-Flight Scorecard</strong> systematically gates every options entry before capital commitment:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>1. Binary Event Clearance:</strong> Assesses whether an upcoming earnings announcement or corporate event threatens to induce volatility crush or gap through strikes within 14 days.</li>
+            <li><strong>2. CBOE Weekly Liquidity Cadence:</strong> Confirms underlying equity supports active CBOE weekly options expirations for agile roll management.</li>
+            <li><strong>3. Bid/Ask Spread &amp; Volume Friction:</strong> Checks average daily volume (&gt;1M shares) and bid/ask spread tightness (&lt;$0.15) to prevent slippage on entry and exit.</li>
+            <li><strong>4. IV Rank &amp; Volatility Edge:</strong> Gauges whether current implied volatility rank affords a statistical premium seller&apos;s edge (&gt;25% for CSP, &lt;60% for CC).</li>
+            <li><strong>5. Technical Cushion &amp; Moving Average Buffer:</strong> Verifies spot price cushion against the 20-day and 50-day SMA (&gt;5% margin of safety) and healthy RSI momentum (&gt;35).</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-indigo-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-indigo-400">🤖</span>
+            <span>How does the Interactive Discord Bot Gateway work?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            DeltaHarvest provides a serverless Discord Interactions endpoint at <code className="text-indigo-300 font-mono">/api/bot/discord</code> running on Cloudflare Pages:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Ed25519 Web Crypto Verification:</strong> Every Discord request is cryptographically validated using the native Web Crypto API and your <code className="text-cyan-300 font-mono">DISCORD_PUBLIC_KEY</code> environment secret.</li>
+            <li><strong>Institutional Slash Commands:</strong> Supports <code className="text-slate-200 font-mono">/options &lt;symbol&gt;</code>, <code className="text-slate-200 font-mono">/csp &lt;symbol&gt;</code>, <code className="text-slate-200 font-mono">/cc &lt;symbol&gt;</code>, <code className="text-slate-200 font-mono">/checklist &lt;symbol&gt;</code>, and <code className="text-slate-200 font-mono">/recap</code>.</li>
+            <li><strong>Rich Color-Coded Embeds:</strong> Returns instant quantitative cards with spot prices, RSI, SMA cushions, recommended 15Δ/22Δ strikes, and composite Pre-Flight readiness scores directly inside your Discord server.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-purple-500/30 space-y-1">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-purple-400">📖</span>
+            <span>How do the Strategy Playbooks and Signal Journal work?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            DeltaHarvest connects institutional reasoning directly to trade journaling via Cloudflare D1 (<code className="text-purple-300 font-mono">/api/options/journal</code>):
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>5 Built-in Playbooks:</strong> Conservative CSP (15Δ), Momentum CC (22Δ), PMCC Compounder (80/20Δ), Post-Earnings Crush, and Capitulation Bounce enforce quantitative strike bounds and DTE targets.</li>
+            <li><strong>1-Click Journaling:</strong> Whenever the Strategy Agent or Ticker Audit displays an actionable setup, click &quot;📌 Track in Journal&quot; to log the underlying symbol, strategy, delta target, spot price, and technical thesis.</li>
+            <li><strong>Outcome Tracking:</strong> Tracks strike outcomes, assignment status, realized premium capture, and return on collateral over time.</li>
           </ul>
         </div>
       </div>
