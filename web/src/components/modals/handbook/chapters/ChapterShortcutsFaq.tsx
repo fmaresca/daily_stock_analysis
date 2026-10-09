@@ -489,6 +489,40 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             <li><strong>Outcome Tracking:</strong> Tracks strike outcomes, assignment status, realized premium capture, and return on collateral over time.</li>
           </ul>
         </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/40 space-y-1.5">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-emerald-400">⚖️</span>
+            <span>How does the Section 1256 Tax Engine and Tax Alpha Optimizer work (v3.7)?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Ported from the MIT-licensed Section 1256 tax engine in <code>howard-lynn-ye/Fin-RSI</code> (verified against IRC §1256, IRS Pub 550, and Rev. Rul. 2026-16):
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>60/40 Capital Gains Blend:</strong> Options on broad-based indexes (SPX, NDX, RUT, VIX, XSP) and regulated futures are taxed as 60% long-term and 40% short-term capital gains regardless of trade holding period, reducing top federal tax rates to ~26.8% vs. 37% ordinary income.</li>
+            <li><strong>Rate Effect vs. Timing Effect Separation:</strong> The engine decomposes after-tax alpha into pure statutory rate savings (Rate Effect) and accelerated tax liabilities triggered by mandatory December 31 mark-to-market valuations (Timing Effect). A truthful model never obscures the year-end cash timing cost.</li>
+            <li><strong>Dec 31 Mark-to-Market Cash-Flow Warning:</strong> Alerts traders with open 1256 contracts of projected year-end tax liabilities due before cash is realized upon closing.</li>
+            <li><strong>Options Backtester After-Tax Mode:</strong> Compounds returns by debiting computed tax at each calendar December mark rather than at trade close, preventing strategies from displaying cash they do not possess.</li>
+            <li><strong>Strict Classification &amp; ETF Ambiguity Gate:</strong> Broad-based index options qualify for 1256; ETF options (SPY, QQQ, IWM) hold conflicting judicial precedent and strictly default to standard equity options (&quot;Needs review&quot;), preventing invented tax law.</li>
+            <li><strong>Form 6781 3-Year Carryback (&sect;1212(c)):</strong> Emits schedules for CPA election to carry net 1256 losses back 3 years against prior 1256 gains to claim immediate tax refunds.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-blue-500/40 space-y-1.5">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-blue-400">🛡️</span>
+            <span>How does the 7-Provider Multi-LLM Failover Chain work (v3.7)?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Behind <code>functions/api/_llm.js</code> operates an institutional multi-tiered failover chain with 0 credentials exposed:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Numbered Failover Slots (1..7):</strong> If primary Google Gemini hits HTTP 429 rate limits or upstream 5xx downtime, execution automatically cascades sequentially across Slot 1 (Groq), Slot 2 (Cerebras), Slot 3 (OpenRouter), Slot 4 (Mistral), Slot 5 (NVIDIA NIM), Slot 6 (Cloudflare Workers AI), and Slot 7 (Cohere).</li>
+            <li><strong>Strict Iron Rule #2 (Request Protection):</strong> Client HTTP 400 errors immediately abort and fail closed to prevent cascading broken requests; failover triggers strictly on 401, 429, 5xx, or network timeouts.</li>
+            <li><strong>Multi-Key Comma-Separated Rotation:</strong> Each slot supports multiple comma-separated keys for load balancing and quota smoothing within a single provider tier.</li>
+            <li><strong>Admin Probe &amp; Zero Disclosure:</strong> Admins can verify live chain health via <code className="text-cyan-300 font-mono">GET /api/admin/llm-chain-test</code> without revealing raw keys in UI, logs, or source code.</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

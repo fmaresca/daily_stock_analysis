@@ -127,7 +127,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>DeltaHarvest Strategy Handbook &amp; Educational Center</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  v3.6
+                  v3.7
                 </span>
               </h2>
               <p className="text-xs text-slate-400">

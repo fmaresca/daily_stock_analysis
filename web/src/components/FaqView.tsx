@@ -18,7 +18,7 @@ import {
 
 interface FaqItem {
   id: string;
-  category: 'GENERAL' | 'STRATEGY' | 'EXECUTION' | 'MARGIN' | 'APIS';
+  category: 'GENERAL' | 'STRATEGY' | 'EXECUTION' | 'MARGIN' | 'APIS' | 'TAX' | 'AI';
   question: string;
   answer: React.ReactNode;
 }
@@ -155,6 +155,104 @@ export const FaqView: React.FC<FaqViewProps> = ({
         </div>
       ),
     },
+    {
+      id: 'faq-8',
+      category: 'TAX',
+      question: 'What is Section 1256 and how do SPX, NDX, and RUT save taxes vs. ETF options (SPY, QQQ)?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            Under <strong>IRC §1256</strong>, broad-based cash-settled index options (such as SPX, NDX, RUT, VIX, and XSP) are classified as nonequity options.
+          </p>
+          <p>
+            Every dollar of net gain is automatically taxed as <strong>60% Long-Term Capital Gains</strong> (top 20% federal rate) and <strong>40% Short-Term Capital Gains</strong> (top 37% ordinary rate), regardless of how briefly you held the trade. This produces an effective blended top tax rate of <strong>26.8%</strong> vs. 37% on standard equity options — unlocking up to 10.2% in pure tax alpha.
+          </p>
+          <p className="text-xs text-amber-300">
+            <strong>Important distinction:</strong> ETF options (SPY, QQQ, IWM) hold conflicting IRS and judicial precedent (Rev. Rul. 2026-16). DeltaHarvest strictly defaults ETF options to standard equity option rules (&quot;Needs review&quot;) and never auto-classifies them as 1256.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'faq-9',
+      category: 'TAX',
+      question: 'Why does DeltaHarvest decompose Rate Effect vs. Timing Effect in Tax Alpha & Backtesting?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            Section 1256 creates two counteracting economic effects that point in opposite directions:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-xs">
+            <li><strong>Rate Effect (Tax Savings):</strong> Statutory 60/40 blended tax rate yields lower taxes on realized profits.</li>
+            <li><strong>Timing Effect (Cash Acceleration Drag):</strong> Mandatory year-end mark-to-market valuation (IRC §1256(a)(1) &amp; IRS Pub 550 p.57) requires paying taxes on unrealized gains as of December 31 before any cash is received from a position sale.</li>
+          </ul>
+          <p>
+            A truthful institutional model never presents a single &quot;tax alpha&quot; number that hides the cash-flow timing cost. When After-Tax Mode is toggled in the Options Backtester, taxes are debited directly at each December mark to mirror real-world liquidity conditions.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'faq-10',
+      category: 'AI',
+      question: 'How does the 7-Provider Multi-LLM Failover Chain protect against API rate limits and outages?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            DeltaHarvest utilizes an institutional multi-tiered failover chain behind <code className="text-emerald-300 font-mono">_llm.js</code>. If primary Google Gemini encounters rate limits (HTTP 429) or upstream server downtime (5xx), requests cascade seamlessly through 7 sequential fallback slots:
+          </p>
+          <ol className="list-decimal list-inside space-y-0.5 text-xs text-slate-400 font-mono">
+            <li>Slot 1: Groq (llama-3.3-70b-versatile)</li>
+            <li>Slot 2: Cerebras (llama-3.3-70b)</li>
+            <li>Slot 3: OpenRouter (openrouter/free)</li>
+            <li>Slot 4: Mistral (mistral-small-latest)</li>
+            <li>Slot 5: NVIDIA NIM (meta/llama-3.3-70b-instruct)</li>
+            <li>Slot 6: Cloudflare Workers AI (@cf/meta/llama-3.1-8b-instruct)</li>
+            <li>Slot 7: Cohere (command-r-plus)</li>
+          </ol>
+          <p className="text-xs">
+            In accordance with Iron Rule #2, client HTTP 400 errors fail closed immediately without failover, preserving system integrity and zero key disclosure.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'faq-11',
+      category: 'STRATEGY',
+      question: 'What is the 5-Point Options Pre-Flight Underwriting Scorecard?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            The 5-Point Pre-Flight Scorecard evaluates every options trade candidate across five quantitative dimensions:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-xs">
+            <li><strong>1. Binary Events:</strong> No earnings or FDA events within 14 days.</li>
+            <li><strong>2. Weekly Cadence:</strong> CBOE Friday weekly options availability.</li>
+            <li><strong>3. Liquidity Friction:</strong> &gt;1M daily shares and bid/ask spreads &lt;$0.15.</li>
+            <li><strong>4. IV Rank:</strong> IVR &gt;25% for CSPs; IVR &lt;60% for Covered Calls.</li>
+            <li><strong>5. Technical Cushion:</strong> &gt;5% margin of safety above 20-day / 50-day SMA and RSI &gt;35.</li>
+          </ul>
+          <p className="text-xs">
+            Candidates receive an institutional rating (<strong>PRIME</strong>, <strong>CONDITIONAL</strong>, or <strong>AVOID</strong>) before capital is committed.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'faq-12',
+      category: 'EXECUTION',
+      question: 'How do Declarative Option Playbooks and the Signal Journal work together?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            DeltaHarvest provides 5 institutional Strategy Playbooks (Conservative CSP 15Δ, Momentum CC 22Δ, PMCC Compounder, Post-Earnings Crush, and Oversold Bounce).
+          </p>
+          <p>
+            When an actionable setup is surfaced by the Strategy Agent or Ticker Audit, clicking <strong>&quot;Track in Journal&quot;</strong> automatically logs the underlying symbol, strategy, delta, spot price, and thesis into persistent Cloudflare D1 storage (<code className="text-purple-300 font-mono">/api/options/journal</code>), enabling disciplined post-trade analytics.
+          </p>
+        </div>
+      ),
+    },
   ];
 
   const filteredFaqs = faqs.filter((item) => {
@@ -181,7 +279,7 @@ export const FaqView: React.FC<FaqViewProps> = ({
               DeltaHarvest Operational FAQ
             </h1>
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Find detailed explanations regarding statistical strike selection, profit-taking mechanics, defensive rolling protocols, and real-time API integrations.
+              Find detailed explanations regarding statistical strike selection, profit-taking mechanics, defensive rolling protocols, Section 1256 tax alpha, and real-time API integrations.
             </p>
           </div>
 
@@ -215,7 +313,7 @@ export const FaqView: React.FC<FaqViewProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search FAQ questions (e.g. 80% rule, Tradier, margin)..."
+              placeholder="Search FAQ questions (e.g. 1256, 80% rule, Tradier, margin)..."
               className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 transition-colors"
             />
           </div>
@@ -224,9 +322,11 @@ export const FaqView: React.FC<FaqViewProps> = ({
             {[
               { key: 'ALL', label: 'All Topics' },
               { key: 'STRATEGY', label: 'Strategy Rules' },
+              { key: 'TAX', label: 'Section 1256 & Taxes' },
+              { key: 'AI', label: 'Strategy Agent & LLMs' },
               { key: 'APIS', label: 'Tradier & Schwab' },
               { key: 'MARGIN', label: 'Margin & Greeks' },
-              { key: 'EXECUTION', label: 'Execution' },
+              { key: 'EXECUTION', label: 'Execution & Journal' },
             ].map((cat) => (
               <button
                 key={cat.key}
