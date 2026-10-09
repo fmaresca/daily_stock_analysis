@@ -146,7 +146,7 @@ export const DEFAULT_SLOT_CONFIGS = {
   7: {
     provider: "openai-compatible",
     name: "cohere",
-    baseUrl: "https://api.cohere.com/compatibility/v1",
+    baseUrl: "https://api.cohere.ai/compatibility/v1",
     model: "command-r-plus",
   },
 };
@@ -206,7 +206,7 @@ export function getFallbackSlots(env = {}) {
       friendlyName = "nvidia";
     } else if (providerType === "cloudflare-workers-ai" || bUrl.includes("cloudflare.com")) {
       friendlyName = "cloudflare-workers-ai";
-    } else if (bUrl.includes("cohere.com") || providerLower.includes("cohere")) {
+    } else if (bUrl.includes("cohere.com") || bUrl.includes("cohere.ai") || providerLower.includes("cohere")) {
       friendlyName = "cohere";
     } else if (!friendlyName) {
       friendlyName = providerType;
