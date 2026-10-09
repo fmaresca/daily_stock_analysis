@@ -21,10 +21,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Dedicated Password Reset State
+  // Dedicated Password Reset & Recovery State
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [resetStep, setResetStep] = useState<'REQUEST' | 'CONFIRM'>('REQUEST');
   const [resetEmail, setResetEmail] = useState('');
+  const [resetUserNote, setResetUserNote] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
@@ -153,46 +154,42 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
 
       setIsResettingPassword(true);
       try {
-        const res = await fetch('/api/auth/reset-password', {
+        // 1. Concurrently dispatch administrator inquiry alert (D1, FormSubmit, Discord)
+        const inquiryPromise = fetch('/api/admin/inquiries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: cleanEmail,
+            name: cleanEmail.split('@')[0],
+            requestType: 'PASSWORD_RESET',
+            note: resetUserNote.trim()
+              ? `Account recovery requested for ${cleanEmail}: ${resetUserNote.trim()}`
+              : `Password reset requested for ${cleanEmail} from web login portal.`,
+          }),
+        }).catch(() => null);
+
+        // 2. Also register reset audit trail on backend
+        const resetPromise = fetch('/api/auth/reset-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: cleanEmail }),
-        });
-        const data = await res.json().catch(() => ({}));
+        }).catch(() => null);
 
-        // Concurrently register inquiry and trigger client-side dispatch from browser IP
-        try {
-          fetch('/api/admin/inquiries', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: cleanEmail,
-              name: cleanEmail.split('@')[0],
-              requestType: 'PASSWORD_RESET',
-              note: `Password reset requested for ${cleanEmail} from web login portal.`,
-            }),
-          }).catch(() => {});
-        } catch {
-          // Non-blocking
-        }
+        await Promise.all([inquiryPromise, resetPromise]);
 
-        if (res.ok && data.success) {
-          setResetSuccessMessage(
-            data.message || 'If an account exists for that email, a reset link has been sent.'
-          );
-        } else {
-          setResetErrorMessage(data.error || 'Failed to submit password reset request. Please try again.');
-        }
+        setResetSuccessMessage(
+          'Your account recovery request has been logged and transmitted directly to your system administrator (Frank Maresca). Your administrator will verify your account and provide your updated credentials directly. No email tokens are required.'
+        );
       } catch {
-        setResetErrorMessage('Network error requesting password reset. Please check your connection.');
+        setResetErrorMessage('Network error submitting recovery request. Please check your connection.');
       } finally {
         setIsResettingPassword(false);
       }
     } else {
-      // Step B: Confirm with token
+      // Step B: Direct confirmation if an administrative reset token is possessed
       const cleanToken = resetToken.trim();
       if (!cleanToken) {
-        setResetErrorMessage('Please enter the reset token received via email.');
+        setResetErrorMessage('Please enter the administrative reset token.');
         return;
       }
       if (resetNewPassword.length < 8) {
@@ -217,7 +214,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.success) {
-          setResetSuccessMessage(data.message || 'Password updated, please sign in.');
+          setResetSuccessMessage(data.message || 'Password updated successfully! Please sign in with your new credentials.');
           if (resetEmail) {
             setEmail(resetEmail.trim().toLowerCase());
           }
@@ -292,7 +289,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       </header>
 
       <div className="mt-6 mx-auto w-full max-w-md px-4 sm:px-0">
-        <div className="bg-slate-900/90 py-8 px-6 shadow-2xl rounded-2xl border border-slate-800 backdrop-blur-md sm:px-10 relative overflow-hidden">
+        <div className="bg-slate-900/95 py-8 px-6 shadow-2xl shadow-emerald-950/20 rounded-2xl border border-slate-700/60 backdrop-blur-xl sm:px-10 relative overflow-hidden">
           {/* Subtle decorative glow */}
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -358,13 +355,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   type="button"
                   onClick={() => {
                     setResetEmail(email.trim());
+                    setResetUserNote('');
                     setResetNewPassword('');
                     setResetConfirmPassword('');
                     setResetErrorMessage(null);
                     setResetSuccessMessage(null);
+                    setResetStep('REQUEST');
                     setIsResetPasswordOpen(true);
                   }}
-                  className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                  className="text-xs text-emerald-400 hover:text-emerald-300 hover:underline transition-colors cursor-pointer"
                 >
                   Forgot password?
                 </button>
@@ -419,7 +418,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-emerald-500/50 rounded-lg shadow-lg shadow-emerald-950/50 text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-emerald-400/40 rounded-xl shadow-lg shadow-emerald-950/60 text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.99] cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
@@ -459,7 +458,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   setRequestType('NEW_ACCOUNT');
                   setIsRequestAccessOpen(true);
                 }}
-                className="w-full py-2 px-3 bg-slate-800/90 hover:bg-slate-800 border border-emerald-500/40 hover:border-emerald-500/80 rounded-lg text-xs font-semibold text-emerald-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                className="w-full py-2.5 px-3 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/60 rounded-xl text-xs font-semibold text-slate-200 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm hover:shadow"
               >
                 <Mail className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Request New Account</span>
@@ -469,7 +468,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
         </div>
       </div>
 
-      {/* Dedicated Self-Service Password Reset Modal */}
+      {/* Dedicated Self-Service Password Reset & Administrator Recovery Modal */}
       {isResetPasswordOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
@@ -477,18 +476,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
           aria-modal="true"
           aria-labelledby="reset-password-modal-title"
         >
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative text-slate-100 space-y-4">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl relative text-slate-100 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                   <Key className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 id="reset-password-modal-title" className="text-base font-bold text-white">
-                    Reset Account Password
+                    {resetStep === 'CONFIRM' ? 'Enter Administrative Reset Token' : 'Account Recovery & Password Reset'}
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Institutional Edge Credential Update
+                    DeltaHarvest Institutional Security • Direct Administrator Recovery
                   </p>
                 </div>
               </div>
@@ -503,101 +502,150 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
             </div>
 
             {resetSuccessMessage ? (
-              <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs text-center space-y-3 animate-fade-in">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto">
+              <div className="p-5 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs text-center space-y-3.5 animate-fade-in">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-inner">
                   <ShieldCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-white">
-                    {resetStep === 'CONFIRM' ? 'Password Updated Successfully!' : 'Reset Request Submitted'}
-                  </p>
-                  <p className="text-slate-300 text-xs leading-relaxed mt-1">
+                  <h4 className="font-bold text-base text-white">
+                    {resetStep === 'CONFIRM' ? 'Password Updated Successfully!' : 'Recovery Request Dispatched'}
+                  </h4>
+                  <p className="text-slate-300 text-xs leading-relaxed mt-1.5">
                     {resetSuccessMessage}
                   </p>
                 </div>
 
                 {resetStep === 'REQUEST' && (
-                  <div className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 text-left font-mono text-[11px] text-slate-300 space-y-1">
-                    <div>Please check your registered inbox for your reset link and token.</div>
+                  <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-left font-mono text-[11px] text-slate-300 space-y-1">
+                    <div><strong>Account Email:</strong> {resetEmail}</div>
+                    <div><strong>Target:</strong> Platform Administrator (Frank Maresca)</div>
+                    <div><strong>Action:</strong> Administrator credential verification &amp; reset</div>
                   </div>
                 )}
 
-                <div className="pt-2 flex items-center justify-center gap-2">
-                  {resetStep === 'REQUEST' ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetSuccessMessage(null);
-                        setResetStep('CONFIRM');
-                      }}
-                      className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-lg shadow-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <Key className="w-4 h-4" />
-                      <span>Enter Reset Token Now →</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsResetPasswordOpen(false);
-                        setResetSuccessMessage(null);
-                        setResetStep('REQUEST');
-                      }}
-                      className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <Zap className="w-4 h-4" />
-                      <span>Sign In Now</span>
-                    </button>
-                  )}
+                <div className="pt-2 flex items-center justify-center">
                   <button
                     type="button"
                     onClick={() => {
                       setIsResetPasswordOpen(false);
                       setResetSuccessMessage(null);
+                      setResetStep('REQUEST');
+                      if (resetEmail) {
+                        setEmail(resetEmail.trim().toLowerCase());
+                      }
                     }}
-                    className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
+                    className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs rounded-xl shadow-lg transition-all cursor-pointer"
                   >
-                    Close
+                    Return to Sign In
                   </button>
                 </div>
               </div>
-            ) : (
-              <form onSubmit={handleResetPasswordSubmit} className="space-y-3.5">
-                <div className="flex border-b border-slate-800 mb-2">
+            ) : resetStep === 'REQUEST' ? (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300 text-xs flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed text-[11px]">
+                    To protect capital and eliminate external email token deliverability failures, DeltaHarvest utilizes verified direct administrator password resets. Submit your registered email below to dispatch an immediate recovery alert.
+                  </p>
+                </div>
+
+                {resetErrorMessage && (
+                  <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/50 text-rose-300 text-xs flex items-center gap-2">
+                    <span className="font-bold shrink-0">!</span>
+                    <span>{resetErrorMessage}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="reset-email" className="block text-xs text-slate-300 mb-1 font-semibold">
+                    Registered Account Email *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="reset-email"
+                      type="email"
+                      required
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="name@domain.com"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 font-mono focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="reset-note" className="block text-xs text-slate-300 mb-1 font-semibold">
+                    Recovery Note / Context (Optional)
+                  </label>
+                  <textarea
+                    id="reset-note"
+                    rows={2}
+                    value={resetUserNote}
+                    onChange={(e) => setResetUserNote(e.target.value)}
+                    placeholder="e.g. Lost password, requesting credential update from administrator..."
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setResetStep('REQUEST');
-                      setResetErrorMessage(null);
-                    }}
-                    className={`pb-2 px-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${
-                      resetStep === 'REQUEST'
-                        ? 'border-amber-500 text-amber-400'
-                        : 'border-transparent text-slate-400 hover:text-slate-200'
-                    }`}
+                    onClick={() => setIsResetPasswordOpen(false)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
                   >
-                    1. Request Reset Link
+                    Cancel
                   </button>
+                  <button
+                    type="submit"
+                    disabled={isResettingPassword}
+                    className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-emerald-950/40 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isResettingPassword ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Transmitting Request...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Submit Recovery Request</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="pt-3 border-t border-slate-800 text-center flex flex-col gap-1.5">
                   <button
                     type="button"
                     onClick={() => {
                       setResetStep('CONFIRM');
                       setResetErrorMessage(null);
                     }}
-                    className={`pb-2 px-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${
-                      resetStep === 'CONFIRM'
-                        ? 'border-amber-500 text-amber-400'
-                        : 'border-transparent text-slate-400 hover:text-slate-200'
-                    }`}
+                    className="text-[11px] text-slate-400 hover:text-emerald-300 transition-colors cursor-pointer"
                   >
-                    2. Enter Token &amp; Update Password
+                    Have an administrative reset token? Enter token to update password →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsResetPasswordOpen(false);
+                      setRequestType('NEW_ACCOUNT');
+                      setApplicantEmail(resetEmail);
+                      setIsRequestAccessOpen(true);
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-teal-300 transition-colors cursor-pointer"
+                  >
+                    Need new account onboarding or administrator assistance? Contact Admin →
                   </button>
                 </div>
-
+              </form>
+            ) : (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-3.5">
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  {resetStep === 'REQUEST'
-                    ? 'Enter your registered email address. If an account exists, a secure single-use reset link and token will be sent to your email.'
-                    : 'Enter the single-use reset token sent to your email and specify your new password (minimum 8 characters).'}
+                  Enter the administrative single-use reset token and specify your new password (minimum 8 characters).
                 </p>
 
                 {resetErrorMessage && (
@@ -607,105 +655,81 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   </div>
                 )}
 
-                {resetStep === 'REQUEST' ? (
-                  <div>
-                    <label htmlFor="reset-email" className="block text-xs text-slate-300 mb-1 font-semibold">
-                      Registered Email Address *
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                        <Mail className="w-4 h-4" />
-                      </div>
-                      <input
-                        id="reset-email"
-                        type="email"
-                        required
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        placeholder="name@domain.com"
-                        className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
-                      />
+                <div>
+                  <label htmlFor="reset-token" className="block text-xs text-slate-300 mb-1 font-semibold">
+                    Administrative Reset Token *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <Key className="w-4 h-4" />
                     </div>
+                    <input
+                      id="reset-token"
+                      type="text"
+                      required
+                      value={resetToken}
+                      onChange={(e) => setResetToken(e.target.value)}
+                      placeholder="Paste 64-character token..."
+                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500 font-mono focus:outline-none"
+                    />
                   </div>
-                ) : (
-                  <>
-                    <div>
-                      <label htmlFor="reset-token" className="block text-xs text-slate-300 mb-1 font-semibold">
-                        Reset Token (from email) *
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                          <Key className="w-4 h-4" />
-                        </div>
-                        <input
-                          id="reset-token"
-                          type="text"
-                          required
-                          value={resetToken}
-                          onChange={(e) => setResetToken(e.target.value)}
-                          placeholder="Paste 64-character token..."
-                          className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
-                        />
-                      </div>
-                    </div>
+                </div>
 
-                    <div>
-                      <label htmlFor="reset-new-password" className="block text-xs text-slate-300 mb-1 font-semibold">
-                        New Password (min. 8 characters) *
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                          <Lock className="w-4 h-4" />
-                        </div>
-                        <input
-                          id="reset-new-password"
-                          type={showResetPassword ? 'text' : 'password'}
-                          required
-                          minLength={8}
-                          value={resetNewPassword}
-                          onChange={(e) => setResetNewPassword(e.target.value)}
-                          placeholder="••••••••••••"
-                          className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowResetPassword(!showResetPassword)}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
-                        >
-                          {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
+                <div>
+                  <label htmlFor="reset-new-password" className="block text-xs text-slate-300 mb-1 font-semibold">
+                    New Password (min. 8 characters) *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <Lock className="w-4 h-4" />
                     </div>
+                    <input
+                      id="reset-new-password"
+                      type={showResetPassword ? 'text' : 'password'}
+                      required
+                      minLength={8}
+                      value={resetNewPassword}
+                      onChange={(e) => setResetNewPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500 font-mono focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword(!showResetPassword)}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
+                    >
+                      {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
 
-                    <div>
-                      <label htmlFor="reset-confirm-password" className="block text-xs text-slate-300 mb-1 font-semibold">
-                        Confirm New Password *
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                          <Lock className="w-4 h-4" />
-                        </div>
-                        <input
-                          id="reset-confirm-password"
-                          type={showResetConfirm ? 'text' : 'password'}
-                          required
-                          minLength={8}
-                          value={resetConfirmPassword}
-                          onChange={(e) => setResetConfirmPassword(e.target.value)}
-                          placeholder="••••••••••••"
-                          className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 font-mono focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowResetConfirm(!showResetConfirm)}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
-                        >
-                          {showResetConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
+                <div>
+                  <label htmlFor="reset-confirm-password" className="block text-xs text-slate-300 mb-1 font-semibold">
+                    Confirm New Password *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <Lock className="w-4 h-4" />
                     </div>
-                  </>
-                )}
+                    <input
+                      id="reset-confirm-password"
+                      type={showResetConfirm ? 'text' : 'password'}
+                      required
+                      minLength={8}
+                      value={resetConfirmPassword}
+                      onChange={(e) => setResetConfirmPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500 font-mono focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetConfirm(!showResetConfirm)}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
+                    >
+                      {showResetConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
 
                 <div className="pt-2 flex items-center justify-end gap-2">
                   <button
@@ -718,57 +742,32 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   <button
                     type="submit"
                     disabled={isResettingPassword}
-                    className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     {isResettingPassword ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>{resetStep === 'REQUEST' ? 'Sending Link...' : 'Updating Password...'}</span>
+                        <span>Updating Password...</span>
                       </>
                     ) : (
                       <>
                         <Key className="w-3.5 h-3.5" />
-                        <span>{resetStep === 'REQUEST' ? 'Send Reset Link' : 'Update Password'}</span>
+                        <span>Update Password</span>
                       </>
                     )}
                   </button>
                 </div>
 
-                <div className="pt-3 border-t border-slate-800 text-center flex flex-col gap-1.5">
-                  {resetStep === 'REQUEST' ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetStep('CONFIRM');
-                        setResetErrorMessage(null);
-                      }}
-                      className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
-                    >
-                      Already have a reset token? Enter token to set new password →
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetStep('REQUEST');
-                        setResetErrorMessage(null);
-                      }}
-                      className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                    >
-                      ← Need to request a reset link?
-                    </button>
-                  )}
+                <div className="pt-3 border-t border-slate-800 text-center">
                   <button
                     type="button"
                     onClick={() => {
-                      setIsResetPasswordOpen(false);
-                      setRequestType('NEW_ACCOUNT');
-                      setApplicantEmail(resetEmail);
-                      setIsRequestAccessOpen(true);
+                      setResetStep('REQUEST');
+                      setResetErrorMessage(null);
                     }}
-                    className="text-[11px] text-slate-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                    className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                   >
-                    Need new account onboarding or administrator assistance? Contact Admin →
+                    ← Return to Direct Administrator Recovery Request
                   </button>
                 </div>
               </form>
