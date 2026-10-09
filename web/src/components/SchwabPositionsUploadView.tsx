@@ -345,10 +345,10 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
 
         <div className="space-y-1">
           <h3 className="text-base font-bold text-white">
-            Upload Charles Schwab Positions (.csv) or Brokerage Screenshot
+            Upload Positions (.csv) or Brokerage Screenshot (OCR)
           </h3>
           <p className="text-xs text-slate-400 max-w-md">
-            Drag and drop your exported <code className="text-cyan-300 bg-slate-900 px-1.5 py-0.5 rounded">Positions-*.csv</code> or brokerage screenshot image here, or paste directly from clipboard (<kbd className="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded font-mono text-[10px]">Ctrl+V</kbd>).
+            Drag &amp; drop your Charles Schwab <code className="text-cyan-300 bg-slate-900 px-1.5 py-0.5 rounded">Positions-*.csv</code> or brokerage holdings screenshot (PNG/JPG), or paste an image directly from your clipboard (<kbd className="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded font-mono text-[10px]">Ctrl+V</kbd> / <kbd className="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded font-mono text-[10px]">⌘V</kbd>).
           </p>
         </div>
 
@@ -363,7 +363,7 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <label className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/30 cursor-pointer flex items-center space-x-2 transition-all">
             <Upload className="w-4 h-4" />
-            <span>Select CSV File</span>
+            <span>Upload Schwab CSV</span>
             <input
               type="file"
               accept=".csv"
@@ -374,10 +374,10 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
 
           <label className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-600/30 cursor-pointer flex items-center space-x-2 transition-all">
             <Sparkles className="w-4 h-4" />
-            <span>Upload Screenshot (Image)</span>
+            <span>Upload Brokerage Screenshot (OCR)</span>
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,.png,.jpg,.jpeg,.webp"
               onChange={handleImageUpload}
               className="hidden"
             />

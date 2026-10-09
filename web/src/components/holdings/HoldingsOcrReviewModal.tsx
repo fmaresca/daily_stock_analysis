@@ -29,6 +29,14 @@ export const HoldingsOcrReviewModal: React.FC<HoldingsOcrReviewModalProps> = ({
   const [rows, setRows] = useState<ParsedHoldingsRow[]>(initialRows);
   const [cash, setCash] = useState<number>(initCash);
 
+  // Synchronize internal state whenever modal opens or new OCR rows/cash arrive
+  React.useEffect(() => {
+    if (isOpen) {
+      setRows(initialRows);
+      setCash(initCash);
+    }
+  }, [isOpen, initialRows, initCash]);
+
   if (!isOpen) return null;
 
   const handleUpdateRow = (id: string, field: keyof ParsedHoldingsRow, value: any) => {
