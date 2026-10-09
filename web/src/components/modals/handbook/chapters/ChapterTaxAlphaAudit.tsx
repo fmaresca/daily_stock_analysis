@@ -128,8 +128,11 @@ export const ChapterTaxAlphaAudit: React.FC<ChapterTaxAlphaAuditProps> = ({
               </p>
             </div>
           </div>
-          <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[10px] font-mono text-slate-300">
-            <strong className="text-cyan-400">Holding Period Impact:</strong> OTM/ATM QCC = stock holding period continues to accrue. ITM QCC = stock holding period is SUSPENDED during option life. Non-Qualified Covered Call = holding period terminates/resets to zero if held &le; 1 year.
+          <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[10px] font-mono text-slate-300 space-y-1">
+            <div><strong className="text-cyan-400">Lowest Qualified Benchmark (LQB) Statutory Tiers:</strong> General = highest strike &lt; ASP; Special (&gt;90 DTE &amp; Strike &gt; $50) = 2nd highest strike &lt; ASP; Low price (ASP &le; $25) = floor at 85% of ASP; Mid price (ASP &le; $150) = floor at ASP - $10.</div>
+            <div><strong className="text-emerald-400">Holding Period Impact:</strong> OTM/ATM QCC = stock holding period continues to accrue. ITM QCC = stock holding period is SUSPENDED during option life. Non-Qualified Covered Call = holding period terminates/resets to zero if held &le; 1 year.</div>
+            <div><strong className="text-amber-400">Identified Straddles (IRC &sect;1092(a)(2)):</strong> Taxpayers can formally elect identified straddle status on same-day entry. Loss deferral is replaced by basis capitalization into remaining open legs until full liquidation.</div>
+            <div><strong className="text-purple-400">Mixed Straddles:</strong> Any straddle with an IRC &sect;1256 leg (SPX/NDX/RUT) is flagged for CPA review. Automated calculation is blocked.</div>
           </div>
         </div>
 

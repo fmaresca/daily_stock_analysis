@@ -2103,5 +2103,6 @@ test('26. Weekly US Economic Indicators Friday Close Rollover & MarketChameleon 
 
 import './test_api_contracts_mocked.mjs';
 import './test_components_smoke.mjs';
+import './test_section1092.mjs';
 
 

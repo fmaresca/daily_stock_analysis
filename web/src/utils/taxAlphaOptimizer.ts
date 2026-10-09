@@ -260,3 +260,133 @@ export function getSampleWashSaleCandidates(
     },
   ];
 }
+
+import { StraddlePosition } from './section1092';
+
+export function getSampleStraddlePositions(): StraddlePosition[] {
+  return [
+    // 1. Non-qualified covered call on TSLA (deep ITM strike 210 vs 240 stock, 21 DTE <= 30)
+    {
+      id: 'POS_STOCK_TSLA',
+      underlying: 'TSLA',
+      kind: 'stock',
+      side: 'long',
+      openedAt: '2026-06-01',
+      quantity: 100,
+      basis: 250,
+      currentPrice: 240,
+      unrealizedGain: 0,
+    },
+    {
+      id: 'POS_CALL_TSLA_DITM',
+      underlying: 'TSLA',
+      kind: 'call',
+      side: 'short',
+      strike: 210,
+      expiry: '2026-10-30',
+      openedAt: '2026-10-09',
+      quantity: 1,
+      basis: 3200,
+      currentPrice: 3500,
+      unrealizedGain: 0,
+      realizedLoss: 10000,
+      closedAt: '2026-10-15',
+    },
+
+    // 2. Married put on AMD
+    {
+      id: 'POS_STOCK_AMD',
+      underlying: 'AMD',
+      kind: 'stock',
+      side: 'long',
+      openedAt: '2026-08-15',
+      quantity: 200,
+      basis: 150,
+      currentPrice: 165,
+      unrealizedGain: 3000,
+    },
+    {
+      id: 'POS_PUT_AMD',
+      underlying: 'AMD',
+      kind: 'put',
+      side: 'long',
+      strike: 145,
+      expiry: '2026-11-20',
+      openedAt: '2026-08-15',
+      quantity: 2,
+      basis: 1200,
+      currentPrice: 400,
+      unrealizedGain: 0,
+      realizedLoss: 800,
+      closedAt: '2026-10-01',
+    },
+
+    // 3. Plain long-stock position on MSFT (no offsetting option)
+    {
+      id: 'POS_STOCK_MSFT',
+      underlying: 'MSFT',
+      kind: 'stock',
+      side: 'long',
+      openedAt: '2026-01-10',
+      quantity: 100,
+      basis: 410,
+      currentPrice: 430,
+      unrealizedGain: 2000,
+    },
+
+    // 4. Qualified Covered Call on AAPL (49 DTE > 30, OTM strike 235 vs 220 stock) -> passes QCC
+    {
+      id: 'POS_STOCK_AAPL',
+      underlying: 'AAPL',
+      kind: 'stock',
+      side: 'long',
+      openedAt: '2026-03-01',
+      quantity: 100,
+      basis: 200,
+      currentPrice: 220,
+      unrealizedGain: 2000,
+    },
+    {
+      id: 'POS_CALL_AAPL_QCC',
+      underlying: 'AAPL',
+      kind: 'call',
+      side: 'short',
+      strike: 235,
+      expiry: '2026-11-27',
+      openedAt: '2026-10-09',
+      quantity: 1,
+      basis: 450,
+      currentPrice: 380,
+      unrealizedGain: 70,
+    },
+
+    // 5. SPX option position (Mixed Straddle demonstration overlapping §1256)
+    {
+      id: 'POS_CALL_SPX',
+      underlying: 'SPX',
+      kind: 'call',
+      side: 'long',
+      strike: 5800,
+      expiry: '2026-11-20',
+      openedAt: '2026-10-01',
+      quantity: 1,
+      basis: 4000,
+      currentPrice: 4200,
+      unrealizedGain: 200,
+    },
+    {
+      id: 'POS_PUT_SPX',
+      underlying: 'SPX',
+      kind: 'put',
+      side: 'long',
+      strike: 5700,
+      expiry: '2026-11-20',
+      openedAt: '2026-10-01',
+      quantity: 1,
+      basis: 3500,
+      currentPrice: 3100,
+      unrealizedGain: 0,
+      realizedLoss: 400,
+    },
+  ];
+}

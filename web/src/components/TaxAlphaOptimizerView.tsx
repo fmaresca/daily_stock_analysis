@@ -38,6 +38,7 @@ import {
   AlertTriangle,
   Info,
 } from './icons';
+import { Section1092StraddlePanel } from './tax/Section1092StraddlePanel';
 
 export const TaxAlphaOptimizerView: React.FC = () => {
   const storedYtd = useMemo(() => {
@@ -416,6 +417,11 @@ export const TaxAlphaOptimizerView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Section 1092 Straddle & QCC Detection Engine Panel */}
+      <Section1092StraddlePanel
+        onSelectAuthority={(auth) => setActiveAuthority(auth)}
+      />
 
       {/* 3-Year Loss Carryback Schedule Panel */}
       <div className="glass-panel p-5 rounded-xl border border-slate-800 bg-slate-950/70 space-y-4">
