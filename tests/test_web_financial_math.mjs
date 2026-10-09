@@ -2041,3 +2041,7 @@ test('25. Post-Commit Security Hardening, Timing Resilience, Bounded Caches & Gr
   }
 });
 
+import './test_api_contracts_mocked.mjs';
+import './test_components_smoke.mjs';
+
+
