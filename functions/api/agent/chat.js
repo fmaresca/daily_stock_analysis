@@ -67,29 +67,73 @@ Available Strategy Lenses:
 ${tickerContext ? `Currently focused ticker context: ${tickerContext}` : ""}`;
 }
 
+const POPULAR_TICKERS = new Set([
+  "TSLA", "AAPL", "NVDA", "MSFT", "AMZN", "GOOGL", "GOOG", "META", "AMD",
+  "PLTR", "SPY", "QQQ", "IWM", "DIA", "VIX", "NFLX", "AVGO", "COST",
+  "JPM", "BAC", "DIS", "INTC", "COIN", "SOFI", "UBER", "MARA", "RIOT",
+  "MSTR", "SMCI", "BABA", "NIO", "XOM", "CVX", "LLY", "UNH", "WMT",
+  "TGT", "BA", "CAT", "GE", "CRM", "ORCL", "PYPL", "SQ", "ROKU",
+  "SHOP", "ARM", "MU", "QCOM", "TXN", "PANW", "CRWD", "NOW", "SNOW",
+  "NET", "F", "GM", "RIVN", "LCID", "TLT", "GLD", "SLV", "USO", "UNG"
+]);
+
+const ENGLISH_WORDS_STOPLIST = new Set([
+  "A", "I", "IN", "ON", "AT", "TO", "OF", "FOR", "IS", "IT", "BY", "AS",
+  "AND", "OR", "THE", "CAN", "HOW", "WHY", "WHAT", "WHEN", "WILL", "DO",
+  "ARE", "NOT", "BUT", "ALL", "NEW", "BUY", "PUT", "CALL", "RSI", "SMA",
+  "MACD", "IV", "DTE", "ATM", "OTM", "ITM", "POP", "CBOE", "FOMC", "CPI",
+  "STOCK", "STOCKS", "ABOUT", "THIS", "TELL", "ME", "ANALYZE", "OVERBOUGHT", "OVERSOLD",
+  "HIGH", "LOW", "RISK", "CASH", "DROP", "FALL", "GAIN", "HOLD", "LOOK",
+  "MOVE", "MOVES", "NEXT", "WEEK", "GOOD", "BEST", "MAKE", "THINK", "TODAY", "PRICE",
+  "PRICES", "TRADE", "TRADES", "LEVEL", "LEVELS", "TREND", "TRENDS", "FAST", "SLOW",
+  "REAL", "OPEN", "PLAY", "PLAYS", "RUN", "DOWN", "PULL", "VIEW", "VIEWS", "RATE",
+  "RATES", "WELL", "MUCH", "SHOW", "HELP", "GIVE", "FIND", "SAFE", "SELL",
+  "TEST", "PLAN", "TARGET", "TRUE", "FREE", "COST", "DATA", "INFO", "WORK",
+  "LOSS", "LOSSES", "BIG", "BASE", "CARE", "CASE", "DEAL", "FACT", "FEEL",
+  "HOPE", "IDEA", "IDEAS", "KNOW", "LEAD", "LONG", "LOVE", "MIND", "PART",
+  "PAST", "PATH", "PEAK", "POST", "PURE", "READ", "RICH", "RISE", "ROAD",
+  "ROLE", "RULE", "SEEM", "SEEN", "SIDE", "SIGN", "SITE", "SIZE", "SOON",
+  "STAY", "STEP", "STOP", "SURE", "TAKE", "TALK", "TEAM", "TERM", "TERMS",
+  "TIME", "TURN", "TYPE", "USER", "VOTE", "WAIT", "WANT", "WARM", "WAVE",
+  "WAYS", "WEAK", "WENT", "WIDE", "WISH", "WORD", "YEAR", "ZERO", "ZONE",
+  "BEAR", "BULL", "PUTS", "CALLS", "SELLS", "BUYS", "HOLD", "HOLDS",
+  "SHORTS", "SHORT", "SAFE", "DEEP", "EVEN", "EVER", "FIVE", "FOUR", "FULL",
+  "HALF", "HARD", "HELD", "HUGE", "INTO", "JUST", "KEEP", "KEPT",
+  "LAST", "LATE", "LINE", "LOST", "MAIN", "MEAN", "MIGHT", "MOST", "NEAR",
+  "NEED", "ONCE", "ONLY", "OVER", "POOR", "REST", "SAME",
+  "SEEK", "SEND", "SHOT", "SLIP", "SNAP", "SOME",
+  "SUCH", "TALL", "THEN", "THEY", "TINY", "TOLD",
+  "TOOK", "VERY", "WERE", "WILD"
+]);
+
 /**
  * Extracts a ticker candidate from the user's message if not specified.
  */
 function extractTickerFromMessage(msg, fallbackTicker) {
   if (!msg || typeof msg !== "string") return fallbackTicker || "SPY";
+
+  // 1. Explicit dollar-prefixed ticker e.g. $TSLA or $AAPL
   const dollarMatch = msg.match(/\$([A-Za-z]{1,5})\b/);
   if (dollarMatch) return dollarMatch[1].toUpperCase();
 
   const words = msg.split(/[\s,?.!;:()"'`]+/);
-  const stopwords = new Set([
-    "A", "I", "IN", "ON", "AT", "TO", "OF", "FOR", "IS", "IT", "BY", "AS",
-    "AND", "OR", "THE", "CAN", "HOW", "WHY", "WHAT", "WHEN", "WILL", "DO",
-    "ARE", "NOT", "BUT", "ALL", "NEW", "BUY", "PUT", "CALL", "RSI", "SMA",
-    "MACD", "IV", "DTE", "ATM", "OTM", "ITM", "POP", "CBOE", "FOMC", "CPI",
-    "STOCK", "ABOUT", "THIS", "TELL", "ME", "ANALYZE", "OVERBOUGHT", "OVERSOLD",
-    "HIGH", "LOW", "RISK", "CASH", "DROP", "FALL", "GAIN", "HOLD", "LOOK"
-  ]);
+
+  // 2. High-priority check: explicitly matches a known prominent ticker
   for (const w of words) {
     const clean = w.toUpperCase();
-    if (/^[A-Z]{1,5}$/.test(clean) && !stopwords.has(clean)) {
+    if (POPULAR_TICKERS.has(clean)) {
       return clean;
     }
   }
+
+  // 3. Fallback check: 1-5 letters that are not conversational English stopwords
+  for (const w of words) {
+    const clean = w.toUpperCase();
+    if (/^[A-Z]{1,5}$/.test(clean) && !ENGLISH_WORDS_STOPLIST.has(clean)) {
+      return clean;
+    }
+  }
+
   return fallbackTicker || "SPY";
 }
 
@@ -240,7 +284,8 @@ async function executeAlgorithmicFallback({
   user,
   notice = "",
 }) {
-  const targetTicker = extractTickerFromMessage(userMessage, ticker) || "SPY";
+  const explicitTicker = extractTickerFromMessage(userMessage, null);
+  const targetTicker = explicitTicker || ticker || "SPY";
 
   // Step 1: Run technical indicators tool
   await sendData({
@@ -513,7 +558,8 @@ async function handlePost(context, user) {
   }));
 
   // Build System Prompt
-  const targetTicker = cleanTicker || session.ticker || extractTickerFromMessage(cleanMessage, "SPY");
+  const explicitTicker = extractTickerFromMessage(cleanMessage, null);
+  const targetTicker = explicitTicker || cleanTicker || session.ticker || "SPY";
   const systemPrompt = buildSystemPrompt(activeLens, targetTicker);
 
   // Set up SSE TransformStream
@@ -570,6 +616,23 @@ async function handlePost(context, user) {
 
         // Case 1: Tool Calls Requested
         if (response.toolCalls && response.toolCalls.length > 0) {
+          // Push a single assistant turn containing all generated tool calls
+          workingMessages.push({
+            role: "assistant",
+            content: response.text || "",
+            tool_calls: response.toolCalls.map((tc) => ({
+              id: tc.id,
+              type: "function",
+              function: {
+                name: tc.name,
+                arguments: typeof tc.arguments === "string"
+                  ? tc.arguments
+                  : JSON.stringify(tc.arguments || {}),
+              },
+            })),
+          });
+
+          // Execute each tool and append corresponding tool response
           for (const tc of response.toolCalls) {
             await sendData({
               type: "tool",
@@ -585,21 +648,6 @@ async function handlePost(context, user) {
               type: "tool_result",
               tool: tc.name,
               result: toolResult,
-            });
-
-            workingMessages.push({
-              role: "assistant",
-              content: response.text || null,
-              tool_calls: [{
-                id: tc.id,
-                type: "function",
-                function: {
-                  name: tc.name,
-                  arguments: typeof tc.arguments === "string"
-                    ? tc.arguments
-                    : JSON.stringify(tc.arguments || {}),
-                },
-              }],
             });
 
             workingMessages.push({

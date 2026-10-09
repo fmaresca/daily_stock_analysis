@@ -210,24 +210,82 @@ async function callGemini({
   // Convert messages to Gemini contents format
   const contents = [];
   for (const m of messages) {
-    const role = m.role === "assistant" ? "model" : "user";
-    if (m.tool_call_id) {
-      // Function response
+    // 1. Tool execution result (role: "tool" or has tool_call_id)
+    if (m.role === "tool" || m.tool_call_id) {
+      let responseObj;
+      try {
+        responseObj = typeof m.content === "string" ? JSON.parse(m.content) : m.content;
+      } catch {
+        responseObj = { output: m.content };
+      }
+      if (!responseObj || typeof responseObj !== "object" || Array.isArray(responseObj)) {
+        responseObj = { output: responseObj };
+      }
+
       contents.push({
         role: "function",
         parts: [{
           functionResponse: {
             name: m.name || "tool",
-            response: { content: m.content }
-          }
-        }]
+            response: {
+              name: m.name || "tool",
+              content: responseObj,
+            },
+          },
+        }],
       });
-    } else {
+      continue;
+    }
+
+    // 2. Assistant message with function calls
+    if (m.tool_calls && Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
+      const parts = [];
+      if (m.content && typeof m.content === "string" && m.content.trim()) {
+        parts.push({ text: m.content.trim() });
+      }
+      for (const tc of m.tool_calls) {
+        const fnName = tc.function?.name || tc.name || "tool";
+        let fnArgs = {};
+        try {
+          fnArgs = typeof tc.function?.arguments === "string"
+            ? JSON.parse(tc.function.arguments)
+            : (tc.function?.arguments || tc.args || {});
+        } catch {
+          fnArgs = {};
+        }
+        parts.push({
+          functionCall: {
+            name: fnName,
+            args: fnArgs,
+          },
+        });
+      }
+      if (parts.length > 0) {
+        contents.push({
+          role: "model",
+          parts,
+        });
+      }
+      continue;
+    }
+
+    // 3. Standard text conversation message (must have non-empty text)
+    const role = (m.role === "assistant" || m.role === "model") ? "model" : "user";
+    const textContent = (typeof m.content === "string" ? m.content.trim() : "") || (m.content ? String(m.content) : "");
+    if (textContent) {
       contents.push({
         role,
-        parts: [{ text: m.content }]
+        parts: [{ text: textContent }],
       });
     }
+  }
+
+  // Ensure contents has at least one valid message
+  if (contents.length === 0) {
+    contents.push({
+      role: "user",
+      parts: [{ text: "Hello" }],
+    });
   }
 
   const generationConfig = {
