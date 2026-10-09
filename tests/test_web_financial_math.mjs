@@ -1806,3 +1806,60 @@ test('23. Institutional v3.6 Capabilities: 5-Point Pre-Flight, Discord Gateway, 
   assert.ok(preflightToolResult.rating === 'PRIME' || preflightToolResult.rating === 'CONDITIONAL');
 });
 
+test('24. Section 1256 Derivatives Tax Engine Benchmark & Invariants', async () => {
+  const {
+    classify,
+    sixtyForty,
+    blendedRate,
+    lastBusinessDay,
+    recognise1256,
+    taxSchedule,
+    compareRegimes,
+  } = await import('../web/src/utils/section1256.ts');
+
+  // A. Classification & ETF ambiguity gate
+  assert.strictEqual(classify('SPX').regime, 'section1256');
+  assert.strictEqual(classify('SPX Call').regime, 'section1256');
+  assert.strictEqual(classify('NDX').regime, 'section1256');
+  assert.strictEqual(classify('/ES').regime, 'section1256');
+  assert.strictEqual(classify('SPY Call').regime, 'unclear');
+  assert.strictEqual(classify('QQQ').regime, 'unclear');
+  assert.strictEqual(classify('AAPL').regime, 'equityOption');
+
+  // B. 60/40 Split & Blended rate identity
+  const split = sixtyForty(10000);
+  assert.strictEqual(split.longTerm, 6000);
+  assert.strictEqual(split.shortTerm, 4000);
+  assert.ok(Math.abs(blendedRate(0.37, 0.20) - 0.268) < 1e-6);
+
+  // C. Last business day calendar approximation
+  assert.strictEqual(lastBusinessDay(2022), '2022-12-30');
+  assert.strictEqual(lastBusinessDay(2023), '2023-12-29');
+  assert.strictEqual(lastBusinessDay(2024), '2024-12-31');
+  assert.strictEqual(lastBusinessDay(2025), '2025-12-31');
+
+  // D. Pub 550 p.57 Futures Example ($50k -> $57k mark -> $56k sale)
+  const book = [
+    {
+      positionId: 'pub550-1',
+      symbol: '/ES',
+      entryDate: '2024-05-01',
+      entryBasis: 50000,
+      closeDate: '2025-05-01',
+      closeAmount: 56000,
+      yearEndMarks: { 2024: 57000 },
+    },
+  ];
+  const gains = recognise1256(book);
+  assert.strictEqual(gains.length, 2);
+  assert.strictEqual(gains[0].amount, 7000);
+  assert.strictEqual(gains[1].amount, -1000);
+  const sumRecognized = gains.reduce((acc, g) => acc + g.amount, 0);
+  assert.strictEqual(sumRecognized, 6000);
+
+  // E. Regime Comparison
+  const comp = compareRegimes(book, 0.37, 0.20);
+  assert.strictEqual(comp.totalEconomicMove, 6000);
+  assert.ok(comp.disclaimer.includes('not tax advice'));
+});
+

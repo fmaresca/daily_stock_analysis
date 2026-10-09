@@ -20,6 +20,7 @@ import {
 import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest';
 import { getOptionExpirationStatus } from './optionExpirationEngine';
 import { CBOE_WEEKLY_OPTIONS_SET, isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
+import { classify } from './section1256';
 
 const CAPITAL_STORAGE_KEY = 'deltaharvest_capital_ledger';
 const TAX_STORAGE_KEY = 'deltaharvest_tax_ledger';
@@ -272,6 +273,20 @@ export function getStoredTaxLedgerState(): TaxLedgerState {
           parsed.ytdPremiumsEarned = DEFAULT_YTD_PREMIUMS_EARNED;
           saveTaxLedgerState(parsed);
         }
+        if (Array.isArray(parsed.records)) {
+          parsed.records = parsed.records.map((r) => {
+            if (!r.taxRegime || !r.regimeBadge) {
+              const cls = classify(r.symbol, r.strategy);
+              return {
+                ...r,
+                taxRegime: cls.regime,
+                regimeBadge: cls.badgeLabel,
+                authority: cls.authority,
+              };
+            }
+            return r;
+          });
+        }
         return parsed;
       }
     }
@@ -375,6 +390,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
     };
     positions = [newPos, ...positions];
 
+    const clsCsp = classify(sym, 'CSP');
     const newTaxRec: TaxLedgerRecord = {
       id: `REC_LIVE_${Date.now()}`,
       date: txDate,
@@ -383,6 +399,9 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
       amount: totalPremium,
       strategy: 'CSP',
       note: tx.notes || `Sold to Open ${contracts}x $${strike.toFixed(2)}P exp ${expiration} (+$${totalPremium.toFixed(2)})`,
+      taxRegime: clsCsp.regime,
+      regimeBadge: clsCsp.badgeLabel,
+      authority: clsCsp.authority,
     };
     taxLedger.records = [newTaxRec, ...taxLedger.records];
     taxLedger.ytdPremiumsEarned += totalPremium;
@@ -425,6 +444,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
     };
     positions = [newPos, ...positions];
 
+    const clsCc = classify(sym, 'COVERED_CALL');
     const newTaxRec: TaxLedgerRecord = {
       id: `REC_LIVE_${Date.now()}`,
       date: txDate,
@@ -433,6 +453,9 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
       amount: totalPremium,
       strategy: 'COVERED_CALL',
       note: tx.notes || `Sold to Open ${contracts}x $${strike.toFixed(2)}C exp ${expiration} (+$${totalPremium.toFixed(2)})`,
+      taxRegime: clsCc.regime,
+      regimeBadge: clsCc.badgeLabel,
+      authority: clsCc.authority,
     };
     taxLedger.records = [newTaxRec, ...taxLedger.records];
     taxLedger.ytdPremiumsEarned += totalPremium;
@@ -500,6 +523,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
     const pnl = (salePrice - costBasis) * shares;
     const isGain = pnl >= 0;
 
+    const clsStock = classify(sym, 'STOCK');
     const newTaxRec: TaxLedgerRecord = {
       id: `REC_LIVE_${Date.now()}`,
       date: txDate,
@@ -508,6 +532,9 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
       amount: Math.abs(pnl),
       strategy: 'STOCK',
       note: tx.notes || `Sold ${shares} shares @ $${salePrice.toFixed(2)} (Cost: $${costBasis.toFixed(2)}, P&L: ${isGain ? '+' : ''}$${pnl.toFixed(2)})`,
+      taxRegime: clsStock.regime,
+      regimeBadge: clsStock.badgeLabel,
+      authority: clsStock.authority,
     };
     taxLedger.records = [newTaxRec, ...taxLedger.records];
 

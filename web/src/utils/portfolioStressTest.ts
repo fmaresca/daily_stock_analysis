@@ -32,6 +32,9 @@ export interface PortfolioPosition {
   costBasisTotal?: number;
   marketValueTotal?: number;
   account?: string;
+  taxRegime?: 'section1256' | 'equityOption' | 'unclear';
+  regimeBadge?: '§1256' | 'Equity option' | 'Needs review';
+  authority?: string;
 }
 
 export interface StressScenarioResult {

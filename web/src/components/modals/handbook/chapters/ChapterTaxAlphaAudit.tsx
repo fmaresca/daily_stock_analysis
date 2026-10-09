@@ -233,6 +233,45 @@ export const ChapterTaxAlphaAudit: React.FC<ChapterTaxAlphaAuditProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Section 1256 Engine Architecture & Verified Rules */}
+      <div className="bg-slate-950/80 p-4 rounded-xl border border-emerald-500/30 space-y-3 text-xs">
+        <div className="flex items-center justify-between">
+          <span className="font-bold text-white flex items-center gap-1.5">
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <span>Section 1256 Engine Architecture &amp; Rate/Timing Decomposition</span>
+          </span>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            MIT Attribution: howard-lynn-ye/Fin-RSI
+          </span>
+        </div>
+        <p className="text-slate-300 text-[11px] leading-relaxed">
+          Ported from the verified Section 1256 tax engine in <code>howard-lynn-ye/Fin-RSI</code> (source-verified against IRC §1256, IRS Pub 550, 15 U.S.C. §78c(a)(55), and Rev. Rul. 2026-16).
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
+          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+            <span className="font-bold text-emerald-400 block font-mono">1. Rate Effect vs. Timing Effect</span>
+            <p className="text-slate-400 text-[10px] leading-normal">
+              Rate Effect saves tax via statutory 60/40 blended rates (26.8% at 37/20). Timing Effect pulls forward tax cash outflows to Dec 31 before positions are sold. Both must be presented transparently.
+            </p>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+            <span className="font-bold text-cyan-400 block font-mono">2. Mark-Chaining Invariant</span>
+            <p className="text-slate-400 text-[10px] leading-normal">
+              Each year&apos;s recognized gain equals the year-end mark minus prior reference. The mark becomes the new reference basis so subsequent closes never double-count economic moves (IRS Pub 550 p.57).
+            </p>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+            <span className="font-bold text-purple-400 block font-mono">3. 3-Year Carryback (&sect;1212(c))</span>
+            <p className="text-slate-400 text-[10px] leading-normal">
+              Net Section 1256 losses can be carried back up to 3 preceding calendar tax years against prior 1256 gains to generate cash refunds. File IRS Form 6781 with your CPA.
+            </p>
+          </div>
+        </div>
+        <div className="text-[10px] text-amber-300/80 bg-amber-500/10 p-2 rounded border border-amber-500/20">
+          <strong>Modelling assumptions for backtests and portfolio analysis, NOT tax advice.</strong> Rates are user inputs, never hardcoded. ETF options (SPY/QQQ) hold conflicting precedent and default to equity options unless confirmed by your CPA.
+        </div>
+      </div>
     </div>
   );
 };

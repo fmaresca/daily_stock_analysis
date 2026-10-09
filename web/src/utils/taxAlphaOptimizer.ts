@@ -1,18 +1,29 @@
 /**
  * Section 1256 Tax-Alpha & Wash-Sale Shield Optimization Engine
  *
- * Models the IRS Section 1256 60/40 blended capital gains tax advantage:
- * - 60% Long-Term Capital Gains (20% top rate)
- * - 40% Short-Term Capital Gains (37% top rate)
- * Blended Effective Rate: 26.8% vs 37.0% Ordinary Income = 10.2% Pure Tax Alpha.
+ * Attribution:
+ * Ported from MIT-licensed `howard-lynn-ye/Fin-RSI`
+ * (`fin_skills/_skills/section-1256-and-derivatives-tax/SKILL.md`,
+ * source-verified 2026-09-09 against IRC §1256, IRS Pub 550 (2025),
+ * 15 U.S.C. §78c(a)(55), and Rev. Rul. 2026-16).
  *
- * Also provides non-substantially identical tax-loss harvesting proxy swaps to bank
- * tax deductions without triggering IRS Section 1091 30-day wash-sale rules.
+ * IMPORTANT LEGAL & TAX DISCLAIMER:
+ * Modelling assumptions for backtests and portfolio analysis, NOT tax advice.
+ * Always consult a qualified CPA or licensed tax professional regarding your
+ * specific tax situation and filing of IRS Form 6781.
  */
 
+import {
+  classify,
+  blendedRate,
+  sixtyForty,
+  TaxRegime,
+  ClassificationResult,
+} from './section1256';
+
 export interface TaxBracketProfile {
-  marginalOrdinaryRatePct: number; // e.g. 37% or 32%
-  longTermCapGainsRatePct: number; // e.g. 20% or 15%
+  marginalOrdinaryRatePct: number; // e.g. 37% or 32% (User input, never hardcoded default)
+  longTermCapGainsRatePct: number; // e.g. 20% or 15% (User input, never hardcoded default)
 }
 
 export interface Section1256Comparison {
@@ -22,6 +33,13 @@ export interface Section1256Comparison {
   taxAlphaSavingsDollars: number;
   effectiveTaxReliefPct: number;
   noWashSaleAccounting: boolean;
+  rateEffect: number; // Pure statutory savings from 60/40 vs short-term
+  timingEffect: number; // Cost of earlier recognition via year-end mark
+  netTaxAlpha: number; // rateEffect - timingEffect
+  blendedRatePct: number;
+  authority: string;
+  disclaimer: string;
+  decemberMtmWarning?: string;
 }
 
 export interface WashSaleHarvestCandidate {
@@ -38,36 +56,158 @@ export interface WashSaleHarvestCandidate {
   rationale: string;
 }
 
+export interface TaxAlphaHoldingPosition {
+  id: string;
+  symbol: string;
+  description: string;
+  contractType: string;
+  unrealizedPnl: number;
+  isOpenAtYearEnd: boolean;
+  classification: ClassificationResult;
+}
+
+export const TAX_RATES_STORAGE_KEY = 'deltaharvest_tax_rates';
+
 export const DEFAULT_TAX_PROFILE: TaxBracketProfile = {
-  marginalOrdinaryRatePct: 35.0,
+  marginalOrdinaryRatePct: 37.0,
   longTermCapGainsRatePct: 20.0,
 };
 
+export function getStoredTaxProfile(): TaxBracketProfile {
+  if (typeof window === 'undefined') {
+    return DEFAULT_TAX_PROFILE;
+  }
+  try {
+    const raw = localStorage.getItem(TAX_RATES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (
+        typeof parsed.marginalOrdinaryRatePct === 'number' &&
+        typeof parsed.longTermCapGainsRatePct === 'number'
+      ) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return DEFAULT_TAX_PROFILE;
+}
+
+export function saveStoredTaxProfile(profile: TaxBracketProfile): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(TAX_RATES_STORAGE_KEY, JSON.stringify(profile));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Calculates Section 1256 comparison breaking out Rate Effect and Timing Effect.
+ *
+ * Authority:
+ * - Rate Effect: IRC §1256(a)(3) — 60/40 blended capital gains vs short-term rate.
+ * - Timing Effect: IRC §1256(a)(1), IRS Pub 550 (2025) p.57 — Year-end mark-to-market.
+ */
 export function calculateSection1256Comparison(
   annualNetProfit: number,
-  profile: TaxBracketProfile = DEFAULT_TAX_PROFILE
+  profile: TaxBracketProfile = DEFAULT_TAX_PROFILE,
+  open1256UnrealizedGains: number = 0
 ): Section1256Comparison {
   const profit = Math.max(0, annualNetProfit);
+  const sRate = profile.marginalOrdinaryRatePct / 100.0;
+  const lRate = profile.longTermCapGainsRatePct / 100.0;
+  const blended = blendedRate(sRate, lRate);
+  const blendedPct = Math.round(blended * 1000) / 10;
 
-  // Equity option: 100% ordinary income
-  const equityOptionTax = profit * (profile.marginalOrdinaryRatePct / 100.0);
+  // Equity option: 100% ordinary / short-term income
+  const equityOptionTax = profit * sRate;
 
   // Section 1256: 60% Long-Term, 40% Short-Term
-  const blendedRate =
-    0.60 * profile.longTermCapGainsRatePct + 0.40 * profile.marginalOrdinaryRatePct;
-  const section1256Tax = profit * (blendedRate / 100.0);
+  const section1256Tax = profit * blended;
 
-  const taxAlphaSavingsDollars = Math.round((equityOptionTax - section1256Tax) * 100) / 100;
-  const effectiveTaxReliefPct = Math.round((profile.marginalOrdinaryRatePct - blendedRate) * 10) / 10;
+  // Rate Effect: Pure statutory tax savings from 60/40 rate vs short-term rate
+  const rateEffect = Math.round((equityOptionTax - section1256Tax) * 100) / 100;
+
+  // Timing Effect: Tax due on December 31 for open mark-to-market gains before cash realization
+  const timingEffect =
+    open1256UnrealizedGains > 0
+      ? Math.round(open1256UnrealizedGains * blended * 100) / 100
+      : 0;
+
+  // Net Tax Alpha taking both counteracting effects into account
+  const netTaxAlpha = Math.round((rateEffect - timingEffect) * 100) / 100;
+  const effectiveTaxReliefPct = Math.round((profile.marginalOrdinaryRatePct - blendedPct) * 10) / 10;
+
+  let decemberMtmWarning: string | undefined;
+  if (open1256UnrealizedGains > 0 && timingEffect > 0) {
+    decemberMtmWarning = `Cash-Flow Warning (IRC §1256(a)(1)): You will owe an estimated $${timingEffect.toLocaleString()} in tax on $${open1256UnrealizedGains.toLocaleString()} of unrealized gains on Dec 31 with NO sale proceeds to fund it. Prepare cash reserves before year-end.`;
+  }
 
   return {
     annualNetProfit: profit,
-    equityOptionTax: Math.round(equityOptionTax),
-    section1256Tax: Math.round(section1256Tax),
-    taxAlphaSavingsDollars,
+    equityOptionTax: Math.round(equityOptionTax * 100) / 100,
+    section1256Tax: Math.round(section1256Tax * 100) / 100,
+    taxAlphaSavingsDollars: rateEffect,
     effectiveTaxReliefPct,
     noWashSaleAccounting: true,
+    rateEffect,
+    timingEffect,
+    netTaxAlpha,
+    blendedRatePct: blendedPct,
+    authority: 'IRC §1256(a)(3) — 60/40 rate; IRC §1256(a)(1) — Mark-to-market',
+    disclaimer: 'Modelling assumptions for backtests and portfolio analysis, not tax advice. Consult a licensed CPA.',
+    decemberMtmWarning,
   };
+}
+
+/**
+ * Returns sample positions demonstrating regime classification badges:
+ * - SPX position -> §1256 badge with authority
+ * - SPY position -> Equity option badge (unclear regime with Rev. Rul. 2026-16 warning)
+ * - AAPL position -> Equity option badge
+ * - OTC/Exotic position -> Needs review badge
+ */
+export function getSampleTaxAlphaPositions(): TaxAlphaHoldingPosition[] {
+  return [
+    {
+      id: 'POS_SPX_CONDOR',
+      symbol: 'SPX',
+      description: 'SPX 5000/5050 Iron Condor (European Cash-Settled)',
+      contractType: 'nonequity option',
+      unrealizedPnl: 8500,
+      isOpenAtYearEnd: true,
+      classification: classify('SPX', 'nonequity option'),
+    },
+    {
+      id: 'POS_SPY_PUT',
+      symbol: 'SPY',
+      description: 'SPY 510 Cash-Secured Put (ETF Option)',
+      contractType: 'equity option',
+      unrealizedPnl: 1200,
+      isOpenAtYearEnd: false,
+      classification: classify('SPY', 'equity option'),
+    },
+    {
+      id: 'POS_AAPL_CC',
+      symbol: 'AAPL',
+      description: 'AAPL 220 Covered Call (Single-Stock Equity Option)',
+      contractType: 'equity option',
+      unrealizedPnl: 2400,
+      isOpenAtYearEnd: false,
+      classification: classify('AAPL', 'equity option'),
+    },
+    {
+      id: 'POS_EXOTIC_SWAP',
+      symbol: 'OTC_SWAP',
+      description: 'Synthetic Total Return Swap (Over-the-Counter)',
+      contractType: 'swap',
+      unrealizedPnl: 3100,
+      isOpenAtYearEnd: false,
+      classification: classify('OTC_SWAP', 'swap'),
+    },
+  ];
 }
 
 export function getSampleWashSaleCandidates(

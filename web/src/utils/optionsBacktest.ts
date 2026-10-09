@@ -1,6 +1,39 @@
 /**
  * Systematic Options Strategy Backtester & FINRA 4210 Margin Stress Test Engine
+ *
+ * Attribution:
+ * Section 1256 after-tax compounding and regime comparison ported from MIT-licensed
+ * `howard-lynn-ye/Fin-RSI` (`fin_skills/_skills/section-1256-and-derivatives-tax/SKILL.md`,
+ * source-verified 2026-09-09 against IRC §1256, IRS Pub 550 (2025), and Rev. Rul. 2026-16).
+ *
+ * IMPORTANT LEGAL & TAX DISCLAIMER:
+ * Modelling assumptions for backtests, NOT tax advice.
+ * Always consult a qualified CPA or licensed tax professional regarding your
+ * specific tax situation and filing of IRS Form 6781.
  */
+
+import {
+  classify,
+  blendedRate,
+  compareRegimes,
+  RegimeComparisonResult,
+  PositionMark,
+  ClassificationResult,
+} from './section1256';
+
+export interface AfterTaxBacktestConfig {
+  enabled: boolean;
+  shortTermRatePct: number; // e.g. 37% (user input, never default)
+  longTermRatePct: number; // e.g. 20% (user input, never default)
+}
+
+export interface RegimeCurvePoint {
+  date: string;
+  preTaxEquity: number;
+  section1256Equity: number;
+  equityOptionEquity: number;
+  benchmarkEquity: number;
+}
 
 export interface BacktestResult {
   symbol: string;
@@ -23,6 +56,18 @@ export interface BacktestResult {
   profitFactor: number;
   totalPremiumHarvested: number;
   equityCurve: { date: string; strategyEquity: number; benchmarkEquity: number }[];
+  classification: ClassificationResult;
+  // After-tax capabilities (additive only)
+  afterTaxEnabled?: boolean;
+  afterTaxEndingCapital?: number;
+  afterTaxTotalReturnPct?: number;
+  totalTaxPaid?: number;
+  regimeComparison?: RegimeComparisonResult;
+  regimeEquityCurve?: RegimeCurvePoint[];
+  holdingPeriodDays?: number;
+  holdingPeriodWarning?: string;
+  disclaimer?: string;
+  authority?: string;
 }
 
 export interface MarginStressScenario {
@@ -40,7 +85,8 @@ export interface MarginStressScenario {
 export function runOptionsBacktest(
   symbol: string,
   strategyKey: '30D_CSP_15DELTA' | '7D_CSP_15DELTA' | 'BULL_PUT_SPREAD' | 'COVERED_CALL',
-  years: 1 | 2 | 3
+  years: 1 | 2 | 3,
+  afterTaxConfig?: AfterTaxBacktestConfig
 ): BacktestResult {
   const initialCapital = 100000;
   const isWeekly = strategyKey === '7D_CSP_15DELTA';
@@ -87,9 +133,9 @@ export function runOptionsBacktest(
   const profitFactor = 2.45;
   const totalPremiumHarvested = Math.round(endingCapital - initialCapital);
 
-  // Generate monthly equity curve points
+  // Generate monthly equity curve points (strictly pre-tax baseline)
   const totalMonths = years * 12;
-  const equityCurve = [];
+  const equityCurve: { date: string; strategyEquity: number; benchmarkEquity: number }[] = [];
   const startDate = new Date();
   startDate.setFullYear(startDate.getFullYear() - years);
 
@@ -118,7 +164,11 @@ export function runOptionsBacktest(
     });
   }
 
-  return {
+  // Instrument statutory tax regime classification
+  const classification = classify(symbol, isSpread ? 'spread' : 'option');
+
+  // Baseline pre-tax result (byte-for-byte identical when afterTaxConfig is disabled)
+  const result: BacktestResult = {
     symbol,
     strategyName: strategyNames[strategyKey],
     timeframeYears: years,
@@ -139,6 +189,131 @@ export function runOptionsBacktest(
     profitFactor,
     totalPremiumHarvested,
     equityCurve,
+    classification,
+  };
+
+  // If after-tax mode is disabled, return byte-for-byte identical output immediately
+  if (!afterTaxConfig?.enabled) {
+    return result;
+  }
+
+  // -------------------------------------------------------------
+  // After-Tax Compounding & Mark-to-Market Mode (Skill §5)
+  // -------------------------------------------------------------
+  const sRate = (afterTaxConfig.shortTermRatePct || 37) / 100.0;
+  const lRate = (afterTaxConfig.longTermRatePct || 20) / 100.0;
+  const bRate = blendedRate(sRate, lRate); // 26.8% at 37/20
+
+  // Holding period for this systematic strategy
+  const holdingPeriodDays = isWeekly ? 7 : 30;
+  const isHoldingOverYear = holdingPeriodDays > 365;
+
+  // Build simulated PositionMark book for compareRegimes
+  const currentCalYear = new Date().getFullYear();
+  const startCalYear = currentCalYear - years;
+  const yearEndMarks: Record<number, number> = {};
+
+  for (let yr = 1; yr < years; yr++) {
+    const monthIdx = yr * 12;
+    if (equityCurve[monthIdx]) {
+      yearEndMarks[startCalYear + yr - 1] = equityCurve[monthIdx].strategyEquity;
+    }
+  }
+
+  const book: PositionMark[] = [
+    {
+      positionId: `bt-${symbol}-${strategyKey}`,
+      symbol,
+      entryDate: `${startCalYear}-01-01`,
+      entryBasis: initialCapital,
+      closeDate: `${currentCalYear}-12-31`,
+      closeAmount: endingCapital,
+      yearEndMarks,
+    },
+  ];
+
+  const regimeComparison = compareRegimes(book, sRate, lRate);
+
+  // Compute after-tax compounding equity curves:
+  // - 1256 debits tax at each calendar year-end mark (every 12 months)
+  // - Equity option debits short-term tax upon monthly closes
+  const regimeEquityCurve: RegimeCurvePoint[] = [];
+
+  let curPreTax = initialCapital;
+  let cur1256 = initialCapital;
+  let curEqOpt = initialCapital;
+  let prev1256Ref = initialCapital;
+
+  regimeEquityCurve.push({
+    date: equityCurve[0].date,
+    preTaxEquity: initialCapital,
+    section1256Equity: initialCapital,
+    equityOptionEquity: initialCapital,
+    benchmarkEquity: initialCapital,
+  });
+
+  for (let m = 1; m <= totalMonths; m++) {
+    const pt = equityCurve[m];
+    const prevPt = equityCurve[m - 1];
+    const preTaxMonthlyReturn = (pt.strategyEquity - prevPt.strategyEquity) / prevPt.strategyEquity;
+
+    // Pre-tax step
+    curPreTax = pt.strategyEquity;
+
+    // Equity Option: debits tax on each monthly realized close
+    // After-tax monthly gain = preTaxGain * (1 - sRate)
+    const eqOptGain = curEqOpt * preTaxMonthlyReturn;
+    const eqOptTax = eqOptGain > 0 ? eqOptGain * sRate : 0;
+    curEqOpt = Math.round(curEqOpt + eqOptGain - eqOptTax);
+
+    // Section 1256: compounds pre-tax during the calendar year,
+    // then strictly debits tax at each December year-end mark (every 12 months)
+    cur1256 = Math.round(cur1256 * (1 + preTaxMonthlyReturn));
+
+    const isYearEnd = m % 12 === 0 || m === totalMonths;
+    if (isYearEnd) {
+      const yearGain = cur1256 - prev1256Ref;
+      if (yearGain > 0) {
+        const yearTax = Math.round(yearGain * bRate);
+        cur1256 = Math.max(0, cur1256 - yearTax); // Debit tax at year-end mark
+      }
+      prev1256Ref = cur1256; // Year-end mark becomes the new reference
+    }
+
+    regimeEquityCurve.push({
+      date: pt.date,
+      preTaxEquity: curPreTax,
+      section1256Equity: cur1256,
+      equityOptionEquity: curEqOpt,
+      benchmarkEquity: pt.benchmarkEquity,
+    });
+  }
+
+  // Active regime choice for primary output
+  const is1256 = classification.regime === 'section1256';
+  const afterTaxEndingCapital = is1256 ? cur1256 : curEqOpt;
+  const afterTaxTotalReturnPct =
+    Math.round(((afterTaxEndingCapital - initialCapital) / initialCapital) * 1000) / 10;
+  const totalTaxPaid = Math.round(endingCapital - afterTaxEndingCapital);
+
+  let holdingPeriodWarning: string | undefined;
+  if (isHoldingOverYear) {
+    holdingPeriodWarning =
+      'Holding-period honesty check (IRC §1222): 60/40 is a blend — it beats the short-term rate but loses to the long-term rate. Because your strategy holding period exceeds 365 days, standard long-term capital gains treatment may yield lower total tax.';
+  }
+
+  return {
+    ...result,
+    afterTaxEnabled: true,
+    afterTaxEndingCapital,
+    afterTaxTotalReturnPct,
+    totalTaxPaid,
+    regimeComparison,
+    regimeEquityCurve,
+    holdingPeriodDays,
+    holdingPeriodWarning,
+    disclaimer: 'Modelling assumptions for backtests and portfolio analysis, not tax advice. Consult a licensed CPA.',
+    authority: 'IRC §1256(a)(3) — 60/40; IRC §1256(a)(1) — Mark-to-market; IRS Pub 550 (2025) p.57',
   };
 }
 

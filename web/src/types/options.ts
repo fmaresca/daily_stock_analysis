@@ -628,6 +628,9 @@ export interface TaxLedgerRecord {
   amount: number;
   strategy: 'CSP' | 'COVERED_CALL' | 'STOCK' | 'SPREAD' | string;
   note?: string;
+  taxRegime?: 'section1256' | 'equityOption' | 'unclear';
+  regimeBadge?: '§1256' | 'Equity option' | 'Needs review';
+  authority?: string;
 }
 
 export interface TaxLedgerState {
