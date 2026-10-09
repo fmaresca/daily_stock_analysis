@@ -77,7 +77,14 @@ export const WatchlistManagerModal: React.FC<WatchlistManagerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const activeGroup = watchlistGroups.find((g) => g.id === activeGroupId) || watchlistGroups[0];
+  const fallbackGroup: WatchlistGroup = {
+    id: 'default',
+    name: 'Primary Watchlist',
+    tickers: [],
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+  };
+  const activeGroup = watchlistGroups.find((g) => g.id === activeGroupId) || watchlistGroups[0] || fallbackGroup;
   const currentTickers = activeGroup?.tickers || [];
 
   // Group Selection handler

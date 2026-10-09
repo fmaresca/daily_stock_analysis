@@ -84,12 +84,12 @@
 | V072 | Modal M02 | Tradier Settings Modal | Profile / Settings -> "Tradier Settings" | Configures Tradier API access mode and account identifiers | PASS |
 | V073 | Modal M03 | Schwab Settings Modal | Profile / Settings -> "Schwab Settings" | Configures Charles Schwab API connectivity status | PASS |
 | V074 | Modal M04 | API Diagnostics Modal | Profile / Settings -> "API Diagnostics" | Tests connectivity to all endpoints, checks latency and auth status | PASS |
-| V075 | Modal M05 | Watchlist Manager Modal | Click "Manage Watchlists" | Creates, renames, and deletes custom ticker watchlists | FAIL:crashes on mount/render if watchlistGroups is empty |
+| V075 | Modal M05 | Watchlist Manager Modal | Click "Manage Watchlists" | Creates, renames, and deletes custom ticker watchlists | PASS |
 | V076 | Modal M06 | Report Query Modal | Header / Reports -> "Generate Query Report" | Formulates custom institutional report queries | PASS |
 | V077 | Modal M07 | Ticker Audit Modal (Equity Analysis) | Click ticker link or Audit button anywhere in terminal | Loads comprehensive technical, fundamental, and sentiment audit | PASS |
 | V078 | Modal M08 | Option Detail Modal | Click option contract row in any screener/chain | Shows Greeks (Delta, Gamma, Theta, Vega), IV, payoff profile | PASS |
 | V079 | Modal M09 | Income Calculator Modal | Click "Calculate Income" on covered call row | Computes projected return based on contracts, premium, and margin | PASS |
-| V080 | Modal M10 | Broker Order Staging Modal | Click "Stage Order" on any recommended trade | Edits action, quantity, limit price, duration, and submits to staging | FAIL:crashes with TypeError if capitalSavedByPm is undefined under PORTFOLIO_MARGIN |
+| V080 | Modal M10 | Broker Order Staging Modal | Click "Stage Order" on any recommended trade | Edits action, quantity, limit price, duration, and submits to staging | PASS |
 | V081 | Modal M11 | Alert Settings Modal | Click Bell / Alert settings | Configures price, IV rank, and technical breakout alert thresholds | PASS |
 | V082 | Modal M12 | Options Trade Quality Simulator | Click "Trade Quality" / "Simulate" | Grades proposed option structure on liquidity, skew, and edge | PASS |
 | V083 | Modal M13 | Fundamental Valuation Modal (DCF) | Click "DCF Valuation" on ticker audit | Interactive DCF model with discount rate, growth rate, margin sliders | PASS |

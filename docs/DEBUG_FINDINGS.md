@@ -10,7 +10,8 @@ Date: 2026-10-09
 
 | Finding | File(s) changed | Test | Result |
 |---------|-----------------|------|--------|
-| *Pending Prompt 4 execution* | | | |
+| FAIL 1 (V075): WatchlistManagerModal crash on empty watchlist groups | `web/src/components/WatchlistManagerModal.tsx` | `tests/test_components_smoke.mjs` (empty watchlistGroups mount assertion) | PASS |
+| FAIL 2 (V080): BrokerOrderStagingModal crash on undefined PM numbers | `web/src/components/BrokerOrderStagingModal.tsx` | `tests/test_components_smoke.mjs` (undefined PM numbers mount assertion) | PASS |
 
 ---
 

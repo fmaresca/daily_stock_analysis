@@ -339,6 +339,18 @@ test('Component Smoke: Modals (Help, Settings, Diagnostics, Audit)', async () =>
   });
   assert.ok(watchlistModalHtml.length > 500, 'WatchlistManagerModal rendered successfully');
 
+  // Regression check: WatchlistManagerModal mounts safely even with completely empty watchlistGroups
+  const emptyWatchlistModalHtml = await renderComponent('components/WatchlistManagerModal.tsx', 'WatchlistManagerModal', {
+    isOpen: true,
+    onClose: () => {},
+    watchlistGroups: [],
+    setWatchlistGroups: () => {},
+    activeGroupId: '',
+    setActiveGroupId: () => {},
+    availableUniverse: [],
+  });
+  assert.ok(emptyWatchlistModalHtml.length > 500, 'WatchlistManagerModal renders safely on empty groups');
+
   const reportQueryHtml = await renderComponent('components/ReportQueryModal.tsx', 'ReportQueryModal', {
     isOpen: true,
     onClose: () => {},
@@ -380,6 +392,30 @@ test('Component Smoke: Modals (Help, Settings, Diagnostics, Audit)', async () =>
     },
   });
   assert.ok(brokerStagingModalHtml.length > 500, 'BrokerOrderStagingModal rendered successfully');
+
+  // Regression check: BrokerOrderStagingModal mounts safely with PORTFOLIO_MARGIN and undefined numerical fields
+  const pmUndefinedStagingHtml = await renderComponent('components/BrokerOrderStagingModal.tsx', 'BrokerOrderStagingModal', {
+    isOpen: true,
+    onClose: () => {},
+    stagedOrder: {
+      id: 'order_pm_test',
+      symbol: 'NVDA',
+      strategy: 'CSP',
+      strike: 120,
+      expiration: '2026-10-16',
+      limitPrice: 1.50,
+      quantity: 1,
+      accountType: 'PORTFOLIO_MARGIN',
+      priceExecution: 'LIMIT',
+      entryLegs: [],
+      takeProfitLegs: [],
+      stopLossLegs: [],
+      schwabJsonPayload: '{}',
+      ibkrBasketCsv: '',
+      thinkorswimString: '',
+    },
+  });
+  assert.ok(pmUndefinedStagingHtml.length > 500, 'BrokerOrderStagingModal renders safely with undefined PM numbers');
 
   const incomeCalcHtml = await renderComponent('components/IncomeCalculatorModal.tsx', 'IncomeCalculatorModal', {
     opportunity: {

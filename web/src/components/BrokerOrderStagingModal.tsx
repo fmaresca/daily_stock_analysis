@@ -292,10 +292,10 @@ export const BrokerOrderStagingModal: React.FC<BrokerOrderStagingModalProps> = (
                 Net Premium Collected
               </span>
               <div className="text-base font-black text-emerald-400 font-mono">
-                +${stagedOrder.totalNetCredit.toLocaleString()}
+                +${(stagedOrder.totalNetCredit ?? 0).toLocaleString()}
               </div>
               <span className="text-[10px] text-slate-400 block font-mono">
-                ${stagedOrder.netCreditPerContract.toFixed(2)}/contract
+                ${(stagedOrder.netCreditPerContract ?? 0).toFixed(2)}/contract
               </span>
             </div>
 
@@ -304,7 +304,7 @@ export const BrokerOrderStagingModal: React.FC<BrokerOrderStagingModalProps> = (
                 80% Take-Profit Target
               </span>
               <div className="text-base font-black text-amber-400 font-mono">
-                ${stagedOrder.takeProfitPrice.toFixed(2)}
+                ${(stagedOrder.takeProfitPrice ?? 0).toFixed(2)}
               </div>
               <span className="text-[10px] text-emerald-400 block">
                 Buy-to-Close GTC Limit
@@ -316,7 +316,7 @@ export const BrokerOrderStagingModal: React.FC<BrokerOrderStagingModalProps> = (
                 Defensive Stop/Roll Trigger
               </span>
               <div className="text-base font-black text-rose-400 font-mono">
-                ${stagedOrder.stopLossPrice.toFixed(2)}
+                ${(stagedOrder.stopLossPrice ?? 0).toFixed(2)}
               </div>
               <span className="text-[10px] text-slate-400 block">
                 200% Premium / 0.50Δ Alert
@@ -328,7 +328,7 @@ export const BrokerOrderStagingModal: React.FC<BrokerOrderStagingModalProps> = (
                 Collateral / Margin
               </span>
               <div className="text-base font-black text-slate-200 font-mono">
-                ${stagedOrder.totalMarginRequired.toLocaleString()}
+                ${(stagedOrder.totalMarginRequired ?? 0).toLocaleString()}
               </div>
               <span className="text-[10px] text-slate-400 block">
                 {stagedOrder.accountType === 'PORTFOLIO_MARGIN'
@@ -372,7 +372,7 @@ export const BrokerOrderStagingModal: React.FC<BrokerOrderStagingModalProps> = (
               <span>• Automatic GTC bracket order enforces the <strong>80% max profit</strong> take-profit rule.</span>
               {stagedOrder.capitalSavedByPm && stagedOrder.capitalSavedByPm > 0 && (
                 <span className="text-emerald-400 font-semibold">
-                  • Portfolio Margin frees up <strong>${stagedOrder.capitalSavedByPm.toLocaleString()}</strong> in excess buying power vs Reg-T!
+                  • Portfolio Margin frees up <strong>${(stagedOrder.capitalSavedByPm ?? 0).toLocaleString()}</strong> in excess buying power vs Reg-T!
                 </span>
               )}
             </div>
