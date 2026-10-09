@@ -789,12 +789,42 @@ const PAST_WEEK_SCHEDULE = [
 
 const DOW_OFFSET = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 4, 0: 0 };
 
+function getEasternTradingState(from = new Date()) {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short',
+      hour: 'numeric',
+      minute: 'numeric',
+      hourCycle: 'h23',
+    });
+    const parts = formatter.formatToParts(from);
+    let dowStr = '';
+    let hours = 0;
+    let minutes = 0;
+    for (const p of parts) {
+      if (p.type === 'weekday') dowStr = p.value;
+      else if (p.type === 'hour') hours = parseInt(p.value, 10);
+      else if (p.type === 'minute') minutes = parseInt(p.value, 10);
+    }
+    const dayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const dow = dayMap[dowStr] !== undefined ? dayMap[dowStr] : from.getDay();
+    const isAfterFridayClose = dow === 5 && (hours > 16 || (hours === 16 && minutes >= 0));
+    return { dow, isAfterFridayClose };
+  } catch {
+    const dow = from.getDay();
+    const isAfterFridayClose = dow === 5 && from.getHours() >= 16;
+    return { dow, isAfterFridayClose };
+  }
+}
+
 function getMondayOfWeek(from = new Date()) {
   const d = new Date(from);
   d.setHours(0, 0, 0, 0);
-  const dow = d.getDay();
+  const { dow, isAfterFridayClose } = getEasternTradingState(from);
   if (dow === 0) d.setDate(d.getDate() + 1);
   else if (dow === 6) d.setDate(d.getDate() + 2);
+  else if (isAfterFridayClose) d.setDate(d.getDate() + 3);
   else d.setDate(d.getDate() - (dow - 1));
   return d;
 }

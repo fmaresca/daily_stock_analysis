@@ -43,6 +43,14 @@ import {
   CBOE_WEEKLY_OPTIONS_REGISTRY,
 } from '../web/src/data/cboeWeeklyDirectory.ts';
 
+import {
+  getEasternTradingState,
+  getMondayOfWeek,
+  getUpcomingTradingWeek,
+  getPriorTradingWeek,
+  reanchorScheduleToWeek,
+} from '../web/src/utils/tradingWeekUtils.ts';
+
 test('1. Black-Scholes Hull Academic Benchmark & Put-Call Parity', () => {
   // S=100, K=100, DTE=91.25 (T=0.25y), r=0.05, sigma=20%, q=0
   const spot = 100.0;
@@ -2039,6 +2047,58 @@ test('25. Post-Commit Security Hardening, Timing Resilience, Bounded Caches & Gr
       );
     }
   }
+});
+
+test('26. Weekly US Economic Indicators Friday Close Rollover & MarketChameleon Screen Invariants', () => {
+  // A. Trading Week Resolution: Before vs After Friday 16:00 ET
+  // Friday Oct 9, 2026 at 10:00 AM ET (14:00 UTC) -> Still current week (Oct 5 - Oct 9)
+  const friMorning = new Date('2026-10-09T14:00:00Z');
+  const morningState = getEasternTradingState(friMorning);
+  assert.strictEqual(morningState.dow, 5, 'Should be Friday (dow=5)');
+  assert.strictEqual(morningState.isAfterFridayClose, false, 'Friday 10:00 AM ET is during market hours');
+  const weekMorning = getUpcomingTradingWeek(friMorning);
+  assert.strictEqual(weekMorning.isoMonday, '2026-10-05', 'Morning should show current week Monday 2026-10-05');
+  assert.strictEqual(weekMorning.isoFriday, '2026-10-09', 'Morning should show current week Friday 2026-10-09');
+
+  // Friday Oct 9, 2026 at 16:05 ET (20:05 UTC) -> Post-close rollover to Oct 12 - Oct 16
+  const friAfterClose = new Date('2026-10-09T20:05:00Z');
+  const afterCloseState = getEasternTradingState(friAfterClose);
+  assert.strictEqual(afterCloseState.dow, 5, 'Should be Friday (dow=5)');
+  assert.strictEqual(afterCloseState.isAfterFridayClose, true, 'Friday 16:05 ET must be marked after close');
+  const weekAfterClose = getUpcomingTradingWeek(friAfterClose);
+  assert.strictEqual(weekAfterClose.isoMonday, '2026-10-12', 'Post-close must advance to following week Monday 2026-10-12');
+  assert.strictEqual(weekAfterClose.isoFriday, '2026-10-16', 'Post-close must advance to following week Friday 2026-10-16');
+
+  // Prior week toggle when post-close must accurately point to the week that just completed (Oct 5 - Oct 9)
+  const priorWeek = getPriorTradingWeek(friAfterClose);
+  assert.strictEqual(priorWeek.isoMonday, '2026-10-05', 'Prior week after rollover must be 2026-10-05');
+  assert.strictEqual(priorWeek.isoFriday, '2026-10-09', 'Prior week after rollover must be 2026-10-09');
+
+  // Weekend (Saturday Oct 10) must also resolve to following week (Oct 12 - Oct 16)
+  const saturday = new Date('2026-10-10T15:00:00Z');
+  const weekSat = getUpcomingTradingWeek(saturday);
+  assert.strictEqual(weekSat.isoMonday, '2026-10-12', 'Saturday must resolve to upcoming Monday 2026-10-12');
+
+  // B. MarketChameleon Dataset Integrity & Active Screener File Validation
+  const mcJsonPath = fileURLToPath(new URL('../web/public/data/weekly_screeners_marketchameleon.json', import.meta.url));
+  const mcCsvPath = fileURLToPath(new URL('../web/public/data/weekly_screeners_marketchameleon.csv', import.meta.url));
+  assert.ok(fs.existsSync(mcJsonPath), 'MarketChameleon JSON dataset must exist');
+  assert.ok(fs.existsSync(mcCsvPath), 'MarketChameleon CSV dataset must exist');
+
+  const mcData = JSON.parse(fs.readFileSync(mcJsonPath, 'utf-8'));
+  assert.ok(Array.isArray(mcData.records), 'MarketChameleon dataset must contain records array');
+  assert.ok(mcData.records.length > 0, 'MarketChameleon records must not be empty');
+  assert.strictEqual(mcData.source_id, 'marketchameleon', 'Dataset source_id must be marketchameleon');
+
+  // Verify first record schema contract
+  const sample = mcData.records[0];
+  assert.ok(sample.symbol, 'Record must have symbol');
+  const price = typeof sample.price === 'number' ? sample.price : sample.last_price;
+  assert.ok(typeof price === 'number' && price > 0, 'Record must have numeric positive price');
+  assert.ok(sample.extra_fields, 'Record must have extra_fields object');
+  assert.ok(typeof sample.extra_fields.rsi_14 === 'number', 'Record must have RSI-14');
+  assert.ok(typeof sample.extra_fields.iv30 === 'number', 'Record must have IV30');
+  assert.ok(sample.extra_fields.market_cap_str, 'Record must have market cap string');
 });
 
 import './test_api_contracts_mocked.mjs';

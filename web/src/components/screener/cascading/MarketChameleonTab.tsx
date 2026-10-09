@@ -71,7 +71,7 @@ export const MarketChameleonTab: React.FC<MarketChameleonTabProps> = React.memo(
         <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
           <span className="text-slate-400 block text-[11px]">MarketChameleon Universe</span>
           <span className="text-lg font-bold text-white font-mono">
-            {mcDataset?.total_count || 60} Momentum Stocks
+            {sortedMcRecords.length} Momentum Stocks
           </span>
           <span className="text-[10px] text-purple-400 block mt-0.5">Preset: {activePresetName}</span>
         </div>
@@ -85,7 +85,7 @@ export const MarketChameleonTab: React.FC<MarketChameleonTabProps> = React.memo(
         <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
           <span className="text-slate-400 block text-[11px]">CBOE Verified Weeklys</span>
           <span className="text-lg font-bold text-emerald-400 font-mono">
-            {cboeOnlyGate ? 'Strict CBOE (10 Active)' : 'All Chains (60 Active)'}
+            {cboeOnlyGate ? `Strict CBOE (${sortedMcRecords.length} Active)` : `All Chains (${sortedMcRecords.length} Active)`}
           </span>
           <span className="text-[10px] text-slate-400 block mt-0.5">Direct CBOE Directory Cross-Check</span>
         </div>
@@ -125,7 +125,7 @@ export const MarketChameleonTab: React.FC<MarketChameleonTabProps> = React.memo(
             title="Toggle strict CBOE weekly registered options"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{cboeOnlyGate ? 'Strict CBOE Weeklys (10)' : 'All Options Chains (60)'}</span>
+            <span>{cboeOnlyGate ? 'Strict CBOE Weeklys' : 'All Options Chains'}</span>
           </button>
 
           <button

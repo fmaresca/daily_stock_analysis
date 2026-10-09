@@ -99,6 +99,19 @@ export const ChapterMarketChameleon: React.FC<ChapterMarketChameleonProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Live MarketChameleon Screener & Dynamic Filters */}
+      <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+        <div className="flex items-center space-x-2 text-white font-bold">
+          <span className="text-amber-400">⚡</span>
+          <span>Live Screener Pipeline &amp; Dynamic Ingestion</span>
+        </div>
+        <ul className="list-disc list-inside text-slate-300 space-y-1.5 pl-1 leading-relaxed">
+          <li><strong>Direct MarketChameleon Ingestion:</strong> Connects to MarketChameleon.com screener feeds to pull active candidate equities with full technical and volatility metrics (IV30, IV Rank, 1Y/20D Historical Volatility, RSI-14, and MA signals).</li>
+          <li><strong>Multi-Source Fallback Pricing:</strong> The &quot;Update Dataset&quot; action triggers real-time price synchronization via Tradier with AlphaVantage, Yahoo Finance, and Stooq multi-source fallback.</li>
+          <li><strong>Multi-Attribute Dynamic Filtering:</strong> Filter by Stock Ideas presets, Market Cap ranges (&gt;$10B Large Cap, $2B–$10B Mid Cap), Options Listed flags, RSI bands (e.g. 50–70 Bullish Consolidation), and Moving Average technical regimes in real time.</li>
+        </ul>
+      </div>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Trading Week Resolution Utility
  *
  * Computes Mon-Fri bounds for the upcoming (or current in-progress) trading
@@ -10,7 +10,7 @@
  *  - Sunday         -> upcoming week starts tomorrow (Monday)
  */
 
-import { EconomicIndicator } from '../types/economicCalendar';
+import type { EconomicIndicator } from '../types/economicCalendar.ts';
 
 export interface TradingWeek {
   monday: Date;
@@ -56,16 +56,56 @@ function addDays(d: Date, n: number): Date {
   return r;
 }
 
-function getMondayOfWeek(from: Date): Date {
+/**
+ * Resolves the calendar day-of-week and whether the current time is at or past
+ * the Friday 16:00 ET (4:00 PM Eastern) close of regular US equity market trading.
+ */
+export function getEasternTradingState(from: Date = new Date()): {
+  dow: number;
+  isAfterFridayClose: boolean;
+} {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short',
+      hour: 'numeric',
+      minute: 'numeric',
+      hourCycle: 'h23',
+    });
+    const parts = formatter.formatToParts(from);
+    let dowStr = '';
+    let hours = 0;
+    let minutes = 0;
+    for (const p of parts) {
+      if (p.type === 'weekday') dowStr = p.value;
+      else if (p.type === 'hour') hours = parseInt(p.value, 10);
+      else if (p.type === 'minute') minutes = parseInt(p.value, 10);
+    }
+    const dayMap: Record<string, number> = {
+      Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+    };
+    const dow = dayMap[dowStr] !== undefined ? dayMap[dowStr] : from.getDay();
+    const isAfterFridayClose = dow === 5 && (hours > 16 || (hours === 16 && minutes >= 0));
+    return { dow, isAfterFridayClose };
+  } catch {
+    const dow = from.getDay();
+    const isAfterFridayClose = dow === 5 && from.getHours() >= 16;
+    return { dow, isAfterFridayClose };
+  }
+}
+
+export function getMondayOfWeek(from: Date = new Date()): Date {
   const d = new Date(from);
   d.setHours(0, 0, 0, 0);
-  const dow = d.getDay();
+  const { dow, isAfterFridayClose } = getEasternTradingState(from);
   if (dow === 0) {
-    d.setDate(d.getDate() + 1); // Sunday -> next Monday
+    d.setDate(d.getDate() + 1); // Sunday -> upcoming Monday
   } else if (dow === 6) {
-    d.setDate(d.getDate() + 2); // Saturday -> next Monday
+    d.setDate(d.getDate() + 2); // Saturday -> upcoming Monday
+  } else if (isAfterFridayClose) {
+    d.setDate(d.getDate() + 3); // Friday after 16:00 ET close -> advance to following week's Monday!
   } else {
-    d.setDate(d.getDate() - (dow - 1)); // Mon-Fri -> this Monday
+    d.setDate(d.getDate() - (dow - 1)); // Mon-Thu, or Friday during trading -> this Monday
   }
   return d;
 }

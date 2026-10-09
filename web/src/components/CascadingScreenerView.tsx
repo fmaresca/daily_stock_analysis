@@ -591,7 +591,15 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       const symbols = baseDataset.records.map((r) => r.symbol);
       let quotesMap = new Map<string, { last: number; bid: number; ask: number; volume: number }>();
       try {
-        quotesMap = await fetchTradierQuotesBatch(symbols);
+        const livePriceMap = await syncLiveEquitiesPrices(symbols);
+        livePriceMap.forEach((p, sym) => {
+          quotesMap.set(sym.toUpperCase(), {
+            last: p.price,
+            bid: p.price,
+            ask: p.price,
+            volume: 0,
+          });
+        });
       } catch {
         // Fallback
       }
@@ -1169,6 +1177,140 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     });
   }, [barchartDataset, searchQuery, weeklyOnlyFilter, opinionFilter]);
 
+function matchesMarketChameleonFilters(
+  record: WeeklyScreenerRecord,
+  filters?: Record<string, string>
+): boolean {
+  if (!filters || Object.keys(filters).length === 0) return true;
+  const ef = record.extra_fields || {};
+
+  for (const [key, val] of Object.entries(filters)) {
+    if (!val || val === '-Any-') continue;
+
+    // Stock Ideas (Momentum, MarketLeaders, etc.)
+    if (key === 'StockIdeas') {
+      const idea = String(ef.stock_idea || record.opinion || '').toLowerCase();
+      const target = val.toLowerCase();
+      if (!idea.includes(target) && !idea.includes('momentum')) {
+        if (!record.opinion?.toLowerCase().includes(target)) return false;
+      }
+    }
+
+    // Market Cap (c8)
+    else if (key === 'c8') {
+      const cap = Number(ef.market_cap || 0);
+      if (cap > 0) {
+        if (val === 'Over 100000000000' && cap < 1e11) return false;
+        else if (val === 'Over 50000000000' && cap < 5e10) return false;
+        else if (val === 'Over 20000000000' && cap < 2e10) return false;
+        else if (val === 'Over 10000000000' && cap < 1e10) return false;
+        else if (val === 'Over 5000000000' && cap < 5e9) return false;
+        else if (val === 'Over 1000000000' && cap < 1e9) return false;
+        else if (val === '1000000000 To 10000000000' && (cap < 1e9 || cap > 1e10)) return false;
+        else if (val === 'Under 1000000000' && cap >= 1e9) return false;
+      }
+    }
+
+    // Options Listed (c31)
+    else if (key === 'c31') {
+      if (val === 'true' && !record.has_options) return false;
+      if (val === 'false' && record.has_options) return false;
+    }
+
+    // 14-Day RSI (c45)
+    else if (key === 'c45') {
+      const rsi = Number(ef.rsi_14 ?? 55);
+      if (val === '50.0 To 70.0' && (rsi < 50 || rsi > 70)) return false;
+      else if (val === '30.0 To 70.0' && (rsi < 30 || rsi > 70)) return false;
+      else if (val === '30.0 To 50.0' && (rsi < 30 || rsi > 50)) return false;
+      else if (val === 'Above 70.0' && rsi < 70) return false;
+      else if (val === 'Below 30.0' && rsi > 30) return false;
+    }
+
+    // Country of Incorporation (c80)
+    else if (key === 'c80') {
+      const country = String(ef.country || 'United States of America').toLowerCase();
+      if (val === 'United States of America') {
+        if (!country.includes('united states') && !country.includes('usa') && !country.includes('us')) return false;
+      } else if (!country.includes(val.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // 1-Yr Volatility (c50)
+    else if (key === 'c50') {
+      const vol = Number(ef.vol_1y || 0);
+      if (vol > 0) {
+        if (val === 'Above 30.0' && vol < 30) return false;
+        else if (val === 'Above 20.0' && vol < 20) return false;
+        else if (val === 'Above 50.0' && vol < 50) return false;
+        else if (val === 'Above 70.0' && vol < 70) return false;
+        else if (val === 'Below 20.0' && vol > 20) return false;
+      }
+    }
+
+    // 20-Day Volatility (c49)
+    else if (key === 'c49') {
+      const vol = Number(ef.vol_20d || 0);
+      if (vol > 0) {
+        if (val === 'Above 30.0' && vol < 30) return false;
+        else if (val === 'Above 20.0' && vol < 20) return false;
+        else if (val === 'Above 50.0' && vol < 50) return false;
+        else if (val === 'Above 70.0' && vol < 70) return false;
+        else if (val === 'Below 20.0' && vol > 20) return false;
+      }
+    }
+
+    // 1-Day Volatility (c48)
+    else if (key === 'c48') {
+      const vol = Number(ef.vol_1d || 0);
+      if (vol > 0) {
+        if (val === 'Above 30.0' && vol < 30) return false;
+        else if (val === 'Above 20.0' && vol < 20) return false;
+        else if (val === 'Above 50.0' && vol < 50) return false;
+        else if (val === 'Above 70.0' && vol < 70) return false;
+        else if (val === 'Below 20.0' && vol > 20) return false;
+      }
+    }
+
+    // IV30 (c21)
+    else if (key === 'c21') {
+      const iv = Number(ef.iv30 || 0);
+      if (iv > 0) {
+        if (val === 'Above 30.0' && iv < 30) return false;
+        else if (val === 'Above 20.0' && iv < 20) return false;
+        else if (val === 'Above 50.0' && iv < 50) return false;
+        else if (val === 'Above 70.0' && iv < 70) return false;
+        else if (val === 'Below 20.0' && iv > 20) return false;
+      }
+    }
+
+    // IV % Rank (c25)
+    else if (key === 'c25') {
+      const ivr = Number(ef.iv_rank || 0);
+      const normIvr = ivr > 1.0 ? ivr / 100 : ivr;
+      if (normIvr > 0) {
+        if (val === 'Above 0.70' && normIvr < 0.70) return false;
+        else if (val === '0.300001 to 0.699999' && (normIvr < 0.30 || normIvr > 0.70)) return false;
+        else if (val === 'Below 0.30' && normIvr > 0.30) return false;
+        else if (val === 'Above 0.5' && normIvr < 0.50) return false;
+        else if (val === 'Above 0.25' && normIvr < 0.25) return false;
+      }
+    }
+
+    // Moving Average Technical Signal (c59)
+    else if (key === 'c59') {
+      const allowedSignals = val.split(';').map((s) => s.trim().toLowerCase());
+      const signal = String(ef.ma_signal || '').toLowerCase();
+      const opinion = String(record.opinion || '').toLowerCase();
+      const matched = allowedSignals.some((s) => signal.includes(s) || opinion.includes(s));
+      if (!matched) return false;
+    }
+  }
+
+  return true;
+}
+
   const filteredMcRecords = useMemo(() => {
     if (!mcDataset) return [];
     return mcDataset.records.filter((r) => {
@@ -1178,9 +1320,10 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       }
       if (cboeOnlyGate && !r.extra_fields?.in_cboe_registry && !r.has_weekly_options) return false;
       if (weeklyOnlyFilter && !r.has_weekly_options) return false;
+      if (!matchesMarketChameleonFilters(r, mcFilters)) return false;
       return true;
     });
-  }, [mcDataset, searchQuery, cboeOnlyGate, weeklyOnlyFilter]);
+  }, [mcDataset, searchQuery, cboeOnlyGate, weeklyOnlyFilter, mcFilters]);
 
   const filteredTosRecords = useMemo(() => {
     if (!tosWatchlistDataset) return [];
