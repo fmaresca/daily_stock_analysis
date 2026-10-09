@@ -289,7 +289,10 @@ export const AppModalsContainer: React.FC<AppModalsContainerProps> = ({
             opportunities={allUniverseOpportunities}
             availableTickers={universeTickers}
             onClose={() => setSelectedTicker(null)}
-            onUpdateTicker={handleAddCustomTickerMeta}
+            onUpdateTicker={(updatedTicker) => {
+              handleAddCustomTickerMeta(updatedTicker);
+              setSelectedTicker(updatedTicker);
+            }}
             onOpenSimulator={(sym) => {
               setSelectedTicker(null);
               if (openSimulator) {

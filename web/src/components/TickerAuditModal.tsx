@@ -240,22 +240,28 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
     };
   }, [activeTicker?.symbol]);
 
+  // Only sync from external ticker prop if it changes to a different symbol
   useEffect(() => {
-    if (ticker) {
+    if (ticker && (!activeTicker || ticker.symbol.toUpperCase() !== activeTicker.symbol.toUpperCase())) {
       setActiveTicker(ticker);
       setInputSymbol(ticker.symbol);
-      const matchedOpps = (opportunities || []).filter((o) => o?.symbol.toUpperCase() === ticker.symbol.toUpperCase());
-      if (matchedOpps.length > 0) {
-        setActiveOpportunities(opportunities);
-      } else {
-        const spot = ticker.spot_price || 100;
-        const iv = ticker.iv_current || 25;
-        const lower = ticker.lower_bb || spot * 0.93;
-        const upper = ticker.upper_bb || spot * 1.07;
-        setActiveOpportunities([...opportunities, ...generateSyntheticOpportunities(ticker.symbol, spot, iv, lower, upper)]);
-      }
     }
-  }, [ticker, opportunities]);
+  }, [ticker?.symbol]);
+
+  // Sync opportunities for the currently active ticker without resetting activeTicker
+  useEffect(() => {
+    const currentSym = activeTicker?.symbol || ticker?.symbol;
+    if (!currentSym) return;
+    const matchedOpps = (opportunities || []).filter(
+      (o) => o?.symbol.toUpperCase() === currentSym.toUpperCase()
+    );
+    if (matchedOpps.length > 0) {
+      setActiveOpportunities((prev) => [
+        ...prev.filter((o) => o?.symbol.toUpperCase() !== currentSym.toUpperCase()),
+        ...matchedOpps,
+      ]);
+    }
+  }, [opportunities, activeTicker?.symbol, ticker?.symbol]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -355,6 +361,18 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   const handleFetchSymbol = async (targetSymbol: string) => {
     const sym = targetSymbol.toUpperCase().trim();
     if (!sym) return;
+
+    // 1. Immediate optimistic switch so user gets instantaneous visual feedback
+    const existing = availableTickers?.find((t) => t.symbol.toUpperCase() === sym);
+    if (existing) {
+      setActiveTicker(existing);
+      setInputSymbol(sym);
+      if (onUpdateTicker) {
+        onUpdateTicker(existing);
+      }
+    } else {
+      setInputSymbol(sym);
+    }
 
     setIsFetching(true);
     setFetchError(null);
@@ -658,9 +676,8 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                   setInputSymbol(sym);
                   handleFetchSymbol(sym);
                 }}
-                disabled={isFetching}
                 className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all cursor-pointer ${
-                  activeTicker.symbol === sym
+                  activeTicker?.symbol === sym
                     ? 'bg-blue-600 text-white border border-blue-400 shadow-sm'
                     : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60'
                 }`}
