@@ -89,6 +89,23 @@ All of these have graceful fallbacks in the frontend and do not break the UI.
 
 ---
 
-## 5. NEEDS-HUMAN Items
+## 5. Live Click-Through Sweep Summary (Prompt 3)
 
-None identified in Prompt 2. Both FAIL items are self-contained frontend UI runtime guards and do not require D1 schema modifications or dependency changes.
+- **Dev Server Runtime:** Vite server active at `http://localhost:5173/`.
+- **Signed-Out Controls Sweep:**
+  - `V001` (Login Form Email Input): PASS (accepts input, responsive)
+  - `V002` (Login Form Password Input): PASS (masked password entry, responsive)
+  - `V003` (Login Submit Button): PASS (dispatches authentication request, fails closed with security error banner when unconfigured)
+  - `V004` (Request Access Modal Trigger): PASS (opens modal reliably)
+  - `V005` (Request Access Form Submit): PASS (submits access inquiry)
+  - `V006` (Forgot Password Modal Trigger): PASS (opens password reset modal reliably)
+  - `V007` (Forgot Password Form Submit): PASS (submits password recovery request)
+- **Local Dev Server Authentication Note:**
+  Running `npm run dev` in `web/` starts the Vite single-page development server without Cloudflare Pages Functions edge bindings. Attempting to log in against the standalone Vite dev server returns a 404 from the dev server, which correctly triggers the fail-closed UI error: *"Authentication failed. Please verify your credentials or contact administrator."* In accordance with strict security requirements, no mock/hardcoded credentials or auto-seeding bypasses were injected.
+- **Signed-Out Sweep Conclusion:** Confirmed `signed-out-only` live sweep. All 7 signed-out controls operate cleanly without JS exceptions.
+
+---
+
+## 6. NEEDS-HUMAN Items
+
+None identified. Both FAIL items (`V075` and `V080`) are self-contained frontend UI runtime guards and do not require D1 schema modifications or dependency changes.
