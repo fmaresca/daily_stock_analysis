@@ -110,3 +110,30 @@ All of these have graceful fallbacks in the frontend and do not break the UI.
 ## 6. NEEDS-HUMAN Items
 
 None identified. Both FAIL items (`V075` and `V080`) are self-contained frontend UI runtime guards and do not require D1 schema modifications or dependency changes.
+
+---
+
+## 7. Deep Audit Middleware Findings (Prompt 2)
+
+### FAIL M01: `functions/api/admin/inquiries.js` — Unauthenticated Resend Test Bypass
+- **Severity:** `CRITICAL`
+- **File / Lines:** `functions/api/admin/inquiries.js:445-502`
+- **Branch:** On middleware allowlist because `pathname === "/api/admin/inquiries"`.
+- **Trigger Condition:** Unauthenticated GET request with `?action=test_resend` or `?test_resend=1`.
+- **Expected vs Actual Behavior:**
+  - *Expected:* All administrative GET actions require authenticated admin session (`authenticateRequest(context, ["admin"])`).
+  - *Actual:* Lines 445–502 execute *before* `authenticateRequest` on line 503. An unauthenticated attacker can dispatch test emails via Resend and receives `{ configured: true, to: adminRecipient, resendResponse: ... }`, leaking the administrator's private email address.
+- **Proposed Surgical Fix (Prompt 6):** Move `const auth = await authenticateRequest(context, ["admin"]); if (!auth.authenticated) return auth.response;` to the very top of `onRequestGet` before any action parameter dispatching.
+
+---
+
+### FAIL M02: `functions/api/bot/discord.js` — Signature Verification Fails Open When Key Unconfigured
+- **Severity:** `MEDIUM`
+- **File / Lines:** `functions/api/bot/discord.js:110-116`
+- **Branch:** Fall-through endpoint.
+- **Trigger Condition:** `POST /api/bot/discord` when `DISCORD_PUBLIC_KEY` is unset or empty.
+- **Expected vs Actual Behavior:**
+  - *Expected:* If `DISCORD_PUBLIC_KEY` is required for webhook integrity, missing key should fail closed (500 or 401).
+  - *Actual:* If `DISCORD_PUBLIC_KEY` is omitted from Cloudflare environment variables, signature validation is skipped and unauthenticated/spoofed webhook payloads are executed.
+- **Proposed Surgical Fix (Prompt 6):** Enforce fail-closed check: if `DISCORD_PUBLIC_KEY` is not provisioned, reject incoming interaction webhooks with 500 "Discord gateway unconfigured".
+
