@@ -135,8 +135,8 @@ export function parseOptionExpirationDate(expStr?: string): Date | null {
     return new Date(year, month - 1, day, 12, 0, 0);
   }
 
-  // 3. OCC format: e.g. PANW260911P00327500 or AAPL 260911C00220000
-  const occMatch = trimmed.match(/[A-Z]{1,6}(\d{2})(\d{2})(\d{2})[CP]/i);
+  // 3. OCC format: e.g. PANW260911P00327500 or AAPL 260911C00220000 or 260911P00327500
+  const occMatch = trimmed.match(/(?:[A-Z]{1,6}\s*)?(\d{2})(\d{2})(\d{2})[CP]/i);
   if (occMatch) {
     const year = 2000 + parseInt(occMatch[1], 10);
     const month = parseInt(occMatch[2], 10);

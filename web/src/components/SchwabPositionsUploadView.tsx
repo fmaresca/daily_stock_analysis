@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Upload,
   ShieldCheck,
+  ShieldAlert,
   CheckCircle2,
   DollarSign,
   Layers,
@@ -17,6 +18,12 @@ import {
   syncImportedEquitiesToWatchlist,
   ParsedSchwabPositionsResult,
 } from '../utils/schwabPositionsParser';
+import {
+  getCurrentTradingWeekLabel,
+  archiveAndClearScreens,
+  partitionExpiredLegsOnImport,
+  ExpiredOptionOnImport,
+} from '../utils/weeklyRollover';
 import { saveCapitalState, saveTaxLedgerState, getStoredTaxLedgerState, getStoredCapitalState } from '../utils/capitalAndTaxLedger';
 import { getSamplePortfolioBook } from '../utils/portfolioStressTest';
 import { TaxLedgerState, AccountCapitalState } from '../types/options';
@@ -43,6 +50,8 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string>('');
   const [resetNotice, setResetNotice] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [expiredOnImportList, setExpiredOnImportList] = useState<ExpiredOptionOnImport[]>([]);
+  const [isExpiredListOpen, setIsExpiredListOpen] = useState<boolean>(false);
 
   // Prompt 5 OCR States
   const [isOcrProcessing, setIsOcrProcessing] = useState<boolean>(false);
@@ -57,8 +66,9 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
     setRawFileName('');
     setUploadSuccessMsg('');
     setErrorMessage('');
+    setExpiredOnImportList([]);
     setResetNotice(
-      'Clean Build Reset Complete: Wiped all prior positions, purged upcoming week screened stocks & staged orders, and reset cash balance encumbrance to default $5,000 living expenses.'
+      'Clean Build Reset Complete: Wiped all prior positions, archived prior week screened stocks, cleared staged orders, and reset cash balance encumbrance to default $5,000 living expenses.'
     );
   };
 
@@ -69,27 +79,51 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
       // CRITICAL: Execute Weekly Workflow Clean Reset PRIOR to ingesting new Schwab CSV
       executeWeeklyWorkflowCleanReset();
       setResetNotice(
-        'Weekend Workflow Ritual Active: Wiped prior week positions, purged screened stocks & staged orders, and cleanly reset cash encumbrance to default $5,000 living expenses.'
+        'Weekend Workflow Ritual Active: Wiped prior week positions, archived screened stocks, cleared staged orders, and cleanly reset cash encumbrance to default $5,000 living expenses.'
       );
 
       const parsed = parseSchwabPositionsCsv(text);
+
+      // Single Clock Authority trading week stamp & archive prior screens
+      const weekLabel = getCurrentTradingWeekLabel();
+      const archiveReport = archiveAndClearScreens();
+
+      // Expiry purge on import: quarantine expired option contracts
+      const partition = partitionExpiredLegsOnImport(parsed, weekLabel);
+      setExpiredOnImportList(partition.expiredOnImport);
+
       const currentCap = getStoredCapitalState();
       const preservedPrior = currentCap.priorYtdPremiumBalance || parsed.capitalState.priorYtdPremiumBalance;
       const currentWeek = parsed.capitalState.currentWeekPremiumsCollected || 0;
       const finalCap: AccountCapitalState = {
         ...parsed.capitalState,
+        totalCash: parsed.cashBreakdown.totalCashToCoverCsp,
+        committedCollateral: partition.liveCollateral,
+        freeCash: partition.liveNetFreeCash,
         priorYtdPremiumBalance: preservedPrior,
         ytdPremiumsEarned: preservedPrior + currentWeek,
       };
-      setParsedData({ ...parsed, capitalState: finalCap });
+
+      setParsedData({
+        ...parsed,
+        equities: partition.liveEquities,
+        openCSPs: partition.liveOpenCSPs,
+        coveredCalls: partition.liveCoveredCalls,
+        portfolioPositions: partition.livePositions,
+        totalCommittedCspCollateral: partition.liveCollateral,
+        availableCashBeforeLivingExpenses: Math.max(0, parsed.cashBreakdown.totalCashToCoverCsp - partition.liveCollateral),
+        netFreeCashForNewCsps: partition.liveNetFreeCash,
+        capitalState: finalCap,
+      });
       setRawFileName(filename);
 
-      // Save to localStorage
+      // Save to localStorage: stamp week and persist live positions only
+      localStorage.setItem('deltaharvest_portfolio_book_week', weekLabel);
       saveCapitalState(finalCap);
-      localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(parsed.portfolioPositions));
+      localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(partition.livePositions));
 
-      // Sync imported equities to Watchlist
-      syncImportedEquitiesToWatchlist(parsed.equitySymbols, parsed.accountName);
+      // Sync imported equities to Watchlist (live equities only)
+      syncImportedEquitiesToWatchlist(partition.liveEquities.map((e) => e.symbol), parsed.accountName);
 
       // Sync tax records if present
       if (parsed.taxRecords && parsed.taxRecords.length > 0) {
@@ -103,26 +137,39 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
         saveTaxLedgerState(freshTax);
       }
 
-      // Auto-sync live trading prices (or latest closing prices if market is closed)
-      autoSyncSchwabPortfolioPrices(parsed.portfolioPositions).then((updatedPositions) => {
+      // Auto-sync live trading prices for live positions
+      autoSyncSchwabPortfolioPrices(partition.livePositions).then((updatedPositions) => {
         setParsedData((prev) => (prev ? { ...prev, portfolioPositions: updatedPositions } : prev));
         window.dispatchEvent(
           new CustomEvent('deltaharvest_portfolio_updated', {
-            detail: { source: 'live_price_sync', positions: updatedPositions, capital: parsed.capitalState },
+            detail: { source: 'live_price_sync', positions: updatedPositions, capital: finalCap },
           })
         );
       });
 
-      // Notify other tabs immediately of initial parse
+      // Notify other tabs immediately
       window.dispatchEvent(
         new CustomEvent('deltaharvest_portfolio_updated', {
-          detail: { source: 'csv_upload', positions: parsed.portfolioPositions, capital: parsed.capitalState },
+          detail: { source: 'csv_upload', positions: partition.livePositions, capital: finalCap },
+        })
+      );
+      window.dispatchEvent(
+        new CustomEvent('deltaharvest_screens_updated', {
+          detail: { week: weekLabel, source: 'csv_upload' },
         })
       );
 
-      setUploadSuccessMsg(
-        `Successfully ingested ${parsed.accountName}: ${parsed.equities.length} Equities, ${parsed.openCSPs.length} Open CSPs, ${parsed.coveredCalls.length} Covered Calls. Dynamic Total Cash: $${parsed.capitalState.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })} (backed out $${parsed.totalCommittedCspCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })} CSP collateral, encumbered $5,000 living expenses -> Net Free Cash: $${parsed.netFreeCashForNewCsps.toLocaleString(undefined, { minimumFractionDigits: 2 })}).`
-      );
+      // Format human-readable week (e.g. week of Oct 12)
+      const [y, m, d] = weekLabel.split('-').map(Number);
+      const weekDate = new Date(y, m - 1, d);
+      const weekMonthDay = weekDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const archiveSummaryStr = archiveReport.totalScreensArchived > 0
+        ? `New week started (week of ${weekMonthDay}): archived last week's ${archiveReport.totalScreensArchived} screens (${archiveReport.totalRecordsArchived} records) — workspace is clear for new screens. `
+        : `New week started (week of ${weekMonthDay}): workspace is clear for new screens. `;
+
+      const ingestionSummaryStr = `Successfully ingested ${parsed.accountName}: ${partition.liveEquities.length} Equities, ${partition.liveOpenCSPs.length} Open CSPs, ${partition.liveCoveredCalls.length} Covered Calls. Dynamic Total Cash: $${finalCap.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })} (backed out $${partition.liveCollateral.toLocaleString(undefined, { minimumFractionDigits: 2 })} CSP collateral, encumbered $5,000 living expenses -> Net Free Cash: $${partition.liveNetFreeCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}).`;
+
+      setUploadSuccessMsg(archiveSummaryStr + ingestionSummaryStr);
     } catch (err: any) {
       console.error('Failed to parse Schwab positions CSV:', err);
       setErrorMessage('Could not parse the CSV file. Please verify it is a valid Charles Schwab positions export.');
@@ -505,6 +552,63 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
               </p>
             </div>
           </div>
+
+          {/* Expired on Import Quarantined Section */}
+          {expiredOnImportList.length > 0 && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-4 space-y-3 shadow-lg">
+              <div
+                className="flex items-center justify-between cursor-pointer select-none"
+                onClick={() => setIsExpiredListOpen(!isExpiredListOpen)}
+              >
+                <div className="flex items-center space-x-2.5">
+                  <ShieldAlert className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-amber-300">
+                      Expired on Import ({expiredOnImportList.length} options excluded from live analysis)
+                    </span>
+                    <span className="ml-2 text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                      Out of Live Math &amp; Collateral
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-amber-300 hover:text-white underline cursor-pointer"
+                >
+                  {isExpiredListOpen ? '▲ Collapse Expired Bucket' : '▼ Expand Expired Bucket'}
+                </button>
+              </div>
+
+              {isExpiredListOpen && (
+                <div className="overflow-x-auto pt-2 border-t border-amber-500/20">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="text-slate-400 border-b border-slate-800">
+                        <th className="py-1 px-2">Symbol</th>
+                        <th className="py-1 px-2">Type</th>
+                        <th className="py-1 px-2">Strike</th>
+                        <th className="py-1 px-2">Expiration</th>
+                        <th className="py-1 px-2">Contracts</th>
+                        <th className="py-1 px-2">Audit Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {expiredOnImportList.map((exp, idx) => (
+                        <tr key={idx} className="hover:bg-slate-900/40 text-slate-300">
+                          <td className="py-1.5 px-2 font-bold text-amber-300">{exp.underlyingSymbol || exp.symbol}</td>
+                          <td className="py-1.5 px-2">{exp.type}</td>
+                          <td className="py-1.5 px-2">${exp.strike.toFixed(2)}</td>
+                          <td className="py-1.5 px-2 text-rose-300">{exp.expiredDateStr}</td>
+                          <td className="py-1.5 px-2">{Math.abs(exp.quantity)}</td>
+                          <td className="py-1.5 px-2 text-amber-400 text-[11px] font-sans">{exp.statusLabel}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Calculation Bridge: Available Cash & Deployable Free Cash Callout */}
           <div className="p-3.5 rounded-xl bg-gradient-to-r from-cyan-950/50 via-slate-900 to-emerald-950/40 border border-cyan-500/40 flex flex-wrap items-center justify-between gap-3 text-xs shadow-lg">

@@ -8,14 +8,12 @@
  * - Calculates true Net Deployable Free Cash for new CSPs
  */
 
-import { AccountCapitalState, WatchlistGroup, TaxLedgerRecord } from '../types/options.ts';
-import { PortfolioPosition } from './portfolioStressTest.ts';
-import {
-  MAX_SINGLE_EQUITY_POSITION_LIMIT,
-  DEFAULT_WEEKLY_DISBURSEMENT,
-  DEFAULT_PRIOR_YTD_PREMIUM_BALANCE,
-  DEFAULT_YTD_PREMIUMS_EARNED,
-} from './capitalAndTaxLedger.ts';
+import type { AccountCapitalState, WatchlistGroup, TaxLedgerRecord } from '../types/options.ts';
+import type { PortfolioPosition } from './portfolioStressTest.ts';
+const MAX_SINGLE_EQUITY_POSITION_LIMIT = 200000;
+const DEFAULT_WEEKLY_DISBURSEMENT = 0.00;
+const DEFAULT_PRIOR_YTD_PREMIUM_BALANCE = 0.00;
+const DEFAULT_YTD_PREMIUMS_EARNED = 0.00;
 import { isOptionExpired, getOptionExpirationStatus } from './optionExpirationEngine.ts';
 import { todayET } from './appNow.ts';
 

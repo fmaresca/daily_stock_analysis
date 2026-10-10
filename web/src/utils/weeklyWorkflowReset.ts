@@ -37,13 +37,10 @@ export interface WorkflowResetSummary {
   defaultLivingDisbursement: number;
 }
 
+import { archiveAndClearScreens } from './weeklyRollover.ts';
+
 const STORAGE_KEYS_TO_CLEAR = [
   'deltaharvest_portfolio_book',
-  'deltaharvest_barchart_screen_data',
-  'deltaharvest_mc_screen_data',
-  'deltaharvest_tos_barchart_watchlist',
-  'deltaharvest_gemini_raw_markdown',
-  'deltaharvest_gemini_parsed_screen',
   'deltaharvest_submitted_orders',
   'deltaharvest_live_payload',
   'deltaharvest_last_live_fetch',
@@ -69,7 +66,10 @@ export function executeWeeklyWorkflowCleanReset(): WorkflowResetSummary {
   }
 
   try {
-    // 1. Clear designated storage keys
+    // 1. Archive prior screens safely (archive, don't annihilate) and clear active screener keys
+    archiveAndClearScreens();
+
+    // 2. Clear remaining transient runtime storage keys
     STORAGE_KEYS_TO_CLEAR.forEach((key) => {
       try {
         window.localStorage.removeItem(key);

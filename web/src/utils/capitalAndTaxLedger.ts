@@ -6,7 +6,7 @@
  * weekly settlement reconciliation, and calendar-year YTD option premiums earned with loss carryforward.
  */
 
-import {
+import type {
   AccountCapitalState,
   TaxLedgerState,
   TaxLedgerRecord,
@@ -17,7 +17,7 @@ import {
   GeminiBorderlineCandidate,
   GeminiExcludedCandidate,
 } from '../types/options.ts';
-import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest.ts';
+import { type PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest.ts';
 import { getOptionExpirationStatus, isOptionExpired } from './optionExpirationEngine.ts';
 import { CBOE_WEEKLY_OPTIONS_SET, isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
 import { classify } from './section1256.ts';

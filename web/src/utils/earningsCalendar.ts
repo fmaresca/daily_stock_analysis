@@ -9,7 +9,7 @@
  * 4. Earnings-Defended Strike formulation (ensuring CSP / CC strikes clear the straddle bounds).
  */
 
-import { OptionStrategyType } from '../types/optionsScreener.types.ts';
+import type { OptionStrategyType } from '../types/optionsScreener.types.ts';
 import { now } from './appNow.ts';
 
 export interface EarningsCalendarEntry {

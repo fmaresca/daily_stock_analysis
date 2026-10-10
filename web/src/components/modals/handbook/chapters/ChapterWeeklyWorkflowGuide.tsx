@@ -121,11 +121,12 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
             <div className="space-y-1.5">
               <strong className="text-white block font-semibold">⚙️ Automated System Ingestion:</strong>
               <ul className="text-slate-300 space-y-1 list-disc list-inside">
-                <li><strong>Pre-Ingestion Clean Reset Routine:</strong> Automatically runs just prior to new Schwab CSV ingestion. Clears all stale positions, purges prior week screened stocks (ThinkorSwim, Barchart, MarketChameleon), wipes prior AI recommendations, and clears staged orders, resetting cash encumbrances to only the default $5,000 living expenses.</li>
+                <li><strong>Archive-First Screener Rollover:</strong> Automatically archives prior week screened datasets (ThinkorSwim, Barchart, MarketChameleon, and Gemini AI selections) into a restorable weekly archive (<code className="text-cyan-300 font-mono">deltaharvest_screen_archive_YYYY-MM-DD_...</code>) and clears active screener workspace tables without destroying historical data. User filter settings remain intact.</li>
+                <li><strong>Expiry Purge on Import:</strong> Automatically scans imported option legs against the Single Clock Authority (4:00 PM ET). Already-expired contracts are quarantined into an &quot;Expired on import&quot; bucket, completely excluded from live positions, covered calls, and CSP collateral requirements while remaining visible for auditing.</li>
+                <li><strong>Cumulative Data Preservation:</strong> Sacred cross-week records—including YTD option premiums earned, the capital ledger, tax records, and the options journal—are never touched or reset during weekly imports.</li>
                 <li><strong>Dynamic Cash Pool Summation:</strong> Dynamically sums all cash and money market funds (Bank Deposit Core Sweep, SNYXX, SNAXX, and reserve MMFs) prior to any deductions.</li>
                 <li><strong>Automatic Open CSP Collateral Backout:</strong> Computes <code className="text-amber-300 font-mono">Strike &times; Contracts &times; 100</code> for every open cash-secured put and backs out the collateral liability to determine Available Cash before living expenses.</li>
                 <li><strong>Default Living Expenses Encumbrance:</strong> Reserves exactly $5,000 in weekly living expenses, producing accurate Net Free Cash for new CSPs.</li>
-                <li><strong>Baseline Auto-Seed:</strong> Pre-loads verified week-ending baseline positions with a clean reset in one click.</li>
               </ul>
             </div>
 

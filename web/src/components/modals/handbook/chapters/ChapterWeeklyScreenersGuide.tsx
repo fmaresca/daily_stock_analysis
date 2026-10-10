@@ -173,6 +173,31 @@ export const ChapterWeeklyScreenersGuide: React.FC<ChapterWeeklyScreenersGuidePr
           </div>
         </div>
       </div>
+
+      {/* New-Upload Weekly Reset, Archiving & History Restoration */}
+      <div className="bg-slate-950/60 p-4 rounded-xl border border-cyan-800/60 space-y-3">
+        <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-1.5 text-cyan-400">
+          <Layers className="w-4 h-4 text-cyan-400" />
+          <span>7. New-Upload Weekly Reset, Non-Destructive Archiving &amp; History Restoration</span>
+        </h4>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Uploading a fresh Schwab brokerage CSV starts a new weekly trading cycle. To prevent stale screens from contaminating new-week analysis while keeping data restorable, DeltaHarvest executes an <strong>Archive, Don&apos;t Annihilate</strong> workflow:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+            <span className="font-bold text-cyan-300 block mb-1">📦 Automated Archiving</span>
+            Active screener datasets (MarketChameleon, Barchart, Gemini AI selections, and ThinkorSwim) are copied to week-labeled archive keys (<code className="text-slate-400 font-mono text-[10px]">deltaharvest_screen_archive_YYYY-MM-DD_...</code>) stamped with the originating trading week.
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+            <span className="font-bold text-emerald-300 block mb-1">✨ Fresh Workspace</span>
+            Active screener tables reset to an explicit &quot;Ready for new screens&quot; empty state with direct action buttons. User filter preferences (min volume, IV rank, price range) survive untouched.
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+            <span className="font-bold text-amber-300 block mb-1">🔄 Non-Destructive Restore</span>
+            Need to reference or re-examine last week&apos;s screener results? Use the &quot;Restore prior week&quot; dropdown in the screener view. Restoring safely re-archives any active work first, ensuring zero data loss.
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

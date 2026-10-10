@@ -112,7 +112,7 @@ export function parseExpirationYmd(expStr) {
     if (y < 100) y += 2000;
     return `${y}-${m}-${d}`;
   }
-  const occMatch = trimmed.match(/[A-Z]{1,6}(\d{2})(\d{2})(\d{2})[CP]/i);
+  const occMatch = trimmed.match(/(?:[A-Z]{1,6}\s*)?(\d{2})(\d{2})(\d{2})[CP]/i);
   if (occMatch) {
     const y = 2000 + parseInt(occMatch[1], 10);
     const m = occMatch[2];

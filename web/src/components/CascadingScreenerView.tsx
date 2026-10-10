@@ -260,8 +260,39 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     return null;
   };
 
+  const portfolioBookWeek = typeof window !== 'undefined' && window.localStorage
+    ? window.localStorage.getItem('deltaharvest_portfolio_book_week')
+    : null;
+
+  // Sync with weekly rollover & archive restore events
+  useEffect(() => {
+    const handleScreensUpdated = () => {
+      try {
+        const savedBarchart = localStorage.getItem('deltaharvest_barchart_screen_data');
+        setBarchartDataset(savedBarchart ? JSON.parse(savedBarchart) : null);
+        const savedMc = localStorage.getItem('deltaharvest_mc_screen_data');
+        setMcDataset(savedMc ? JSON.parse(savedMc) : null);
+        const savedTos = localStorage.getItem('deltaharvest_tos_barchart_watchlist');
+        setTosWatchlistDataset(savedTos ? JSON.parse(savedTos) : null);
+        const savedGemini = localStorage.getItem('deltaharvest_gemini_parsed_screen');
+        setParsedGeminiResult(savedGemini ? JSON.parse(savedGemini) : null);
+        const savedMarkdown = localStorage.getItem('deltaharvest_gemini_raw_markdown');
+        setImportedBriefing(savedMarkdown || '');
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('deltaharvest_screens_updated', handleScreensUpdated);
+    window.addEventListener('deltaharvest_workflow_reset', handleScreensUpdated);
+    return () => {
+      window.removeEventListener('deltaharvest_screens_updated', handleScreensUpdated);
+      window.removeEventListener('deltaharvest_workflow_reset', handleScreensUpdated);
+    };
+  }, []);
+
   // Load Barchart Top 1% Dataset
   useEffect(() => {
+    if (portfolioBookWeek) return; // Guard: fresh upload started, don't load stale static sample
     if (initialWeeklyDataset && !barchartDataset) {
       setBarchartDataset(initialWeeklyDataset);
     } else if (!barchartDataset) {
@@ -269,19 +300,21 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
         if (data) setBarchartDataset(data);
       });
     }
-  }, [initialWeeklyDataset, barchartDataset]);
+  }, [portfolioBookWeek, initialWeeklyDataset, barchartDataset]);
 
   // Load MarketChameleon Dataset
   useEffect(() => {
+    if (portfolioBookWeek) return; // Guard: fresh upload started, don't load stale static sample
     if (!mcDataset) {
       fetchScreenerJson('weekly_screeners_marketchameleon.json').then((data) => {
         if (data) setMcDataset(data);
       });
     }
-  }, [mcDataset]);
+  }, [portfolioBookWeek, mcDataset]);
 
   // Load Initial Custom Barchart Watchlist if no saved state
   useEffect(() => {
+    if (portfolioBookWeek) return; // Guard: fresh upload started, don't load stale static sample
     if (!tosWatchlistDataset) {
       const saved = localStorage.getItem('deltaharvest_tos_barchart_watchlist');
       if (saved) {
@@ -299,7 +332,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
         if (data) setTosWatchlistDataset(data);
       });
     }
-  }, [tosWatchlistDataset]);
+  }, [portfolioBookWeek, tosWatchlistDataset]);
 
   // Auto-sync most current trading price (or closing price if after close) for TOS/Barchart records
   useEffect(() => {

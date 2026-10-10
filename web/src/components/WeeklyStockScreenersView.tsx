@@ -29,6 +29,9 @@ import {
   Filter,
   ListFilter,
   Trash2,
+  Sparkles,
+  Clock,
+  ArrowRight,
 } from './icons';
 import { MarketChameleonPrescreenModal } from './MarketChameleonPrescreenModal';
 import { DEFAULT_MARKET_CHAMELEON_PRESETS } from '../types/marketChameleonPrescreen';
@@ -39,6 +42,12 @@ import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
 import { extractSymbolsFromTextOrCsv, sanitizeTickerList } from '../utils/symbolSanitizer';
 import { getSchwabImportedEquities, getSchwabImportedEquitiesWithPrices } from '../utils/schwabPositionsParser';
 import { SECURITY_INTELLIGENCE_REGISTRY } from '../utils/securityIntelligence';
+import {
+  listArchivedScreenWeeks,
+  restoreArchivedScreens,
+  getCurrentTradingWeekLabel,
+  ArchivedWeekSummary,
+} from '../utils/weeklyRollover';
 import { SortableTh } from './ui/SortableTh';
 import { sortData, SortOrder } from '../utils/tableSort';
 import { MarketChameleonRow } from './screener/barchart/MarketChameleonRow';
@@ -58,9 +67,43 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
   onOpenTickerAudit,
   onOpenBrokerStaging,
 }) => {
-  const [barchartDataset, setBarchartDataset] = useState<WeeklyScreenerDataset | null>(initialDataset);
-  const [mcDataset, setMcDataset] = useState<WeeklyScreenerDataset | null>(null);
-  const [watchlistDataset, setWatchlistDataset] = useState<WeeklyScreenerDataset | null>(null);
+  // Active week stamp & archive state
+  const portfolioBookWeek = typeof window !== 'undefined' && window.localStorage
+    ? window.localStorage.getItem('deltaharvest_portfolio_book_week')
+    : null;
+  const [archivedWeeksList, setArchivedWeeksList] = useState<ArchivedWeekSummary[]>(() => listArchivedScreenWeeks());
+  const [selectedArchiveWeek, setSelectedArchiveWeek] = useState<string>('');
+  const [isStaticDataset, setIsStaticDataset] = useState<boolean>(false);
+
+  const [barchartDataset, setBarchartDataset] = useState<WeeklyScreenerDataset | null>(() => {
+    try {
+      const saved = localStorage.getItem('deltaharvest_barchart_screen_data');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    // Static JSON guard: if fresh upload week started, do not pollute with initial dataset
+    if (portfolioBookWeek) return null;
+    return initialDataset || null;
+  });
+  const [mcDataset, setMcDataset] = useState<WeeklyScreenerDataset | null>(() => {
+    try {
+      const saved = localStorage.getItem('deltaharvest_mc_screen_data');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+  const [watchlistDataset, setWatchlistDataset] = useState<WeeklyScreenerDataset | null>(() => {
+    try {
+      const saved = localStorage.getItem('deltaharvest_tos_barchart_watchlist');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return null;
+  });
   const [customDataset, setCustomDataset] = useState<WeeklyScreenerDataset | null>(null);
   const [activeSource, setActiveSource] = useState<ScreenerSourceType>('BARCHART');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -97,6 +140,49 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
     return () => window.removeEventListener('deltaharvest_portfolio_updated', handlePortfolioUpdate);
   }, []);
 
+  // Sync with weekly rollover events
+  useEffect(() => {
+    const handleScreensUpdated = () => {
+      setArchivedWeeksList(listArchivedScreenWeeks());
+      try {
+        const savedBarchart = localStorage.getItem('deltaharvest_barchart_screen_data');
+        setBarchartDataset(savedBarchart ? JSON.parse(savedBarchart) : null);
+        const savedMc = localStorage.getItem('deltaharvest_mc_screen_data');
+        setMcDataset(savedMc ? JSON.parse(savedMc) : null);
+        const savedWatchlist = localStorage.getItem('deltaharvest_tos_barchart_watchlist');
+        setWatchlistDataset(savedWatchlist ? JSON.parse(savedWatchlist) : null);
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('deltaharvest_screens_updated', handleScreensUpdated);
+    window.addEventListener('deltaharvest_workflow_reset', handleScreensUpdated);
+    return () => {
+      window.removeEventListener('deltaharvest_screens_updated', handleScreensUpdated);
+      window.removeEventListener('deltaharvest_workflow_reset', handleScreensUpdated);
+    };
+  }, []);
+
+  // Restore archived week handler
+  const handleRestoreWeek = (week?: string) => {
+    const target = week || selectedArchiveWeek || archivedWeeksList[0]?.week;
+    if (!target) return;
+    restoreArchivedScreens(target);
+    try {
+      const savedBarchart = localStorage.getItem('deltaharvest_barchart_screen_data');
+      setBarchartDataset(savedBarchart ? JSON.parse(savedBarchart) : null);
+      const savedMc = localStorage.getItem('deltaharvest_mc_screen_data');
+      setMcDataset(savedMc ? JSON.parse(savedMc) : null);
+      const savedWatchlist = localStorage.getItem('deltaharvest_tos_barchart_watchlist');
+      setWatchlistDataset(savedWatchlist ? JSON.parse(savedWatchlist) : null);
+    } catch {
+      // ignore
+    }
+    setArchivedWeeksList(listArchivedScreenWeeks());
+    setUploadSuccessMsg(`Restored archived screens from week of ${target}! Workspace is refreshed.`);
+    setTimeout(() => setUploadSuccessMsg(''), 5000);
+  };
+
   // Apply prescreen preset or filter configuration from modal
   const handleApplyPreset = (filters: Record<string, string>, cboeOnly: boolean, presetName?: string) => {
     setMcFilters(filters);
@@ -106,44 +192,38 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
     setTimeout(() => setUploadSuccessMsg(''), 5000);
   };
 
-  // Sync initial dataset
+  // Static JSON Guard: Only load bundled sample files if NO fresh-week portfolio upload has started
   useEffect(() => {
-    if (initialDataset && !barchartDataset) {
-      setBarchartDataset(initialDataset);
+    if (portfolioBookWeek) {
+      // Fresh upload started: do NOT render bundled static JSON as current week data
+      setIsStaticDataset(false);
+      return;
     }
-  }, [initialDataset, barchartDataset]);
 
-  // Load MarketChameleon dataset
-  useEffect(() => {
-    const fetchMcDataset = async () => {
+    // Baseline/demo mode: load sample files with as-of label
+    const fetchSamples = async () => {
       try {
-        const res = await fetch('./data/weekly_screeners_marketchameleon.json?t=' + Date.now());
-        if (res.ok) {
-          const json = await res.json();
-          setMcDataset(json);
+        if (!mcDataset) {
+          const resMc = await fetch('./data/weekly_screeners_marketchameleon.json?t=' + Date.now());
+          if (resMc.ok) {
+            const json = await resMc.json();
+            setMcDataset(json);
+            setIsStaticDataset(true);
+          }
+        }
+        if (!watchlistDataset) {
+          const resWl = await fetch('./data/weekly_screeners_barchart_custom.json?t=' + Date.now());
+          if (resWl.ok) {
+            const json = await resWl.json();
+            setWatchlistDataset(json);
+          }
         }
       } catch (err) {
-        console.warn('Could not load MarketChameleon dataset:', err);
+        console.warn('Could not load sample datasets:', err);
       }
     };
-    fetchMcDataset();
-  }, []);
-
-  // Load Barchart Custom Watchlist dataset
-  useEffect(() => {
-    const fetchWatchlistDataset = async () => {
-      try {
-        const res = await fetch('./data/weekly_screeners_barchart_custom.json?t=' + Date.now());
-        if (res.ok) {
-          const json = await res.json();
-          setWatchlistDataset(json);
-        }
-      } catch (err) {
-        console.warn('Could not load Barchart custom watchlist dataset:', err);
-      }
-    };
-    fetchWatchlistDataset();
-  }, []);
+    fetchSamples();
+  }, [portfolioBookWeek]);
 
   // Auto-sync most current trading price (or closing price if after close) for Barchart Watchlist records
   useEffect(() => {
@@ -1294,8 +1374,123 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
         </div>
       </div>
 
+      {/* Fresh-Week Ready for Screens Panel */}
+      {(!currentDataset || currentDataset.records.length === 0) && (
+        <div className="glass-panel p-8 rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-slate-900/90 to-slate-950/90 text-center space-y-6 shadow-2xl">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+            <Sparkles className="w-8 h-8" />
+          </div>
+
+          <div className="max-w-xl mx-auto space-y-2">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{portfolioBookWeek ? `Trading Week: Week of ${portfolioBookWeek}` : `Current Trading Week: ${getCurrentTradingWeekLabel()}`}</span>
+            </div>
+            <h3 className="text-xl font-bold text-white">
+              New Week — Ready for Screens
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Your portfolio positions are synchronized and prior week's screens have been safely archived to keep your analysis clean. Run new stock screens below or import fresh data to generate candidates for this week's options flow.
+            </p>
+          </div>
+
+          {/* Action Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto pt-2">
+            <button
+              onClick={() => setIsPrescreenModalOpen(true)}
+              className="p-4 rounded-xl border border-purple-500/30 bg-purple-950/20 hover:bg-purple-950/40 text-left space-y-2 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between text-purple-400">
+                <Sliders className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <ArrowRight className="w-4 h-4 text-purple-400" />
+              </div>
+              <div className="text-sm font-bold text-white">MarketChameleon Pre-Screen</div>
+              <div className="text-[11px] text-slate-400">
+                Filter momentum &amp; high-IV stocks meeting institutional criteria.
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleRunBarchartWatchlist()}
+              disabled={isAnalyzingWatchlist}
+              className="p-4 rounded-xl border border-amber-500/30 bg-amber-950/20 hover:bg-amber-950/40 text-left space-y-2 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between text-amber-400">
+                <Zap className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <ArrowRight className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="text-sm font-bold text-white">Barchart Watchlist (View 190898)</div>
+              <div className="text-[11px] text-slate-400">
+                Analyze technical direction &amp; consensus across Schwab stock holdings.
+              </div>
+            </button>
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-4 rounded-xl border border-blue-500/30 bg-blue-950/20 hover:bg-blue-950/40 text-left space-y-2 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between text-blue-400">
+                <Upload className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <ArrowRight className="w-4 h-4 text-blue-400" />
+              </div>
+              <div className="text-sm font-bold text-white">Upload Screener CSV</div>
+              <div className="text-[11px] text-slate-400">
+                Import exported CSV from ThinkorSwim, Barchart, or MarketChameleon.
+              </div>
+            </button>
+          </div>
+
+          {/* Restore Prior Week Archive Section */}
+          {archivedWeeksList.length > 0 && (
+            <div className="pt-4 border-t border-slate-800/80 max-w-lg mx-auto space-y-3">
+              <div className="flex items-center justify-center space-x-2 text-xs text-slate-400 font-semibold">
+                <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Need prior week's screens? Restore from archive:</span>
+              </div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                <select
+                  value={selectedArchiveWeek || (archivedWeeksList[0]?.week || '')}
+                  onChange={(e) => setSelectedArchiveWeek(e.target.value)}
+                  className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono w-full sm:w-auto"
+                >
+                  {archivedWeeksList.map((aw) => (
+                    <option key={aw.week} value={aw.week}>
+                      Week of {aw.week} ({aw.sources.join(', ')} — {aw.totalRecords} records)
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => handleRestoreWeek(selectedArchiveWeek || archivedWeeksList[0]?.week)}
+                  className="px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-cyan-600/30 whitespace-nowrap"
+                >
+                  Restore Week
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Screened Equities Table with Dynamic Headers */}
+      {currentDataset && currentDataset.records.length > 0 && (
       <div className="glass-panel rounded-2xl border border-slate-800/90 shadow-2xl overflow-hidden bg-slate-950/70">
+        <div className="p-3 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-2">
+            <span className="font-bold text-white">{currentDataset.source_name || currentDataset.source_id}</span>
+            {isStaticDataset && currentDataset.timestamp && (
+              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono text-[10px]">
+                Static Reference Data (As of: {currentDataset.timestamp.slice(0, 10)})
+              </span>
+            )}
+            {!isStaticDataset && currentDataset.timestamp && (
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono text-[10px]">
+                Active Screen (As of: {currentDataset.timestamp.slice(0, 10)})
+              </span>
+            )}
+          </div>
+          <span className="text-slate-400 font-mono">{filteredRecords.length} records</span>
+        </div>
         <div className="overflow-x-auto max-h-[680px] 2xl:max-h-[780px] overflow-y-auto relative table-scroll-container">
           <table className="w-full text-left text-xs text-slate-300 border-collapse table-sticky-header">
             <thead className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -1363,6 +1558,7 @@ export const WeeklyStockScreenersView: React.FC<WeeklyStockScreenersViewProps> =
           </table>
         </div>
       </div>
+      )}
 
       {/* Multi-Source Extensibility Information Card */}
       <div className="glass-panel p-4 rounded-xl border border-slate-800/80 bg-slate-900/40 space-y-2">
