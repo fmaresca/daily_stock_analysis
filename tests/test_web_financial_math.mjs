@@ -35,6 +35,7 @@ import {
 import {
   sortData,
   normalizeSortValue,
+  parseCurrencyInput,
 } from '../web/src/utils/tableSort.ts';
 
 import {
@@ -2099,6 +2100,71 @@ test('26. Weekly US Economic Indicators Friday Close Rollover & MarketChameleon 
   assert.ok(typeof sample.extra_fields.rsi_14 === 'number', 'Record must have RSI-14');
   assert.ok(typeof sample.extra_fields.iv30 === 'number', 'Record must have IV30');
   assert.ok(sample.extra_fields.market_cap_str, 'Record must have market cap string');
+});
+
+test('27. YTD Premiums Written ($746,277.69) Currency Parsing & Economic Calendar Rollover & Sorting Contract', async () => {
+  // A. Formatted Currency & Large Float Number Parsing
+  assert.strictEqual(parseCurrencyInput('$746,277.69'), 746277.69);
+  assert.strictEqual(parseCurrencyInput('746,277.69'), 746277.69);
+  assert.strictEqual(parseCurrencyInput('746277.69'), 746277.69);
+  assert.strictEqual(parseCurrencyInput(' $ 746,277.69 '), 746277.69);
+  assert.strictEqual(parseCurrencyInput(746277.69), 746277.69);
+  assert.strictEqual(parseCurrencyInput('($3,000.00)'), -3000);
+  assert.strictEqual(parseCurrencyInput('-$3,000.00'), -3000);
+  assert.strictEqual(parseCurrencyInput(''), 0);
+  assert.strictEqual(parseCurrencyInput(null), 0);
+  assert.strictEqual(parseCurrencyInput(undefined), 0);
+
+  // B. Economic Calendar Rollover: After Friday 16:00 ET (e.g. 2026-10-09 21:00 UTC)
+  const fridayEvening = new Date('2026-10-09T21:00:00Z');
+  const weekUpcoming = getUpcomingTradingWeek(fridayEvening);
+  assert.strictEqual(weekUpcoming.isoMonday, '2026-10-12', 'Target week Monday must be 2026-10-12');
+  assert.strictEqual(weekUpcoming.isoFriday, '2026-10-16', 'Target week Friday must be 2026-10-16');
+
+  // Verify Cloudflare Pages Function onRequestGet produces indicators strictly for 2026-10-12 - 2026-10-16
+  const { onRequestGet } = await import('../functions/api/economic-calendar.js');
+  const mockContext = { request: new Request('http://localhost/api/economic-calendar?scope=upcoming') };
+  const res = await onRequestGet(mockContext);
+  assert.strictEqual(res.status, 200);
+  const data = await res.json();
+  assert.ok(Array.isArray(data.indicators), 'Indicators must be an array');
+  assert.ok(data.indicators.length >= 5, 'Must have at least 5 events');
+  
+  // Every event returned for upcoming must have isoDate in target week
+  for (const item of data.indicators) {
+    const prefix = (item.isoDate || '').substring(0, 10);
+    assert.ok(prefix >= '2026-10-12', `Event ${item.title} date ${prefix} must be >= 2026-10-12, not past week`);
+    assert.ok(prefix <= '2026-10-16', `Event ${item.title} date ${prefix} must be <= 2026-10-16`);
+  }
+
+  // C. Column Sort Engine Verification
+  const sampleIndicators = [
+    { title: 'Z-Trade Balance', dateET: 'Fri, Oct 16', timeET: '08:30 AM', impact: 'Low', forecast: '10.5%', sectors: 'Industrials', tickers: 'XLI', isoDate: '2026-10-16T08:30:00-04:00' },
+    { title: 'A-CPI Inflation', dateET: 'Wed, Oct 14', timeET: '08:30 AM', impact: 'High', forecast: '2.5%', sectors: 'Tech', tickers: 'QQQ', isoDate: '2026-10-14T08:30:00-04:00' },
+    { title: 'M-Retail Sales', dateET: 'Mon, Oct 12', timeET: '09:45 AM', impact: 'Moderate', forecast: '1.2%', sectors: 'Retail', tickers: 'XRT', isoDate: '2026-10-12T09:45:00-04:00' },
+  ];
+
+  // 1. Sort by DateET (chronological)
+  const sortedDateAsc = sortData(sampleIndicators, (item) => Date.parse(item.isoDate), 'asc');
+  assert.strictEqual(sortedDateAsc[0].title, 'M-Retail Sales', 'Mon Oct 12 must come first asc');
+  assert.strictEqual(sortedDateAsc[2].title, 'Z-Trade Balance', 'Fri Oct 16 must come last asc');
+
+  // 2. Sort by Title (alphabetical)
+  const sortedTitleAsc = sortData(sampleIndicators, 'title', 'asc');
+  assert.strictEqual(sortedTitleAsc[0].title, 'A-CPI Inflation');
+  assert.strictEqual(sortedTitleAsc[2].title, 'Z-Trade Balance');
+
+  // 3. Sort by Impact (severity mapping High > Moderate > Low)
+  const impactMap = { HIGH: 3, MODERATE: 2, MEDIUM: 2, LOW: 1 };
+  const sortedImpactDesc = sortData(sampleIndicators, (item) => impactMap[item.impact.toUpperCase()] || 0, 'desc');
+  assert.strictEqual(sortedImpactDesc[0].impact, 'High', 'High impact must be first desc');
+  assert.strictEqual(sortedImpactDesc[1].impact, 'Moderate', 'Moderate impact must be second desc');
+  assert.strictEqual(sortedImpactDesc[2].impact, 'Low', 'Low impact must be last desc');
+
+  // 4. Sort by Forecast (numeric percentage parse)
+  const sortedForecastAsc = sortData(sampleIndicators, (item) => parseFloat(item.forecast.replace(/[^0-9.-]/g, '')), 'asc');
+  assert.strictEqual(sortedForecastAsc[0].forecast, '1.2%');
+  assert.strictEqual(sortedForecastAsc[2].forecast, '10.5%');
 });
 
 import './test_api_contracts_mocked.mjs';

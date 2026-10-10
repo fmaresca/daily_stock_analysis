@@ -127,7 +127,7 @@ export const TaxAlphaLedgerPanel: React.FC<TaxAlphaLedgerPanelProps> = React.mem
             <div className="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/40">
               <span className="text-[10px] text-white block font-bold">= Cumulative YTD</span>
               <span className="text-base font-bold font-mono text-emerald-400">
-                ${capitalState.ytdPremiumsEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${Math.max(capitalState.ytdPremiumsEarned || 0, taxState.ytdPremiumsEarned || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-[9px] text-slate-400 block">2026 Calendar Year</span>
             </div>
@@ -227,7 +227,7 @@ export const TaxAlphaLedgerPanel: React.FC<TaxAlphaLedgerPanelProps> = React.mem
             <span>
               Premiums Included:{' '}
               <strong className="text-emerald-300">
-                +${capitalState.ytdPremiumsEarned.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                +${Math.max(capitalState.ytdPremiumsEarned || 0, taxState.ytdPremiumsEarned || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </strong>
             </span>
           </div>

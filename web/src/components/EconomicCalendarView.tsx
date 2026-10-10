@@ -32,13 +32,20 @@ import {
 const CALENDAR_CACHE_KEY_PREFIX = 'deltaharvest_calendar_cache_';
 const CALENDAR_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
-function getSessionCachedCalendar(scope: 'upcoming' | 'past'): EconomicCalendarResponse | null {
+function getSessionCachedCalendar(scope: 'upcoming' | 'past', targetMonday?: string): EconomicCalendarResponse | null {
   try {
     const raw = sessionStorage.getItem(`${CALENDAR_CACHE_KEY_PREFIX}${scope}`);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.data && Array.isArray(parsed.data.indicators) && parsed.data.indicators.length > 0) {
         if (Date.now() - parsed.timestamp < CALENDAR_CACHE_TTL_MS) {
+          if (scope === 'upcoming' && targetMonday) {
+            const hasValidUpcoming = parsed.data.indicators.some((item: any) => {
+              const datePrefix = (item.isoDate || '').substring(0, 10);
+              return datePrefix >= targetMonday;
+            });
+            if (!hasValidUpcoming) return null;
+          }
           return parsed.data;
         }
       }
@@ -74,13 +81,14 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
 
   // Initialize from session cache or bundled fallback immediately so view NEVER blocks
   const [data, setData] = useState<EconomicCalendarResponse | null>(() => {
-    const cached = getSessionCachedCalendar('upcoming');
+    const cached = getSessionCachedCalendar('upcoming', getUpcomingTradingWeek().isoMonday);
     if (cached) return cached;
+    const week = getUpcomingTradingWeek();
     return {
-      indicators: reanchorScheduleToWeek(BUNDLED_MACRO_SCHEDULE, getUpcomingTradingWeek()),
+      indicators: reanchorScheduleToWeek(BUNDLED_MACRO_SCHEDULE, week),
       source: 'curated_macro_schedule',
       fallback: false,
-      notice: 'Active weekly macroeconomic catalyst radar & sector transmission schedule.',
+      notice: `Active weekly macroeconomic catalyst radar & sector transmission schedule for upcoming week (${week.label}).`,
       last_updated: new Date().toISOString(),
     };
   });
@@ -154,12 +162,11 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       if (res && res.ok) {
         const json: EconomicCalendarResponse = await res.json();
         if (json && Array.isArray(json.indicators) && json.indicators.length > 0) {
-          // If scope is 'upcoming', verify the events are actually upcoming (not last week's un-rolled feed)
-          const todayIso = new Date().toISOString().substring(0, 10);
+          // If scope is 'upcoming', verify the events are actually for the target upcoming week
           const targetMonday = upcomingWeek.isoMonday;
           const hasUpcomingEvents = json.indicators.some((item) => {
             const datePrefix = (item.isoDate || '').substring(0, 10);
-            return datePrefix >= targetMonday || datePrefix >= todayIso;
+            return datePrefix >= targetMonday;
           });
 
           if (targetScope === 'upcoming' && !hasUpcomingEvents) {
@@ -179,7 +186,7 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
       // Proceed to Tier 2
     }
 
-    // Tier 2: Static JSON resource (/data/economic_calendar.json) for upcoming week
+    // Tier 2: Static JSON resource (/data/economic_calendar.json) re-anchored for upcoming week
     if (!success && targetScope === 'upcoming') {
       try {
         let bRes: Response | null = null;
@@ -192,9 +199,12 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
         if (bRes && bRes.ok) {
           const bJson: EconomicCalendarResponse = await bRes.json();
           if (bJson && Array.isArray(bJson.indicators) && bJson.indicators.length > 0) {
+            const reanchoredList = reanchorScheduleToWeek(bJson.indicators, upcomingWeek);
             const nextPayload: EconomicCalendarResponse = {
               ...bJson,
+              indicators: reanchoredList,
               source: bJson.source || 'curated_macro_schedule',
+              notice: `Active weekly macroeconomic catalyst radar & sector transmission schedule for upcoming week (${upcomingWeek.label}).`,
               last_updated: new Date().toISOString(),
             };
             setData(nextPayload);
@@ -278,6 +288,18 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
             const t = Date.parse(fullStr);
             if (!isNaN(t)) return t;
             return item.dateET || '';
+          }
+        : sortKey === 'impact'
+        ? (item: EconomicIndicator) => {
+            const map: Record<string, number> = { HIGH: 3, MODERATE: 2, MEDIUM: 2, LOW: 1 };
+            return map[item.impact?.toUpperCase()] || 0;
+          }
+        : sortKey === 'forecast'
+        ? (item: EconomicIndicator) => {
+            const raw = (item.forecast || '').trim();
+            const cleaned = raw.replace(/[^0-9.-]/g, '');
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? raw.toLowerCase() : num;
           }
         : sortKey,
       sortOrder
@@ -759,22 +781,22 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
           <table className="w-full text-left text-xs text-slate-300 border-collapse bg-slate-900/70 table-sticky-header">
             <thead>
               <tr className="bg-slate-950/90 text-[11px] text-slate-400 uppercase font-mono tracking-wider border-b border-slate-800 sticky top-0 z-10">
-                <SortableTh columnKey="dateET" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                <SortableTh columnKey="dateET" sortKey="dateET" currentSortKey={sortKey} currentSortOrder={sortOrder} onSort={handleSort}>
                   Date &amp; Time (ET)
                 </SortableTh>
-                <SortableTh columnKey="title" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                <SortableTh columnKey="title" sortKey="title" currentSortKey={sortKey} currentSortOrder={sortOrder} onSort={handleSort}>
                   Economic Indicator
                 </SortableTh>
-                <SortableTh columnKey="impact" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                <SortableTh columnKey="impact" sortKey="impact" currentSortKey={sortKey} currentSortOrder={sortOrder} onSort={handleSort}>
                   Market Impact
                 </SortableTh>
-                <SortableTh columnKey="forecast" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                <SortableTh columnKey="forecast" sortKey="forecast" currentSortKey={sortKey} currentSortOrder={sortOrder} onSort={handleSort}>
                   Consensus / Prior
                 </SortableTh>
-                <SortableTh columnKey="sectors" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                <SortableTh columnKey="sectors" sortKey="sectors" currentSortKey={sortKey} currentSortOrder={sortOrder} onSort={handleSort}>
                   Vulnerable Sectors
                 </SortableTh>
-                <SortableTh columnKey="tickers" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>
+                <SortableTh columnKey="tickers" sortKey="tickers" currentSortKey={sortKey} currentSortOrder={sortOrder} onSort={handleSort}>
                   Proxy ETFs &amp; Securities
                 </SortableTh>
               </tr>

@@ -16,6 +16,23 @@ export type SortOrder = 'asc' | 'desc';
 export type ValueAccessor<T> = (item: T) => unknown;
 
 /**
+ * Universal Currency & Numeric Input Parser
+ * Safely parses formatted currency strings (e.g. "$746,277.69", "746,277.69", "($3,000)"),
+ * raw numbers, or empty inputs into clean numeric floats.
+ */
+export function parseCurrencyInput(value: string | number | undefined | null): number {
+  if (value === undefined || value === null) return 0;
+  if (typeof value === 'number') return isNaN(value) ? 0 : value;
+  const str = String(value).trim();
+  if (str === '') return 0;
+  const isNegative = str.includes('-') || (str.startsWith('(') && str.endsWith(')'));
+  const cleaned = str.replace(/[^0-9.]/g, '');
+  const parsed = parseFloat(cleaned);
+  if (isNaN(parsed)) return 0;
+  return isNegative ? -Math.abs(parsed) : parsed;
+}
+
+/**
  * Extracts a comparable primitive (number, date timestamp, or lowercase string) from any value.
  */
 export function normalizeSortValue(val: unknown): number | string {

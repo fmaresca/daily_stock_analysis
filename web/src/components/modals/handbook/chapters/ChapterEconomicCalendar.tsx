@@ -146,6 +146,7 @@ export const ChapterEconomicCalendar: React.FC<ChapterEconomicCalendarProps> = (
           <li><strong>Multi-Tier Resilient Feed Ingestion:</strong> The Radar utilizes a 3-tier architecture: <em>Tier 1: Forex Factory Live Feed</em>, <em>Tier 2: Nasdaq Live Calendar Radar</em> backup, and <em>Tier 3: Curated High-Impact Weekly Schedule</em>.</li>
           <li><strong>Upcoming vs. Past Week Scope Selector:</strong> Easily toggle between the upcoming trading week (e.g. Sep 14 – 18 with FOMC Rate Decision, Retail Sales, Quadruple Witching) and the historical past week archive (e.g. Sep 7 – 11 with CPI &amp; PPI prints). <em>Automatic Rollover:</em> The radar automatically shifts focus to the following trading week promptly at the Friday 16:00 ET (4:00 PM Eastern) market close, providing traders with an immediate, forward-looking macro calendar throughout the weekend.</li>
           <li><strong>Live Eastern Time (ET) Synchronization:</strong> Real-time feed status badges indicate the active source (Forex Factory, Nasdaq, or Curated Schedule) along with live synchronization timestamps. Clicking &quot;Refresh Feed&quot; forces an immediate edge and cache bypass for the active scope.</li>
+          <li><strong>Interactive Table Sorting:</strong> Click any column header (Date &amp; Time, Event / Release, Impact, Forecast, Sectors, Vulnerable Equities) to sort ascending or descending. Impact sorts by institutional risk severity (High &gt; Moderate &gt; Low) and Forecast sorts numerically.</li>
         </ul>
       </div>
     </div>

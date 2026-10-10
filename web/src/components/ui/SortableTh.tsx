@@ -29,11 +29,11 @@ export const SortableTh: React.FC<SortableThProps> = ({
   children,
   title,
 }) => {
-  const activeKey = propSortKey || columnKey;
-  const activeSortKey = currentSortKey;
+  const activeKey = columnKey || propSortKey;
+  const activeSortKey = currentSortKey !== undefined ? currentSortKey : (columnKey ? propSortKey : undefined);
   const activeSortOrder = currentSortOrder || sortOrder || 'asc';
   const isSortable = Boolean(activeKey && onSort);
-  const isActive = isSortable && activeSortKey === activeKey;
+  const isActive = isSortable && Boolean(activeSortKey && activeSortKey === activeKey);
 
   const alignClass =
     align === 'right'

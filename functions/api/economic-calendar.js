@@ -984,12 +984,15 @@ export async function onRequestGet(context) {
             };
           });
 
+        const targetFriday = addDays(targetMonday, 4);
+        const targetFridayIso = formatDateYMD(targetFriday);
+
         const relevantUsd = usdEvents.filter((e) => {
           const eventDatePrefix = (e.isoDate || "").substring(0, 10);
-          return eventDatePrefix >= targetMondayIso;
+          return eventDatePrefix >= targetMondayIso && eventDatePrefix <= targetFridayIso;
         });
 
-        // Only return Forex Factory if it provides comprehensive coverage (>= 5 events)
+        // Only return Forex Factory if it provides comprehensive coverage (>= 5 events) for the target week
         if (relevantUsd.length >= 5) {
           return new Response(JSON.stringify({
             indicators: relevantUsd,
@@ -1017,9 +1020,15 @@ export async function onRequestGet(context) {
     if (nasdaqResponse.ok) {
       const nJson = await nasdaqResponse.json();
       const rows = nJson?.data?.rows;
-      const asOf = nJson?.data?.asOf || "This Week";
+      const asOf = nJson?.data?.asOf || "";
 
-      if (Array.isArray(rows) && rows.length > 0) {
+      // Validate that Nasdaq's asOf date belongs to target week (e.g. not past Friday or earlier)
+      const asOfDate = new Date(asOf);
+      const asOfIso = !isNaN(asOfDate.getTime()) ? formatDateYMD(asOfDate) : "";
+      const targetFridayIso = formatDateYMD(addDays(targetMonday, 4));
+      const isAsOfInTargetWeek = asOfIso !== "" && asOfIso >= targetMondayIso && asOfIso <= targetFridayIso;
+
+      if (isAsOfInTargetWeek && Array.isArray(rows) && rows.length > 0) {
         const usRows = rows
           .filter((r) => r.country === "United States" || r.country === "USD" || r.country === "US")
           .map((r) => {
@@ -1050,7 +1059,7 @@ export async function onRequestGet(context) {
               previous: cleanPrevious,
               sectors: mapped.sectors,
               tickers: mapped.tickers,
-              isoDate: new Date().toISOString()
+              isoDate: asOfIso ? `${asOfIso}T12:00:00-04:00` : new Date().toISOString()
             };
           });
 

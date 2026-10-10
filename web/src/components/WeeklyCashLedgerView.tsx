@@ -17,6 +17,7 @@ import {
   calculateDynamicPositionSizing,
   MAX_SINGLE_EQUITY_POSITION_LIMIT,
   DEFAULT_PER_POSITION_BUDGET,
+  parseCurrencyInput,
 } from '../utils/capitalAndTaxLedger';
 import {
   parseSchwabPositionsCsv,
@@ -359,27 +360,32 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     realizedLosses: number;
     lossCarryover: number;
   }) => {
+    const parsedPremiums = parseCurrencyInput(data.ytdPremiumsWritten);
+    const parsedGains = parseCurrencyInput(data.realizedGains);
+    const parsedLosses = parseCurrencyInput(data.realizedLosses);
+    const parsedCarryover = parseCurrencyInput(data.lossCarryover);
+
     const updatedTax: TaxLedgerState = {
       ...taxState,
       currentTaxYear: data.taxYear,
-      ytdPremiumsEarned: data.ytdPremiumsWritten,
-      ytdRealizedCapitalGains: data.realizedGains,
-      ytdRealizedCapitalLosses: data.realizedLosses,
-      priorYearLossCarryforward: data.lossCarryover,
+      ytdPremiumsEarned: parsedPremiums,
+      ytdRealizedCapitalGains: parsedGains,
+      ytdRealizedCapitalLosses: parsedLosses,
+      priorYearLossCarryforward: parsedCarryover,
     };
     setTaxState(updatedTax);
     saveTaxLedgerState(updatedTax);
 
     // Keep capitalState in sync:
     // When the user edits YTD Option Premiums Written, calculate priorYtdPremiumBalance so that
-    // priorYtdPremiumBalance + currentWeekPremiumsCollected === data.ytdPremiumsWritten
+    // priorYtdPremiumBalance + currentWeekPremiumsCollected === parsedPremiums
     const currentWeek = Number(capitalState.currentWeekPremiumsCollected) || 0;
-    const newPriorYtd = Math.max(0, data.ytdPremiumsWritten - currentWeek);
+    const newPriorYtd = Math.max(0, parsedPremiums - currentWeek);
 
     const updatedCap: AccountCapitalState = {
       ...capitalState,
       priorYtdPremiumBalance: newPriorYtd,
-      ytdPremiumsEarned: data.ytdPremiumsWritten,
+      ytdPremiumsEarned: parsedPremiums,
       lastUpdated: new Date().toISOString(),
     };
     setCapitalState(updatedCap);
@@ -607,7 +613,7 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
             <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">1. YTD Option Premiums Written</span>
             <span className="text-lg font-bold font-mono text-emerald-400 block mt-0.5">
-              ${capitalState.ytdPremiumsEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${Math.max(capitalState.ytdPremiumsEarned || 0, taxState.ytdPremiumsEarned || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <span className="text-[10px] text-slate-500 block mt-0.5">
               Cumulative premiums collected in tax year {taxState.currentTaxYear}

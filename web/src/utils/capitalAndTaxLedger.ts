@@ -40,6 +40,23 @@ export const DEFAULT_PRIOR_YTD_PREMIUM_BALANCE = 0.00;
 export const DEFAULT_YTD_PREMIUMS_EARNED = 0.00;
 
 /**
+ * Universal Currency & Numeric Input Parser
+ * Safely parses formatted currency strings (e.g. "$746,277.69", "746,277.69", "($3,000)"),
+ * raw numbers, or empty inputs into clean numeric floats.
+ */
+export function parseCurrencyInput(value: string | number | undefined | null): number {
+  if (value === undefined || value === null) return 0;
+  if (typeof value === 'number') return isNaN(value) ? 0 : value;
+  const str = String(value).trim();
+  if (str === '') return 0;
+  const isNegative = str.includes('-') || (str.startsWith('(') && str.endsWith(')'));
+  const cleaned = str.replace(/[^0-9.]/g, '');
+  const parsed = parseFloat(cleaned);
+  if (isNaN(parsed)) return 0;
+  return isNegative ? -Math.abs(parsed) : parsed;
+}
+
+/**
  * Dynamically calculates target allocation per position and maximum concurrent positions permitted:
  * - Position limit on any one equity security CSP will be NO MORE than $200,000.
  * - Target allocation per position defaults to freeCash / 5 (bounded between $25k and $200,000).
@@ -218,6 +235,25 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
     let priorYtd = Number(state.priorYtdPremiumBalance);
     let ytdTotal = Number(state.ytdPremiumsEarned);
 
+    // Cross-check tax ledger state to ensure ytdPremiumsEarned is always in sync and preserved
+    try {
+      const taxRaw = typeof window !== 'undefined' ? localStorage.getItem(TAX_STORAGE_KEY) : null;
+      if (taxRaw) {
+        const parsedTax = JSON.parse(taxRaw);
+        if (parsedTax && Number(parsedTax.ytdPremiumsEarned) > 0) {
+          const taxYtd = Number(parsedTax.ytdPremiumsEarned);
+          if (isNaN(ytdTotal) || taxYtd > ytdTotal) {
+            ytdTotal = taxYtd;
+            if (isNaN(priorYtd) || priorYtd === 0) {
+              priorYtd = Math.max(0, ytdTotal - currentWeekPrem);
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     if (isNaN(priorYtd) || priorYtd < 0) {
       priorYtd = !isNaN(ytdTotal) && ytdTotal > 0 ? Math.max(0, ytdTotal - currentWeekPrem) : DEFAULT_PRIOR_YTD_PREMIUM_BALANCE;
     }
@@ -285,6 +321,19 @@ export function getStoredTaxLedgerState(): TaxLedgerState {
         }
         if (parsed.ytdPremiumsEarned === undefined || parsed.ytdPremiumsEarned === null || parsed.ytdPremiumsEarned === 51514.11) {
           parsed.ytdPremiumsEarned = DEFAULT_YTD_PREMIUMS_EARNED;
+        }
+
+        // Cross-check capital state to ensure ytdPremiumsEarned is synchronized
+        try {
+          const capRaw = typeof window !== 'undefined' ? localStorage.getItem(CAPITAL_STORAGE_KEY) : null;
+          if (capRaw) {
+            const parsedCap = JSON.parse(capRaw);
+            if (parsedCap && Number(parsedCap.ytdPremiumsEarned) > Number(parsed.ytdPremiumsEarned)) {
+              parsed.ytdPremiumsEarned = Number(parsedCap.ytdPremiumsEarned);
+            }
+          }
+        } catch {
+          // ignore
         }
         if (parsed.ytdRealizedCapitalGains === undefined || parsed.ytdRealizedCapitalGains === null) {
           parsed.ytdRealizedCapitalGains = 0.00;

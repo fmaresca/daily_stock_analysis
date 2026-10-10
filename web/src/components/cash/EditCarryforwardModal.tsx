@@ -12,6 +12,7 @@ import {
 import {
   MAX_SINGLE_EQUITY_POSITION_LIMIT,
   DEFAULT_PER_POSITION_BUDGET,
+  parseCurrencyInput,
 } from '../../utils/capitalAndTaxLedger';
 
 // ----------------------------------------------------
@@ -40,23 +41,23 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
   taxState,
   onSave,
 }) => {
-  const [inputTotalCash, setInputTotalCash] = useState<number>(capitalState.totalCash);
-  const [inputTargetAllocation, setInputTargetAllocation] = useState<number>(
+  const [inputTotalCash, setInputTotalCash] = useState<string | number>(capitalState.totalCash);
+  const [inputTargetAllocation, setInputTargetAllocation] = useState<string | number>(
     capitalState.maxPerPositionAllocation || DEFAULT_PER_POSITION_BUDGET
   );
-  const [inputPriorYtdPremiums, setInputPriorYtdPremiums] = useState<number>(
+  const [inputPriorYtdPremiums, setInputPriorYtdPremiums] = useState<string | number>(
     capitalState.priorYtdPremiumBalance
   );
-  const [inputCurrentWeekPremiums, setInputCurrentWeekPremiums] = useState<number>(
+  const [inputCurrentWeekPremiums, setInputCurrentWeekPremiums] = useState<string | number>(
     capitalState.currentWeekPremiumsCollected
   );
-  const [inputLossCarryover, setInputLossCarryover] = useState<number>(
+  const [inputLossCarryover, setInputLossCarryover] = useState<string | number>(
     taxState.priorYearLossCarryforward
   );
-  const [inputRealizedGains, setInputRealizedGains] = useState<number>(
+  const [inputRealizedGains, setInputRealizedGains] = useState<string | number>(
     taxState.ytdRealizedCapitalGains
   );
-  const [inputRealizedLosses, setInputRealizedLosses] = useState<number>(
+  const [inputRealizedLosses, setInputRealizedLosses] = useState<string | number>(
     taxState.ytdRealizedCapitalLosses
   );
 
@@ -86,13 +87,13 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
-      totalCash: Number(inputTotalCash),
-      targetAllocation: Number(inputTargetAllocation),
-      priorYtdPremiums: Number(inputPriorYtdPremiums),
-      currentWeekPremiums: Number(inputCurrentWeekPremiums),
-      lossCarryover: Number(inputLossCarryover),
-      realizedGains: Number(inputRealizedGains),
-      realizedLosses: Number(inputRealizedLosses),
+      totalCash: parseCurrencyInput(inputTotalCash),
+      targetAllocation: Math.min(MAX_SINGLE_EQUITY_POSITION_LIMIT, parseCurrencyInput(inputTargetAllocation)),
+      priorYtdPremiums: parseCurrencyInput(inputPriorYtdPremiums),
+      currentWeekPremiums: parseCurrencyInput(inputCurrentWeekPremiums),
+      lossCarryover: parseCurrencyInput(inputLossCarryover),
+      realizedGains: parseCurrencyInput(inputRealizedGains),
+      realizedLosses: parseCurrencyInput(inputRealizedLosses),
     });
   };
 
@@ -118,9 +119,10 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
               Total Brokerage Cash Position ($)
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={inputTotalCash}
-              onChange={(e) => setInputTotalCash(Number(e.target.value))}
+              onChange={(e) => setInputTotalCash(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
               required
             />
@@ -135,11 +137,10 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
               <span className="text-[10px] text-cyan-400 font-mono">Max $200,000 / Equity</span>
             </label>
             <input
-              type="number"
-              step="5000"
-              max={MAX_SINGLE_EQUITY_POSITION_LIMIT}
+              type="text"
+              inputMode="decimal"
               value={inputTargetAllocation}
-              onChange={(e) => setInputTargetAllocation(Math.min(MAX_SINGLE_EQUITY_POSITION_LIMIT, Number(e.target.value)))}
+              onChange={(e) => setInputTargetAllocation(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
               required
             />
@@ -153,10 +154,10 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
               Previous / Starting YTD Premiums Balance ($)
             </label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={inputPriorYtdPremiums}
-              onChange={(e) => setInputPriorYtdPremiums(Number(e.target.value))}
+              onChange={(e) => setInputPriorYtdPremiums(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
               required
             />
@@ -170,10 +171,10 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
               Current Week Premiums Collected ($)
             </label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={inputCurrentWeekPremiums}
-              onChange={(e) => setInputCurrentWeekPremiums(Number(e.target.value))}
+              onChange={(e) => setInputCurrentWeekPremiums(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
               required
             />
@@ -187,9 +188,10 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
               Prior-Year Capital Loss Carryforward ($)
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={inputLossCarryover}
-              onChange={(e) => setInputLossCarryover(Number(e.target.value))}
+              onChange={(e) => setInputLossCarryover(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
               required
             />
@@ -204,10 +206,10 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
                 YTD Realized Gains ($)
               </label>
               <input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={inputRealizedGains}
-                onChange={(e) => setInputRealizedGains(Number(e.target.value))}
+                onChange={(e) => setInputRealizedGains(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono"
                 required
               />
@@ -220,10 +222,10 @@ export const EditBalancesModal: React.FC<EditBalancesModalProps> = ({
                 YTD Realized Losses ($)
               </label>
               <input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={inputRealizedLosses}
-                onChange={(e) => setInputRealizedLosses(Number(e.target.value))}
+                onChange={(e) => setInputRealizedLosses(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-rose-400 font-mono"
                 required
               />
@@ -380,9 +382,9 @@ export const AddWeeklyPremiumModal: React.FC<AddWeeklyPremiumModalProps> = ({
   currentWeekPremiums,
   onAdd,
 }) => {
-  const [modalStartingYtdInput, setModalStartingYtdInput] = useState<number>(initialStartingYtd);
+  const [modalStartingYtdInput, setModalStartingYtdInput] = useState<string | number>(initialStartingYtd);
   const [premSymbol, setPremSymbol] = useState('');
-  const [premAmount, setPremAmount] = useState<number>(350);
+  const [premAmount, setPremAmount] = useState<string | number>(350);
   const [premType, setPremType] = useState<'EXPIRED' | 'EXERCISED' | 'ROLLED'>('EXPIRED');
   const [premNote, setPremNote] = useState('');
 
@@ -397,10 +399,10 @@ export const AddWeeklyPremiumModal: React.FC<AddWeeklyPremiumModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAdd({
-      startingYtd: Number(modalStartingYtdInput) || initialStartingYtd,
+      startingYtd: parseCurrencyInput(modalStartingYtdInput) || initialStartingYtd,
       symbol: premSymbol,
       type: premType,
-      amount: Number(premAmount),
+      amount: parseCurrencyInput(premAmount),
       note: premNote,
     });
     setPremSymbol('');
@@ -439,17 +441,17 @@ export const AddWeeklyPremiumModal: React.FC<AddWeeklyPremiumModalProps> = ({
               </button>
             </div>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={modalStartingYtdInput}
-              onChange={(e) => setModalStartingYtdInput(Number(e.target.value))}
+              onChange={(e) => setModalStartingYtdInput(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-bold font-mono text-sm focus:border-emerald-500 focus:outline-none"
               required
             />
             <div className="flex justify-between items-center text-[10px] text-slate-400 pt-0.5">
               <span>Current Week premium will be added to this baseline amount.</span>
               <span className="font-mono text-slate-300">
-                Preview YTD: ${(Number(modalStartingYtdInput || 0) + currentWeekPremiums + Number(premAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                Preview YTD: ${(parseCurrencyInput(modalStartingYtdInput) + currentWeekPremiums + parseCurrencyInput(premAmount)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>
@@ -541,7 +543,7 @@ export const EditPriorYtdModal: React.FC<EditPriorYtdModalProps> = ({
   currentWeekPremiums,
   onSave,
 }) => {
-  const [inputVal, setInputVal] = useState<number>(currentPriorYtd);
+  const [inputVal, setInputVal] = useState<string | number>(currentPriorYtd);
 
   useEffect(() => {
     if (isOpen) {
@@ -553,7 +555,7 @@ export const EditPriorYtdModal: React.FC<EditPriorYtdModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(Number(inputVal));
+    onSave(parseCurrencyInput(inputVal));
   };
 
   return (
@@ -595,10 +597,10 @@ export const EditPriorYtdModal: React.FC<EditPriorYtdModalProps> = ({
               </button>
             </div>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={inputVal}
-              onChange={(e) => setInputVal(Number(e.target.value))}
+              onChange={(e) => setInputVal(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono font-bold text-sm focus:border-cyan-500 focus:outline-none"
               required
             />
@@ -611,7 +613,7 @@ export const EditPriorYtdModal: React.FC<EditPriorYtdModalProps> = ({
             </div>
             <div className="flex justify-between text-white font-bold border-t border-slate-800 pt-1">
               <span>New Cumulative YTD:</span>
-              <span className="text-emerald-300">${(Number(inputVal || 0) + currentWeekPremiums).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="text-emerald-300">${(parseCurrencyInput(inputVal) + currentWeekPremiums).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
 
@@ -660,23 +662,25 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
   ytdPremiumsEarned,
   onSave,
 }) => {
-  const currentYtd = (ytdPremiumsEarned !== undefined && ytdPremiumsEarned !== null && ytdPremiumsEarned > 0)
-    ? ytdPremiumsEarned
-    : (taxState.ytdPremiumsEarned || 0);
+  const currentYtd = Math.max(
+    (ytdPremiumsEarned !== undefined && ytdPremiumsEarned !== null && ytdPremiumsEarned > 0) ? ytdPremiumsEarned : 0,
+    (taxState.ytdPremiumsEarned !== undefined && taxState.ytdPremiumsEarned !== null && taxState.ytdPremiumsEarned > 0) ? taxState.ytdPremiumsEarned : 0
+  );
 
   const [inputTaxYear, setInputTaxYear] = useState<number | string>(taxState.currentTaxYear);
-  const [inputYtdPremiums, setInputYtdPremiums] = useState<number | string>(currentYtd);
-  const [inputRealizedGains, setInputRealizedGains] = useState<number | string>(taxState.ytdRealizedCapitalGains);
-  const [inputRealizedLosses, setInputRealizedLosses] = useState<number | string>(taxState.ytdRealizedCapitalLosses);
-  const [inputTaxCarryover, setInputTaxCarryover] = useState<number | string>(taxState.priorYearLossCarryforward);
+  const [inputYtdPremiums, setInputYtdPremiums] = useState<string | number>(currentYtd > 0 ? currentYtd : '');
+  const [inputRealizedGains, setInputRealizedGains] = useState<string | number>(taxState.ytdRealizedCapitalGains);
+  const [inputRealizedLosses, setInputRealizedLosses] = useState<string | number>(taxState.ytdRealizedCapitalLosses);
+  const [inputTaxCarryover, setInputTaxCarryover] = useState<string | number>(taxState.priorYearLossCarryforward);
 
   useEffect(() => {
     if (isOpen) {
-      const freshYtd = (ytdPremiumsEarned !== undefined && ytdPremiumsEarned !== null && ytdPremiumsEarned > 0)
-        ? ytdPremiumsEarned
-        : (taxState.ytdPremiumsEarned || 0);
+      const freshYtd = Math.max(
+        (ytdPremiumsEarned !== undefined && ytdPremiumsEarned !== null && ytdPremiumsEarned > 0) ? ytdPremiumsEarned : 0,
+        (taxState.ytdPremiumsEarned !== undefined && taxState.ytdPremiumsEarned !== null && taxState.ytdPremiumsEarned > 0) ? taxState.ytdPremiumsEarned : 0
+      );
       setInputTaxYear(taxState.currentTaxYear);
-      setInputYtdPremiums(freshYtd);
+      setInputYtdPremiums(freshYtd > 0 ? freshYtd : '');
       setInputRealizedGains(taxState.ytdRealizedCapitalGains);
       setInputRealizedLosses(taxState.ytdRealizedCapitalLosses);
       setInputTaxCarryover(taxState.priorYearLossCarryforward);
@@ -689,10 +693,10 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
     e.preventDefault();
     onSave({
       taxYear: Number(inputTaxYear) || 2026,
-      ytdPremiumsWritten: Number(inputYtdPremiums) || 0,
-      realizedGains: Number(inputRealizedGains) || 0,
-      realizedLosses: Number(inputRealizedLosses) || 0,
-      lossCarryover: Number(inputTaxCarryover) || 0,
+      ytdPremiumsWritten: parseCurrencyInput(inputYtdPremiums),
+      realizedGains: parseCurrencyInput(inputRealizedGains),
+      realizedLosses: parseCurrencyInput(inputRealizedLosses),
+      lossCarryover: parseCurrencyInput(inputTaxCarryover),
     });
   };
 
@@ -718,7 +722,7 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
             <input
               type="number"
               value={inputTaxYear}
-              onChange={(e) => setInputTaxYear(Number(e.target.value))}
+              onChange={(e) => setInputTaxYear(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
               required
             />
@@ -729,12 +733,12 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
               YTD Option Premiums Written ($)
             </label>
             <input
-              type="number"
-              step="0.01"
-              min="0"
+              type="text"
+              inputMode="decimal"
               value={inputYtdPremiums}
-              onChange={(e) => setInputYtdPremiums(e.target.value === '' ? '' : Number(e.target.value))}
+              onChange={(e) => setInputYtdPremiums(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono font-bold"
+              placeholder="e.g. 746,277.69"
               required
             />
             <span className="text-[10px] text-slate-500 mt-0.5 block">
@@ -747,10 +751,10 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
               YTD Realized Capital Gains ($)
             </label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={inputRealizedGains}
-              onChange={(e) => setInputRealizedGains(e.target.value === '' ? '' : Number(e.target.value))}
+              onChange={(e) => setInputRealizedGains(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono font-bold"
               required
             />
@@ -764,10 +768,10 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
               YTD Realized Capital Losses ($)
             </label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={inputRealizedLosses}
-              onChange={(e) => setInputRealizedLosses(e.target.value === '' ? '' : Number(e.target.value))}
+              onChange={(e) => setInputRealizedLosses(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-rose-400 font-mono font-bold"
               required
             />
@@ -790,10 +794,10 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
               </button>
             </div>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={inputTaxCarryover}
-              onChange={(e) => setInputTaxCarryover(e.target.value === '' ? '' : Number(e.target.value))}
+              onChange={(e) => setInputTaxCarryover(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-amber-400 font-mono font-bold"
               required
             />
@@ -805,22 +809,22 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5 font-mono text-[11px]">
             <div className="flex justify-between text-slate-400">
               <span>YTD Option Premiums:</span>
-              <span className="text-emerald-400">+${Number(inputYtdPremiums || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="text-emerald-400">+${parseCurrencyInput(inputYtdPremiums).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-slate-400">
               <span>Net Capital Gains / Losses:</span>
-              <span className={Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                {Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) >= 0 ? '+' : ''}${(Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              <span className={parseCurrencyInput(inputRealizedGains) - parseCurrencyInput(inputRealizedLosses) >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                {parseCurrencyInput(inputRealizedGains) - parseCurrencyInput(inputRealizedLosses) >= 0 ? '+' : ''}${(parseCurrencyInput(inputRealizedGains) - parseCurrencyInput(inputRealizedLosses)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </div>
             <div className="flex justify-between text-slate-400">
               <span>Carryforward Deducted:</span>
-              <span className="text-amber-400">-${Math.min(Math.max(0, Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0)), Number(inputTaxCarryover || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="text-amber-400">-${Math.min(Math.max(0, parseCurrencyInput(inputRealizedGains) - parseCurrencyInput(inputRealizedLosses)), parseCurrencyInput(inputTaxCarryover)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-white font-bold border-t border-slate-800 pt-1">
               <span>Estimated Net Taxable Income:</span>
               <span className="text-cyan-300">
-                ${Math.max(0, (Number(inputYtdPremiums || 0) + Number(inputRealizedGains || 0) - Number(inputRealizedLosses || 0) - Number(inputTaxCarryover || 0))).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                ${Math.max(0, (parseCurrencyInput(inputYtdPremiums) + parseCurrencyInput(inputRealizedGains) - parseCurrencyInput(inputRealizedLosses) - parseCurrencyInput(inputTaxCarryover))).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </div>
           </div>

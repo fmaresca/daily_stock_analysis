@@ -96,6 +96,18 @@ export function executeWeeklyWorkflowCleanReset(): WorkflowResetSummary {
       // ignore
     }
 
+    try {
+      const rawTax = window.localStorage.getItem('deltaharvest_tax_ledger');
+      if (rawTax) {
+        const parsedTax = JSON.parse(rawTax);
+        if (parsedTax && Number(parsedTax.ytdPremiumsEarned) > ytdTotal) {
+          ytdTotal = Number(parsedTax.ytdPremiumsEarned);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     // 3. Construct clean baseline capital state with ONLY default $5,000 living expense disbursement
     const cleanCapitalState: AccountCapitalState = {
       totalCash: 0,
