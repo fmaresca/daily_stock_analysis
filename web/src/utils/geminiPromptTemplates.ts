@@ -10,6 +10,8 @@
 
 import { AccountCapitalState, OptionOpportunity, TickerMeta } from '../types/options';
 import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
+import { now } from './appNow.ts';
+import { getNextWeeklyExpiration } from './nyseHolidayCalendar.ts';
 
 export interface GeminiPromptGenerationParams {
   capitalState: AccountCapitalState;
@@ -32,10 +34,8 @@ export function generateInstitutionalGeminiPrompt({
   // Compute next Friday expiration if not provided
   let expDate = targetExpirationDate;
   if (!expDate) {
-    const d = new Date();
-    const daysUntilFriday = (5 + 7 - d.getDay()) % 7 || 7;
-    d.setDate(d.getDate() + daysUntilFriday);
-    expDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const weekly = getNextWeeklyExpiration(now());
+    expDate = weekly.displayLabel;
   }
 
   const effectiveAlloc = Math.min(200000, maxPositionCollateral || 15000);

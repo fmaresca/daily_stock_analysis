@@ -91,7 +91,7 @@ export async function onRequest(context) {
   const useSandbox = (env.TRADIER_USE_SANDBOX || "").toLowerCase() === "true";
   const baseUrl = useSandbox ? "https://sandbox.tradier.com/v1" : "https://api.tradier.com/v1";
 
-  const t0 = Date.now();
+  const t0 = Date.now(); // wall-clock-ok: latency measurement start
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);
@@ -105,7 +105,7 @@ export async function onRequest(context) {
     });
     clearTimeout(timeoutId);
 
-    const elapsed = Date.now() - t0;
+    const elapsed = Date.now() - t0; // wall-clock-ok: latency measurement duration
 
     if (tradierResp.ok) {
       const data = await tradierResp.json();
@@ -160,7 +160,7 @@ export async function onRequest(context) {
       }
     );
   } catch (err) {
-    const elapsed = Date.now() - t0;
+    const elapsed = Date.now() - t0; // wall-clock-ok: latency measurement duration
     return new Response(
       JSON.stringify({
         status: "ERROR",

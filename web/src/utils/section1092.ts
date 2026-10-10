@@ -34,6 +34,8 @@
  * 3. Qualified covered calls (QCC) meeting statutory criteria are exempt from §1092.
  */
 
+import { now } from './appNow.ts';
+
 // Broad-based index contracts verified under 15 U.S.C. §78c(a)(55) and IRC §1256(g)(6)
 export const SECTION_1256_INDEX_SET = new Set([
   'SPX',
@@ -235,7 +237,7 @@ export function testQualifiedCoveredCall(
   availableStrikes?: number[]
 ): QCCResult {
   const reasons: string[] = [];
-  const testedAt = new Date().toISOString();
+  const testedAt = new Date().toISOString(); // wall-clock-ok: audit run timestamp
 
   if (!call.expiry) {
     return {
@@ -319,7 +321,7 @@ export function testQualifiedCoveredCall(
 export function computeDeferredLoss(
   realizedLoss: number,
   unrecognizedGains: number[],
-  taxYear: number = new Date().getFullYear()
+  taxYear: number = now().getFullYear()
 ): LossDeferralResult {
   const absLoss = Math.abs(realizedLoss);
   const totalGains = unrecognizedGains.reduce((sum, g) => sum + Math.max(0, g), 0);

@@ -8,6 +8,7 @@
  */
 
 import { evaluateAndDispatchAlerts } from './alertDispatcher';
+import { isOptionExpired } from './optionExpirationEngine';
 
 export interface SweeperAlertEvent {
   id: string;
@@ -21,7 +22,7 @@ let sweeperIntervalId: any = null;
 
 export function evaluateOpenPositionsRisk(): SweeperAlertEvent[] {
   const events: SweeperAlertEvent[] = [];
-  const now = new Date().toLocaleTimeString();
+  const now = new Date().toLocaleTimeString(); // wall-clock-ok: UI display timestamp
 
   // Inspect sample/active ledger positions
   try {
@@ -33,11 +34,12 @@ export function evaluateOpenPositionsRisk(): SweeperAlertEvent[] {
           // Derivative option contracts only (CSPs, Covered Calls, Spreads, PMCC)
           const isOptionContract = p.type !== 'STOCK' && p.type !== 'CASH' && p.type !== 'MMF';
           if (!isOptionContract) continue;
+          if (isOptionExpired(p.expiration, p.dte)) continue;
 
           // Check for 0.50 Delta breach (Defensive roll protocol)
           if (p.delta && Math.abs(p.delta) >= 0.45) {
             events.push({
-              id: `SWEEP_DELTA_${p.symbol}_${Date.now()}`,
+              id: `SWEEP_DELTA_${p.symbol}_${Date.now()}`, // wall-clock-ok: unique alert ID
               type: 'DEFENSIVE_ROLL_TRIGGER',
               symbol: p.symbol,
               message: `CRITICAL 0.50Δ THRESHOLD: ${p.symbol} option delta is ${p.delta}Δ. Execute defensive roll out & down for net credit immediately.`,
@@ -50,7 +52,7 @@ export function evaluateOpenPositionsRisk(): SweeperAlertEvent[] {
             const profitPct = ((p.entryPrice - p.currentOptionPrice) / p.entryPrice) * 100;
             if (profitPct >= 80.0) {
               events.push({
-                id: `SWEEP_PROFIT_${p.symbol}_${Date.now()}`,
+                id: `SWEEP_PROFIT_${p.symbol}_${Date.now()}`, // wall-clock-ok: unique alert ID
                 type: 'PROFIT_TAKE_TRIGGER',
                 symbol: p.symbol,
                 message: `80% PROFIT TARGET HIT: ${p.symbol} has captured ${profitPct.toFixed(1)}% of maximum premium. Close position to eliminate gamma risk.`,

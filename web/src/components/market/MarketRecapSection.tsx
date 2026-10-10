@@ -9,6 +9,7 @@ import {
   DollarSign,
   AlertCircle,
 } from '../icons';
+import { todayET } from '../../utils/appNow';
 
 export interface MarketRecapData {
   date: string;
@@ -104,6 +105,15 @@ export const MarketRecapSection: React.FC = () => {
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
                 Daily US Market Recap
               </h3>
+              {recap?.date && recap.date < todayET() ? (
+                <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono text-[10px] border border-amber-500/30">
+                  Prior Session ({recap.date})
+                </span>
+              ) : recap?.date ? (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono text-[10px] border border-emerald-500/30">
+                  Today's Session
+                </span>
+              ) : null}
               {recap?.asOf && (
                 <span className="text-[10px] text-slate-500 font-mono">
                   {new Date(recap.asOf).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
@@ -111,7 +121,9 @@ export const MarketRecapSection: React.FC = () => {
               )}
             </div>
             <p className="text-[11px] text-slate-400">
-              Broad index performance, volatility regime &amp; sector rotation
+              {recap?.date && recap.date < todayET()
+                ? `Prior trading session recap (${recap.date}) • Waiting for fresh market session`
+                : 'Broad index performance, volatility regime & sector rotation'}
             </p>
           </div>
         </div>

@@ -291,7 +291,7 @@ export function stageSingleLegOrder(
   const thinkorswimString = `SELL -${quantity} ${opportunity.symbol} 100 ${formattedToSDate} ${strike} ${optType} @${limitPrice.toFixed(2)} LMT [BRACKET: 80% PROFIT @${takeProfitPrice.toFixed(2)} LMT GTC / DEFENSIVE STOP @${stopLossPrice.toFixed(2)}]`;
 
   return {
-    id: `STG_${opportunity.id}_${Date.now()}`,
+    id: `STG_${opportunity.id}_${Date.now()}`, // wall-clock-ok: unique staged order ID
     strategyName: isPut ? `Cash-Secured Put (${strike}P)` : `Covered Call (${strike}C)`,
     underlyingSymbol: opportunity.symbol,
     spotPrice: spot,
@@ -485,7 +485,7 @@ export function stageMultiLegSpreadOrder(
       : `SELL -${quantity} VERTICAL ${spread.symbol} 100 ${formattedToSDate} ${spread.short_strike}/${spread.long_strike} ${spread.short_type.toUpperCase()} @${limitPrice.toFixed(2)} Crd LMT [BRACKET: 80% PROFIT @${takeProfitPrice.toFixed(2)} Dbt GTC]`;
 
   return {
-    id: `STG_${spread.id}_${Date.now()}`,
+    id: `STG_${spread.id}_${Date.now()}`, // wall-clock-ok: unique staged spread order ID
     strategyName: spread.strategy_name,
     underlyingSymbol: spread.symbol,
     spotPrice: spot,
@@ -580,7 +580,7 @@ export function addExecutedOrderToPortfolioBook(order: StagedBracketOrder): void
         : 'CREDIT_SPREAD';
 
     const newPos = {
-      id: `POS_${order.underlyingSymbol}_${Date.now().toString().slice(-4)}`,
+      id: `POS_${order.underlyingSymbol}_${Date.now().toString().slice(-4)}`, // wall-clock-ok: unique position ID suffix
       symbol: order.underlyingSymbol,
       type: posType,
       quantity: order.quantity,

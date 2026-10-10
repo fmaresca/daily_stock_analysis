@@ -32,7 +32,7 @@ export function getClientIp(request) {
  * @returns {Promise<{ allowed: boolean, retryAfter: number, remaining: number }>}
  */
 export async function checkRateLimit(env, key, limit, windowSeconds) {
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(Date.now() / 1000); // wall-clock-ok: rate limit second bucket
 
   // 1. Cloudflare Workers KV persistent path (if RATE_LIMIT_KV is bound)
   if (env && env.RATE_LIMIT_KV) {

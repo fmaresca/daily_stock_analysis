@@ -93,7 +93,7 @@ async function fetchGoogleNews(ticker) {
       title,
       link,
       source: `Google News · ${source}`,
-      publishedAt: pubDate || new Date().toISOString(),
+      publishedAt: pubDate || new Date().toISOString(), // wall-clock-ok: article publish fallback timestamp
       category: 'news',
     });
   }
@@ -125,7 +125,7 @@ async function fetchYahooFinanceNews(ticker) {
       title,
       link,
       source: 'Yahoo Finance',
-      publishedAt: pubDate || new Date().toISOString(),
+      publishedAt: pubDate || new Date().toISOString(), // wall-clock-ok: article publish fallback timestamp
       category: 'news',
     });
   }
@@ -159,7 +159,7 @@ async function fetchSecEdgar8K(ticker) {
       title: title.startsWith('8-K') ? title : `SEC 8-K: ${title}`,
       link,
       source: 'SEC EDGAR',
-      publishedAt: updated || new Date().toISOString(),
+      publishedAt: updated || new Date().toISOString(), // wall-clock-ok: SEC filing fallback timestamp
       category: 'sec-8k',
     });
   }
@@ -247,7 +247,7 @@ async function fetchMarketChameleonNews(ticker) {
         title: decodeHtmlEntities(rawTitle),
         link: fullLink,
         source: 'MarketChameleon',
-        publishedAt: new Date().toISOString(),
+        publishedAt: new Date().toISOString(), // wall-clock-ok: scrape fallback timestamp
         category: 'news',
       });
     }
@@ -319,7 +319,8 @@ export async function onRequest(context) {
     },
     mcBlocked: mcItems.length === 0,
     items: all,
-    cachedAt: new Date().toISOString(),
+    cachedAt: new Date().toISOString(), // wall-clock-ok: edge cache timestamp
+    asOf: new Date().toISOString(), // wall-clock-ok: response timestamp
   };
 
   const response = jsonResponse(payload);

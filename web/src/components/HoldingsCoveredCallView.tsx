@@ -14,7 +14,7 @@ import {
   saveCapitalState,
 } from '../utils/capitalAndTaxLedger';
 import { StockHoldingPair } from '../types/options';
-import { getOptionExpirationStatus } from '../utils/optionExpirationEngine';
+import { getOptionExpirationStatus, isOptionExpired } from '../utils/optionExpirationEngine';
 import {
   ShieldCheck,
   AlertTriangle,
@@ -138,8 +138,8 @@ export const HoldingsCoveredCallView: React.FC<HoldingsCoveredCallViewProps> = (
   // Group positions into Stock Holdings (with linked CCs) and Open CSPs
   const { stockPairs, openCSPs, totalStockEquity, totalCspCollateral, totalActiveCcIncome } = useMemo(() => {
     const stocks = positions.filter((p) => p.type === 'STOCK');
-    const coveredCalls = positions.filter((p) => p.type === 'COVERED_CALL');
-    const csps = positions.filter((p) => p.type === 'CSP');
+    const coveredCalls = positions.filter((p) => p.type === 'COVERED_CALL' && !isOptionExpired(p.expiration, p.dte));
+    const csps = positions.filter((p) => p.type === 'CSP' && !isOptionExpired(p.expiration, p.dte));
 
     let totalEquity = 0;
     let totalCspCash = 0;

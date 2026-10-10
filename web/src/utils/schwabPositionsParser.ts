@@ -8,14 +8,16 @@
  * - Calculates true Net Deployable Free Cash for new CSPs
  */
 
-import { AccountCapitalState, WatchlistGroup, TaxLedgerRecord } from '../types/options';
-import { PortfolioPosition } from './portfolioStressTest';
+import { AccountCapitalState, WatchlistGroup, TaxLedgerRecord } from '../types/options.ts';
+import { PortfolioPosition } from './portfolioStressTest.ts';
 import {
   MAX_SINGLE_EQUITY_POSITION_LIMIT,
   DEFAULT_WEEKLY_DISBURSEMENT,
   DEFAULT_PRIOR_YTD_PREMIUM_BALANCE,
   DEFAULT_YTD_PREMIUMS_EARNED,
-} from './capitalAndTaxLedger';
+} from './capitalAndTaxLedger.ts';
+import { isOptionExpired, getOptionExpirationStatus } from './optionExpirationEngine.ts';
+import { todayET } from './appNow.ts';
 
 export interface ParsedEquityHolding {
   symbol: string;
@@ -226,7 +228,8 @@ export function parseSchwabPositionsCsv(
 
       const contracts = Math.abs(qtyCol);
       // Collateral required for open Cash-Secured Puts (100% cash-backed): strike * contracts * 100
-      const collateral = isPut && qtyCol < 0 ? strike * contracts * 100 : 0;
+      const isExpired = isOptionExpired(expDate);
+      const collateral = isPut && qtyCol < 0 && !isExpired ? strike * contracts * 100 : 0;
       const is80Pct = gainPctCol >= 80;
 
       const optPos: ParsedOptionPosition = {
@@ -265,9 +268,11 @@ export function parseSchwabPositionsCsv(
   // Dynamically calculate total cash based upon cash and money market funds (before any deductions)
   const totalCashToCoverCsp = Math.round((snyxx + snaxx + coreCash + otherMmf) * 100) / 100;
 
-  // Total cash collateral required to 100% cover all open Cash Secured Puts
+  // Total cash collateral required to 100% cover all open, non-expired Cash Secured Puts
   const totalCommittedCspCollateral = Math.round(
-    openCSPs.reduce((sum, p) => sum + p.collateralRequired, 0) * 100
+    openCSPs
+      .filter((p) => !isOptionExpired(p.expiration))
+      .reduce((sum, p) => sum + p.collateralRequired, 0) * 100
   ) / 100;
 
   // Step 1: Available Cash Before Living Expenses (Total Liquid Cash minus Open Put Liabilities)
@@ -424,7 +429,7 @@ export function parseSchwabPositionsCsv(
       quantity: Math.abs(cc.quantity),
       spotPrice: equities.find((e) => e.symbol === cc.underlyingSymbol)?.price || 100,
       strike: cc.strike,
-      dte: 6,
+      dte: getOptionExpirationStatus(cc.expiration).dte,
       entryPrice: cc.costBasis !== 0 ? Math.abs(cc.costBasis / (Math.abs(cc.quantity) * 100)) : cc.price,
       currentOptionPrice: cc.price,
       iv: 45,
@@ -448,7 +453,7 @@ export function parseSchwabPositionsCsv(
       quantity: Math.abs(csp.quantity),
       spotPrice: csp.strike * 1.05,
       strike: csp.strike,
-      dte: 6,
+      dte: getOptionExpirationStatus(csp.expiration).dte,
       entryPrice: csp.costBasis !== 0 ? Math.abs(csp.costBasis / (Math.abs(csp.quantity) * 100)) : csp.price,
       currentOptionPrice: csp.price,
       iv: 42,
@@ -467,7 +472,7 @@ export function parseSchwabPositionsCsv(
   const taxRecords: TaxLedgerRecord[] = [];
 
   // Parse asOfTimestamp to extract clean date (YYYY-MM-DD) and execution/export time (e.g. 11:35 AM ET)
-  let recDate = new Date().toISOString().split('T')[0];
+  let recDate = todayET();
   let recTime = '';
   if (asOfTimestamp && asOfTimestamp.trim()) {
     const rawTs = asOfTimestamp.trim();
@@ -565,7 +570,7 @@ export function parseSchwabPositionsCsv(
       coreCash,
       otherMmf: otherMmf > 0 ? otherMmf : undefined,
     },
-    lastUpdated: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(), // wall-clock-ok: file parse timestamp
   };
 
   const equitySymbols = equities.map((e) => e.symbol);
@@ -629,7 +634,7 @@ export function syncImportedEquitiesToWatchlist(symbols: string[], accountName: 
         description,
         tickers: symbols,
         isDefault: false,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(), // wall-clock-ok: position created timestamp
       });
     }
 

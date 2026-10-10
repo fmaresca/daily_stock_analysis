@@ -408,7 +408,7 @@ async function fetchTradierLiveQuoteAndBars(symbol: string): Promise<{
  */
 export async function fetchLiveValuationStock(symbol: string): Promise<EnrichedValuationStock> {
   const sym = (symbol || '').toUpperCase().trim();
-  const now = new Date().toISOString();
+  const now = new Date().toISOString(); // wall-clock-ok: valuation fetch timestamp
 
   // Tier 1: Try Tradier API direct
   const tradierData = await fetchTradierLiveQuoteAndBars(sym);

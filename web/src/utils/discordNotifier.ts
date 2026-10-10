@@ -137,7 +137,7 @@ export async function sendDiscordAlert(
           text: 'DeltaHarvest Quantitative Terminal',
           icon_url: `${APP_URL}/favicon.ico`,
         },
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString(), // wall-clock-ok: Discord embed timestamp
       },
     ],
   };

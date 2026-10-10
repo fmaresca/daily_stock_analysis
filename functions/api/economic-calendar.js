@@ -9,6 +9,8 @@
  * Deterministically maps to sector transmission channels and proxy ETFs.
  */
 
+import { startOfTradingWeekET, todayET, nowET } from "./_now.js";
+
 const SECTOR_IMPACT_MAP = {
   CPI: {
     sectors: "Technology, Real Estate, Financials, Utilities",
@@ -789,7 +791,7 @@ const PAST_WEEK_SCHEDULE = [
 
 const DOW_OFFSET = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 4, 0: 0 };
 
-function getEasternTradingState(from = new Date()) {
+function getEasternTradingState(from = nowET()) {
   try {
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/New_York',
@@ -818,15 +820,10 @@ function getEasternTradingState(from = new Date()) {
   }
 }
 
-function getMondayOfWeek(from = new Date()) {
-  const d = new Date(from);
-  d.setHours(0, 0, 0, 0);
-  const { dow, isAfterFridayClose } = getEasternTradingState(from);
-  if (dow === 0) d.setDate(d.getDate() + 1);
-  else if (dow === 6) d.setDate(d.getDate() + 2);
-  else if (isAfterFridayClose) d.setDate(d.getDate() + 3);
-  else d.setDate(d.getDate() - (dow - 1));
-  return d;
+function getMondayOfWeek(from = nowET()) {
+  const ymd = startOfTradingWeekET(from);
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0);
 }
 
 function addDays(d, n) {
@@ -907,11 +904,12 @@ export async function onRequestGet(context) {
       : "public, max-age=900, s-maxage=1800, stale-while-revalidate=3600"
   };
 
-  const now = new Date();
-  const currentMonday = getMondayOfWeek(now);
+  const todayIso = todayET();
+  const currentMonday = getMondayOfWeek();
   const priorMonday = addDays(currentMonday, -7);
   const targetMonday = scope === "past" ? priorMonday : currentMonday;
   const targetMondayIso = formatDateYMD(targetMonday);
+  const isUpcomingWeek = scope !== "past" && todayIso < targetMondayIso;
 
   // If past week archive is requested, immediately return prior week actuals
   if (scope === "past") {
@@ -919,9 +917,11 @@ export async function onRequestGet(context) {
       indicators: PAST_WEEK_SCHEDULE,
       source: "past_week_archive",
       scope: "past",
+      is_upcoming_week: false,
+      as_of: todayIso,
       fallback: false,
       notice: `Historical US macroeconomic releases & actual prints from previous trading week (${formatDateLabel(priorMonday)} – ${formatDateLabel(addDays(priorMonday, 4))}).`,
-      last_updated: new Date().toISOString()
+      last_updated: new Date().toISOString() // wall-clock-ok: response envelope timestamp
     }), { status: 200, headers: commonHeaders });
   }
 
@@ -998,8 +998,10 @@ export async function onRequestGet(context) {
             indicators: relevantUsd,
             source: "faireconomy_media",
             scope: "upcoming",
+            is_upcoming_week: isUpcomingWeek,
+            as_of: todayIso,
             fallback: false,
-            last_updated: new Date().toISOString()
+            last_updated: new Date().toISOString() // wall-clock-ok: response envelope timestamp
           }), { status: 200, headers: commonHeaders });
         }
       }
@@ -1059,7 +1061,7 @@ export async function onRequestGet(context) {
               previous: cleanPrevious,
               sectors: mapped.sectors,
               tickers: mapped.tickers,
-              isoDate: asOfIso ? `${asOfIso}T12:00:00-04:00` : new Date().toISOString()
+              isoDate: asOfIso ? `${asOfIso}T12:00:00-04:00` : `${todayIso}T12:00:00-04:00`
             };
           });
 
@@ -1068,9 +1070,11 @@ export async function onRequestGet(context) {
             indicators: usRows,
             source: "nasdaq_live",
             scope: "upcoming",
+            is_upcoming_week: isUpcomingWeek,
+            as_of: todayIso,
             fallback: false,
             notice: "Live macroeconomic feed ingested via Nasdaq Economic Calendar Radar.",
-            last_updated: new Date().toISOString()
+            last_updated: new Date().toISOString() // wall-clock-ok: response envelope timestamp
           }), { status: 200, headers: commonHeaders });
         } else if (usRows.length > 0) {
           // Merge Nasdaq live events with full curated weekly schedule
@@ -1088,9 +1092,11 @@ export async function onRequestGet(context) {
             indicators: fullSchedule,
             source: "nasdaq_live",
             scope: "upcoming",
+            is_upcoming_week: isUpcomingWeek,
+            as_of: todayIso,
             fallback: false,
             notice: "Live macroeconomic feed ingested via Nasdaq Economic Calendar Radar (augmented for full weekly catalyst coverage).",
-            last_updated: new Date().toISOString()
+            last_updated: new Date().toISOString() // wall-clock-ok: response envelope timestamp
           }), { status: 200, headers: commonHeaders });
         }
       }
@@ -1106,9 +1112,11 @@ export async function onRequestGet(context) {
     indicators: anchoredSchedule,
     source: "curated_macro_schedule",
     scope: "upcoming",
-    fallback: false,
-    notice: `Active high-impact weekly macroeconomic catalyst radar for upcoming week (${formatDateLabel(currentMonday)} – ${formatDateLabel(addDays(currentMonday, 4))}).`,
-    last_updated: new Date().toISOString()
+    is_upcoming_week: isUpcomingWeek,
+    as_of: todayIso,
+    fallback: true,
+    notice: `Active high-impact weekly macroeconomic catalyst radar for ${isUpcomingWeek ? "upcoming" : "current"} week (${formatDateLabel(currentMonday)} – ${formatDateLabel(addDays(currentMonday, 4))}).`,
+    last_updated: new Date().toISOString() // wall-clock-ok: response envelope timestamp
   }), {
     status: 200,
     headers: commonHeaders

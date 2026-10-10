@@ -87,7 +87,7 @@ export async function onRequestGet(context) {
         "/recap            - Live US Market indices & sector recap",
         "/ping             - Edge latency diagnostic probe",
       ],
-      asOf: new Date().toISOString(),
+      asOf: new Date().toISOString(), // wall-clock-ok: Discord command menu timestamp
     }),
     {
       status: 200,
@@ -177,7 +177,7 @@ export async function onRequestPost(context) {
                 },
               ],
               footer: { text: "DeltaHarvest Edge Engine • CBOE & NYSE Real-time Feeds" },
-              timestamp: new Date().toISOString(),
+              timestamp: new Date().toISOString(), // wall-clock-ok: Discord embed timestamp
             },
           ],
         });
@@ -234,7 +234,7 @@ export async function onRequestPost(context) {
                 { name: "Estimated PoP", value: "> 82% OTM", inline: true },
               ],
               footer: { text: "DeltaHarvest Institutional • Conservative Theta Harvest Rule" },
-              timestamp: new Date().toISOString(),
+              timestamp: new Date().toISOString(), // wall-clock-ok: Discord embed timestamp
             },
           ],
         });
@@ -256,7 +256,7 @@ export async function onRequestPost(context) {
                 { name: "Target Delta", value: "≈ 18Δ–22Δ", inline: true },
               ],
               footer: { text: "DeltaHarvest Institutional • Systematic Yield Enhancement" },
-              timestamp: new Date().toISOString(),
+              timestamp: new Date().toISOString(), // wall-clock-ok: Discord embed timestamp
             },
           ],
         });
@@ -278,7 +278,7 @@ export async function onRequestPost(context) {
                 `${spot >= sma20 ? "✅" : "⚠️"} **5. Technical Cushion:** ${trendPosture} (20d SMA $${sma20.toFixed(2)}).\n\n` +
                 `🎯 **Verdict:** ${score >= 4.0 ? "GREEN LIGHT · Institutional Prime Setup" : "AMBER LIGHT · Conditional Entry"} (Score: **${score.toFixed(1)} / 5.0**)`,
               footer: { text: "DeltaHarvest Institutional Options Gateway" },
-              timestamp: new Date().toISOString(),
+              timestamp: new Date().toISOString(), // wall-clock-ok: Discord embed timestamp
             },
           ],
         });
@@ -303,7 +303,7 @@ export async function onRequestPost(context) {
               { name: "Pre-Flight Status", value: "Prime Underwriting Candidate", inline: true },
             ],
             footer: { text: "DeltaHarvest Institutional Edge • Zero-Hallucination Quant Feed" },
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(), // wall-clock-ok: Discord embed timestamp
           },
         ],
       });

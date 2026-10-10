@@ -88,7 +88,7 @@ export async function runMultiAgentTradeAudit(
           symbol: ticker.symbol,
           strategy,
           spotPrice: spot,
-          timestamp: data.timestamp || new Date().toISOString(),
+          timestamp: data.timestamp || new Date().toISOString(), // wall-clock-ok: audit log timestamp
           quantAgent: {
             name: data.quant_agent.name,
             verdict: data.quant_agent.verdict,
@@ -160,7 +160,7 @@ export async function runMultiAgentTradeAudit(
     symbol: ticker.symbol,
     strategy,
     spotPrice: spot,
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString(), // wall-clock-ok: audit log timestamp
     quantAgent: {
       name: 'Quantitative & Derivatives Specialist',
       verdict: quantVerdict,

@@ -71,7 +71,7 @@ export function formatTimeAgo(dateStr: string | null | undefined): string {
   try {
     const past = new Date(dateStr).getTime();
     if (Number.isNaN(past)) return dateStr;
-    const now = Date.now();
+    const now = Date.now(); // wall-clock-ok: relative time display formatter
     const diffSec = Math.max(0, Math.floor((now - past) / 1000));
     if (diffSec < 60) return `${diffSec}s ago`;
     const diffMin = Math.floor(diffSec / 60);

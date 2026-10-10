@@ -4,6 +4,8 @@
  * Compatible with Cloudflare Pages / Workers Edge runtime (Zero Node.js 'fs' / 'child_process' dependencies).
  */
 
+import { nowET, isExpiredOption } from "./_now.js";
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -31,7 +33,7 @@ export async function onRequestGet(context) {
     };
 
     const profile = knownProfiles[ticker] || { price: 100.0, ivr: 50 };
-    const now = new Date();
+    const now = nowET();
     let dividend = null;
     if (profile.div && profile.divDays) {
       const exDate = new Date(now.getTime() + profile.divDays * 86400000);
@@ -58,7 +60,8 @@ export async function onRequestGet(context) {
     const contracts = [];
 
     dtes.forEach((dte) => {
-      const expDate = new Date(Date.now() + dte * 86400000).toISOString().split('T')[0];
+      const expDate = new Date(now.getTime() + dte * 86400000).toISOString().split('T')[0];
+      if (isExpiredOption(expDate)) return;
       const iv = Math.max(0.18, 0.22 + (underlying.ivRank52w / 100) * 0.28);
       const timeFactor = Math.sqrt(dte / 365);
 
@@ -197,7 +200,7 @@ export async function onRequestGet(context) {
     return new Response(
       JSON.stringify({
         success: true,
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString(), // wall-clock-ok: response timestamp
         underlying,
         totalContractsInspected: contracts.length,
         screenedCandidatesCount: candidates.length,

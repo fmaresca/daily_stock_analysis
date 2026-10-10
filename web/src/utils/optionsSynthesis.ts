@@ -1,5 +1,7 @@
 import { OptionOpportunity, TickerMeta } from '../types/options';
 import { isWeeklyCadence } from './capitalAndTaxLedger';
+import { now } from './appNow.ts';
+import { getNextWeeklyExpiration, getClosestFridayDteExpiration } from './nyseHolidayCalendar.ts';
 
 /**
  * Creates a fully typed fallback TickerMeta instance with standard default properties.
@@ -63,8 +65,9 @@ export function synthesizeAllUniverseOpportunities(
       const lowerBb = t.lower_bb || spot * 0.94;
       const upperBb = t.upper_bb || spot * 1.06;
       const iv = t.iv_current || 0.25;
-      const dte = t.has_weeklys === false ? t.days_to_nearest_expiration || 20 : 5;
-      const expDate = new Date(Date.now() + dte * 86400000).toISOString().split('T')[0];
+      const weekly = getNextWeeklyExpiration(now());
+      const dte = t.has_weeklys === false ? t.days_to_nearest_expiration || 20 : Math.max(1, weekly.dte);
+      const expDate = t.has_weeklys === false ? getClosestFridayDteExpiration(dte, now()).dateString : weekly.dateString;
 
       const putStrike = Math.max(
         1,

@@ -9,7 +9,8 @@
  * 4. Earnings-Defended Strike formulation (ensuring CSP / CC strikes clear the straddle bounds).
  */
 
-import { OptionStrategyType } from '../types/optionsScreener.types';
+import { OptionStrategyType } from '../types/optionsScreener.types.ts';
+import { now } from './appNow.ts';
 
 export interface EarningsCalendarEntry {
   symbol: string;
@@ -334,7 +335,7 @@ export async function fetchLiveEarningsInfo(
   // 5. Fallback if network sources failed or symbol has unannounced dates
   if (!discoveredDate) {
     onProgress?.(`Estimating next earnings date for ${sym} using 90-day rolling cycle...`);
-    const today = new Date();
+    const today = now();
 
     // Prefer last known earnings date + 90 days as the approximated future date.
     // This is more accurate than projecting a generic quarterly window for companies
@@ -434,7 +435,7 @@ export function checkEarningsInsideExpiration(
   }
 
   // Determine trade date (default to today / current active market session)
-  const today = tradeDateStr ? new Date(tradeDateStr) : new Date();
+  const today = tradeDateStr ? new Date(tradeDateStr) : now();
   today.setHours(0, 0, 0, 0);
 
   // If known in registry

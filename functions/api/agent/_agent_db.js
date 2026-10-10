@@ -51,7 +51,7 @@ export async function ensureAgentTables(env) {
 
 export async function getOrCreateSession(env, userId, sessionId, ticker = "", lens = "Trend/Momentum") {
   await ensureAgentTables(env);
-  const now = new Date().toISOString();
+  const now = new Date().toISOString(); // wall-clock-ok: session created timestamp
 
   if (sessionId) {
     if (env?.DB) {
@@ -65,7 +65,7 @@ export async function getOrCreateSession(env, userId, sessionId, ticker = "", le
     }
   }
 
-  const newId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const newId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`; // wall-clock-ok: unique session ID
   const title = ticker ? `Analysis of ${ticker}` : "Strategy Conversation";
   const sessionRecord = {
     id: newId,
@@ -130,8 +130,8 @@ export async function getSessionMessages(env, userId, sessionId) {
 
 export async function saveMessage(env, userId, sessionId, role, content, lens = "") {
   await ensureAgentTables(env);
-  const now = new Date().toISOString();
-  const id = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const now = new Date().toISOString(); // wall-clock-ok: message created timestamp
+  const id = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`; // wall-clock-ok: unique message ID
 
   const msg = {
     id,

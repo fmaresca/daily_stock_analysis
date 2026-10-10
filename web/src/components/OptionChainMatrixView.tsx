@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TickerMeta, OptionOpportunity } from '../types/options';
 import {
   generateOptionChainMatrix,
@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   ChevronDown,
   Info,
+  Clock,
 } from './icons';
 
 interface OptionChainMatrixViewProps {
@@ -55,6 +56,13 @@ export const OptionChainMatrixView: React.FC<OptionChainMatrixViewProps> = ({
   const chainResult = useMemo(() => {
     return generateOptionChainMatrix(currentTicker as TickerMeta, selectedDte);
   }, [currentTicker, selectedDte]);
+
+  // Sync selectedDte to nearest non-expired expiration when chain updates
+  useEffect(() => {
+    if (chainResult.expirations.length > 0 && !chainResult.expirations.some((e) => e.dte === selectedDte)) {
+      setSelectedDte(chainResult.expirations[0].dte);
+    }
+  }, [chainResult.expirations, selectedDte]);
 
   // Filter strikes range
   const filteredRows = useMemo(() => {
@@ -183,17 +191,21 @@ export const OptionChainMatrixView: React.FC<OptionChainMatrixViewProps> = ({
             {/* Expiration Dropdown */}
             <div className="flex items-center space-x-1.5 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800">
               <span className="text-xs text-slate-400 font-semibold">Expiration:</span>
-              <select
-                value={selectedDte}
-                onChange={(e) => setSelectedDte(Number(e.target.value))}
-                className="bg-transparent text-xs font-bold text-cyan-400 focus:outline-none cursor-pointer"
-              >
-                {chainResult.expirations.map((exp) => (
-                  <option key={exp.dte} value={exp.dte} className="bg-slate-900 text-white">
-                    {exp.formattedDate}
-                  </option>
-                ))}
-              </select>
+              {chainResult.expirations.length === 0 ? (
+                <span className="text-xs font-bold text-amber-400 font-mono">All Expired</span>
+              ) : (
+                <select
+                  value={selectedDte}
+                  onChange={(e) => setSelectedDte(Number(e.target.value))}
+                  className="bg-transparent text-xs font-bold text-cyan-400 focus:outline-none cursor-pointer"
+                >
+                  {chainResult.expirations.map((exp) => (
+                    <option key={exp.dte} value={exp.dte} className="bg-slate-900 text-white">
+                      {exp.formattedDate}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Strike Depth Filter */}
@@ -394,7 +406,18 @@ export const OptionChainMatrixView: React.FC<OptionChainMatrixViewProps> = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto max-h-[680px] overflow-y-auto table-scroll-container">
+        {chainResult.expirations.length === 0 ? (
+          <div className="py-20 text-center text-slate-400">
+            <Clock className="w-10 h-10 mx-auto mb-3 text-slate-500" />
+            <p className="text-base font-semibold text-slate-300">
+              All quoted expirations have expired — refresh for the new week
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              No active weekly option expirations found past current ET expiration cutoff.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto max-h-[680px] overflow-y-auto table-scroll-container">
           <table className="w-full text-left border-collapse text-xs table-sticky-header">
             <thead className="sticky top-0 z-20 bg-slate-950 shadow-md">
               {/* Top Level Group Header */}
@@ -537,6 +560,7 @@ export const OptionChainMatrixView: React.FC<OptionChainMatrixViewProps> = ({
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   );

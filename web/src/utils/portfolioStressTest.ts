@@ -5,7 +5,8 @@
  * volatility surges (+100%), time decay, and compares Reg-T vs Portfolio Margin (TIMS) capital requirements.
  */
 
-import { calculateBlackScholesOption } from './optionChainMatrix';
+import { calculateBlackScholesOption } from './optionChainMatrix.ts';
+import { isOptionExpired } from './optionExpirationEngine.ts';
 
 export type PositionType = 'STOCK' | 'CSP' | 'COVERED_CALL' | 'CREDIT_SPREAD' | 'PMCC' | 'MMF' | 'CASH';
 
@@ -113,6 +114,20 @@ export function simulatePosition(
   let vega = 0;
   let regTMargin = 0;
   let pmMargin = 0;
+
+  // Expired option contracts are excluded from live P&L, greeks, and margin math
+  const isDerivative = pos.type !== 'STOCK' && pos.type !== 'CASH' && pos.type !== 'MMF';
+  if (isDerivative && isOptionExpired(pos.expiration, pos.dte)) {
+    return {
+      currentValue: 0,
+      simulatedValue: 0,
+      delta: 0,
+      theta: 0,
+      vega: 0,
+      regTMargin: 0,
+      pmMargin: 0,
+    };
+  }
 
   if (pos.type === 'CASH' || pos.type === 'MMF') {
     // Cash & Money Market Funds: $1.00 constant NAV, 100% principal preservation, zero market shock risk

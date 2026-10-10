@@ -96,7 +96,7 @@ export async function onRequestPost(context) {
             created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
           )
         `).run();
-        const inquiryId = `inq_reset_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const inquiryId = `inq_reset_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`; // wall-clock-ok: unique reset request ID
         await env.DB.prepare(`
           INSERT INTO access_inquiries (id, request_type, name, email, note, ip, status)
           VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -151,7 +151,7 @@ export async function onRequestPost(context) {
           const isAdminNotice = adminEmail && targetEmail.toLowerCase() === adminEmail.toLowerCase() && cleanEmail.toLowerCase() !== adminEmail.toLowerCase();
           const emailSubject = isAdminNotice ? `[DeltaHarvest Security] Password Reset Requested: ${cleanEmail}` : userSubject;
           const textBody = isAdminNotice
-            ? `DeltaHarvest Security Alert:\n\nA password reset was requested for ${cleanEmail}.\nOrigin IP: ${clientIp}\nTimestamp: ${new Date().toUTCString()}\n\nReset Link: ${resetUrl}\nReset Token: ${plaintextToken}`
+            ? `DeltaHarvest Security Alert:\n\nA password reset was requested for ${cleanEmail}.\nOrigin IP: ${clientIp}\nTimestamp: ${new Date().toUTCString()}\n\nReset Link: ${resetUrl}\nReset Token: ${plaintextToken}` // wall-clock-ok: security notification timestamp
             : userTextBody;
 
           const resendResp = await fetch("https://api.resend.com/emails", {
@@ -197,7 +197,7 @@ export async function onRequestPost(context) {
             accountEmail: cleanEmail,
             requestType: "Password Reset Request",
             note: "A password reset was requested. The reset token was delivered via the primary email channel and is registered in the system.",
-            timestamp: new Date().toUTCString(),
+            timestamp: new Date().toUTCString(), // wall-clock-ok: security fallback timestamp
             originIP: clientIp,
             _template: "table",
           }),

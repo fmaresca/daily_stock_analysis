@@ -9,6 +9,8 @@
  * - Market hours: Monday - Friday, 9:30 AM - 4:00 PM US Eastern Time (ET)
  */
 
+import { nowET, getPartsET, isMarketOpen as authorityIsMarketOpen } from './appNow.ts';
+
 export type AutoSyncCadence = number;
 
 export interface AutoSyncSettings {
@@ -118,13 +120,12 @@ export function getUsEasternTime(): {
   timeString: string;
   isWeekday: boolean;
 } {
-  const now = new Date();
-  const etString = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
-  const etDate = new Date(etString);
-  const dayOfWeek = etDate.getDay(); // 0 = Sun, 6 = Sat
+  const etDate = nowET();
+  const parts = getPartsET();
+  const dayOfWeek = parts.dayOfWeek;
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-  const hours = etDate.getHours();
-  const minutes = etDate.getMinutes();
+  const hours = parts.hours;
+  const minutes = parts.minutes;
 
   return {
     date: etDate,
@@ -137,12 +138,5 @@ export function getUsEasternTime(): {
 }
 
 export function isUsMarketOpen(): boolean {
-  const et = getUsEasternTime();
-  if (!et.isWeekday) return false;
-
-  const currentMinutes = et.hours * 60 + et.minutes;
-  const marketOpenMinutes = 9 * 60 + 30; // 9:30 AM ET = 570
-  const marketCloseMinutes = 16 * 60; // 4:00 PM ET = 960
-
-  return currentMinutes >= marketOpenMinutes && currentMinutes < marketCloseMinutes;
+  return authorityIsMarketOpen();
 }

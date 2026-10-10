@@ -16,11 +16,12 @@ import {
   GeminiRecommendedTrade,
   GeminiBorderlineCandidate,
   GeminiExcludedCandidate,
-} from '../types/options';
-import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest';
-import { getOptionExpirationStatus } from './optionExpirationEngine';
+} from '../types/options.ts';
+import { PortfolioPosition, LIVING_TRUST_OPTIONS_POSITIONS } from './portfolioStressTest.ts';
+import { getOptionExpirationStatus, isOptionExpired } from './optionExpirationEngine.ts';
 import { CBOE_WEEKLY_OPTIONS_SET, isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
-import { classify } from './section1256';
+import { classify } from './section1256.ts';
+import { now, todayET } from './appNow.ts';
 
 const CAPITAL_STORAGE_KEY = 'deltaharvest_capital_ledger';
 const TAX_STORAGE_KEY = 'deltaharvest_tax_ledger';
@@ -133,14 +134,14 @@ export function getDefaultCapitalState(positions: PortfolioPosition[] = []): Acc
     maxPerPositionAllocation: sizing.targetAllocationPerPosition,
     singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
     maxAllowedPositions: sizing.maxConcurrentPositions,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(), // wall-clock-ok: ledger timestamp
   };
 }
 
 export const SCHWAB_REAL_OPTIONS_RECORDS: TaxLedgerRecord[] = [];
 
 export function getDefaultTaxLedgerState(): TaxLedgerState {
-  const currentYear = new Date().getFullYear();
+  const currentYear = now().getFullYear();
 
   return {
     currentTaxYear: currentYear,
@@ -404,7 +405,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
   updatedTax: TaxLedgerState;
 } {
   const sym = tx.symbol.toUpperCase().trim();
-  const txDate = tx.date || new Date().toISOString().split('T')[0];
+  const txDate = tx.date || todayET();
 
   // 1. Load active positions
   let positions: PortfolioPosition[] = [];
@@ -436,10 +437,10 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
     const totalPremium = premium * contracts * 100;
     const spot = tx.spotPrice || strike * 1.02;
     const dte = tx.dte || 6;
-    const expiration = tx.expiration || new Date(Date.now() + dte * 86400000).toISOString().split('T')[0];
+    const expiration = tx.expiration || getNextWeeklyExpiration(now()).dateString;
 
     const newPos: PortfolioPosition = {
-      id: `POS_${sym}_CSP_${Date.now()}`,
+      id: `POS_${sym}_CSP_${Date.now()}`, // wall-clock-ok: unique position ID generation
       symbol: sym,
       type: 'CSP',
       quantity: contracts,
@@ -462,7 +463,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
 
     const clsCsp = classify(sym, 'CSP');
     const newTaxRec: TaxLedgerRecord = {
-      id: `REC_LIVE_${Date.now()}`,
+      id: `REC_LIVE_${Date.now()}`, // wall-clock-ok: unique transaction ID generation
       date: txDate,
       symbol: sym,
       type: 'PREMIUM_EARNED',
@@ -490,10 +491,10 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
     const totalPremium = premium * contracts * 100;
     const spot = tx.spotPrice || strike * 0.98;
     const dte = tx.dte || 6;
-    const expiration = tx.expiration || new Date(Date.now() + dte * 86400000).toISOString().split('T')[0];
+    const expiration = tx.expiration || getNextWeeklyExpiration(now()).dateString;
 
     const newPos: PortfolioPosition = {
-      id: `POS_${sym}_CC_${Date.now()}`,
+      id: `POS_${sym}_CC_${Date.now()}`, // wall-clock-ok: unique position ID generation
       symbol: sym,
       type: 'COVERED_CALL',
       quantity: contracts,
@@ -516,7 +517,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
 
     const clsCc = classify(sym, 'COVERED_CALL');
     const newTaxRec: TaxLedgerRecord = {
-      id: `REC_LIVE_${Date.now()}`,
+      id: `REC_LIVE_${Date.now()}`, // wall-clock-ok: unique transaction ID generation
       date: txDate,
       symbol: sym,
       type: 'PREMIUM_EARNED',
@@ -553,7 +554,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
       };
     } else {
       positions.push({
-        id: `POS_${sym}_STOCK_${Date.now()}`,
+        id: `POS_${sym}_STOCK_${Date.now()}`, // wall-clock-ok: unique position ID generation
         symbol: sym,
         type: 'STOCK',
         quantity: shares,
@@ -595,7 +596,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
 
     const clsStock = classify(sym, 'STOCK');
     const newTaxRec: TaxLedgerRecord = {
-      id: `REC_LIVE_${Date.now()}`,
+      id: `REC_LIVE_${Date.now()}`, // wall-clock-ok: unique transaction ID generation
       date: txDate,
       symbol: sym,
       type: isGain ? 'CAPITAL_GAIN' : 'CAPITAL_LOSS',
@@ -633,7 +634,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
     maxPerPositionAllocation: sizing.targetAllocationPerPosition,
     singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
     maxAllowedPositions: sizing.maxConcurrentPositions,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(), // wall-clock-ok: ledger persistence timestamp
   };
 
   // Commit all 3 states to localStorage
@@ -668,7 +669,7 @@ export function recordLiveTransaction(tx: LiveTransactionEntry): {
  */
 export function calculateCommittedCspCollateral(positions: PortfolioPosition[]): number {
   return positions
-    .filter((p) => p.type === 'CSP')
+    .filter((p) => p.type === 'CSP' && !isOptionExpired(p.expiration, p.dte))
     .reduce((total, p) => total + p.strike * 100 * (p.quantity || 1), 0);
 }
 
@@ -698,9 +699,9 @@ export function calculateNetTaxableMetrics(ledger: TaxLedgerState) {
   };
 }
 
-import { checkEarningsInsideExpiration, calculateStraddleImpliedMove } from './earningsCalendar';
-import { normCdf, inverseNormalCdf, getNearestExchangeStrike } from './financeMath';
-import { getNextWeeklyExpiration } from './nyseHolidayCalendar';
+import { checkEarningsInsideExpiration, calculateStraddleImpliedMove } from './earningsCalendar.ts';
+import { normCdf, inverseNormalCdf, getNearestExchangeStrike } from './financeMath.ts';
+import { getNextWeeklyExpiration } from './nyseHolidayCalendar.ts';
 export { getNextWeeklyExpiration };
 
 export interface CoveredCallDeltaResult {
@@ -735,7 +736,7 @@ export type CoveredCall20DeltaResult = CoveredCallDeltaResult;
  * Resolves the upcoming Friday expiration date for weekly options (5-7 DTE target)
  * Aware of NYSE exchange holidays (e.g. Good Friday) and local timezone conventions.
  */
-export function getNextWeeklyFriday(baseDate: Date = new Date()): { dateStr: string; dte: number } {
+export function getNextWeeklyFriday(baseDate: Date = now()): { dateStr: string; dte: number } {
   try {
     const weeklyExp = getNextWeeklyExpiration(baseDate);
     if (weeklyExp && weeklyExp.dateString) {

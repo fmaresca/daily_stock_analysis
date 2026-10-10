@@ -36,6 +36,7 @@ import {
   Layers,
 } from './icons';
 import { getOptionExpirationStatus, isOptionExpired } from '../utils/optionExpirationEngine';
+import { isMarketOpen, todayET } from '../utils/appNow';
 import { fetchTradierQuotesBatch } from '../utils/liveMarketFetcher';
 import { SortableTh } from './ui/SortableTh';
 import { sortData, SortOrder } from '../utils/tableSort';
@@ -84,15 +85,28 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
   // Filter state for Active Position Ledger
   const [positionFilter, setPositionFilter] = useState<'ALL' | 'EQUITY' | 'CSP' | 'COVERED_CALL' | 'CASH_MMF' | 'EXPIRED'>('ALL');
 
-  // Filtered positions based on selected tab
+  // Partition live (unexpired) vs expired/settled positions
+  const livePositions = useMemo(() => {
+    return positions.filter(
+      (p) => p.type === 'STOCK' || p.type === 'CASH' || p.type === 'MMF' || !isOptionExpired(p.expiration, p.dte)
+    );
+  }, [positions]);
+
+  const expiredPositions = useMemo(() => {
+    return positions.filter(
+      (p) => (p.type === 'CSP' || p.type === 'COVERED_CALL') && isOptionExpired(p.expiration, p.dte)
+    );
+  }, [positions]);
+
+  // Filtered positions based on selected tab: 'ALL' strictly shows live unexpired positions
   const filteredPositions = useMemo(() => {
     if (positionFilter === 'EQUITY') return positions.filter((p) => p.type === 'STOCK');
     if (positionFilter === 'CSP') return positions.filter((p) => p.type === 'CSP' && !isOptionExpired(p.expiration, p.dte));
     if (positionFilter === 'COVERED_CALL') return positions.filter((p) => p.type === 'COVERED_CALL' && !isOptionExpired(p.expiration, p.dte));
     if (positionFilter === 'CASH_MMF') return positions.filter((p) => p.type === 'CASH' || p.type === 'MMF');
-    if (positionFilter === 'EXPIRED') return positions.filter((p) => (p.type === 'CSP' || p.type === 'COVERED_CALL') && isOptionExpired(p.expiration, p.dte));
-    return positions;
-  }, [positions, positionFilter]);
+    if (positionFilter === 'EXPIRED') return expiredPositions;
+    return livePositions;
+  }, [positions, positionFilter, livePositions, expiredPositions]);
 
   // Live market quote hydration state
   const [isRefreshingQuotes, setIsRefreshingQuotes] = useState(false);
@@ -116,15 +130,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
 
       const tradierQuotes = await fetchTradierQuotesBatch(symbols);
 
-      const now = new Date();
-      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-      const estNow = new Date(utc + 3600000 * -4); // EDT UTC-4
-      const dayOfWeek = estNow.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const isMarketHours =
-        !isWeekend &&
-        (estNow.getHours() > 9 || (estNow.getHours() === 9 && estNow.getMinutes() >= 30)) &&
-        estNow.getHours() < 16;
+      const isMarketHours = isMarketOpen();
 
       let updatedCount = 0;
       const updatedPositions = positions.map((pos) => {
@@ -280,7 +286,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
     e.preventDefault();
     const rec: TaxLedgerRecord = {
       id: `TAX_${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: todayET(),
       symbol: taxRecordSymbol.toUpperCase().trim() || 'OPTION',
       type: taxRecordType,
       amount: Number(taxRecordAmount),
@@ -524,7 +530,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
               <Clock className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-bold text-white">Active Positions Ledger ({positions.length})</h3>
+              <h3 className="text-sm font-bold text-white">Active Positions Ledger ({livePositions.length})</h3>
               <span className="text-[11px] font-mono text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                 {capitalState.accountName || positions[0]?.account || 'Active Account'}
               </span>
@@ -572,7 +578,7 @@ export const WeeklyPositionAuditView: React.FC<WeeklyPositionAuditViewProps> = (
                   : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/70'
               }`}
             >
-              All Positions ({positions.length})
+              Live Positions ({livePositions.length})
             </button>
             <button
               onClick={() => setPositionFilter('EQUITY')}

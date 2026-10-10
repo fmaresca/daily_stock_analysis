@@ -5,7 +5,19 @@
  * - Compares contract expiration dates against current market time (4:00 PM ET close).
  * - Accurately differentiates active contracts from expired contracts.
  * - Formats DTE with live day/date counters (e.g. "6d (09/18)", "Expired (09/11)").
+ * - Fully powered by the central clock authority (appNow.ts).
  */
+
+import {
+  now,
+  getPartsET,
+  todayET,
+  isExpiredOption,
+  parseOptionExpirationDate,
+} from './appNow.ts';
+import { adjustExpirationForNyseHolidays, formatDateYMD } from './nyseHolidayCalendar.ts';
+
+export { parseOptionExpirationDate };
 
 export interface OptionExpirationStatus {
   isExpired: boolean;
@@ -20,51 +32,13 @@ export interface OptionExpirationStatus {
 }
 
 /**
- * Parses diverse option expiration date formats into a standard Date object
- * Handles:
- * - 'YYYY-MM-DD' (e.g. '2026-09-11')
- * - 'MM/DD/YYYY' (e.g. '09/11/2026')
- * - 'MM/DD/YY' (e.g. '09/11/26')
- * - OCC symbols containing 'YYMMDD' (e.g. 'PANW260911P00327500')
- */
-export function parseOptionExpirationDate(expStr?: string): Date | null {
-  if (!expStr || typeof expStr !== 'string') return null;
-  const trimmed = expStr.trim();
-  if (!trimmed || trimmed === 'N/A' || trimmed === '—') return null;
-
-  // 1. ISO format: YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    const [year, month, day] = trimmed.split('-').map(Number);
-    return new Date(year, month - 1, day, 16, 0, 0); // 4:00 PM ET
-  }
-
-  // 2. US format: MM/DD/YYYY or MM/DD/YY
-  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(trimmed)) {
-    const parts = trimmed.split('/').map(Number);
-    let month = parts[0];
-    let day = parts[1];
-    let year = parts[2];
-    if (year < 100) year += 2000;
-    return new Date(year, month - 1, day, 16, 0, 0);
-  }
-
-  // 3. Fallback standard Date constructor
-  const parsed = new Date(trimmed);
-  if (!isNaN(parsed.getTime())) {
-    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 16, 0, 0);
-  }
-
-  return null;
-}
-
-/**
  * Calculates dynamic DTE and expiration status comparing the expiration cutoff against current time.
  * The official options expiration cutoff for trading decisions is Friday 4:00 PM Eastern Time.
  */
 export function getOptionExpirationStatus(
   expStr?: string,
   fallbackDte: number = 0,
-  referenceNow: Date = new Date()
+  referenceNow: Date = now()
 ): OptionExpirationStatus {
   const expDate = parseOptionExpirationDate(expStr);
 
@@ -96,24 +70,28 @@ export function getOptionExpirationStatus(
     };
   }
 
-  const expMonth = String(expDate.getMonth() + 1).padStart(2, '0');
-  const expDay = String(expDate.getDate()).padStart(2, '0');
-  const formattedExp = `${expMonth}/${expDay}`;
+  // OCC Holiday adjustment
+  const { adjustedDate } = adjustExpirationForNyseHolidays(expDate);
+  const expYmd = formatDateYMD(adjustedDate);
+  const [expYear, expMonthNum, expDayNum] = expYmd.split('-').map(Number);
+  const formattedExp = `${String(expMonthNum).padStart(2, '0')}/${String(expDayNum).padStart(2, '0')}`;
 
-  // Calendar day calculation (midnight-to-midnight)
-  const todayMidnight = new Date(referenceNow.getFullYear(), referenceNow.getMonth(), referenceNow.getDate()).getTime();
-  const expMidnight = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate()).getTime();
-  const calendarDiffDays = Math.round((expMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+  const curET = getPartsET(referenceNow);
+  const curYmd = curET.ymd;
 
-  // Time difference including 4:00 PM ET cutoff
-  const msRemaining = expDate.getTime() - referenceNow.getTime();
+  // Calendar day calculation in ET: compute difference in days
+  const curMidnightMs = Date.UTC(curET.year, curET.month - 1, curET.day);
+  const expMidnightMs = Date.UTC(expYear, expMonthNum - 1, expDayNum);
+  const calendarDiffDays = Math.round((expMidnightMs - curMidnightMs) / 86400000);
+
+  const expired = isExpiredOption(expStr, referenceNow);
 
   // 1. Fully expired (past expiration date, or expiration date after 4:00 PM ET)
-  if (calendarDiffDays < 0 || msRemaining <= 0) {
+  if (expired) {
     const daysAgo = Math.max(1, Math.abs(calendarDiffDays));
     return {
       isExpired: true,
-      isToday: calendarDiffDays === 0,
+      isToday: curYmd === expYmd,
       dte: 0,
       calendarDaysRemaining: calendarDiffDays,
       label: `Expired (${formattedExp})`,
@@ -125,7 +103,7 @@ export function getOptionExpirationStatus(
   }
 
   // 2. Expiring today before 4:00 PM ET
-  if (calendarDiffDays === 0) {
+  if (curYmd === expYmd) {
     return {
       isExpired: false,
       isToday: true,
@@ -140,22 +118,27 @@ export function getOptionExpirationStatus(
   }
 
   // 3. Active future expiration
+  const activeDte = Math.max(1, calendarDiffDays);
   return {
     isExpired: false,
     isToday: false,
-    dte: calendarDiffDays,
+    dte: activeDte,
     calendarDaysRemaining: calendarDiffDays,
-    label: `${calendarDiffDays}d (${formattedExp})`,
-    shortLabel: `${calendarDiffDays}d`,
+    label: `${activeDte}d (${formattedExp})`,
+    shortLabel: `${activeDte}d`,
     formattedExpiration: formattedExp,
     statusText: 'ACTIVE',
-    badgeColor: calendarDiffDays <= 5 ? 'amber' : 'emerald',
+    badgeColor: activeDte <= 5 ? 'amber' : 'emerald',
   };
 }
 
 /**
- * Quick boolean check if an option is expired
+ * Quick boolean check if an option is expired.
+ * Flows directly through the central clock authority.
  */
-export function isOptionExpired(expStr?: string, fallbackDte?: number): boolean {
-  return getOptionExpirationStatus(expStr, fallbackDte).isExpired;
+export function isOptionExpired(expStr?: string, fallbackDte?: number, referenceNow?: Date): boolean {
+  if (expStr) {
+    return isExpiredOption(expStr, referenceNow ?? now());
+  }
+  return getOptionExpirationStatus(expStr, fallbackDte, referenceNow).isExpired;
 }

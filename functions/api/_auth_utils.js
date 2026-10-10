@@ -120,7 +120,7 @@ export async function createSessionToken(payload, secret, expiresInSeconds = DEF
     throw new Error("createSessionToken requires a valid secret string.");
   }
   const header = { alg: "HS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(Date.now() / 1000); // wall-clock-ok: JWT epoch second calculation
   const jwtPayload = {
     ...payload,
     tv: payload.tv !== undefined ? Number(payload.tv) : 0,
@@ -185,7 +185,7 @@ export async function verifySessionToken(token, secret) {
     if (!isValid) return null;
 
     const payload = JSON.parse(base64UrlDecode(encodedPayload));
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 1000); // wall-clock-ok: JWT exp validation
     if (payload.exp && payload.exp < now) return null;
 
     return payload;
@@ -315,11 +315,11 @@ export async function ensurePasswordResetTable(env) {
 }
 
 export async function storePasswordResetToken(env, tokenHash, userId, expiresInMinutes = 30) {
-  const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString();
-  const createdAt = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString(); // wall-clock-ok: reset token expiration
+  const createdAt = new Date().toISOString(); // wall-clock-ok: reset token created timestamp
 
   // Bounded in-memory reset-token cache: sweep expired entries to prevent memory growth
-  const nowIso = new Date().toISOString();
+  const nowIso = new Date().toISOString(); // wall-clock-ok: in-memory cache sweep timestamp
   for (const [key, val] of localMemoryResetTokens.entries()) {
     if (val && val.expiresAt && val.expiresAt < nowIso) {
       localMemoryResetTokens.delete(key);
@@ -350,7 +350,7 @@ export async function storePasswordResetToken(env, tokenHash, userId, expiresInM
 }
 
 export async function consumePasswordResetToken(env, tokenHash) {
-  const now = new Date().toISOString();
+  const now = new Date().toISOString(); // wall-clock-ok: token consumption verification timestamp
 
   if (env && env.DB) {
     try {
@@ -514,8 +514,8 @@ export async function getAllUsers(env) {
 
 export async function createUser(env, { id, email, password_hash, password_salt, role, is_active, must_change_password, display_name, token_version }) {
   const cleanEmail = email.trim().toLowerCase();
-  const userId = id || `user-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  const now = new Date().toISOString();
+  const userId = id || `user-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`; // wall-clock-ok: unique user ID
+  const now = new Date().toISOString(); // wall-clock-ok: user created timestamp
   const tv = token_version ?? 0;
 
   if (env && env.DB) {
@@ -562,7 +562,7 @@ export async function createUser(env, { id, email, password_hash, password_salt,
 }
 
 export async function updateUserPassword(env, userId, newHash, newSalt) {
-  const now = new Date().toISOString();
+  const now = new Date().toISOString(); // wall-clock-ok: password updated timestamp
   if (env && env.DB) {
     try {
       await ensureUsersTables(env);
@@ -590,7 +590,7 @@ export async function updateUserPassword(env, userId, newHash, newSalt) {
 }
 
 export async function resetUserPasswordAdmin(env, userId, newHash, newSalt, forceReset = true) {
-  const now = new Date().toISOString();
+  const now = new Date().toISOString(); // wall-clock-ok: admin reset timestamp
   if (env && env.DB) {
     try {
       await ensureUsersTables(env);
@@ -619,7 +619,7 @@ export async function resetUserPasswordAdmin(env, userId, newHash, newSalt, forc
 
 export async function resetUserPasswordByEmail(env, email, newHash, newSalt, forceReset = false) {
   const cleanEmail = email.trim().toLowerCase();
-  const now = new Date().toISOString();
+  const now = new Date().toISOString(); // wall-clock-ok: email reset timestamp
 
   if (env && env.DB) {
     try {
@@ -648,7 +648,7 @@ export async function resetUserPasswordByEmail(env, email, newHash, newSalt, for
 }
 
 export async function toggleUserStatus(env, userId, isActive) {
-  const now = new Date().toISOString();
+  const now = new Date().toISOString(); // wall-clock-ok: status toggle timestamp
   if (env && env.DB) {
     try {
       await ensureUsersTables(env);
@@ -675,7 +675,7 @@ export async function toggleUserStatus(env, userId, isActive) {
 }
 
 export async function updateLastLogin(env, userId) {
-  const now = new Date().toISOString();
+  const now = new Date().toISOString(); // wall-clock-ok: last login timestamp
   if (env && env.DB) {
     try {
       await env.DB.prepare(`UPDATE users SET last_login_at = ? WHERE id = ?`).bind(now, userId).run();

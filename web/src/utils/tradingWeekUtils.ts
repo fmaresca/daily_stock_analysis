@@ -11,6 +11,7 @@
  */
 
 import type { EconomicIndicator } from '../types/economicCalendar.ts';
+import { now, startOfTradingWeekET, todayET } from './appNow.ts';
 
 export interface TradingWeek {
   monday: Date;
@@ -60,7 +61,7 @@ function addDays(d: Date, n: number): Date {
  * Resolves the calendar day-of-week and whether the current time is at or past
  * the Friday 16:00 ET (4:00 PM Eastern) close of regular US equity market trading.
  */
-export function getEasternTradingState(from: Date = new Date()): {
+export function getEasternTradingState(from: Date = now()): {
   dow: number;
   isAfterFridayClose: boolean;
 } {
@@ -94,20 +95,10 @@ export function getEasternTradingState(from: Date = new Date()): {
   }
 }
 
-export function getMondayOfWeek(from: Date = new Date()): Date {
-  const d = new Date(from);
-  d.setHours(0, 0, 0, 0);
-  const { dow, isAfterFridayClose } = getEasternTradingState(from);
-  if (dow === 0) {
-    d.setDate(d.getDate() + 1); // Sunday -> upcoming Monday
-  } else if (dow === 6) {
-    d.setDate(d.getDate() + 2); // Saturday -> upcoming Monday
-  } else if (isAfterFridayClose) {
-    d.setDate(d.getDate() + 3); // Friday after 16:00 ET close -> advance to following week's Monday!
-  } else {
-    d.setDate(d.getDate() - (dow - 1)); // Mon-Thu, or Friday during trading -> this Monday
-  }
-  return d;
+export function getMondayOfWeek(from: Date = now()): Date {
+  const ymd = startOfTradingWeekET(from);
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0);
 }
 
 function buildTradingWeek(monday: Date): TradingWeek {
@@ -152,14 +143,14 @@ function buildTradingWeek(monday: Date): TradingWeek {
  * Returns the current in-progress Mon-Fri trading week (if today is Mon-Fri)
  * or the upcoming Mon-Fri trading week (if today is Sat/Sun).
  */
-export function getUpcomingTradingWeek(from: Date = new Date()): TradingWeek {
+export function getUpcomingTradingWeek(from: Date = now()): TradingWeek {
   return buildTradingWeek(getMondayOfWeek(from));
 }
 
 /**
  * Returns the prior Mon-Fri trading week (always 7 days before the upcoming Monday).
  */
-export function getPriorTradingWeek(from: Date = new Date()): TradingWeek {
+export function getPriorTradingWeek(from: Date = now()): TradingWeek {
   const upcomingMonday = getMondayOfWeek(from);
   return buildTradingWeek(addDays(upcomingMonday, -7));
 }

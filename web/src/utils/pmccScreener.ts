@@ -9,6 +9,7 @@
 
 import { TickerMeta } from '../types/options';
 import { calculateBlackScholesOption } from './optionChainMatrix';
+import { now, isExpiredOption } from './appNow';
 
 export interface PmccOpportunity {
   id: string;
@@ -52,17 +53,21 @@ export interface PmccOpportunity {
 
 export function generatePmccOpportunities(tickers: TickerMeta[]): PmccOpportunity[] {
   const opportunities: PmccOpportunity[] = [];
-  const now = new Date();
+  const currentMoment = now();
 
   // Long LEAPS expiration ~180-270 days out
-  const leapsDate = new Date(now.getTime() + 210 * 86400000);
+  const leapsDate = new Date(currentMoment.getTime() + 210 * 86400000);
   const leapsDte = 210;
   const leapsExpStr = leapsDate.toISOString().split('T')[0];
 
   // Short income expiration ~30-45 days out
-  const shortDate = new Date(now.getTime() + 35 * 86400000);
+  const shortDate = new Date(currentMoment.getTime() + 35 * 86400000);
   const shortDte = 35;
   const shortExpStr = shortDate.toISOString().split('T')[0];
+
+  if (isExpiredOption(shortExpStr) || isExpiredOption(leapsExpStr)) {
+    return [];
+  }
 
   for (const t of tickers) {
     const spot = t.spot_price > 0 ? t.spot_price : 100;

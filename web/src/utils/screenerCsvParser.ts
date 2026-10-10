@@ -168,7 +168,7 @@ export function parseScreenerCSV(
       signal_direction: signalDirection,
       source: sourceType === 'BARCHART' ? 'barchart' : sourceType === 'MARKETCHAMELEON' ? 'marketchameleon' : 'custom_upload',
       source_url: '',
-      updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(), // wall-clock-ok: CSV ingestion timestamp
       recommended_strategy: recStrat,
       notes: `Ingested ${sourceType} Screener`,
       extra_fields: Object.keys(extraFields).length > 0 ? extraFields : undefined,

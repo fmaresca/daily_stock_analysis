@@ -85,7 +85,7 @@ export async function onRequest(context) {
     const optedIn = body.opted_in ? 1 : 0;
     const discordWebhook = typeof body.discord_webhook_url === "string" ? body.discord_webhook_url.trim() : "";
     const email = (body.email || user.email).trim().toLowerCase();
-    const now = new Date().toISOString();
+    const now = new Date().toISOString(); // wall-clock-ok: preference updated timestamp
 
     if (env?.DB) {
       try {

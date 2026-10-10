@@ -1,5 +1,6 @@
 import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
 import type { TickerMeta, OptionOpportunity } from '../types/options';
+import { now } from './appNow.ts';
 
 export interface PreFlightCheckItem {
   id: 'binary_events' | 'cboe_cadence' | 'liquidity_spread' | 'iv_rank' | 'technical_buffer' | 'earnings' | 'cboe_weekly';
@@ -74,7 +75,7 @@ export function evaluateOptionsPreFlight(
     earningsExplanation = 'Earnings approaching within 2 weeks. Time decay competes with pre-earnings IV ramp.';
     earningsRec = 'Select expiration strictly before earnings date to avoid binary risk.';
   } else if (ticker.earnings_date) {
-    const daysUntil = Math.round((new Date(ticker.earnings_date).getTime() - Date.now()) / (1000 * 3600 * 24));
+    const daysUntil = Math.round((new Date(ticker.earnings_date).getTime() - now().getTime()) / (1000 * 3600 * 24));
     if (daysUntil <= 14 && daysUntil > 0) {
       earningsStatus = 'CAUTION';
       earningsMetric = `Earnings in ${daysUntil} days`;
@@ -258,6 +259,6 @@ export function evaluateOptionsPreFlight(
     recommendedStrikeDescription,
     checks,
     items: checks,
-    evaluatedAt: new Date().toISOString(),
+    evaluatedAt: new Date().toISOString(), // wall-clock-ok: evaluation audit timestamp
   };
 }

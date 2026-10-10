@@ -20,6 +20,8 @@
  * 5. Moving qualified-exchange lists (venues evolve — see Rev. Rul. 2026-16 as a caveat to verify with your CPA).
  */
 
+import { now } from './appNow.ts';
+
 export type TaxRegime = 'section1256' | 'equityOption' | 'unclear';
 
 export interface ClassificationResult {
@@ -256,7 +258,7 @@ export function recognise1256(
   for (const pos of positions) {
     let currentReference = pos.entryBasis;
     const entryYear = parseInt(pos.entryDate.slice(0, 4), 10);
-    const closeYear = pos.closeDate ? parseInt(pos.closeDate.slice(0, 4), 10) : new Date().getFullYear();
+    const closeYear = pos.closeDate ? parseInt(pos.closeDate.slice(0, 4), 10) : now().getFullYear();
 
     const marksForPos = {
       ...(pos.yearEndMarks || {}),
@@ -385,7 +387,7 @@ export function compareRegimes(
     totalEconomicMove += economicMove;
 
     const entryTime = new Date(pos.entryDate).getTime();
-    const closeTime = pos.closeDate ? new Date(pos.closeDate).getTime() : Date.now();
+    const closeTime = pos.closeDate ? new Date(pos.closeDate).getTime() : now().getTime();
     const daysHeld = Math.max(0, Math.round((closeTime - entryTime) / (1000 * 60 * 60 * 24)));
 
     totalHoldingDays += daysHeld;

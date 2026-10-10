@@ -136,7 +136,7 @@ export function runOptionsBacktest(
   // Generate monthly equity curve points (strictly pre-tax baseline)
   const totalMonths = years * 12;
   const equityCurve: { date: string; strategyEquity: number; benchmarkEquity: number }[] = [];
-  const startDate = new Date();
+  const startDate = new Date(); // wall-clock-ok: historical backtest timeline generation
   startDate.setFullYear(startDate.getFullYear() - years);
 
   let curStrat = initialCapital;
@@ -209,7 +209,7 @@ export function runOptionsBacktest(
   const isHoldingOverYear = holdingPeriodDays > 365;
 
   // Build simulated PositionMark book for compareRegimes
-  const currentCalYear = new Date().getFullYear();
+  const currentCalYear = new Date().getFullYear(); // wall-clock-ok: historical backtest calendar bounds
   const startCalYear = currentCalYear - years;
   const yearEndMarks: Record<number, number> = {};
 

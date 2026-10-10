@@ -31,7 +31,7 @@ export async function onRequestGet(context) {
       ).run();
       await env.DB.prepare(
         "INSERT INTO _d1_health (id, ts) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET ts = excluded.ts"
-      ).bind(new Date().toISOString()).run();
+      ).bind(new Date().toISOString()).run(); // wall-clock-ok: D1 health check ping timestamp
       d1Writable = true;
     } catch {
       d1Writable = false;

@@ -6,6 +6,7 @@
  */
 
 import { authenticateRequest } from "../_auth_utils.js";
+import { isExpiredOption, nowET } from "../_now.js";
 
 // In-memory dual-track fallback store when D1 is unbound
 const memoryJournal = new Map();
@@ -69,23 +70,38 @@ export async function onRequest(context) {
 
   // 1. GET: List journal entries
   if (request.method === "GET") {
+    let rawEntries = [];
     if (env?.DB) {
       await ensureJournalTable(env.DB);
       try {
         const { results } = await env.DB.prepare(
           "SELECT * FROM options_signal_journal WHERE user_id = ? ORDER BY created_at DESC LIMIT 100"
         ).bind(userId).all();
-        return new Response(JSON.stringify({ entries: results || [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        rawEntries = results || [];
       } catch (err) {
         console.warn("[Journal] D1 read error, falling back to memory:", err.message);
+        rawEntries = memoryJournal.get(userId) || [];
       }
+    } else {
+      rawEntries = memoryJournal.get(userId) || [];
     }
 
-    const userEntries = memoryJournal.get(userId) || [];
-    return new Response(JSON.stringify({ entries: userEntries }), {
+    const processedEntries = rawEntries.map((e) => {
+      if (e.status === "ACTIVE" && e.expiration && isExpiredOption(e.expiration)) {
+        const isWorthless =
+          (e.strategy === "CSP" && Number(e.spot_price) >= Number(e.strike)) ||
+          (e.strategy === "COVERED_CALL" && Number(e.spot_price) <= Number(e.strike));
+        return {
+          ...e,
+          status: "EXPIRED",
+          resolved_at: e.resolved_at || nowET().toISOString(),
+          suggested_action: isWorthless ? "Let Lapse (Worthless)" : "Roll / Close",
+        };
+      }
+      return e;
+    });
+
+    return new Response(JSON.stringify({ entries: processedEntries }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -99,8 +115,8 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ error: "Symbol required" }), { status: 400 });
     }
 
-    const id = `jnl_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const now = new Date().toISOString();
+    const id = `jnl_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`; // wall-clock-ok: unique entry ID generation
+    const now = nowET().toISOString();
 
     const entry = {
       id,
@@ -114,10 +130,10 @@ export async function onRequest(context) {
       cushion_pct: Number(body.cushion_pct) || 0,
       premium: Number(body.premium) || 0,
       pop_pct: Number(body.pop_pct) || 0,
-      status: "ACTIVE",
+      status: body.expiration && isExpiredOption(body.expiration) ? "EXPIRED" : "ACTIVE",
       notes: body.notes || "",
       created_at: now,
-      resolved_at: null,
+      resolved_at: body.expiration && isExpiredOption(body.expiration) ? now : null,
     };
 
     if (env?.DB) {
@@ -156,7 +172,7 @@ export async function onRequest(context) {
 
     const status = body.status || "CLOSED";
     const notes = body.notes;
-    const resolvedAt = status !== "ACTIVE" ? new Date().toISOString() : null;
+    const resolvedAt = status !== "ACTIVE" ? nowET().toISOString() : null;
 
     if (env?.DB) {
       await ensureJournalTable(env.DB);

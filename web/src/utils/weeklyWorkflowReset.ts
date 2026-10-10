@@ -55,7 +55,7 @@ const STORAGE_KEYS_TO_CLEAR = [
  * Designed to be called immediately before ingesting a new Schwab CSV.
  */
 export function executeWeeklyWorkflowCleanReset(): WorkflowResetSummary {
-  const timestamp = new Date().toISOString();
+  const timestamp = new Date().toISOString(); // wall-clock-ok: reset log timestamp
 
   if (typeof window === 'undefined' || !window.localStorage) {
     return {

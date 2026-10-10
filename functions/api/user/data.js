@@ -92,10 +92,10 @@ export async function onRequestPost(context) {
       );
     }
 
-    const now = new Date().toISOString();
+    const now = new Date().toISOString(); // wall-clock-ok: record created timestamp
 
     if (type === "trade") {
-      const tradeId = `trade-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const tradeId = `trade-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`; // wall-clock-ok: unique trade ID
       const {
         symbol,
         strategy = "CSP",
@@ -166,7 +166,7 @@ export async function onRequestPost(context) {
     }
 
     if (type === "watchlist") {
-      const watchlistId = `wl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const watchlistId = `wl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`; // wall-clock-ok: unique watchlist ID
       const { group_name, symbols = [] } = payload;
 
       if (!group_name) {

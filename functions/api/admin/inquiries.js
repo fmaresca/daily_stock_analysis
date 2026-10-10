@@ -9,7 +9,7 @@ const EXTENDED_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const EXTENDED_LIMIT = 6; // Max 6 submissions per 10 minutes
 
 function checkRateLimit(clientIp) {
-  const now = Date.now();
+  const now = Date.now(); // wall-clock-ok: in-memory rate limit window
   let timestamps = ipRequestHistory.get(clientIp) || [];
   // Purge records older than 10 minutes
   timestamps = timestamps.filter((t) => now - t < EXTENDED_WINDOW_MS);
@@ -83,8 +83,8 @@ export async function onRequestPost(context) {
     const adminRecipient = await getAdminNotificationEmail(env);
 
     const userAgent = request.headers.get("User-Agent") || "Unknown Browser";
-    const timestampIso = new Date().toISOString();
-    const timestampFormatted = new Date().toUTCString();
+    const timestampIso = new Date().toISOString(); // wall-clock-ok: notification timestamp
+    const timestampFormatted = new Date().toUTCString(); // wall-clock-ok: notification timestamp
 
     const subject = `[DeltaHarvest] ${typeLabel}: ${cleanName} (${cleanEmail})`;
 
@@ -382,7 +382,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
             created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
           )
         `).run();
-        const inquiryId = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const inquiryId = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`; // wall-clock-ok: unique inquiry ID
         await env.DB.prepare(`
           INSERT INTO access_inquiries (id, request_type, name, email, note, ip, status)
           VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -571,7 +571,7 @@ export async function onRequestGet(context) {
             email: adminRecipient,
             requestType: "System Test",
             message: testText,
-            timestamp: new Date().toUTCString(),
+            timestamp: new Date().toUTCString(), // wall-clock-ok: diagnostic test timestamp
             _template: "table",
           }),
         });

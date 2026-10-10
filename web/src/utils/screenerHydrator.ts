@@ -18,6 +18,8 @@
  */
 
 import { OptionOpportunity, TickerMeta } from '../types/options';
+import { now } from './appNow.ts';
+import { getNextWeeklyExpiration } from './nyseHolidayCalendar.ts';
 import { WeeklyScreenerRecord } from '../types/weeklyScreeners';
 import { calculateBlackScholesGreeks, clamp, roundToDecimals } from './financeMath';
 import { calculateRSI } from './technicalIndicators';
@@ -219,12 +221,10 @@ export function hydrateOptionOpportunity(
   const spot = record.last_price || 100.0;
   const volStats = resolveTickerVolAndRsi(record, tMeta, closes);
 
-  // Target DTE: nearest next Friday (6-7 days)
-  const nextFriday = new Date();
-  const daysUntilFriday = (5 + 7 - nextFriday.getDay()) % 7 || 7;
-  nextFriday.setDate(nextFriday.getDate() + daysUntilFriday);
-  const expStr = nextFriday.toISOString().split('T')[0];
-  const dte = Math.max(1, daysUntilFriday);
+  // Target DTE: nearest next Friday (or OCC holiday adjusted)
+  const weekly = getNextWeeklyExpiration(now());
+  const expStr = weekly.dateString;
+  const dte = Math.max(1, weekly.dte);
 
   // Solve for target ~0.18 - 0.20 Delta Put Strike using Black-Scholes inversion
   // K ≈ S * exp(-(d1 * iv * sqrt(t) - (r + 0.5*iv^2)*t)) where d1 ≈ 0.915 for 0.18 Delta

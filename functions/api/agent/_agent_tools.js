@@ -111,7 +111,7 @@ export async function getMarketPriceAndTechnicals(symbol, env) {
       },
       fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh || null,
       fiftyTwoWeekLow: meta.fiftyTwoWeekLow || null,
-      asOf: new Date().toISOString(),
+      asOf: new Date().toISOString(), // wall-clock-ok: agent tool snapshot timestamp
     };
   } catch (err) {
     return { error: `Market price fetch error: ${err.message}` };

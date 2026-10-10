@@ -6,6 +6,7 @@
  */
 
 import { completeLLM } from "./_llm.js";
+import { isExpiredOption } from "./_now.js";
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -136,6 +137,12 @@ Return ONLY a valid, raw JSON object (no surrounding Markdown wrappers, no \`\`\
       // Fallback clean-up if model returns escaped markdown tags
       const sanitized = rawText.replace(/```json\n?|```/g, "").trim();
       parsedResult = JSON.parse(sanitized);
+    }
+
+    if (parsedResult && Array.isArray(parsedResult.candidates)) {
+      parsedResult.candidates = parsedResult.candidates.filter(
+        (c) => !c.expiration_date || !isExpiredOption(c.expiration_date)
+      );
     }
 
     return new Response(JSON.stringify(parsedResult), {

@@ -28,6 +28,7 @@ import {
   getPriorTradingWeek,
   reanchorScheduleToWeek,
 } from '../utils/tradingWeekUtils';
+import { todayET } from '../utils/appNow';
 
 const CALENDAR_CACHE_KEY_PREFIX = 'deltaharvest_calendar_cache_';
 const CALENDAR_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -203,9 +204,10 @@ export const EconomicCalendarView: React.FC<EconomicCalendarViewProps> = ({
             const nextPayload: EconomicCalendarResponse = {
               ...bJson,
               indicators: reanchoredList,
-              source: bJson.source || 'curated_macro_schedule',
-              notice: `Active weekly macroeconomic catalyst radar & sector transmission schedule for upcoming week (${upcomingWeek.label}).`,
-              last_updated: new Date().toISOString(),
+              source: 'static_fallback_json',
+              fallback: true,
+              notice: `Static baseline fallback schedule (as of ${bJson.last_updated ? bJson.last_updated.substring(0, 10) : 'archived'}). Re-anchored for ${upcomingWeek.label}.`,
+              last_updated: bJson.last_updated || new Date().toISOString(),
             };
             setData(nextPayload);
             setSessionCachedCalendar(targetScope, nextPayload);
@@ -461,10 +463,10 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
                         <span>🛡️ High-Impact Curated Schedule</span>
                       </>
-                    ) : data?.fallback || data?.source === 'fallback_baseline' ? (
+                    ) : data?.source === 'static_fallback_json' || data?.fallback || data?.source === 'fallback_baseline' ? (
                       <>
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        <span>⚠️ Baseline Fallback Schedule</span>
+                        <span>⚠️ Static Fallback (As of {data?.last_updated ? data.last_updated.substring(0, 10) : 'Archived'})</span>
                       </>
                     ) : (
                       <>
@@ -487,7 +489,7 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 {scheduleScope === 'upcoming'
-                  ? `Upcoming Trading Week (${upcomingWeek.label}) • Normalized to US Eastern Time (ET) with deterministic sector & proxy ETF mapping.`
+                  ? `${todayET() < upcomingWeek.isoMonday ? 'Upcoming' : 'Current'} Trading Week (${upcomingWeek.label}) • Normalized to US Eastern Time (ET) with deterministic sector & proxy ETF mapping.`
                   : `Past Trading Week (${priorWeek.label} Archive) • Actual prints normalized to US Eastern Time (ET).`}
               </p>
             </div>
@@ -520,11 +522,13 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/50'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
-              title={`Show Upcoming Week catalysts (${upcomingWeek.label})`}
+              title={`Show ${todayET() < upcomingWeek.isoMonday ? 'Upcoming' : 'Current'} Week catalysts (${upcomingWeek.label})`}
             >
               <Calendar className="w-3.5 h-3.5 text-blue-200" />
-              <span>{`Upcoming Week (${upcomingWeek.shortLabel})`}</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/25 text-blue-100">Next</span>
+              <span>{`${todayET() < upcomingWeek.isoMonday ? 'Upcoming' : 'Current'} Week (${upcomingWeek.shortLabel})`}</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/25 text-blue-100">
+                {todayET() < upcomingWeek.isoMonday ? 'Next' : 'Active'}
+              </span>
             </button>
             <button
               onClick={() => {
@@ -802,16 +806,30 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-sans">
-              {sortedIndicators.map((item, index) => (
-                <tr
-                  key={index}
-                  className="hover:bg-slate-800/40 transition-colors group"
-                >
-                  {/* Date & Time */}
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    <div className="font-bold text-white font-mono">{item.dateET}</div>
-                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">{item.timeET} ET</div>
-                  </td>
+              {sortedIndicators.map((item, index) => {
+                const eventDateIso = item.isoDate ? item.isoDate.substring(0, 10) : '';
+                const isPastEvent = Boolean(eventDateIso && eventDateIso < todayET());
+                return (
+                  <tr
+                    key={index}
+                    className={`transition-colors group ${
+                      isPastEvent
+                        ? 'opacity-50 bg-slate-950/40 text-slate-500 hover:opacity-80'
+                        : 'hover:bg-slate-800/40'
+                    }`}
+                  >
+                    {/* Date & Time */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 font-bold font-mono">
+                        <span className={isPastEvent ? 'text-slate-400' : 'text-white'}>{item.dateET}</span>
+                        {isPastEvent && (
+                          <span className="px-1.5 py-0.2 rounded bg-slate-800 text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+                            Passed
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-mono mt-0.5">{item.timeET} ET</div>
+                    </td>
 
                   {/* Indicator Title */}
                   <td className="py-3.5 px-4">
@@ -870,7 +888,8 @@ RESPOND STRICTLY IN VALID JSON FORMAT MATCHING THIS EXACT SCHEMA (NO MARKDOWN TE
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

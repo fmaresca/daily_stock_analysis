@@ -10,6 +10,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { now } from './appNow.ts';
 
 export type SortOrder = 'asc' | 'desc';
 
@@ -104,7 +105,7 @@ export function normalizeSortValue(val: unknown): number | string {
     if (/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(trimmed)) {
       const parsedDirect = Date.parse(trimmed);
       if (!isNaN(parsedDirect)) return parsedDirect;
-      const currentYear = new Date().getFullYear();
+      const currentYear = now().getFullYear();
       const withYear = Date.parse(`${trimmed}, ${currentYear}`);
       if (!isNaN(withYear)) return withYear;
     }

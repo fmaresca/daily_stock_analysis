@@ -1,4 +1,5 @@
 import type { DividendSchedule, EarlyAssignmentAnalysis } from '../types/coveredCall.ts';
+import { now } from './appNow.ts';
 
 /**
  * Calculates covered call payoff at a target terminal stock price at expiration.
@@ -59,10 +60,10 @@ export function evaluateEarlyAssignmentRisk(
 
   const expTime = new Date(expirationDate).getTime();
   const exDivTime = new Date(dividend.exDividendDate).getTime();
-  const now = referenceDate ? new Date(referenceDate).getTime() : new Date().getTime();
+  const nowTime = referenceDate ? new Date(referenceDate).getTime() : now().getTime();
 
   // Ex-div has already passed or occurs after option expiration
-  if (exDivTime <= now || exDivTime > expTime) {
+  if (exDivTime <= nowTime || exDivTime > expTime) {
     return {
       hasRisk: false,
       severity: 'NONE',

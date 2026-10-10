@@ -5,7 +5,8 @@
  * realistic volatility skews/smirks, and straddle ladder aggregation.
  */
 
-import { TickerMeta } from '../types/options';
+import type { TickerMeta } from '../types/options.ts';
+import { now, getPartsET, todayET, isExpiredOption } from './appNow.ts';
 
 export interface OptionContractData {
   symbol: string;
@@ -135,46 +136,58 @@ export function calculateBlackScholesOption(
 }
 
 // Generate true CBOE calendar Friday expirations (Weekly, Monthly, LEAPS)
+// Purges any expired options so dead strikes never render
 export function getAvailableExpirations(): ExpirationGroup[] {
-  const now = new Date();
+  const currentNow = now();
+  const curET = getPartsET(currentNow);
   const expirations: ExpirationGroup[] = [];
 
-  // 1. Next 4 Weekly Fridays
-  for (let w = 1; w <= 4; w++) {
-    const d = new Date(now);
-    const day = d.getDay();
-    const daysUntilFriday = ((5 - day + 7) % 7) || 7;
-    d.setDate(d.getDate() + daysUntilFriday + (w - 1) * 7);
-    d.setHours(16, 0, 0, 0);
+  // 1. Next 6 Weekly Fridays (skipping today if expired past 4:00 PM ET close)
+  for (let w = 0; w <= 5; w++) {
+    let daysUntilFriday = (5 - curET.dayOfWeek + 7) % 7;
+    if (curET.dayOfWeek === 5 && (curET.hours > 16 || (curET.hours === 16 && (curET.minutes > 0 || curET.seconds > 0)))) {
+      daysUntilFriday = 7;
+    }
+    const daysOffset = daysUntilFriday + w * 7;
+    // wall-clock-ok: calendar arithmetic anchored to central authority curET
+    const target = new Date(Date.UTC(curET.year, curET.month - 1, curET.day + daysOffset, 12, 0, 0));
+    const targetYmd = target.toISOString().split('T')[0];
 
-    const diffMs = d.getTime() - now.getTime();
-    const dte = Math.max(1, Math.round(diffMs / 86400000));
-    const iso = d.toISOString().split('T')[0];
-    const fmt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    // Drop expired contracts
+    if (isExpiredOption(targetYmd, currentNow)) {
+      continue;
+    }
 
-    expirations.push({
-      expiration: iso,
-      dte,
-      formattedDate: `[Weekly] ${fmt} (${dte}d)`,
-      atmIv: 24.0 + w * 0.4,
-    });
+    const curMidnight = Date.UTC(curET.year, curET.month - 1, curET.day);
+    const expMidnight = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate());
+    const dte = Math.max(0, Math.round((expMidnight - curMidnight) / 86400000));
+    const fmt = target.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+    if (!expirations.some((e) => e.expiration === targetYmd)) {
+      expirations.push({
+        expiration: targetYmd,
+        dte,
+        formattedDate: `[Weekly] ${fmt} (${dte}d)`,
+        atmIv: 24.0 + (w + 1) * 0.4,
+      });
+    }
   }
 
   // 2. Next 3 Monthly 3rd Fridays
   for (let m = 1; m <= 3; m++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + m, 1);
-    while (d.getDay() !== 5) {
-      d.setDate(d.getDate() + 1);
-    }
-    d.setDate(d.getDate() + 14);
-    d.setHours(16, 0, 0, 0);
+    // wall-clock-ok: calendar arithmetic anchored to central authority curET
+    const targetMonthDate = new Date(Date.UTC(curET.year, curET.month - 1 + m, 1, 12, 0, 0));
+    const firstFriOffset = (5 - targetMonthDate.getUTCDay() + 7) % 7;
+    // wall-clock-ok: calendar arithmetic anchored to central authority curET
+    const thirdFriDate = new Date(Date.UTC(targetMonthDate.getUTCFullYear(), targetMonthDate.getUTCMonth(), 1 + firstFriOffset + 14, 12, 0, 0));
+    const iso = thirdFriDate.toISOString().split('T')[0];
 
-    const diffMs = d.getTime() - now.getTime();
-    const dte = Math.max(1, Math.round(diffMs / 86400000));
-    const iso = d.toISOString().split('T')[0];
-    const fmt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!isExpiredOption(iso, currentNow) && !expirations.some((e) => e.expiration === iso)) {
+      const curMidnight = Date.UTC(curET.year, curET.month - 1, curET.day);
+      const expMidnight = Date.UTC(thirdFriDate.getUTCFullYear(), thirdFriDate.getUTCMonth(), thirdFriDate.getUTCDate());
+      const dte = Math.max(0, Math.round((expMidnight - curMidnight) / 86400000));
+      const fmt = thirdFriDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
-    if (!expirations.some((e) => e.expiration === iso)) {
       expirations.push({
         expiration: iso,
         dte,
@@ -185,23 +198,27 @@ export function getAvailableExpirations(): ExpirationGroup[] {
   }
 
   // 3. Long-Term LEAPS (January 3rd Friday)
-  const leapsYear = now.getMonth() >= 10 ? now.getFullYear() + 2 : now.getFullYear() + 1;
-  const leapsDate = new Date(leapsYear, 0, 1);
-  while (leapsDate.getDay() !== 5) {
-    leapsDate.setDate(leapsDate.getDate() + 1);
-  }
-  leapsDate.setDate(leapsDate.getDate() + 14);
-  const leapsDiff = leapsDate.getTime() - now.getTime();
-  const leapsDte = Math.round(leapsDiff / 86400000);
-  const leapsIso = leapsDate.toISOString().split('T')[0];
-  const leapsFmt = leapsDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const leapsYear = curET.month >= 10 ? curET.year + 2 : curET.year + 1;
+  // wall-clock-ok: calendar arithmetic anchored to central authority curET
+  const jan1 = new Date(Date.UTC(leapsYear, 0, 1, 12, 0, 0));
+  const janFirstFriOffset = (5 - jan1.getUTCDay() + 7) % 7;
+  // wall-clock-ok: calendar arithmetic anchored to central authority curET
+  const leapsThirdFri = new Date(Date.UTC(leapsYear, 0, 1 + janFirstFriOffset + 14, 12, 0, 0));
+  const leapsIso = leapsThirdFri.toISOString().split('T')[0];
 
-  expirations.push({
-    expiration: leapsIso,
-    dte: leapsDte,
-    formattedDate: `[LEAPS] ${leapsFmt} (${leapsDte}d)`,
-    atmIv: 27.0,
-  });
+  if (!isExpiredOption(leapsIso, currentNow) && !expirations.some((e) => e.expiration === leapsIso)) {
+    const curMidnight = Date.UTC(curET.year, curET.month - 1, curET.day);
+    const expMidnight = Date.UTC(leapsThirdFri.getUTCFullYear(), leapsThirdFri.getUTCMonth(), leapsThirdFri.getUTCDate());
+    const leapsDte = Math.max(0, Math.round((expMidnight - curMidnight) / 86400000));
+    const leapsFmt = leapsThirdFri.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+
+    expirations.push({
+      expiration: leapsIso,
+      dte: leapsDte,
+      formattedDate: `[LEAPS] ${leapsFmt} (${leapsDte}d)`,
+      atmIv: 27.0,
+    });
+  }
 
   return expirations.sort((a, b) => a.dte - b.dte);
 }
@@ -216,7 +233,23 @@ export function generateOptionChainMatrix(
   const baseIv = ticker.iv_rank ? Math.max(15, ticker.iv_rank * 0.4 + 16) : 25;
   const expirations = getAvailableExpirations();
 
-  const selectedExpObj = expirations.find((e) => e.dte === selectedDte) || expirations[3]; // Default ~30d
+  if (expirations.length === 0) {
+    return {
+      symbol: ticker.symbol,
+      spotPrice: spot,
+      selectedExpiration: 'All expirations expired',
+      selectedDte: 0,
+      expirations: [],
+      rows: [],
+      ivSmilePoints: [],
+      atmIv: baseIv,
+      callSkewAvg: baseIv,
+      putSkewAvg: baseIv,
+    };
+  }
+
+  // Select nearest non-expired expiration if requested selectedDte not found
+  const selectedExpObj = expirations.find((e) => e.dte === selectedDte) || expirations[0];
   const dte = selectedExpObj.dte;
   const expDateStr = selectedExpObj.expiration;
 

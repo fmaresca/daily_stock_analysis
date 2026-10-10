@@ -115,7 +115,7 @@ export async function sendDiscordAlert(
         footer: {
           text: 'DeltaHarvest Quantitative Screener',
         },
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString(), // wall-clock-ok: webhook payload timestamp
       },
     ],
   };
@@ -204,7 +204,7 @@ export async function sendEmailAlert(
         recipient: cleanEmail,
         alertType: 'Market Opportunity Trigger',
         details: content,
-        timestamp: new Date().toUTCString(),
+        timestamp: new Date().toUTCString(), // wall-clock-ok: email header timestamp
         _template: 'table',
       }),
     });
@@ -294,14 +294,14 @@ export async function evaluateAndDispatchAlerts(
         sendEmailAlert(
           settings.alertEmailAddress,
           `${t.symbol} Opportunity Alert (${triggers.join(', ')})`,
-          `Ticker: ${t.symbol}\nSpot Price: $${t.spot_price.toFixed(2)}\nRSI-14: ${t.rsi_14?.toFixed(1) || 'N/A'}\nIV Rank: ${t.iv_rank?.toFixed(0) || 'N/A'}%\nTriggers: ${triggers.join(', ')}\nGenerated at: ${new Date().toUTCString()}`
+          `Ticker: ${t.symbol}\nSpot Price: $${t.spot_price.toFixed(2)}\nRSI-14: ${t.rsi_14?.toFixed(1) || 'N/A'}\nIV Rank: ${t.iv_rank?.toFixed(0) || 'N/A'}%\nTriggers: ${triggers.join(', ')}\nGenerated at: ${new Date().toUTCString()}` // wall-clock-ok: notification timestamp
         );
       }
     }
   }
 
   if (alertMessages.length > 0) {
-    saveAlertSettings({ ...settings, lastDispatchedTime: new Date().toISOString() });
+    saveAlertSettings({ ...settings, lastDispatchedTime: new Date().toISOString() }); // wall-clock-ok: alert cooldown timestamp
   }
 
   return {

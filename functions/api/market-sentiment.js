@@ -21,7 +21,8 @@ import {
 const BASE_URL = "https://api.adanos.org";
 const STOCK_NAMESPACES = ["reddit", "x", "polymarket", "news"];
 const EXPLAIN_NAMESPACES = ["reddit", "x", "news"];
-const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes fresh TTL
+const MAX_STALE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours max stale fallback
 const UPSTREAM_TIMEOUT_MS = 8000; // 8-second hard timeout
 
 // In-memory cache fallback per edge isolate
@@ -82,7 +83,7 @@ export async function onRequest(context) {
     return buildRateLimitResponse(ipLimit.retryAfter, "Too many sentiment requests. Please try again later.");
   }
 
-  const now = Date.now();
+  const now = Date.now(); // wall-clock-ok: cache TTL calculation
 
   // 1. Check local isolate memory cache
   let cachedEntry = memorySentimentCache.get(symbol);
@@ -108,6 +109,7 @@ export async function onRequest(context) {
       JSON.stringify({
         ...cachedEntry.data,
         cached: true,
+        asOf: cachedEntry.data.asOf || new Date(cachedEntry.cachedAt).toISOString(), // wall-clock-ok: response timestamp
       }),
       {
         status: 200,
@@ -190,10 +192,11 @@ export async function onRequest(context) {
     // Check if upstream timed out or failed across all endpoints
     const allErrored = stockResults.every((r) => !r.ok && (r.error || r.status >= 500));
     if (allErrored) {
-      if (cachedEntry && cachedEntry.data) {
+      if (cachedEntry && cachedEntry.data && (now - cachedEntry.cachedAt < MAX_STALE_TTL_MS)) {
         return new Response(
           JSON.stringify({
             ...cachedEntry.data,
+            asOf: cachedEntry.data.asOf || new Date(cachedEntry.cachedAt).toISOString(), // wall-clock-ok: response timestamp
             stale: true,
             cached: true,
           }),
@@ -308,7 +311,7 @@ export async function onRequest(context) {
       sources,
       explanation: explainResult.explanation,
       explanation_source: explainResult.explanation_source,
-      asOf: new Date().toISOString(),
+      asOf: new Date().toISOString(), // wall-clock-ok: response timestamp
     };
 
     // Store into memory cache & KV
@@ -335,11 +338,12 @@ export async function onRequest(context) {
     clearTimeout(timeoutTimer);
     console.warn(`[adanos_sentiment_error] symbol=${symbol} error=${upstreamErr?.message || "timeout"}`);
 
-    // Serve stale cache if available
-    if (cachedEntry && cachedEntry.data) {
+    // Serve stale cache if available within MAX_STALE_TTL_MS
+    if (cachedEntry && cachedEntry.data && (now - cachedEntry.cachedAt < MAX_STALE_TTL_MS)) {
       return new Response(
         JSON.stringify({
           ...cachedEntry.data,
+          asOf: cachedEntry.data.asOf || new Date(cachedEntry.cachedAt).toISOString(), // wall-clock-ok: response timestamp
           stale: true,
           cached: true,
         }),

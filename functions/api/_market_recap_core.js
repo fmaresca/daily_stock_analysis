@@ -11,6 +11,8 @@
  * - Strictly omits unsupported breadth metrics (zero fabrication)
  */
 
+import { todayET } from "./_now.js";
+
 let cachedRecap = null;
 let cacheExpiryTime = 0;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -80,8 +82,9 @@ async function fetchYahooQuote(symbol) {
  * @returns {Promise<Object>} Market recap data payload
  */
 export async function getDailyMarketRecap(forceRefresh = false) {
-  const now = Date.now();
-  if (!forceRefresh && cachedRecap && now < cacheExpiryTime) {
+  const now = Date.now(); // wall-clock-ok: memory cache expiry check
+  const currentToday = todayET();
+  if (!forceRefresh && cachedRecap && now < cacheExpiryTime && cachedRecap.date === currentToday) {
     return {
       ...cachedRecap,
       cached: true,
@@ -126,13 +129,14 @@ export async function getDailyMarketRecap(forceRefresh = false) {
   const validIndices = indicesResults.filter(Boolean);
   const validSectors = sectorsResults.filter(Boolean);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = currentToday;
 
   const payload = {
     date: todayStr,
+    tradingDate: todayStr,
     indices: validIndices,
     sectors: validSectors,
-    asOf: new Date().toISOString(),
+    asOf: new Date().toISOString(), // wall-clock-ok: response envelope timestamp
   };
 
   if (vixResult) {

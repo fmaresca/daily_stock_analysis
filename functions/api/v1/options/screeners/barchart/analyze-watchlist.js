@@ -47,7 +47,7 @@ export async function onRequest(context) {
         source_id: 'BARCHART_WATCHLIST',
         source_name: 'Barchart Watchlist 13-Indicator Analysis',
         source_url: 'https://www.barchart.com/options/screener',
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString(), // wall-clock-ok: response timestamp
         total_count: 0,
         records: [],
       }),
@@ -152,7 +152,7 @@ export async function onRequest(context) {
       signal_strength: signalStrength,
       signal_direction: signalDirection,
       source: 'BARCHART_WATCHLIST',
-      updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(), // wall-clock-ok: record timestamp
       recommended_strategy: opinionPct >= 80 ? 'BULL_PUT_SPREAD' : 'CSP',
       notes: '13-Indicator Barchart consensus analysis evaluated at Edge',
     });
@@ -163,7 +163,7 @@ export async function onRequest(context) {
       source_id: 'BARCHART_WATCHLIST',
       source_name: 'Barchart Watchlist 13-Indicator Analysis',
       source_url: 'https://www.barchart.com/options/screener',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString(), // wall-clock-ok: response timestamp
       total_count: records.length,
       records,
     }),

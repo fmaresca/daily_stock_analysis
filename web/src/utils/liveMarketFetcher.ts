@@ -11,6 +11,8 @@ import { calculateRSI, calculateSMA, calculateBollingerBands } from './technical
 import { classifySectorAndBaseVol } from './screenerHydrator';
 import { isWeeklyCadence } from './capitalAndTaxLedger';
 import { isCboeWeeklyOptionable } from '../data/cboeWeeklyDirectory';
+import { now } from './appNow.ts';
+import { getNextWeeklyExpiration } from './nyseHolidayCalendar.ts';
 
 export interface TickerChartData {
   spotPrice: number;
@@ -635,8 +637,9 @@ export async function fetchClientSideLiveMarketData(
   });
 
   // Synthesize conservative Cash-Secured Put (CSP <= Lower BB) and Covered Call (CC >= Upper BB)
-  const dte = 5;
-  const expDate = new Date(Date.now() + dte * 86400000).toISOString().split('T')[0];
+  const weeklySync = getNextWeeklyExpiration(now());
+  const dte = Math.max(1, weeklySync.dte);
+  const expDate = weeklySync.dateString;
 
   updatedTickers.forEach((meta) => {
     if (processedSymbols.has(meta.symbol)) return;
@@ -763,7 +766,7 @@ export async function fetchClientSideLiveMarketData(
     }
   });
 
-  const nowIso = new Date().toISOString();
+  const nowIso = new Date().toISOString(); // wall-clock-ok: network quote update timestamp
   const cspCount = updatedOpportunities.filter((o) => o.strategy === 'CSP').length;
   const ccCount = updatedOpportunities.filter((o) => o.strategy === 'CC').length;
   const highIvrCount = updatedTickers.filter((t) => t.iv_rank >= 45).length;
@@ -1065,10 +1068,9 @@ export async function fetchAndBuildTickerMeta(
       : 'Tier 4 (Low Liquidity)';
 
   // Calculate target expiration and nearest expiration
-  const nextFriday = new Date();
-  nextFriday.setDate(nextFriday.getDate() + ((5 + 7 - nextFriday.getDay()) % 7 || 7));
-  const targetExpStr = nextFriday.toISOString().split('T')[0];
-  const targetDte = Math.max(1, Math.round((nextFriday.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+  const nextWeekly = getNextWeeklyExpiration(now());
+  const targetExpStr = nextWeekly.dateString;
+  const targetDte = Math.max(1, nextWeekly.dte);
 
   // 13-indicator technical opinion
   const barchartOpinion = calculateBarchartOpinion(

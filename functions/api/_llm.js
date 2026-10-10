@@ -363,7 +363,7 @@ export async function completeLLM({
  */
 async function executeSlotCall(params) {
   const { slot, env } = params;
-  const startTime = Date.now();
+  const startTime = Date.now(); // wall-clock-ok: latency measurement start
 
   const apiKey = resolveSlotApiKey(slot.apiKey);
   let result;
@@ -398,7 +398,7 @@ async function executeSlotCall(params) {
     });
   }
 
-  const latencyMs = Date.now() - startTime;
+  const latencyMs = Date.now() - startTime; // wall-clock-ok: latency measurement duration
   const preview = (result.text || "").slice(0, 60).replace(/[\r\n]+/g, " ");
   console.info(`[LLM] Slot: ${slot.slot} | Provider: ${slot.name} | Model: ${result.model} | Latency: ${latencyMs}ms | Preview: "${preview}..."`);
 
@@ -415,7 +415,7 @@ async function executeSlotCall(params) {
  */
 async function executeProviderCall(params) {
   const { provider } = params;
-  const startTime = Date.now();
+  const startTime = Date.now(); // wall-clock-ok: latency measurement start
 
   let result;
   if (provider === "gemini") {
@@ -430,7 +430,7 @@ async function executeProviderCall(params) {
     result = await callOpenAICompatible(params);
   }
 
-  const latencyMs = Date.now() - startTime;
+  const latencyMs = Date.now() - startTime; // wall-clock-ok: latency measurement duration
   const preview = (result.text || "").slice(0, 60).replace(/[\r\n]+/g, " ");
   console.info(`[LLM] Provider: ${provider} | Model: ${result.model} | Latency: ${latencyMs}ms | Preview: "${preview}..."`);
 
@@ -633,7 +633,7 @@ async function callGemini({
     }
     if (part.functionCall) {
       toolCalls.push({
-        id: `call_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        id: `call_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, // wall-clock-ok: unique tool call ID
         name: part.functionCall.name,
         arguments: typeof part.functionCall.args === "string"
           ? part.functionCall.args
@@ -984,7 +984,7 @@ async function callAnthropic({
  * @returns {Promise<{slot: number, provider: string, model: string, ok: boolean, latencyMs: number, error?: string}>}
  */
 export async function testFallbackSlot(env, slot) {
-  const startTime = Date.now();
+  const startTime = Date.now(); // wall-clock-ok: test probe latency start
   try {
     await executeSlotCall({
       slot,
@@ -999,7 +999,7 @@ export async function testFallbackSlot(env, slot) {
       provider: slot.name,
       model: slot.model,
       ok: true,
-      latencyMs: Date.now() - startTime,
+      latencyMs: Date.now() - startTime, // wall-clock-ok: test probe latency duration
     };
   } catch (err) {
     return {
@@ -1007,7 +1007,7 @@ export async function testFallbackSlot(env, slot) {
       provider: slot.name,
       model: slot.model,
       ok: false,
-      latencyMs: Date.now() - startTime,
+      latencyMs: Date.now() - startTime, // wall-clock-ok: test probe latency duration
       error: sanitizeKeyLeakage(err.message || "Unknown error"),
     };
   }

@@ -20,12 +20,51 @@
 import { authenticateRequest } from "../_auth_utils.js";
 import { getDailyMarketRecap } from "../_market_recap_core.js";
 import { getMarketPriceAndTechnicals, getOptionsPreFlightChecklist } from "../agent/_agent_tools.js";
+import { nowET, todayET, isExpiredOption } from "../_now.js";
+
+/**
+ * Purges expired option contracts and past economic calendar events from digest content.
+ * Strictly uses single clock authority (_now.js).
+ */
+export function filterDigestContent({ positions = [], events = [] } = {}, at = nowET()) {
+  const curToday = todayET(at);
+
+  const filteredPositions = (positions || []).filter((pos) => {
+    const expStr = pos.expiration || pos.expiry || pos.expirationDate || pos.symbol || "";
+    // If it is an option contract with an expiration date, exclude if expired!
+    return !isExpiredOption(expStr, at);
+  });
+
+  const filteredEvents = (events || []).filter((evt) => {
+    const rawDate = evt.isoDate || evt.date || evt.dateET || "";
+    const evtDate = rawDate.substring(0, 10);
+    if (!evtDate) return true;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(evtDate)) {
+      return evtDate >= curToday;
+    }
+    try {
+      const parsed = new Date(rawDate);
+      if (!isNaN(parsed.getTime())) {
+        const pIso = parsed.toISOString().substring(0, 10);
+        return pIso >= curToday;
+      }
+    } catch {
+      // keep
+    }
+    return true;
+  });
+
+  return {
+    positions: filteredPositions,
+    events: filteredEvents,
+  };
+}
 
 /**
  * Checks if a given date is a US equity market trading day.
  * Skips weekends and standard US Market Holidays (NYSE/Nasdaq).
  */
-export function isUsMarketTradingDay(date = new Date()) {
+export function isUsMarketTradingDay(date = nowET()) {
   const d = new Date(date);
   const dayOfWeek = d.getUTCDay(); // 0 = Sunday, 6 = Saturday
   if (dayOfWeek === 0 || dayOfWeek === 6) return false;
@@ -68,7 +107,8 @@ export async function ensureLogsTable(env) {
 /**
  * Composes rich HTML email for the morning digest
  */
-function composeDigestEmailHtml({ userEmail, recap, watchlistData, runDate }) {
+export function composeDigestEmailHtml({ userEmail, recap, watchlistData, positions = [], events = [], runDate }) {
+  const { positions: livePositions, events: upcomingEvents } = filterDigestContent({ positions, events });
   const indicesRows = (recap?.indices || []).map((idx) => {
     const isUp = idx.changePct >= 0;
     const color = isUp ? "#10b981" : "#ef4444";
@@ -144,6 +184,58 @@ function composeDigestEmailHtml({ userEmail, recap, watchlistData, runDate }) {
       </table>
     </div>
 
+    ${livePositions.length > 0 ? `
+    <!-- Section 3: Live Positions Underwriting -->
+    <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+      <h2 style="margin: 0 0 12px; font-size: 14px; text-transform: uppercase; color: #38bdf8; letter-spacing: 0.5px;">Live Options Positions</h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+        <thead>
+          <tr style="border-bottom: 2px solid #334155; color: #94a3b8;">
+            <th style="padding: 8px 10px;">Symbol</th>
+            <th style="padding: 8px 10px;">Expiration</th>
+            <th style="padding: 8px 10px;">Type</th>
+            <th style="padding: 8px 10px;">Strike</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${livePositions.map((pos) => `
+            <tr>
+              <td style="padding: 8px 10px; border-bottom: 1px solid #1e293b; font-weight: bold; font-family: monospace; color: #38bdf8;">${pos.symbol}</td>
+              <td style="padding: 8px 10px; border-bottom: 1px solid #1e293b; font-family: monospace; color: #f8fafc;">${pos.expiration || pos.expiry || "—"}</td>
+              <td style="padding: 8px 10px; border-bottom: 1px solid #1e293b; font-family: monospace; color: #10b981;">${pos.type || "OPTION"}</td>
+              <td style="padding: 8px 10px; border-bottom: 1px solid #1e293b; font-family: monospace; color: #cbd5e1;">$${pos.strike || "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+    ` : ""}
+
+    ${upcomingEvents.length > 0 ? `
+    <!-- Section 4: Upcoming Macro Catalysts -->
+    <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+      <h2 style="margin: 0 0 12px; font-size: 14px; text-transform: uppercase; color: #f59e0b; letter-spacing: 0.5px;">Upcoming Macro Catalysts</h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+        <thead>
+          <tr style="border-bottom: 2px solid #334155; color: #94a3b8;">
+            <th style="padding: 8px 10px;">Date</th>
+            <th style="padding: 8px 10px;">Event</th>
+            <th style="padding: 8px 10px;">Impact</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${upcomingEvents.map((evt) => `
+            <tr>
+              <td style="padding: 8px 10px; border-bottom: 1px solid #1e293b; font-weight: bold; font-family: monospace; color: #f8fafc;">${evt.dateET || evt.date || "—"}</td>
+              <td style="padding: 8px 10px; border-bottom: 1px solid #1e293b; color: #38bdf8;">${evt.title || "Economic Event"}</td>
+              <td style="padding: 8px 10px; border-bottom: 1px solid #1e293b; font-family: monospace; color: ${evt.impact === 'High' ? '#ef4444' : '#f59e0b'};">${evt.impact || "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+    ` : ""}
+
     <!-- Footer -->
     <div style="text-align: center; font-size: 11px; color: #64748b; line-height: 1.5; padding-top: 16px;">
       <p style="margin: 0;">Dispatched to ${userEmail} via DeltaHarvest Pre-Market Scheduled Engine (6:00 AM CT).</p>
@@ -193,13 +285,13 @@ export async function onRequest(context) {
   await ensureLogsTable(env);
 
   // 2. Market Trading Day Check
-  const now = new Date();
-  if (!forceRun && !isUsMarketTradingDay(now)) {
+  const curNow = nowET();
+  if (!forceRun && !isUsMarketTradingDay(curNow)) {
     return new Response(
       JSON.stringify({
         skipped: true,
         reason: "US equity markets are closed today (Weekend or federal holiday).",
-        asOf: now.toISOString(),
+        asOf: new Date().toISOString(), // wall-clock-ok: response envelope timestamp
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -207,7 +299,7 @@ export async function onRequest(context) {
 
   // 3. Compile Macro Market Recap
   const recap = await getDailyMarketRecap(forceRun);
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = todayET(curNow);
 
   // 4. Retrieve Opted-In Recipients
   let optedInUsers = [];
@@ -230,7 +322,7 @@ export async function onRequest(context) {
         success: true,
         sent: 0,
         message: "No users currently opted in to morning digest.",
-        asOf: now.toISOString(),
+        asOf: curNow.toISOString(),
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -371,7 +463,7 @@ export async function onRequest(context) {
   }
 
   // 8. Log run to D1
-  const logId = `digest_${Date.now()}`;
+  const logId = `digest_${Date.now()}`; // wall-clock-ok: unique digest run ID
   if (env?.DB) {
     try {
       await env.DB.prepare(`

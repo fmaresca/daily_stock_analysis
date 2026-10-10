@@ -34,6 +34,7 @@ import {
   getStoredCapitalState,
   DEFAULT_ACCOUNT_NET_VALUE,
 } from './capitalAndTaxLedger';
+import { now } from './appNow.ts';
 
 export function calculateComplianceHealthScore(
   positions: PortfolioPosition[],
@@ -84,8 +85,8 @@ export function calculateLiveExecutiveMetrics(
   customPositions?: PortfolioPosition[],
   customCapital?: ReturnType<typeof getStoredCapitalState>
 ): ExecutiveDigestMetrics {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-US', {
+  const curNow = now();
+  const dateStr = curNow.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

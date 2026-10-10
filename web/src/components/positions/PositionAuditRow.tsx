@@ -24,7 +24,14 @@ export const PositionAuditRow: React.FC<PositionAuditRowProps> = React.memo(({
 
   const expStatus = getOptionExpirationStatus(p.expiration, p.dte);
 
-  const collateral = isCsp
+  const isWorthless = isOption && expStatus.isExpired
+    ? (isCsp && p.spotPrice >= p.strike) || (isCc && p.spotPrice <= p.strike)
+    : false;
+  const suggestedAction = isWorthless ? 'Let Lapse' : 'Roll / Close';
+
+  const collateral = isOption && expStatus.isExpired
+    ? 0
+    : isCsp
     ? p.strike * 100 * (p.quantity || 1)
     : isStock
     ? (p.marketValueTotal || p.spotPrice * p.quantity)
@@ -33,7 +40,9 @@ export const PositionAuditRow: React.FC<PositionAuditRowProps> = React.memo(({
     : p.spotPrice * 100 * (p.quantity || 1);
 
   const profitPct =
-    p.entryPrice > 0 && p.currentOptionPrice !== undefined
+    isOption && expStatus.isExpired
+      ? (isWorthless ? 100 : 0)
+      : p.entryPrice > 0 && p.currentOptionPrice !== undefined
       ? ((p.entryPrice - p.currentOptionPrice) / p.entryPrice) * 100
       : 0;
 
@@ -112,13 +121,20 @@ export const PositionAuditRow: React.FC<PositionAuditRowProps> = React.memo(({
           <span className="text-emerald-400 font-semibold">{isCash ? 'Instant Sweep' : 'T+1 Daily'}</span>
         ) : isStock ? (
           <span className="text-slate-500">Hold</span>
+        ) : expStatus.isExpired ? (
+          <div>
+            <span className="font-semibold text-slate-400 text-[11px] block">
+              Expired
+            </span>
+            <span className="text-[10px] text-slate-500 block">
+              {expStatus.formattedExpiration || p.expiration}
+            </span>
+          </div>
         ) : (
           <div>
             <span
               className={`font-semibold ${
-                expStatus.isExpired
-                  ? 'text-slate-400 text-[11px]'
-                  : expStatus.isToday
+                expStatus.isToday
                   ? 'text-rose-400 font-bold'
                   : expStatus.dte <= 5
                   ? 'text-amber-400 font-bold'
@@ -128,11 +144,7 @@ export const PositionAuditRow: React.FC<PositionAuditRowProps> = React.memo(({
               {expStatus.shortLabel}
             </span>
             {p.expiration && (
-              <span
-                className={`text-[10px] block ${
-                  expStatus.isExpired ? 'text-slate-500 line-through' : 'text-slate-400'
-                }`}
-              >
+              <span className="text-[10px] block text-slate-400">
                 {expStatus.formattedExpiration}
               </span>
             )}
@@ -145,6 +157,8 @@ export const PositionAuditRow: React.FC<PositionAuditRowProps> = React.memo(({
           <span className="text-slate-500">0.00</span>
         ) : isStock ? (
           <span className="text-slate-400">1.00</span>
+        ) : expStatus.isExpired ? (
+          <span className="text-slate-500">—</span>
         ) : (
           <span
             className={`px-1.5 py-0.5 rounded ${
@@ -167,8 +181,17 @@ export const PositionAuditRow: React.FC<PositionAuditRowProps> = React.memo(({
       </td>
 
       <td className="py-3 px-3 font-mono text-slate-300">
-        <div className="font-bold text-white">${collateral.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-        {isLiquid && <span className="text-[10px] text-emerald-400 block font-normal">Liquid Cash Pool</span>}
+        {isOption && expStatus.isExpired ? (
+          <div>
+            <div className="font-bold text-slate-400">$0.00</div>
+            <span className="text-[10px] text-slate-500 block font-normal">Collateral Released</span>
+          </div>
+        ) : (
+          <div>
+            <div className="font-bold text-white">${collateral.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            {isLiquid && <span className="text-[10px] text-emerald-400 block font-normal">Liquid Cash Pool</span>}
+          </div>
+        )}
       </td>
 
       <td className="py-3 px-3 font-mono">
@@ -199,17 +222,20 @@ export const PositionAuditRow: React.FC<PositionAuditRowProps> = React.memo(({
             Cash Reserve
           </span>
         ) : isOption && expStatus.isExpired ? (
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-              (isCsp && p.spotPrice >= p.strike) || (isCc && p.spotPrice <= p.strike)
-                ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
-                : 'bg-slate-900 text-slate-400 border-slate-700'
-            }`}
-          >
-            {(isCsp && p.spotPrice >= p.strike) || (isCc && p.spotPrice <= p.strike)
-              ? 'Expired (100% Win)'
-              : 'Expired / Settled'}
-          </span>
+          <div>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border block text-center ${
+                isWorthless
+                  ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
+                  : 'bg-amber-950/40 text-amber-300 border-amber-500/40'
+              }`}
+            >
+              {isWorthless ? 'Expired (Worthless)' : 'Expired / Settled'}
+            </span>
+            <span className="text-[10px] text-slate-400 block mt-0.5 text-center font-semibold">
+              Action: {suggestedAction}
+            </span>
+          </div>
         ) : profitPct >= 80 ? (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
             80% Hit
@@ -231,7 +257,11 @@ export const PositionAuditRow: React.FC<PositionAuditRowProps> = React.memo(({
 
       <td className="py-3 px-4 text-center">
         <div className="flex items-center justify-center space-x-1.5">
-          {isCsp && !expStatus.isExpired && onNavigateToRollAssistant && (
+          {isOption && expStatus.isExpired ? (
+            <span className="text-[10px] font-mono text-slate-400 font-semibold px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">
+              {suggestedAction}
+            </span>
+          ) : isCsp && !expStatus.isExpired && onNavigateToRollAssistant ? (
             <button
               onClick={() => onNavigateToRollAssistant(p.symbol)}
               title="Evaluate Defensive Roll"
@@ -239,7 +269,7 @@ export const PositionAuditRow: React.FC<PositionAuditRowProps> = React.memo(({
             >
               <Zap className="w-3.5 h-3.5" />
             </button>
-          )}
+          ) : null}
           <button
             onClick={() => onDeletePosition(p.id)}
             title="Remove Position"

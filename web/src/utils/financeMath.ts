@@ -7,6 +7,8 @@
  * Annualized Return on Collateral (RoR/ROC), DTE calculation, and collateral sizing rules.
  */
 
+import { now } from './appNow.ts';
+
 // Defensive Numerical Helpers
 export function isFiniteNumber(val: unknown): val is number {
   return typeof val === 'number' && Number.isFinite(val) && !Number.isNaN(val);
@@ -576,10 +578,10 @@ export function calculateDteFromExpiration(expirationDateStr: string): number {
   if (!expirationDateStr) return 30;
   const target = new Date(expirationDateStr);
   if (Number.isNaN(target.getTime())) return 30;
-  const now = new Date();
+  const curNow = now();
   // Clear time component for day precision
   target.setHours(16, 0, 0, 0); // Expiration market close
-  const diffMs = target.getTime() - now.getTime();
+  const diffMs = target.getTime() - curNow.getTime();
   const dte = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   return Math.max(0, dte);
 }

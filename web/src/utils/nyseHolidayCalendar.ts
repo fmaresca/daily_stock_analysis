@@ -11,6 +11,8 @@
  * 5. Timezone-safe local date formatting and parsing (never uses toISOString which shifts evening US dates to next day).
  */
 
+import { now } from './appNow.ts';
+
 export interface NyseHoliday {
   date: string; // YYYY-MM-DD
   name: string;
@@ -43,7 +45,7 @@ export function formatDateYMD(d: Date): string {
 export function parseDateYMD(dateStr: string): Date {
   const parts = dateStr.split('-');
   if (parts.length !== 3) {
-    const fallback = new Date();
+    const fallback = now();
     fallback.setHours(12, 0, 0, 0);
     return fallback;
   }
@@ -277,11 +279,11 @@ export function adjustExpirationForNyseHolidays(targetDate: Date): {
 export function calculateOptionsDte(expirationDateStr: string, fromDate?: Date): number {
   if (!expirationDateStr) return 5;
   const exp = parseDateYMD(expirationDateStr);
-  const now = fromDate ? new Date(fromDate) : new Date();
-  now.setHours(12, 0, 0, 0);
+  const curNow = fromDate ? new Date(fromDate) : now();
+  curNow.setHours(12, 0, 0, 0);
   exp.setHours(12, 0, 0, 0);
 
-  const diffMs = exp.getTime() - now.getTime();
+  const diffMs = exp.getTime() - curNow.getTime();
   const diffDays = Math.round(diffMs / 86400000);
   return Math.max(0, diffDays);
 }
@@ -292,7 +294,7 @@ const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', '
  * Returns the next weekly options expiration (standard Friday, or Thursday if Good Friday / Holiday).
  */
 export function getNextWeeklyExpiration(fromDate?: Date): ExpirationOptionResult {
-  const base = fromDate ? new Date(fromDate) : new Date();
+  const base = fromDate ? new Date(fromDate) : now();
   base.setHours(12, 0, 0, 0);
 
   const day = base.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
@@ -302,7 +304,7 @@ export function getNextWeeklyExpiration(fromDate?: Date): ExpirationOptionResult
     // If today is Friday:
     // If current time is after market hours (e.g. >= 16:00), or for simulation, next weekly is next Friday (+7).
     // During weekend/evening simulation, advance to next Friday (+7).
-    const currentHour = (fromDate || new Date()).getHours();
+    const currentHour = (fromDate || now()).getHours();
     daysToFriday = currentHour >= 16 ? 7 : 0;
   } else if (day === 6) {
     // Saturday -> next Friday is 6 days away
@@ -340,7 +342,7 @@ export function getNextWeeklyExpiration(fromDate?: Date): ExpirationOptionResult
  * and applies the NYSE holiday calendar to adjust to Thursday if Friday is an exchange holiday.
  */
 export function getClosestFridayDteExpiration(targetDte: number, fromDate?: Date): ExpirationOptionResult {
-  const base = fromDate ? new Date(fromDate) : new Date();
+  const base = fromDate ? new Date(fromDate) : now();
   base.setHours(12, 0, 0, 0);
 
   // Target date after DTE days
