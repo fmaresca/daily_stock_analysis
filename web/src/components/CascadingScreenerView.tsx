@@ -60,15 +60,19 @@ import { BarchartTopTab } from './screener/cascading/BarchartTopTab';
 import { MarketChameleonTab } from './screener/cascading/MarketChameleonTab';
 import { TosReturnScreenTab } from './screener/cascading/TosReturnScreenTab';
 import { GeminiDecisionHubTab } from './screener/cascading/GeminiDecisionHubTab';
+import { GeminiSelectionsUploadTab } from './screener/cascading/GeminiSelectionsUploadTab';
 import { getSchwabImportedEquities, getSchwabImportedEquitiesWithPrices } from '../utils/schwabPositionsParser';
 import { SECURITY_INTELLIGENCE_REGISTRY } from '../utils/securityIntelligence';
+import { now } from '../utils/appNow';
+import { getNextWeeklyExpiration } from '../utils/nyseHolidayCalendar';
 
-export type CascadingSubTab = 'BARCHART' | 'MARKETCHAMELEON' | 'TOS_BARCHART' | 'GEMINI_DECISION_HUB';
+export type CascadingSubTab = 'BARCHART' | 'MARKETCHAMELEON' | 'TOS_BARCHART' | 'GEMINI_DECISION_HUB' | 'GEMINI_UPLOAD';
 
 interface CascadingScreenerViewProps {
   tickers: TickerMeta[];
   allOpportunities: OptionOpportunity[];
   initialWeeklyDataset?: WeeklyScreenerDataset | null;
+  initialSubTab?: CascadingSubTab;
   onStageOpportunity?: (opp: OptionOpportunity) => void;
   onSelectSymbolForChart?: (symbol: string) => void;
   onOpenTickerAudit?: (symbol: string) => void;
@@ -79,6 +83,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
   tickers,
   allOpportunities,
   initialWeeklyDataset,
+  initialSubTab,
   onStageOpportunity,
   onSelectSymbolForChart,
   onOpenTickerAudit,
@@ -90,7 +95,13 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
   }, []);
 
   // Primary Sub-Tab navigation for Item 4: Tri-Screen & Gemini AI
-  const [activeSubTab, setActiveSubTab] = useState<CascadingSubTab>('BARCHART');
+  const [activeSubTab, setActiveSubTab] = useState<CascadingSubTab>(initialSubTab || 'BARCHART');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   // Strategy Mode: CSP vs CC
   const [strategyMode, setStrategyMode] = useState<'CSP' | 'CC'>('CSP');
@@ -875,6 +886,37 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     showToast(`Loaded consolidated candidate universe into Gemini Extended Thinking Decision Hub!`);
   };
 
+  // Handler to update Gemini Screen Result from uploaded file, Google Sheet, or paste
+  const handleUpdateGeminiResult = (result: GeminiScreenResult) => {
+    setParsedGeminiResult(result);
+    if (result.rawMarkdown) {
+      setImportedBriefing(result.rawMarkdown);
+      try {
+        localStorage.setItem('deltaharvest_gemini_raw_markdown', result.rawMarkdown);
+      } catch (e) {
+        console.warn('Failed to save raw markdown:', e);
+      }
+    }
+    try {
+      localStorage.setItem('deltaharvest_gemini_parsed_screen', JSON.stringify(result));
+    } catch (e) {
+      console.warn('Failed to save parsed gemini result:', e);
+    }
+  };
+
+  // Handler to clear parsed Gemini Screen Result
+  const handleClearGeminiResult = () => {
+    setParsedGeminiResult(null);
+    setImportedBriefing('');
+    try {
+      localStorage.removeItem('deltaharvest_gemini_parsed_screen');
+      localStorage.removeItem('deltaharvest_gemini_raw_markdown');
+    } catch (e) {
+      console.warn('Failed to remove gemini result:', e);
+    }
+    showToast('Cleared parsed Gemini trade selections.');
+  };
+
   // Handler to parse pasted Gemini markdown response
   const handleParseMarkdown = (text: string) => {
     setImportedBriefing(text);
@@ -897,9 +939,9 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
 
   // Convert Gemini recommended trade to OptionOpportunity and stage in broker workbench
   const handleStageGeminiTrade = (trade: GeminiRecommendedTrade) => {
-    const nextFriday = new Date();
-    nextFriday.setDate(nextFriday.getDate() + ((5 + 7 - nextFriday.getDay()) % 7 || 7));
-    const expStr = nextFriday.toISOString().split('T')[0];
+    const weeklyExp = getNextWeeklyExpiration(now());
+    const expStr = weeklyExp.dateString;
+    const effectiveDte = weeklyExp.dte || 6;
 
     const opp: OptionOpportunity = {
       id: `GEMINI_${trade.symbol}_${trade.suggestedStrike}_PUT`,
@@ -912,7 +954,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       strategy: 'CSP',
       strategy_name: 'Cash-Secured Put',
       expiration: expStr,
-      dte: 6,
+      dte: effectiveDte,
       strike: trade.suggestedStrike,
       type: 'put',
       bid: 1.40,
@@ -1496,6 +1538,22 @@ function matchesMarketChameleonFilters(
               {finalCandidates.length}
             </span>
           </button>
+
+          {/* Tab 5: Upload Final Gemini Selections */}
+          <button
+            onClick={() => setActiveSubTab('GEMINI_UPLOAD')}
+            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              activeSubTab === 'GEMINI_UPLOAD'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border-slate-800'
+            }`}
+          >
+            <Upload className="w-4 h-4 text-emerald-300" />
+            <span>5. Upload Gemini Selections (CSV / Sheet / Excel)</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-white/20 text-white">
+              {parsedGeminiResult?.recommendedTrades.length || 0}
+            </span>
+          </button>
         </div>
 
         {/* Strategy Switcher */}
@@ -1657,6 +1715,27 @@ function matchesMarketChameleonFilters(
           handleCopyPrompt={handleCopyPrompt}
           importedBriefing={importedBriefing}
           handleParseMarkdown={handleParseMarkdown}
+          onNavigateToUploadSelections={() => setActiveSubTab('GEMINI_UPLOAD')}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUB-TAB 5: UPLOAD FINAL GEMINI SELECTIONS (CSV / GOOGLE SHEET / EXCEL)    */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'GEMINI_UPLOAD' && (
+        <GeminiSelectionsUploadTab
+          capitalState={capitalState}
+          parsedGeminiResult={parsedGeminiResult}
+          onUpdateGeminiResult={handleUpdateGeminiResult}
+          onClearGeminiResult={handleClearGeminiResult}
+          onStageGeminiTrade={handleStageGeminiTrade}
+          sortedGeminiTrades={sortedGeminiTrades}
+          geminiTradesSortKey={geminiTradesSortKey}
+          geminiTradesSortOrder={geminiTradesSortOrder}
+          requestGeminiTradesSort={requestGeminiTradesSort}
+          showToast={showToast}
+          onSelectSymbolForChart={onSelectSymbolForChart}
+          onNavigateToAiPrompt={() => setActiveSubTab('GEMINI_DECISION_HUB')}
         />
       )}
 

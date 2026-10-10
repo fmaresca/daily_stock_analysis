@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "node ../scripts/check_single_clock_gate.mjs && node --experimental-strip-types ../tests/test_single_clock_authority.mjs && node --experimental-strip-types --test ../tests/test_web_financial_math.mjs"
+    "test": "node ../scripts/check_single_clock_gate.mjs && node --experimental-strip-types ../tests/test_single_clock_authority.mjs && node --experimental-strip-types --test ../tests/test_web_financial_math.mjs && node --experimental-strip-types --test ../tests/test_gemini_selections_parser.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

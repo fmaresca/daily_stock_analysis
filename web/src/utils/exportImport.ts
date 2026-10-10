@@ -4,7 +4,7 @@
  * Supports RFC 4180 CSV, Microsoft XML Spreadsheet (Multi-Sheet Excel .xls/.xlsx), and Native Print/PDF.
  */
 
-import { TickerMeta, OptionOpportunity, ScreenerSummary } from '../types/options';
+import { TickerMeta, OptionOpportunity, ScreenerSummary, GeminiScreenResult } from '../types/options';
 
 // ----------------------------------------------------------------------------
 // 1. FILE DOWNLOAD HELPER
@@ -585,4 +585,304 @@ export async function downloadSampleTemplate(format: 'csv' | 'xlsx' = 'csv') {
 
 export function triggerPrintReport() {
   window.print();
+}
+
+// ----------------------------------------------------------------------------
+// 6. GEMINI SELECTIONS EXPORT & TEMPLATE UTILITIES
+// ----------------------------------------------------------------------------
+
+export function exportGeminiTradesToCSV(
+  result: GeminiScreenResult,
+  filename = 'deltaharvest_gemini_selections.csv'
+) {
+  const lines: string[] = [];
+
+  // Table 1: Recommended Trades
+  lines.push('Category,Risk Rank,Symbol,Current Spot,Suggested Strike,Delta,Est. Premium,Cash Collateral,Trend Direction,14D RSI,Earnings Date,Technical Justification');
+  (result.recommendedTrades || []).forEach((t, idx) => {
+    lines.push([
+      'Recommended',
+      t.riskRank || idx + 1,
+      escapeCsv(t.symbol),
+      t.currentPrice ? t.currentPrice.toFixed(2) : '',
+      t.suggestedStrike ? t.suggestedStrike.toFixed(2) : '',
+      t.delta !== undefined ? t.delta.toFixed(2) : '0.20',
+      escapeCsv(t.estPremiumAnnualized || ''),
+      t.capitalCommitted ? t.capitalCommitted.toFixed(2) : '',
+      escapeCsv(t.trendStrDir || 'Strong Uptrend'),
+      t.rsi14 !== undefined ? t.rsi14.toFixed(1) : '55.0',
+      escapeCsv(t.earningsDate || 'None in expiration cycle'),
+      escapeCsv(t.technicalJustification || ''),
+    ].join(','));
+  });
+
+  // Table 2: Borderline Candidates
+  (result.borderlineCandidates || []).forEach((b) => {
+    lines.push([
+      'Borderline',
+      '',
+      escapeCsv(b.symbol),
+      b.currentPrice ? b.currentPrice.toFixed(2) : '',
+      '',
+      '',
+      '',
+      '',
+      escapeCsv(b.trendStrDir || 'Moderate'),
+      b.rsi14 !== undefined ? b.rsi14.toFixed(1) : '50.0',
+      escapeCsv(b.earningsDate || 'N/A'),
+      escapeCsv(b.borderlineReason || ''),
+    ].join(','));
+  });
+
+  // Table 3: Excluded Candidates
+  (result.excludedCandidates || []).forEach((x) => {
+    lines.push([
+      'Excluded',
+      '',
+      escapeCsv(x.symbol),
+      x.currentPrice ? x.currentPrice.toFixed(2) : '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      escapeCsv(x.reasonForExclusion || ''),
+    ].join(','));
+  });
+
+  const csvContent = lines.join('\r\n');
+  downloadFile(csvContent, filename, 'text/csv;charset=utf-8;');
+}
+
+export function exportGeminiTradesToExcel(
+  result: GeminiScreenResult,
+  filename = 'deltaharvest_gemini_selections.xls'
+) {
+  const actualFilename = filename.endsWith('.xlsx')
+    ? filename.replace(/\.xlsx$/, '.xls')
+    : filename.endsWith('.xls')
+    ? filename
+    : `${filename}.xls`;
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<?mso-application progid="Excel.Sheet"?>\n`;
+  xml += `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n`;
+  xml += ` xmlns:o="urn:schemas-microsoft-com:office:office"\n`;
+  xml += ` xmlns:x="urn:schemas-microsoft-com:office:excel"\n`;
+  xml += ` xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"\n`;
+  xml += ` xmlns:html="http://www.w3.org/TR/REC-html40">\n`;
+  xml += ` <Styles>\n`;
+  xml += `  <Style ss:ID="Default" ss:Name="Normal">\n`;
+  xml += `   <Alignment ss:Vertical="Center"/>\n`;
+  xml += `   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Color="#0F172A"/>\n`;
+  xml += `  </Style>\n`;
+  xml += `  <Style ss:ID="Header">\n`;
+  xml += `   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>\n`;
+  xml += `   <Interior ss:Color="#047857" ss:Pattern="Solid"/>\n`;
+  xml += `   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>\n`;
+  xml += `  </Style>\n`;
+  xml += ` </Styles>\n`;
+
+  // Sheet 1: Recommended Trades
+  const recHeaders = [
+    'Risk Rank',
+    'Symbol',
+    'Current Spot ($)',
+    'Suggested Strike ($)',
+    'Delta',
+    'Est. Premium',
+    'Cash Collateral ($)',
+    'Trend Direction',
+    '14D RSI',
+    'Earnings Date',
+    'Technical Justification',
+  ];
+  const recRows = (result.recommendedTrades || []).map((t, idx) => [
+    t.riskRank || idx + 1,
+    t.symbol,
+    t.currentPrice,
+    t.suggestedStrike,
+    t.delta,
+    t.estPremiumAnnualized,
+    t.capitalCommitted,
+    t.trendStrDir,
+    t.rsi14,
+    t.earningsDate,
+    t.technicalJustification,
+  ]);
+  xml += buildXmlWorksheet('Recommended Trades', recHeaders, recRows);
+
+  // Sheet 2: Borderline Candidates
+  const borHeaders = ['Symbol', 'Current Spot ($)', 'Trend Direction', '14D RSI', 'Earnings Date', 'Borderline Reason'];
+  const borRows = (result.borderlineCandidates || []).map((b) => [
+    b.symbol,
+    b.currentPrice,
+    b.trendStrDir,
+    b.rsi14,
+    b.earningsDate,
+    b.borderlineReason,
+  ]);
+  xml += buildXmlWorksheet('Borderline Candidates', borHeaders, borRows);
+
+  // Sheet 3: Excluded Candidates
+  const excHeaders = ['Symbol', 'Current Spot ($)', 'Reason For Exclusion'];
+  const excRows = (result.excludedCandidates || []).map((x) => [
+    x.symbol,
+    x.currentPrice,
+    x.reasonForExclusion,
+  ]);
+  xml += buildXmlWorksheet('Excluded Candidates', excHeaders, excRows);
+
+  xml += `</Workbook>`;
+  downloadFile(xml, actualFilename, 'application/vnd.ms-excel;charset=utf-8;');
+}
+
+export function downloadGeminiCsvTemplate(filename = 'deltaharvest_gemini_template.csv') {
+  const sampleResult: GeminiScreenResult = {
+    recommendedTrades: [
+      {
+        riskRank: 1,
+        symbol: 'NVDA',
+        currentPrice: 120.50,
+        suggestedStrike: 114.00,
+        delta: 0.20,
+        estPremiumAnnualized: '$1.85 (28.4% Ann. ROC)',
+        capitalCommitted: 11400,
+        trendStrDir: 'Strong Uptrend',
+        rsi14: 56.4,
+        earningsDate: 'None in expiration cycle',
+        sentimentFlags: 'Bullish',
+        technicalJustification: 'Strike sits below 2-SD lower Bollinger Band ($115.20) and major 50-day EMA support with 80% POP.',
+      },
+      {
+        riskRank: 2,
+        symbol: 'MSFT',
+        currentPrice: 425.00,
+        suggestedStrike: 405.00,
+        delta: 0.18,
+        estPremiumAnnualized: '$3.50 (22.5% Ann. ROC)',
+        capitalCommitted: 40500,
+        trendStrDir: 'Strong Uptrend',
+        rsi14: 52.1,
+        earningsDate: 'None in expiration cycle',
+        sentimentFlags: 'Bullish',
+        technicalJustification: 'Confirmed horizontal support at $405 psychological round level; IV rank 42%.',
+      },
+      {
+        riskRank: 3,
+        symbol: 'AAPL',
+        currentPrice: 230.00,
+        suggestedStrike: 220.00,
+        delta: 0.19,
+        estPremiumAnnualized: '$2.10 (24.8% Ann. ROC)',
+        capitalCommitted: 22000,
+        trendStrDir: 'Uptrend',
+        rsi14: 54.0,
+        earningsDate: 'None in expiration cycle',
+        sentimentFlags: 'Bullish',
+        technicalJustification: 'High liquidity Tier 1 mega-cap, 100% Barchart Buy consensus, clean Friday weekly options chain.',
+      },
+    ],
+    borderlineCandidates: [
+      {
+        symbol: 'TSLA',
+        currentPrice: 245.00,
+        trendStrDir: 'High Volatility',
+        rsi14: 67.8,
+        earningsDate: 'In 12 days',
+        borderlineReason: 'High IV rank (78%) offers lucrative premium, but RSI approaching 70 and earnings volatility creates gap risk.',
+      },
+    ],
+    excludedCandidates: [
+      {
+        symbol: 'AMCX',
+        currentPrice: 12.30,
+        reasonForExclusion: 'Failed Weekly Options Mandate (Standard Monthly Cycles Only; Not in CBOE Weekly Registry).',
+      },
+      {
+        symbol: 'MUFG',
+        currentPrice: 10.80,
+        reasonForExclusion: 'Monthly expiration only; ADR lacks active Friday-to-Friday options chains.',
+      },
+    ],
+    rawMarkdown: '',
+  };
+
+  exportGeminiTradesToCSV(sampleResult, filename);
+}
+
+export function downloadGeminiExcelTemplate(filename = 'deltaharvest_gemini_template.xls') {
+  const sampleResult: GeminiScreenResult = {
+    recommendedTrades: [
+      {
+        riskRank: 1,
+        symbol: 'NVDA',
+        currentPrice: 120.50,
+        suggestedStrike: 114.00,
+        delta: 0.20,
+        estPremiumAnnualized: '$1.85 (28.4% Ann. ROC)',
+        capitalCommitted: 11400,
+        trendStrDir: 'Strong Uptrend',
+        rsi14: 56.4,
+        earningsDate: 'None in expiration cycle',
+        sentimentFlags: 'Bullish',
+        technicalJustification: 'Strike sits below 2-SD lower Bollinger Band ($115.20) and major 50-day EMA support with 80% POP.',
+      },
+      {
+        riskRank: 2,
+        symbol: 'MSFT',
+        currentPrice: 425.00,
+        suggestedStrike: 405.00,
+        delta: 0.18,
+        estPremiumAnnualized: '$3.50 (22.5% Ann. ROC)',
+        capitalCommitted: 40500,
+        trendStrDir: 'Strong Uptrend',
+        rsi14: 52.1,
+        earningsDate: 'None in expiration cycle',
+        sentimentFlags: 'Bullish',
+        technicalJustification: 'Confirmed horizontal support at $405 psychological round level; IV rank 42%.',
+      },
+      {
+        riskRank: 3,
+        symbol: 'AAPL',
+        currentPrice: 230.00,
+        suggestedStrike: 220.00,
+        delta: 0.19,
+        estPremiumAnnualized: '$2.10 (24.8% Ann. ROC)',
+        capitalCommitted: 22000,
+        trendStrDir: 'Uptrend',
+        rsi14: 54.0,
+        earningsDate: 'None in expiration cycle',
+        sentimentFlags: 'Bullish',
+        technicalJustification: 'High liquidity Tier 1 mega-cap, 100% Barchart Buy consensus, clean Friday weekly options chain.',
+      },
+    ],
+    borderlineCandidates: [
+      {
+        symbol: 'TSLA',
+        currentPrice: 245.00,
+        trendStrDir: 'High Volatility',
+        rsi14: 67.8,
+        earningsDate: 'In 12 days',
+        borderlineReason: 'High IV rank (78%) offers lucrative premium, but RSI approaching 70 and earnings volatility creates gap risk.',
+      },
+    ],
+    excludedCandidates: [
+      {
+        symbol: 'AMCX',
+        currentPrice: 12.30,
+        reasonForExclusion: 'Failed Weekly Options Mandate (Standard Monthly Cycles Only; Not in CBOE Weekly Registry).',
+      },
+      {
+        symbol: 'MUFG',
+        currentPrice: 10.80,
+        reasonForExclusion: 'Monthly expiration only; ADR lacks active Friday-to-Friday options chains.',
+      },
+    ],
+    rawMarkdown: '',
+  };
+
+  exportGeminiTradesToExcel(sampleResult, filename);
 }

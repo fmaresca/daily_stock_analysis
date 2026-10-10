@@ -88,6 +88,10 @@ export function parseRouteFromLocation(autoRedirect = false): RouteLocation {
     if (autoRedirect && path !== '/ritual/screener') window.history.replaceState(null, '', '/ritual/screener');
     return makeRoute({ tree: 'WORKFLOW', optionsTab: 'CASCADING_SCREENER', canonicalPath: '/ritual/screener' });
   }
+  if (path === '/ritual/gemini-upload' || path === '/workflow/gemini-upload' || path === '/workflow/upload-gemini') {
+    if (autoRedirect && path !== '/ritual/gemini-upload') window.history.replaceState(null, '', '/ritual/gemini-upload');
+    return makeRoute({ tree: 'WORKFLOW', optionsTab: 'GEMINI_SELECTIONS_UPLOAD', canonicalPath: '/ritual/gemini-upload' });
+  }
   if (path === '/ritual/report' || path === '/workflow/report' || path === '/workflow/step6') {
     if (autoRedirect && path !== '/ritual/report') window.history.replaceState(null, '', '/ritual/report');
     return makeRoute({ tree: 'WORKFLOW', optionsTab: 'WEEKLY_EXECUTIVE_REPORT', canonicalPath: '/ritual/report' });
@@ -315,6 +319,7 @@ export function useAppNavigation() {
         else if (optionsTab === 'HOLDINGS_COVERED_CALLS') targetPath = '/ritual/holdings';
         else if (optionsTab === 'ECONOMIC_CALENDAR') targetPath = '/ritual/calendar';
         else if (optionsTab === 'CASCADING_SCREENER') targetPath = '/ritual/screener';
+        else if (optionsTab === 'GEMINI_SELECTIONS_UPLOAD') targetPath = '/ritual/gemini-upload';
         else if (optionsTab === 'WEEKLY_EXECUTIVE_REPORT') targetPath = '/ritual/report';
         else if (optionsTab === 'BROKER_STAGING') targetPath = '/ritual/staging';
         else targetPath = '/ritual';

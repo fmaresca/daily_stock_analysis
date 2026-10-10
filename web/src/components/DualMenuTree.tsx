@@ -340,7 +340,7 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
 
             <span className="text-slate-600 text-xs">➔</span>
 
-            {/* Step 5: Weekly Shortlist Screener */}
+            {/* Step 5: Tri-Screen Screener */}
             <button
               onClick={() => onSelectOptionsTab('CASCADING_SCREENER')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
@@ -349,12 +349,31 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
                   : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
               }`}
               title="Run the 3-stage quantitative funnel and generate AI trade ideas."
-              aria-label="5. Weekly Shortlist Screener"
+              aria-label="5. Tri-Screen & Gemini AI"
               aria-current={activeOptionsTab === 'CASCADING_SCREENER' ? 'true' : undefined}
             >
               <span className="w-4 h-4 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-mono">5</span>
               <Filter className="w-3.5 h-3.5 text-emerald-300" />
-              <span>5. Weekly Shortlist Screener</span>
+              <span>5. Tri-Screen &amp; Gemini AI</span>
+            </button>
+
+            <span className="text-slate-600 text-xs">➔</span>
+
+            {/* Upload Gemini Selections Step */}
+            <button
+              onClick={() => onSelectOptionsTab('GEMINI_SELECTIONS_UPLOAD')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer border ${
+                activeOptionsTab === 'GEMINI_SELECTIONS_UPLOAD'
+                  ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white border-teal-400 shadow-md shadow-teal-600/30 ring-1 ring-teal-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+              title="Upload final Gemini AI trade selections as CSV, Google Sheet, or Excel file."
+              aria-label="Upload Gemini Selections"
+              aria-current={activeOptionsTab === 'GEMINI_SELECTIONS_UPLOAD' ? 'true' : undefined}
+            >
+              <Upload className="w-3.5 h-3.5 text-teal-300" />
+              <span>Upload Gemini Selections</span>
+              <span className="text-[10px] font-mono opacity-80">(CSV/Sheet/Excel)</span>
             </button>
 
             <span className="text-slate-600 text-xs">➔</span>

@@ -7,6 +7,8 @@ import {
   ExternalLink,
   CheckCircle2,
   Copy,
+  Upload,
+  Download,
 } from '../../icons';
 import { SortableTh } from '../../ui/SortableTh';
 import { SortOrder } from '../../../utils/tableSort';
@@ -16,6 +18,10 @@ import {
   GeminiScreenResult,
   GeminiRecommendedTrade,
 } from '../../../types/options';
+import {
+  exportGeminiTradesToCSV,
+  exportGeminiTradesToExcel,
+} from '../../../utils/exportImport';
 
 export interface GeminiDecisionHubTabProps {
   capitalState: AccountCapitalState;
@@ -53,6 +59,7 @@ export interface GeminiDecisionHubTabProps {
   handleCopyPrompt: () => void;
   importedBriefing: string;
   handleParseMarkdown: (val: string) => void;
+  onNavigateToUploadSelections?: () => void;
 }
 
 export const GeminiDecisionHubTab: React.FC<GeminiDecisionHubTabProps> = React.memo(({
@@ -91,6 +98,7 @@ export const GeminiDecisionHubTab: React.FC<GeminiDecisionHubTabProps> = React.m
   handleCopyPrompt,
   importedBriefing,
   handleParseMarkdown,
+  onNavigateToUploadSelections,
 }) => {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -220,7 +228,37 @@ export const GeminiDecisionHubTab: React.FC<GeminiDecisionHubTabProps> = React.m
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {onNavigateToUploadSelections && (
+                <button
+                  onClick={() => onNavigateToUploadSelections()}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-600/30"
+                  title="Upload or import final selections via CSV, Google Sheet, or Excel"
+                >
+                  <Upload className="w-3.5 h-3.5 text-white" />
+                  <span>Upload / Import Selections File</span>
+                </button>
+              )}
+              {parsedGeminiResult && parsedGeminiResult.recommendedTrades.length > 0 && (
+                <>
+                  <button
+                    onClick={() => exportGeminiTradesToCSV(parsedGeminiResult)}
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-all cursor-pointer flex items-center gap-1 border border-slate-700"
+                    title="Export current recommendations to CSV"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>CSV</span>
+                  </button>
+                  <button
+                    onClick={() => exportGeminiTradesToExcel(parsedGeminiResult)}
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-all cursor-pointer flex items-center gap-1 border border-slate-700"
+                    title="Export current recommendations to Excel (.xls)"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Excel</span>
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => setIsAiModalOpen(true)}
                 className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
@@ -554,9 +592,24 @@ export const GeminiDecisionHubTab: React.FC<GeminiDecisionHubTabProps> = React.m
               </div>
 
               <div className="pt-3 border-t border-slate-800 space-y-2">
-                <span className="font-semibold text-slate-300 block">
-                  📥 Paste Gemini&apos;s Markdown Response Here (Auto-Parses 3 Tables):
-                </span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-semibold text-slate-300 block">
+                    📥 Paste Gemini&apos;s Markdown Response Here (Auto-Parses 3 Tables):
+                  </span>
+                  {onNavigateToUploadSelections && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAiModalOpen(false);
+                        onNavigateToUploadSelections();
+                      }}
+                      className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Or Upload CSV / Google Sheet / Excel File &rarr;</span>
+                    </button>
+                  )}
+                </div>
                 <textarea
                   rows={6}
                   value={importedBriefing}

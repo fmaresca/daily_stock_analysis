@@ -271,7 +271,8 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
                 <li><strong>Tab 1 (Barchart Top 1%):</strong> Automated screener with 100% buy consensus across 13 technical moving averages and MACDs. Supports <strong>&quot;Fetch Live Quotes&quot;</strong> (re-hydrating live market prices via Tradier) and <strong>&quot;Upload CSV&quot;</strong> for latest Friday exports.</li>
                 <li><strong>Tab 2 (MarketChameleon Momentum):</strong> Momentum equities with RSI 50–70, IV30 &gt; 30%, and CBOE weekly registry verification. Features <strong>&quot;Fetch Live Quotes&quot;</strong> and <strong>&quot;Upload CSV&quot;</strong> alongside Prescreen Builder.</li>
                 <li><strong>Tab 3 (ThinkorSwim View 190898):</strong> Automatically computes 13-indicator Barchart opinion consensus, stability arrows, and options cadence for any custom or TOS tickers.</li>
-                <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Consolidates all Tri-Screen sources (ThinkorSwim + Barchart View 190898 + MarketChameleon) into a unified multi-candidate prompt (up to 25 screened candidate contracts), enforces liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), verifies CBOE weekly options, and auto-parses Gemini&apos;s 3 markdown tables.</li>
+                <li><strong>Tab 4 (Gemini AI Extended Thinking):</strong> Consolidates all Tri-Screen sources (ThinkorSwim + Barchart View 190898 + MarketChameleon) into a unified multi-candidate prompt (up to 25 screened candidate contracts), enforces liquidity constraints ($200k max single equity CSP cap, $5,000 living deduction, free cash), verifies CBOE weekly options, and generates an institutional prompt.</li>
+                <li><strong>Tab 5 (Upload Gemini Selections):</strong> Upload final Gemini selections directly via CSV, Google Sheet (URL sync or copy-paste), or Microsoft Excel (.xlsx / .xls). Populates Table 1 (Recommended Trades), Table 2 (Borderline Candidates), and Table 3 (Excluded Candidates), with downloadable templates and round-trip export.</li>
               </ul>
             </div>
 
@@ -282,7 +283,7 @@ export const ChapterWeeklyWorkflowGuide: React.FC<ChapterWeeklyWorkflowGuideProp
                 <li><strong>Run TOS Screen (Tab 3):</strong> Click <strong>Schwab Import Equities</strong> (or paste custom symbols) and click <strong>&quot;▶ Run Barchart View 190898 Analysis&quot;</strong>.</li>
                 <li><strong>Send to Gemini Hub:</strong> Click <strong>&quot;📥 Send Screened Stocks to Gemini Decision Hub&quot;</strong> on any of the screens.</li>
                 <li><strong>Generate &amp; Run Prompt:</strong> On Tab 4, click <strong>&quot;1-Click Copy Prompt&quot;</strong>. Open <strong>gemini.google.com</strong> (select Gemini Pro with Extended Thinking HIGH), paste the prompt, and execute.</li>
-                <li><strong>Import &amp; Stage:</strong> Copy Gemini&apos;s markdown response, paste it into the DeltaHarvest parser box, and click <strong>&quot;1-Click Stage&quot;</strong> on Table 1 recommended trades.</li>
+                <li><strong>Import &amp; Stage (Tab 5):</strong> Upload the resulting Gemini selections file as CSV, Excel (.xlsx/.xls), Google Sheet URL, or paste the text directly. Review the 3 populated tables and click <strong>&quot;1-Click Stage&quot;</strong> on Table 1 recommended trades to prepare broker orders.</li>
               </ol>
             </div>
           </div>

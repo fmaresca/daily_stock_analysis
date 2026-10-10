@@ -32,6 +32,7 @@ import {
   Lock,
   Calendar,
   Globe,
+  Upload,
 } from './icons';
 import { useAuth } from '../context/AuthContext';
 
@@ -273,8 +274,28 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
                 >
                   <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[9px] font-mono shrink-0">5</span>
                   <div className="truncate min-w-0">
-                    <span className="truncate block font-medium">5. Weekly Shortlist Screener</span>
+                    <span className="truncate block font-medium">5. Tri-Screen &amp; Gemini AI</span>
                     <span className="text-[9px] text-slate-500 block">15Δ–25Δ Funnel &amp; AI</span>
+                  </div>
+                </button>
+                {/* Step 5b */}
+                <button
+                  onClick={() => {
+                    onSelectTree('WORKFLOW');
+                    onSelectOptionsTab('GEMINI_SELECTIONS_UPLOAD');
+                    onCloseMobile?.();
+                  }}
+                  className={`${getSubItemClasses(activeOptionsTab === 'GEMINI_SELECTIONS_UPLOAD')} w-full text-left`}
+                  title="Upload final Gemini AI trade selections via CSV, Google Sheet, or Excel file."
+                  aria-label="Upload Gemini Selections"
+                  aria-current={activeOptionsTab === 'GEMINI_SELECTIONS_UPLOAD' ? 'true' : undefined}
+                >
+                  <span className="w-4 h-4 rounded-full bg-teal-500/20 text-teal-300 flex items-center justify-center text-[9px] font-mono shrink-0">
+                    <Upload className="w-2.5 h-2.5 text-teal-300" />
+                  </span>
+                  <div className="truncate min-w-0">
+                    <span className="truncate block font-medium">Upload Gemini Selections</span>
+                    <span className="text-[9px] text-slate-500 block">CSV • Google Sheet • Excel</span>
                   </div>
                 </button>
                 {/* Step 6 */}

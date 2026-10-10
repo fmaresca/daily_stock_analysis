@@ -1056,11 +1056,12 @@ export const AuthenticatedTerminal: React.FC = () => {
                     setActiveOptionsTab('BROKER_STAGING');
                   }}
                 />
-              ) : activeOptionsTab === 'CASCADING_SCREENER' ? (
+              ) : (activeOptionsTab === 'CASCADING_SCREENER' || activeOptionsTab === 'GEMINI_SELECTIONS_UPLOAD') ? (
                 <CascadingScreenerView
                   tickers={universeTickers}
                   allOpportunities={allUniverseOpportunities}
                   initialWeeklyDataset={weeklyScreenersDataset}
+                  initialSubTab={activeOptionsTab === 'GEMINI_SELECTIONS_UPLOAD' ? 'GEMINI_UPLOAD' : undefined}
                   onStageOpportunity={handleStageOpportunity}
                   onSelectSymbolForChart={(sym) => {
                     setActiveChartSymbol(sym);

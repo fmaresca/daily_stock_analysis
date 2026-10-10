@@ -1,4 +1,4 @@
-import { GeminiScreenResult } from '../types/options';
+import type { GeminiScreenResult } from '../types/options.ts';
 
 /**
  * Parses Gemini AI Pro Markdown Output into 3 Structured Tables (Recommended, Borderline, Excluded)
