@@ -116,7 +116,7 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({
                   onClick={() => openValuation('NVDA')}
                   className="hover:text-teal-400 text-teal-300 font-medium transition-colors text-left cursor-pointer"
                 >
-                  DCF Intrinsic Valuation &amp; DuPont (v3.4)
+                  DCF Intrinsic Valuation &amp; DuPont (v3.5)
                 </button>
               </li>
               <li>
@@ -193,10 +193,10 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({
             <span>&copy; {new Date().getFullYear()} DeltaHarvest Institutional. Quantitative Equity Analysis &amp; Options Income. &bull;</span>
             <span className="inline-flex items-center gap-1.5 font-mono">
               <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold tracking-wider">
-                {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v3.4'}
+                {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v3.5'}
               </span>
               <span className="text-slate-500">
-                {typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'v3.4-prod'}
+                {typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'v3.5-prod'}
               </span>
             </span>
           </div>

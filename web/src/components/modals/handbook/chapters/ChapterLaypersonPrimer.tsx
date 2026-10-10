@@ -42,7 +42,7 @@ export const ChapterLaypersonPrimer: React.FC<ChapterLaypersonPrimerProps> = ({
             onClick: onOpenSimulator,
           },
           {
-            label: 'DCF Intrinsic Valuation & DuPont (v3.4)',
+            label: 'DCF Intrinsic Valuation & DuPont (v3.5)',
             location: 'Valuation Terminal',
             onClick: () => onOpenValuation?.('NVDA'),
           },

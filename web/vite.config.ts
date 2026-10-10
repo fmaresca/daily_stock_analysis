@@ -13,7 +13,7 @@ try {
 const buildTimestamp = new Date().toISOString();
 const buildId = `dh-${commitHash}-${buildTimestamp.replace(/[-:T.]/g, '').substring(0, 14)}`;
 
-const appVersion = 'v3.4';
+const appVersion = 'v3.5';
 
 // https://vitejs.dev/config/
 export default defineConfig({

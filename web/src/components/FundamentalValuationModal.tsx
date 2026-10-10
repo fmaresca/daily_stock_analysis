@@ -298,7 +298,7 @@ export const FundamentalValuationModal: React.FC<FundamentalValuationModalProps>
         : 'Calibrated Financial Model';
 
     return `================================================================================
-           DELTAHARVEST QUANTITATIVE VALUATION & DCF TERMINAL (v3.4)
+           DELTAHARVEST QUANTITATIVE VALUATION & DCF TERMINAL (v3.5)
 ================================================================================
 Ticker: ${activeStock.symbol} (${activeStock.name}) | Feed: ${sourceLabel} | Spot: $${activeStock.spot.toFixed(2)}
 Calculated at: ${timestamp} | 14-Day ATR: $${activeStock.atr.toFixed(2)}
@@ -379,7 +379,7 @@ Calculated at: ${timestamp} | 14-Day ATR: $${activeStock.atr.toFixed(2)}
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>DeltaHarvest Quantitative Equity Valuation &amp; DCF Terminal</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  v3.4 Live
+                  v3.5 Live
                 </span>
               </h2>
               <p className="text-xs text-slate-400">

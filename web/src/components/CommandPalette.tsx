@@ -267,7 +267,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: 'nav-dcf-valuation',
-      title: 'DCF Intrinsic Valuation & DuPont Terminal (v3.4)',
+      title: 'DCF Intrinsic Valuation & DuPont Terminal (v3.5)',
       subtitle: '5-Yr Midpoint Discounting, WACC & Gordon Bound, DuPont 3/5-Step ROE & Dynamic ATR Risk-Reward',
       icon: <DollarSign className="w-4 h-4 text-emerald-400" />,
       action: () => {

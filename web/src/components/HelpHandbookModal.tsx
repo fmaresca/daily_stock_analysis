@@ -127,7 +127,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>DeltaHarvest Strategy Handbook &amp; Educational Center</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  v3.7
+                  v3.5
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
@@ -407,7 +407,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
             }`}
           >
             <DollarSign className="w-4 h-4 text-teal-400" />
-            <span>14. Quantitative Equity Valuation &amp; DCF Terminal (v3.4)</span>
+            <span>14. Quantitative Equity Valuation &amp; DCF Terminal (v3.5)</span>
           </button>
 
           <button
@@ -419,7 +419,7 @@ export const HelpHandbookModal: React.FC<HelpHandbookModalProps> = ({
             }`}
           >
             <DollarSign className="w-4 h-4 text-emerald-400" />
-            <span>15. Institutional Derivatives Tax Alpha &amp; IRC Subchapter P Audit (v3.4)</span>
+            <span>15. Institutional Derivatives Tax Alpha &amp; IRC Subchapter P Audit (v3.5)</span>
           </button>
         </div>
 

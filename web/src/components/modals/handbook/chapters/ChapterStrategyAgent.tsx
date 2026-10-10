@@ -97,7 +97,7 @@ export const ChapterStrategyAgent: React.FC<ChapterStrategyAgentProps> = ({ onNa
         {/* Playbooks & Journal Sub-section */}
         <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 space-y-2 text-xs">
           <div className="font-bold text-emerald-300 flex items-center gap-1.5">
-            <span>🛡️ Declarative Options Strategy Playbooks &amp; Signal Journal (v3.6)</span>
+            <span>🛡️ Declarative Options Strategy Playbooks &amp; Signal Journal (v3.5)</span>
           </div>
           <p className="text-[11px] text-slate-300 leading-relaxed">
             The agent now supports 5 declarative options playbooks tailored to quantitative execution:

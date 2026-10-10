@@ -990,10 +990,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
           <span>&copy; {new Date().getFullYear()} DeltaHarvest Institutional. All rights reserved. &bull;</span>
           <span className="inline-flex items-center gap-1.5 font-mono">
             <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold tracking-wider">
-              {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v3.4'}
+              {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v3.5'}
             </span>
             <span className="text-slate-500">
-              {typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'v3.4-prod'}
+              {typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'v3.5-prod'}
             </span>
           </span>
         </p>

@@ -18,7 +18,7 @@ export const ChapterTaxAlphaAudit: React.FC<ChapterTaxAlphaAuditProps> = ({
       <div className="border-l-2 border-emerald-400 pl-4 py-1">
         <h3 className="text-base font-bold text-white flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-emerald-400" />
-          <span>Institutional Derivatives Tax Alpha &amp; IRC Subchapter P Audit (v3.4)</span>
+          <span>Institutional Derivatives Tax Alpha &amp; IRC Subchapter P Audit (v3.5)</span>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
             IRS Form 6781 &amp; Form 8949
           </span>

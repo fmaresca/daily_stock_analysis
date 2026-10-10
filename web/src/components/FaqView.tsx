@@ -253,6 +253,77 @@ export const FaqView: React.FC<FaqViewProps> = ({
         </div>
       ),
     },
+    {
+      id: 'faq-13',
+      category: 'EXECUTION',
+      question: 'How does the New-Upload Weekly Reset and Non-Destructive Archiving work?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            When uploading a fresh Charles Schwab positions CSV, DeltaHarvest begins a new weekly trading ritual under the <em>Archive, Don&apos;t Annihilate</em> rule:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-slate-400">
+            <li><strong>Automated Archiving:</strong> Previous screener results (MarketChameleon, Barchart, Gemini AI selections, ThinkorSwim) are safely moved to week-labeled archive storage (<code className="text-teal-300 font-mono">deltaharvest_screen_archive_YYYY-MM-DD_...</code>).</li>
+            <li><strong>Clean Workspace:</strong> Active screener tables clear cleanly to prevent stale candidate contamination, while user filter settings (IV rank, volume, price bounds) remain intact.</li>
+            <li><strong>Cumulative Data Sacredness:</strong> YTD option premiums written, capital ledger allocations, tax records, and options journal entries are strictly preserved across weeks.</li>
+            <li><strong>Non-Destructive Restoration:</strong> Any prior week&apos;s screener datasets can be restored at any time via the <em>&quot;Restore prior week&quot;</em> dropdown in the screener view without losing active work.</li>
+          </ul>
+        </div>
+      ),
+    },
+    {
+      id: 'faq-14',
+      category: 'MARGIN',
+      question: 'How does Expiry Purge on Import protect live P&L and CSP collateral math?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            Brokerage export CSVs frequently include option contracts that expired on the preceding Friday close. DeltaHarvest automatically purges these contracts during import:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-slate-400">
+            <li><strong>Single Clock Cutoff:</strong> All legs are checked against the Single Clock Authority (4:00 PM ET cutoff, adjusting for NYSE holiday closures).</li>
+            <li><strong>Quarantined Partition:</strong> Expired legs are routed to a dedicated <code className="text-amber-300 font-mono">deltaharvest_expired_on_import_...</code> bucket labeled <em>&quot;Expired &lt;date&gt; — excluded from live analysis&quot;</em>.</li>
+            <li><strong>Zero Math Pollution:</strong> Expired contracts never enter active portfolio positions, live P&amp;L, Greeks, covered call tracking, or cash-secured put collateral liability calculations ($Strike &times; 100).</li>
+            <li><strong>Audit Visibility:</strong> Expired legs remain visible in a collapsed drawer in the Upload view for full reconciliation transparency.</li>
+          </ul>
+        </div>
+      ),
+    },
+    {
+      id: 'faq-15',
+      category: 'AI',
+      question: 'How do I upload and import Gemini AI Final Selections (CSV / Sheet / Excel)?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            In Workflow Step 5 (Cascading Screener Funnel), Sub-Tab 5 offers a zero-dependency universal import engine:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-slate-400">
+            <li><strong>Multi-Format Ingestion:</strong> Supports RFC 4180 CSV, TSV, modern Excel (.xlsx), Microsoft XML Spreadsheet 2003 (.xls/.xml), Google Sheets public links, and direct clipboard paste.</li>
+            <li><strong>3-Table Segmentation:</strong> Automatically parses rows into Table 1 (Recommended Institutional Trades), Table 2 (Borderline Candidates), and Table 3 (Excluded), extracting strike, delta, expiration, and yield metrics.</li>
+            <li><strong>Schwab Staging Link:</strong> Table 1 recommended trades feature 1-click bracket order staging to the Charles Schwab Order Workbench with automated cash collateral validation.</li>
+            <li><strong>Template &amp; Export:</strong> Download standardized templates or export your active selections directly from the UI.</li>
+          </ul>
+        </div>
+      ),
+    },
+    {
+      id: 'faq-16',
+      category: 'GENERAL',
+      question: 'What is the Single Clock Authority and how does it prevent timezone drift?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            DeltaHarvest centralizes all platform time and date logic in <code className="text-teal-300 font-mono">web/src/utils/appNow.ts</code> and edge <code className="text-teal-300 font-mono">functions/api/_now.js</code>:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-slate-400">
+            <li><strong>America/New_York (ET) Anchor:</strong> Regardless of user local time or server timezone, the trading day, week boundaries, and market status strictly reference New York exchange time.</li>
+            <li><strong>Deterministic 16:00 ET Close:</strong> Option expiration occurs precisely at 4:00 PM ET on Fridays (or Thursdays before Good Friday / market holidays).</li>
+            <li><strong>Weekend Indicator Rollover:</strong> Macro calendars and screening weeks advance automatically to the upcoming week upon Friday close.</li>
+          </ul>
+        </div>
+      ),
+    },
   ];
 
   const filteredFaqs = faqs.filter((item) => {

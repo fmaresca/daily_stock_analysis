@@ -195,7 +195,7 @@ export const ChapterTradeQualityScoring: React.FC<ChapterTradeQualityScoringProp
             <span>Options Trade Quality Simulator &ndash; 4-Tab Analytical Architecture</span>
           </span>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
-            Institutional v3.4
+            Institutional v3.5
           </span>
         </div>
         <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-[11px] space-y-1 my-3">

@@ -29,7 +29,7 @@ export const ChapterSolvencyCef: React.FC<ChapterSolvencyCefProps> = ({
             onClick: () => onNavigate?.('EQUITIES', undefined, 'FUNDAMENTAL_HEALTH'),
           },
           {
-            label: 'Launch DCF Valuation & DuPont Terminal (v3.4)',
+            label: 'Launch DCF Valuation & DuPont Terminal (v3.5)',
             location: 'Valuation Terminal',
             onClick: () => onOpenValuation?.('NVDA'),
           },

@@ -746,7 +746,7 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
               </button>
             )}
 
-            {/* DCF Valuation & DuPont Terminal (v3.4) */}
+            {/* DCF Valuation & DuPont Terminal (v3.5) */}
             {onOpenValuation && (
               <button
                 onClick={() => {
@@ -764,7 +764,7 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
                       <span className="font-semibold truncate">Valuation Terminal</span>
                     </div>
                     <div className="text-[10px] text-slate-500 light:text-slate-400 font-normal truncate">
-                      DCF &amp; DuPont ROE v3.4
+                      DCF &amp; DuPont ROE v3.5
                     </div>
                   </div>
                 )}

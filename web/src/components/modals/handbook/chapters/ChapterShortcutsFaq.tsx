@@ -446,7 +446,7 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/30 space-y-1">
           <div className="text-xs font-bold text-white flex items-center gap-1.5">
             <span className="text-emerald-400">📋</span>
-            <span>What is the 5-Point Options Pre-Flight Underwriting Scorecard (v3.6)?</span>
+            <span>What is the 5-Point Options Pre-Flight Underwriting Scorecard (v3.5)?</span>
           </div>
           <p className="text-xs text-slate-400">
             Located at the top of the Single-Stock Audit Options &amp; Technicals tab, the <strong>5-Point Pre-Flight Scorecard</strong> systematically gates every options entry before capital commitment:
@@ -463,7 +463,7 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         <div className="bg-slate-950/60 p-3 rounded-xl border border-indigo-500/30 space-y-1">
           <div className="text-xs font-bold text-white flex items-center gap-1.5">
             <span className="text-indigo-400">🤖</span>
-            <span>How does the Interactive Discord Bot Gateway work?</span>
+            <span>How does the Interactive Discord Bot Gateway work (v3.5)?</span>
           </div>
           <p className="text-xs text-slate-400">
             DeltaHarvest provides a serverless Discord Interactions endpoint at <code className="text-indigo-300 font-mono">/api/bot/discord</code> running on Cloudflare Pages:
@@ -478,7 +478,7 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         <div className="bg-slate-950/60 p-3 rounded-xl border border-purple-500/30 space-y-1">
           <div className="text-xs font-bold text-white flex items-center gap-1.5">
             <span className="text-purple-400">📖</span>
-            <span>How do the Strategy Playbooks and Signal Journal work?</span>
+            <span>How do the Strategy Playbooks and Signal Journal work (v3.5)?</span>
           </div>
           <p className="text-xs text-slate-400">
             DeltaHarvest connects institutional reasoning directly to trade journaling via Cloudflare D1 (<code className="text-purple-300 font-mono">/api/options/journal</code>):
@@ -493,7 +493,7 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/40 space-y-1.5">
           <div className="text-xs font-bold text-white flex items-center gap-1.5">
             <span className="text-emerald-400">⚖️</span>
-            <span>How does the Section 1256 Tax Engine and Tax Alpha Optimizer work (v3.7)?</span>
+            <span>How does the Section 1256 Tax Engine and Tax Alpha Optimizer work (v3.5)?</span>
           </div>
           <p className="text-xs text-slate-400">
             Ported from the MIT-licensed Section 1256 tax engine in <code>howard-lynn-ye/Fin-RSI</code> (verified against IRC §1256, IRS Pub 550, and Rev. Rul. 2026-16):
@@ -511,7 +511,7 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         <div className="bg-slate-950/60 p-3 rounded-xl border border-blue-500/40 space-y-1.5">
           <div className="text-xs font-bold text-white flex items-center gap-1.5">
             <span className="text-blue-400">🛡️</span>
-            <span>How does the 7-Provider Multi-LLM Failover Chain work (v3.7)?</span>
+            <span>How does the 7-Provider Multi-LLM Failover Chain work (v3.5)?</span>
           </div>
           <p className="text-xs text-slate-400">
             Behind <code>functions/api/_llm.js</code> operates an institutional multi-tiered failover chain with 0 credentials exposed:
@@ -521,6 +521,54 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             <li><strong>Strict Iron Rule #2 (Request Protection):</strong> Client HTTP 400 errors immediately abort and fail closed to prevent cascading broken requests; failover triggers strictly on 401, 429, 5xx, or network timeouts.</li>
             <li><strong>Multi-Key Comma-Separated Rotation:</strong> Each slot supports multiple comma-separated keys for load balancing and quota smoothing within a single provider tier.</li>
             <li><strong>Admin Probe &amp; Zero Disclosure:</strong> Admins can verify live chain health via <code className="text-cyan-300 font-mono">GET /api/admin/llm-chain-test</code> without revealing raw keys in UI, logs, or source code.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-cyan-500/40 space-y-1.5">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-cyan-400">📦</span>
+            <span>How does the New-Upload Weekly Reset &amp; Non-Destructive Archiving work (v3.5)?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Every time you upload a fresh Charles Schwab positions CSV to start a new weekly ritual, DeltaHarvest executes an <strong>Archive, Don&apos;t Annihilate</strong> rollover:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Automated Archive:</strong> Active screeners (MarketChameleon, Barchart, Gemini AI selections, ThinkorSwim) are transferred to week-labeled archive storage (<code className="text-cyan-300 font-mono">deltaharvest_screen_archive_YYYY-MM-DD_...</code>) stamped with the originating Monday trading week.</li>
+            <li><strong>Fresh Active Workspace:</strong> Active screener tables clear cleanly to prevent stale candidate carryover, while filter preferences (minimum volume, IV rank, price range) survive untouched.</li>
+            <li><strong>Cumulative Ledgers Protected:</strong> Sacred cross-week cumulative records (prior YTD option premiums earned, capital ledger disbursements, options journal, and tax records) are never cleared.</li>
+            <li><strong>1-Click History Restoration:</strong> In the Weekly Stock Screeners view, selecting an archived week from the &quot;Restore prior week&quot; dropdown rehydrates past datasets immediately (safely re-archiving active data first).</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-amber-500/40 space-y-1.5">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-amber-400">⏱️</span>
+            <span>How does Expiry Purge on Import &amp; the Single Clock Authority work (v3.5)?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            DeltaHarvest establishes <code>web/src/utils/appNow.ts</code> and edge <code>functions/api/_now.js</code> as the Single Clock Authority, anchoring all time calculations to America/New_York (ET):
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Strict 4:00 PM ET Expiration Rule:</strong> Options expire at market close (16:00 ET) on Friday, correctly accounting for NYSE/OCC holiday calendar shifts to Thursday when markets are closed on Good Friday or federal holidays.</li>
+            <li><strong>Quarantined on Import:</strong> When a Schwab CSV is uploaded containing option legs that expired previously, they are partitioned into an &quot;Expired on import&quot; bucket (<code className="text-amber-300 font-mono">deltaharvest_expired_on_import_...</code>) labeled <em>&quot;Expired &lt;date&gt; — excluded from live analysis&quot;</em>.</li>
+            <li><strong>P&amp;L and Margin Protection:</strong> Expired legs never enter active portfolio positions, live P&amp;L, Greeks, covered call tracking, or cash-secured put collateral liability calculations ($Strike &times; 100).</li>
+            <li><strong>Collapsible Audit Drawer:</strong> Expired contracts remain fully inspectable in a collapsed accordion section in the Upload view for complete accounting transparency.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-teal-500/40 space-y-1.5">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-teal-400">📥</span>
+            <span>How do I upload and import Gemini AI Final Selections via CSV, Excel, or Google Sheets (v3.5)?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            In Workflow Step 5 (Cascading Screener Funnel), Sub-Tab 5 provides a zero-dependency universal import engine:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Supported Formats:</strong> RFC 4180 CSV, tab-separated TSV, standard Excel workbook (.xlsx), Microsoft XML Spreadsheet 2003 (.xls/.xml), Google Sheets public/sharing URLs, or raw clipboard paste.</li>
+            <li><strong>Automated 3-Table Partitioning:</strong> Automatically parses rows into Table 1 (Recommended Institutional Trades), Table 2 (Borderline Candidates), and Table 3 (Excluded), normalizing ticker symbols, strike prices, expiration dates, delta, and premium yields.</li>
+            <li><strong>Broker Workbench Staging:</strong> Once imported, Table 1 selections activate direct staging to the Charles Schwab Order Workbench with 1 click for bracket order staging and cash collateral check.</li>
+            <li><strong>Template &amp; Export:</strong> Includes 1-click download of standardized CSV and Excel import templates, as well as real-time export of your current active selections.</li>
           </ul>
         </div>
       </div>
