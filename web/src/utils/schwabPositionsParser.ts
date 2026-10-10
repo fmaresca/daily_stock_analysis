@@ -516,6 +516,26 @@ export function parseSchwabPositionsCsv(
 
   const totalCalculatedPremiums = taxRecords.reduce((sum, r) => sum + r.amount, 0);
 
+  // Preserve existing YTD premium balance if present in localStorage
+  let preservedPriorYtd = DEFAULT_PRIOR_YTD_PREMIUM_BALANCE;
+  let preservedYtdEarned = DEFAULT_YTD_PREMIUMS_EARNED;
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const raw = window.localStorage.getItem('deltaharvest_capital_ledger');
+      if (raw) {
+        const existing = JSON.parse(raw);
+        if (typeof existing.priorYtdPremiumBalance === 'number') {
+          preservedPriorYtd = existing.priorYtdPremiumBalance;
+        }
+        if (typeof existing.ytdPremiumsEarned === 'number') {
+          preservedYtdEarned = existing.ytdPremiumsEarned;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   // Construct AccountCapitalState
   const capitalState: AccountCapitalState = {
     totalCash: totalCashToCoverCsp,
@@ -531,9 +551,9 @@ export function parseSchwabPositionsCsv(
     totalEncumberedDisbursements: weeklyLivingExpenses,
     committedCollateral: totalCommittedCspCollateral,
     freeCash: netFreeCashForNewCsps,
-    priorYtdPremiumBalance: DEFAULT_PRIOR_YTD_PREMIUM_BALANCE,
+    priorYtdPremiumBalance: preservedPriorYtd,
     currentWeekPremiumsCollected: 0.00,
-    ytdPremiumsEarned: DEFAULT_YTD_PREMIUMS_EARNED,
+    ytdPremiumsEarned: Math.max(preservedPriorYtd, preservedYtdEarned),
     maxPerPositionAllocation: targetPerPosition,
     singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
     maxAllowedPositions: maxAllowedNewPositions,

@@ -159,9 +159,17 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
         executeWeeklyWorkflowCleanReset();
 
         const parsed = parseSchwabPositionsCsv(text);
-        setCapitalState(parsed.capitalState);
-        saveCapitalState(parsed.capitalState);
-        setInlineCashValue(parsed.capitalState.totalCash);
+        const currentCap = getStoredCapitalState();
+        const preservedPrior = currentCap.priorYtdPremiumBalance || parsed.capitalState.priorYtdPremiumBalance;
+        const currentWeek = parsed.capitalState.currentWeekPremiumsCollected || 0;
+        const finalCap: AccountCapitalState = {
+          ...parsed.capitalState,
+          priorYtdPremiumBalance: preservedPrior,
+          ytdPremiumsEarned: preservedPrior + currentWeek,
+        };
+        setCapitalState(finalCap);
+        saveCapitalState(finalCap);
+        setInlineCashValue(finalCap.totalCash);
 
         // Update portfolio book with all equities, calls, puts
         localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(parsed.portfolioPositions));
@@ -172,10 +180,11 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
         // Sync authentic option tax records
         if (parsed.taxRecords && parsed.taxRecords.length > 0) {
           const currentTax = getStoredTaxLedgerState();
+          const csvPremiums = parsed.taxRecords.reduce((sum, r) => sum + r.amount, 0);
           const freshTax: TaxLedgerState = {
             ...currentTax,
             records: parsed.taxRecords,
-            ytdPremiumsEarned: parsed.taxRecords.reduce((sum, r) => sum + r.amount, 0),
+            ytdPremiumsEarned: Math.max(currentTax.ytdPremiumsEarned || 0, csvPremiums),
           };
           saveTaxLedgerState(freshTax);
           setTaxState(freshTax);
@@ -361,9 +370,15 @@ export const WeeklyCashLedgerView: React.FC<WeeklyCashLedgerViewProps> = ({
     setTaxState(updatedTax);
     saveTaxLedgerState(updatedTax);
 
-    // Keep capitalState.ytdPremiumsEarned in sync
+    // Keep capitalState in sync:
+    // When the user edits YTD Option Premiums Written, calculate priorYtdPremiumBalance so that
+    // priorYtdPremiumBalance + currentWeekPremiumsCollected === data.ytdPremiumsWritten
+    const currentWeek = Number(capitalState.currentWeekPremiumsCollected) || 0;
+    const newPriorYtd = Math.max(0, data.ytdPremiumsWritten - currentWeek);
+
     const updatedCap: AccountCapitalState = {
       ...capitalState,
+      priorYtdPremiumBalance: newPriorYtd,
       ytdPremiumsEarned: data.ytdPremiumsWritten,
       lastUpdated: new Date().toISOString(),
     };

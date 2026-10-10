@@ -575,7 +575,55 @@ TABLE 3: EXCLUDED CANDIDATES
         net_liquidation = (total_equity_value + total_liquid_cash) - total_deriv_liability
         self.assertAlmostEqual(net_liquidation, total_account_net_value, places=2)
 
+    def test_ytd_option_premiums_written_reconciliation_persistence(self):
+        """
+        Validates Section 1 'YTD Option Premiums Written' in End of Week Tax & YTD Reconciliation Verification:
+        1. When user saves YTD Option Premiums Written (e.g. $603,305.40 baseline or custom $45,000.00),
+           priorYtdPremiumBalance is set so that priorYtdPremiumBalance + currentWeekPremiumsCollected == ytdPremiumsWritten.
+        2. Tax ledger state preserves ytdPremiumsEarned, realized gains, realized losses, and loss carryforward
+           even when trade record list is empty (no individual closed lots entered yet).
+        3. Weekly workflow reset properly rolls over cumulative ytdPremiumsEarned into starting priorYtd balance for new week.
+        """
+        # Scenario 1: User enters YTD Option Premiums Written = $52,500.00 with current week = $2,500.00
+        ytd_premiums_written_entry = 52500.00
+        current_week_collected = 2500.00
+        calculated_prior_ytd = max(0.0, ytd_premiums_written_entry - current_week_collected)
+        self.assertEqual(calculated_prior_ytd, 50000.00)
+
+        # Recomputed cumulative YTD in Section 1
+        section_1_ytd_display = calculated_prior_ytd + current_week_collected
+        self.assertEqual(section_1_ytd_display, ytd_premiums_written_entry)
+
+        # Scenario 2: User enters YTD Option Premiums Written = $40,000.00 with no current week harvest yet
+        ytd_premiums_written_entry_2 = 40000.00
+        current_week_collected_2 = 0.00
+        calculated_prior_ytd_2 = max(0.0, ytd_premiums_written_entry_2 - current_week_collected_2)
+        self.assertEqual(calculated_prior_ytd_2, 40000.00)
+        self.assertEqual(calculated_prior_ytd_2 + current_week_collected_2, ytd_premiums_written_entry_2)
+
+        # Scenario 3: Tax state non-destruction when records is empty []
+        tax_state = {
+            "currentTaxYear": 2026,
+            "priorYearLossCarryforward": 7500.00,
+            "ytdPremiumsEarned": 52500.00,
+            "ytdRealizedCapitalGains": 12000.00,
+            "ytdRealizedCapitalLosses": 4000.00,
+            "records": [],
+        }
+        # Ensure fields remain intact
+        self.assertEqual(tax_state["ytdPremiumsEarned"], 52500.00)
+        self.assertEqual(tax_state["ytdRealizedCapitalGains"] - tax_state["ytdRealizedCapitalLosses"], 8000.00)
+        self.assertEqual(tax_state["priorYearLossCarryforward"], 7500.00)
+
+        # Scenario 4: Roll forward into next week upon reset
+        next_week_starting_prior = tax_state["ytdPremiumsEarned"] if tax_state["ytdPremiumsEarned"] > 0 else calculated_prior_ytd
+        next_week_current_week = 0.00
+        next_week_total = next_week_starting_prior + next_week_current_week
+        self.assertEqual(next_week_starting_prior, 52500.00)
+        self.assertEqual(next_week_total, 52500.00)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

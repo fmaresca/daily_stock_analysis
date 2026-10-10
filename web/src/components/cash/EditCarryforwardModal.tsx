@@ -660,16 +660,23 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
   ytdPremiumsEarned,
   onSave,
 }) => {
-  const [inputTaxYear, setInputTaxYear] = useState<number>(taxState.currentTaxYear);
-  const [inputYtdPremiums, setInputYtdPremiums] = useState<number>(ytdPremiumsEarned);
-  const [inputRealizedGains, setInputRealizedGains] = useState<number>(taxState.ytdRealizedCapitalGains);
-  const [inputRealizedLosses, setInputRealizedLosses] = useState<number>(taxState.ytdRealizedCapitalLosses);
-  const [inputTaxCarryover, setInputTaxCarryover] = useState<number>(taxState.priorYearLossCarryforward);
+  const currentYtd = (ytdPremiumsEarned !== undefined && ytdPremiumsEarned !== null && ytdPremiumsEarned > 0)
+    ? ytdPremiumsEarned
+    : (taxState.ytdPremiumsEarned || 0);
+
+  const [inputTaxYear, setInputTaxYear] = useState<number | string>(taxState.currentTaxYear);
+  const [inputYtdPremiums, setInputYtdPremiums] = useState<number | string>(currentYtd);
+  const [inputRealizedGains, setInputRealizedGains] = useState<number | string>(taxState.ytdRealizedCapitalGains);
+  const [inputRealizedLosses, setInputRealizedLosses] = useState<number | string>(taxState.ytdRealizedCapitalLosses);
+  const [inputTaxCarryover, setInputTaxCarryover] = useState<number | string>(taxState.priorYearLossCarryforward);
 
   useEffect(() => {
     if (isOpen) {
+      const freshYtd = (ytdPremiumsEarned !== undefined && ytdPremiumsEarned !== null && ytdPremiumsEarned > 0)
+        ? ytdPremiumsEarned
+        : (taxState.ytdPremiumsEarned || 0);
       setInputTaxYear(taxState.currentTaxYear);
-      setInputYtdPremiums(ytdPremiumsEarned);
+      setInputYtdPremiums(freshYtd);
       setInputRealizedGains(taxState.ytdRealizedCapitalGains);
       setInputRealizedLosses(taxState.ytdRealizedCapitalLosses);
       setInputTaxCarryover(taxState.priorYearLossCarryforward);
@@ -682,10 +689,10 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
     e.preventDefault();
     onSave({
       taxYear: Number(inputTaxYear) || 2026,
-      ytdPremiumsWritten: Number(inputYtdPremiums),
-      realizedGains: Number(inputRealizedGains),
-      realizedLosses: Number(inputRealizedLosses),
-      lossCarryover: Number(inputTaxCarryover),
+      ytdPremiumsWritten: Number(inputYtdPremiums) || 0,
+      realizedGains: Number(inputRealizedGains) || 0,
+      realizedLosses: Number(inputRealizedLosses) || 0,
+      lossCarryover: Number(inputTaxCarryover) || 0,
     });
   };
 
@@ -726,7 +733,7 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
               step="0.01"
               min="0"
               value={inputYtdPremiums}
-              onChange={(e) => setInputYtdPremiums(Number(e.target.value))}
+              onChange={(e) => setInputYtdPremiums(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono font-bold"
               required
             />
@@ -743,7 +750,7 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
               type="number"
               step="0.01"
               value={inputRealizedGains}
-              onChange={(e) => setInputRealizedGains(Number(e.target.value))}
+              onChange={(e) => setInputRealizedGains(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono font-bold"
               required
             />
@@ -760,7 +767,7 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
               type="number"
               step="0.01"
               value={inputRealizedLosses}
-              onChange={(e) => setInputRealizedLosses(Number(e.target.value))}
+              onChange={(e) => setInputRealizedLosses(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-rose-400 font-mono font-bold"
               required
             />
@@ -786,7 +793,7 @@ export const EditTaxGainsModal: React.FC<EditTaxGainsModalProps> = ({
               type="number"
               step="0.01"
               value={inputTaxCarryover}
-              onChange={(e) => setInputTaxCarryover(Number(e.target.value))}
+              onChange={(e) => setInputTaxCarryover(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-amber-400 font-mono font-bold"
               required
             />

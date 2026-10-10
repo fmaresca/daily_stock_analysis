@@ -17,9 +17,9 @@ import {
   syncImportedEquitiesToWatchlist,
   ParsedSchwabPositionsResult,
 } from '../utils/schwabPositionsParser';
-import { saveCapitalState, saveTaxLedgerState, getStoredTaxLedgerState } from '../utils/capitalAndTaxLedger';
+import { saveCapitalState, saveTaxLedgerState, getStoredTaxLedgerState, getStoredCapitalState } from '../utils/capitalAndTaxLedger';
 import { getSamplePortfolioBook } from '../utils/portfolioStressTest';
-import { TaxLedgerState } from '../types/options';
+import { TaxLedgerState, AccountCapitalState } from '../types/options';
 import { autoSyncSchwabPortfolioPrices } from '../utils/liveMarketFetcher';
 import { executeWeeklyWorkflowCleanReset } from '../utils/weeklyWorkflowReset';
 import {
@@ -73,11 +73,19 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
       );
 
       const parsed = parseSchwabPositionsCsv(text);
-      setParsedData(parsed);
+      const currentCap = getStoredCapitalState();
+      const preservedPrior = currentCap.priorYtdPremiumBalance || parsed.capitalState.priorYtdPremiumBalance;
+      const currentWeek = parsed.capitalState.currentWeekPremiumsCollected || 0;
+      const finalCap: AccountCapitalState = {
+        ...parsed.capitalState,
+        priorYtdPremiumBalance: preservedPrior,
+        ytdPremiumsEarned: preservedPrior + currentWeek,
+      };
+      setParsedData({ ...parsed, capitalState: finalCap });
       setRawFileName(filename);
 
       // Save to localStorage
-      saveCapitalState(parsed.capitalState);
+      saveCapitalState(finalCap);
       localStorage.setItem('deltaharvest_portfolio_book', JSON.stringify(parsed.portfolioPositions));
 
       // Sync imported equities to Watchlist
@@ -86,10 +94,11 @@ export const SchwabPositionsUploadView: React.FC<SchwabPositionsUploadViewProps>
       // Sync tax records if present
       if (parsed.taxRecords && parsed.taxRecords.length > 0) {
         const currentTax = getStoredTaxLedgerState();
+        const csvPremiums = parsed.taxRecords.reduce((sum, r) => sum + r.amount, 0);
         const freshTax: TaxLedgerState = {
           ...currentTax,
           records: parsed.taxRecords,
-          ytdPremiumsEarned: parsed.taxRecords.reduce((sum, r) => sum + r.amount, 0),
+          ytdPremiumsEarned: Math.max(currentTax.ytdPremiumsEarned || 0, csvPremiums),
         };
         saveTaxLedgerState(freshTax);
       }

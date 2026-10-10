@@ -214,6 +214,21 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
     const free = Math.max(0, totalCash - encumbered - committed);
     const sizing = calculateDynamicPositionSizing(free, state.maxPerPositionAllocation || DEFAULT_PER_POSITION_BUDGET);
 
+    const currentWeekPrem = Number(state.currentWeekPremiumsCollected) || 0;
+    let priorYtd = Number(state.priorYtdPremiumBalance);
+    let ytdTotal = Number(state.ytdPremiumsEarned);
+
+    if (isNaN(priorYtd) || priorYtd < 0) {
+      priorYtd = !isNaN(ytdTotal) && ytdTotal > 0 ? Math.max(0, ytdTotal - currentWeekPrem) : DEFAULT_PRIOR_YTD_PREMIUM_BALANCE;
+    }
+    if (isNaN(ytdTotal) || ytdTotal < 0) {
+      ytdTotal = priorYtd + currentWeekPrem;
+    } else if (ytdTotal > 0 && priorYtd === 0 && currentWeekPrem === 0) {
+      priorYtd = ytdTotal;
+    } else {
+      ytdTotal = priorYtd + currentWeekPrem;
+    }
+
     state = {
       ...state,
       accountName: state.accountName || DEFAULT_ACCOUNT_NAME,
@@ -227,10 +242,12 @@ export function getStoredCapitalState(currentPositions: PortfolioPosition[] = []
       totalEncumberedDisbursements: encumbered,
       committedCollateral: committed,
       freeCash: free,
+      priorYtdPremiumBalance: priorYtd,
+      currentWeekPremiumsCollected: currentWeekPrem,
       maxPerPositionAllocation: sizing.targetAllocationPerPosition,
       singleEquityPositionLimit: MAX_SINGLE_EQUITY_POSITION_LIMIT,
       maxAllowedPositions: sizing.maxConcurrentPositions,
-      ytdPremiumsEarned: (Number(state.priorYtdPremiumBalance) || 0) + (Number(state.currentWeekPremiumsCollected) || 0),
+      ytdPremiumsEarned: ytdTotal,
     };
     return state;
   } catch (e) {
@@ -253,40 +270,44 @@ export function getStoredTaxLedgerState(): TaxLedgerState {
     if (raw) {
       const parsed = JSON.parse(raw) as TaxLedgerState;
       if (parsed && typeof parsed.currentTaxYear === 'number') {
-        // Auto-migrate away from legacy dummy test records (e.g. SPY, AAPL CSPs)
-        const hasLegacyTestRecords = Array.isArray(parsed.records) && parsed.records.some(
-          (r) => r.symbol === 'SPY' || r.symbol === 'AAPL' || r.id === 'REC_001' || r.id === 'REC_002'
-        );
-        if (hasLegacyTestRecords || !parsed.records || parsed.records.length === 0) {
-          const fresh = getDefaultTaxLedgerState();
-          // Preserve any custom user-added records while removing dummy test records
-          const userRecords = (parsed.records || []).filter(
-            (r) => r.symbol !== 'SPY' && r.symbol !== 'AAPL' && r.symbol !== 'IWM' && !r.id.startsWith('REC_00')
+        if (!Array.isArray(parsed.records)) {
+          parsed.records = [];
+        } else {
+          // Remove legacy dummy test records if present
+          const hasLegacyTestRecords = parsed.records.some(
+            (r) => r.symbol === 'SPY' || r.symbol === 'AAPL' || r.id === 'REC_001' || r.id === 'REC_002'
           );
-          fresh.records = [...userRecords, ...SCHWAB_REAL_OPTIONS_RECORDS];
-          fresh.ytdPremiumsEarned = DEFAULT_YTD_PREMIUMS_EARNED;
-          fresh.priorYearLossCarryforward = parsed.priorYearLossCarryforward || 3000;
-          saveTaxLedgerState(fresh);
-          return fresh;
+          if (hasLegacyTestRecords) {
+            parsed.records = parsed.records.filter(
+              (r) => r.symbol !== 'SPY' && r.symbol !== 'AAPL' && r.symbol !== 'IWM' && !r.id.startsWith('REC_00')
+            );
+          }
         }
         if (parsed.ytdPremiumsEarned === undefined || parsed.ytdPremiumsEarned === null || parsed.ytdPremiumsEarned === 51514.11) {
           parsed.ytdPremiumsEarned = DEFAULT_YTD_PREMIUMS_EARNED;
-          saveTaxLedgerState(parsed);
         }
-        if (Array.isArray(parsed.records)) {
-          parsed.records = parsed.records.map((r) => {
-            if (!r.taxRegime || !r.regimeBadge) {
-              const cls = classify(r.symbol, r.strategy);
-              return {
-                ...r,
-                taxRegime: cls.regime,
-                regimeBadge: cls.badgeLabel,
-                authority: cls.authority,
-              };
-            }
-            return r;
-          });
+        if (parsed.ytdRealizedCapitalGains === undefined || parsed.ytdRealizedCapitalGains === null) {
+          parsed.ytdRealizedCapitalGains = 0.00;
         }
+        if (parsed.ytdRealizedCapitalLosses === undefined || parsed.ytdRealizedCapitalLosses === null) {
+          parsed.ytdRealizedCapitalLosses = 0.00;
+        }
+        if (parsed.priorYearLossCarryforward === undefined || parsed.priorYearLossCarryforward === null) {
+          parsed.priorYearLossCarryforward = 3000;
+        }
+        parsed.records = parsed.records.map((r) => {
+          if (!r.taxRegime || !r.regimeBadge) {
+            const cls = classify(r.symbol, r.strategy);
+            return {
+              ...r,
+              taxRegime: cls.regime,
+              regimeBadge: cls.badgeLabel,
+              authority: cls.authority,
+            };
+          }
+          return r;
+        });
+        saveTaxLedgerState(parsed);
         return parsed;
       }
     }
