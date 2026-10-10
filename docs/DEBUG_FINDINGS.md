@@ -310,5 +310,41 @@ None identified. Both FAIL items (`V075` and `V080`) are self-contained frontend
 - **Financial Tenant State Stored:** `deltaharvest_portfolio_book`, `deltaharvest_capital_ledger`, `deltaharvest_tax_ledger`, `deltaharvest_watchlist_groups`, `deltaharvest_submitted_orders`.
 - **Tenant Isolation Purge Verification:** `purgeTenantBrowserStorage()` correctly clears all financial state and keys when the active user logs out or switches accounts.
 
+---
+
+## 10. Data Layer & Integration Failure Findings (Prompt 5)
+
+### FAIL D01: `functions/api/user/data.js` — Unbounded Queries on User Trades and Watchlists
+- **Severity:** `MEDIUM`
+- **File / Lines:** `functions/api/user/data.js:27-28`
+- **Trigger Condition:** User with high trade volume (>500 trades) loads dashboard or portfolio view.
+- **Expected vs Actual Behavior:**
+  - *Expected:* Query should enforce reasonable pagination or upper limit (`LIMIT 250` or `LIMIT 500`).
+  - *Actual:* `SELECT * FROM user_trades WHERE user_id = ? ORDER BY entry_date DESC` and `SELECT * FROM user_watchlists WHERE user_id = ? ORDER BY created_at ASC` have no `LIMIT` clause.
+- **Proposed Surgical Fix (Prompt 6):** Append `LIMIT 250` to `user_trades` and `LIMIT 100` to `user_watchlists`.
+
+---
+
+### FAIL D02: `functions/api/options/journal.js` — Unbounded Query on Signal Journal
+- **Severity:** `MEDIUM`
+- **File / Lines:** `functions/api/options/journal.js:71`
+- **Trigger Condition:** User loads options journal after extensive historical logging.
+- **Expected vs Actual Behavior:**
+  - *Expected:* Journal query should be capped with `LIMIT 200` to prevent memory blow-up.
+  - *Actual:* `SELECT * FROM options_signal_journal WHERE user_id = ? ORDER BY created_at DESC` lacks a `LIMIT` clause.
+- **Proposed Surgical Fix (Prompt 6):** Append `LIMIT 200` to the query.
+
+---
+
+### FAIL D03: `functions/api/user/digest-preferences.js` — Redundant Hot-Path DDL Execution
+- **Severity:** `LOW`
+- **File / Lines:** `functions/api/user/digest-preferences.js:9-25,47`
+- **Trigger Condition:** Every request to `GET` or `POST /api/user/digest-preferences`.
+- **Expected vs Actual Behavior:**
+  - *Expected:* Table creation should run once per isolate via cached initialization flag.
+  - *Actual:* `ensurePreferencesTable(env)` executes `CREATE TABLE IF NOT EXISTS morning_digest_preferences` on every request.
+- **Proposed Surgical Fix (Prompt 6):** Add memory flag `let preferencesTableEnsured = false;` to guard table creation.
+
+
 
 
