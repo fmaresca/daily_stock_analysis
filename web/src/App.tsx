@@ -4,6 +4,8 @@ import { LoginView } from './components/auth/LoginView';
 import { PasswordChangeView } from './components/auth/PasswordChangeView';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 // Code-split authenticated workspace shell so login page downloads only minimal bundle
 const AuthenticatedTerminal = lazyWithRetry(
   () => import('./components/AuthenticatedTerminal').then((m) => ({ default: m.AuthenticatedTerminal })),
@@ -49,16 +51,22 @@ export const App: React.FC = () => {
   }
 
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-200">
-          <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4" />
-          <p className="text-xs font-mono text-slate-400">Loading Institutional Workspace...</p>
-        </div>
-      }
+    <ErrorBoundary
+      fallbackTitle="Workspace Loading Interrupted"
+      fallbackMessage="The application was updated or network interrupted during bundle loading. Please reload to load the latest release."
+      onReset={() => window.location.reload()}
     >
-      <AuthenticatedTerminal />
-    </Suspense>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-200">
+            <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4" />
+            <p className="text-xs font-mono text-slate-400">Loading Institutional Workspace...</p>
+          </div>
+        }
+      >
+        <AuthenticatedTerminal />
+      </Suspense>
+    </ErrorBoundary>
   );
 };
 

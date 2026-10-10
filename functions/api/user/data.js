@@ -23,9 +23,9 @@ export async function onRequestGet(context) {
   if (env && env.DB) {
     try {
       const [portfolioRes, tradesRes, watchlistsRes] = await env.DB.batch([
-        env.DB.prepare("SELECT * FROM user_portfolios WHERE user_id = ?").bind(userId),
-        env.DB.prepare("SELECT * FROM user_trades WHERE user_id = ? ORDER BY entry_date DESC").bind(userId),
-        env.DB.prepare("SELECT * FROM user_watchlists WHERE user_id = ? ORDER BY created_at ASC").bind(userId),
+        env.DB.prepare("SELECT * FROM user_portfolios WHERE user_id = ? LIMIT 1").bind(userId),
+        env.DB.prepare("SELECT * FROM user_trades WHERE user_id = ? ORDER BY entry_date DESC LIMIT 250").bind(userId),
+        env.DB.prepare("SELECT * FROM user_watchlists WHERE user_id = ? ORDER BY created_at ASC LIMIT 100").bind(userId),
       ]);
 
       return new Response(

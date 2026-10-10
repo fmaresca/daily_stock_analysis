@@ -494,8 +494,15 @@ async function handlePost(context, user) {
     });
   }
 
-  // Key storage action: Allows saving or clearing Gemini API key in D1 system_settings
+  // Key storage action: Allows saving or clearing Gemini API key in D1 system_settings (Admin-only)
   if (url.searchParams.get("action") === "save_key" || body?.action === "save_key") {
+    if (user.role?.toLowerCase() !== "admin") {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Administrator role required to configure global system keys." }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const keyToSave = (body.apiKey || body.geminiApiKey || "").trim();
     if (env?.DB) {
       try {

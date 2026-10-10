@@ -216,7 +216,7 @@ export async function onRequest(context) {
   } else if (env?.DB) {
     try {
       const { results } = await env.DB.prepare(
-        "SELECT * FROM morning_digest_preferences WHERE opted_in = 1"
+        "SELECT user_id, email, discord_webhook_url FROM morning_digest_preferences WHERE opted_in = 1 LIMIT 100"
       ).all();
       optedInUsers = results || [];
     } catch (e) {

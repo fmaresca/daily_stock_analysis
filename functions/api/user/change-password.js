@@ -9,6 +9,11 @@ import {
   createSessionToken,
   buildSessionCookie,
 } from "../_auth_utils.js";
+import {
+  getClientIp,
+  checkRateLimit,
+  buildRateLimitResponse,
+} from "../_rate_limit.js";
 
 /**
  * Cloudflare Pages Function: POST /api/user/change-password
@@ -17,6 +22,18 @@ import {
 export async function onRequestPost(context) {
   const auth = await authenticateRequest(context);
   if (!auth.authenticated) return auth.response;
+
+  // Rate Limiting: Max 10 per IP per 15 min, max 5 per user per 15 min
+  const clientIp = getClientIp(context.request);
+  const ipLimit = await checkRateLimit(context.env, `change_pwd:ip:${clientIp}`, 10, 900);
+  if (!ipLimit.allowed) {
+    return buildRateLimitResponse(ipLimit.retryAfter, "Too many password change attempts from this IP. Please try again later.");
+  }
+
+  const userLimit = await checkRateLimit(context.env, `change_pwd:user:${auth.user.id}`, 5, 900);
+  if (!userLimit.allowed) {
+    return buildRateLimitResponse(userLimit.retryAfter, "Too many password change attempts for this account. Please try again later.");
+  }
 
   try {
     const body = await context.request.json().catch(() => ({}));

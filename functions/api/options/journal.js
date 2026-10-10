@@ -13,7 +13,10 @@ const memoryJournal = new Map();
 /**
  * Ensures table exists in D1 database.
  */
+let journalTableEnsured = false;
+
 async function ensureJournalTable(db) {
+  if (journalTableEnsured) return;
   if (!db || typeof db.prepare !== "function") return;
   try {
     await db.prepare(`
@@ -38,6 +41,7 @@ async function ensureJournalTable(db) {
     await db.prepare(`
       CREATE INDEX IF NOT EXISTS idx_journal_user ON options_signal_journal(user_id, status)
     `).run();
+    journalTableEnsured = true;
   } catch (err) {
     console.warn("[Journal] DB table initialization notice:", err.message);
   }

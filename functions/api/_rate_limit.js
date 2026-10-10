@@ -58,6 +58,14 @@ export async function checkRateLimit(env, key, limit, windowSeconds) {
   }
 
   // 2. Best-effort in-memory fallback per isolate
+  if (memoryStore.size > 500) {
+    for (const [k, v] of memoryStore.entries()) {
+      if (now >= v.resetAt) {
+        memoryStore.delete(k);
+      }
+    }
+  }
+
   const record = memoryStore.get(key);
   if (!record || now >= record.resetAt) {
     memoryStore.set(key, { count: 1, resetAt: now + windowSeconds });

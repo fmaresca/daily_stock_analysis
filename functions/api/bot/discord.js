@@ -113,6 +113,12 @@ export async function onRequestPost(context) {
     if (!isValid) {
       return new Response("Invalid request signature", { status: 401 });
     }
+  } else if (env?.ENVIRONMENT === "production") {
+    // Fail closed in production if Discord verification key is missing
+    return new Response(
+      JSON.stringify({ error: "Discord webhook verification unconfigured in production: DISCORD_PUBLIC_KEY required." }),
+      { status: 503, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   let body;

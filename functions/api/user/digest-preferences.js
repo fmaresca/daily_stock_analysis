@@ -6,7 +6,10 @@
 
 import { authenticateRequest } from "../_auth_utils.js";
 
+let preferencesTableEnsured = false;
+
 export async function ensurePreferencesTable(env) {
+  if (preferencesTableEnsured) return;
   if (env?.DB) {
     try {
       await env.DB.prepare(`
@@ -18,6 +21,7 @@ export async function ensurePreferencesTable(env) {
           updated_at TEXT NOT NULL
         )
       `).run();
+      preferencesTableEnsured = true;
     } catch (e) {
       console.warn("D1 ensurePreferencesTable error:", e);
     }

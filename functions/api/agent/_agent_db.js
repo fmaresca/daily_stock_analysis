@@ -7,7 +7,10 @@
 const memorySessions = new Map(); // id -> session
 const memoryMessages = new Map(); // id -> message
 
+let agentTablesEnsured = false;
+
 export async function ensureAgentTables(env) {
+  if (agentTablesEnsured) return;
   if (env?.DB) {
     try {
       await env.DB.prepare(`
@@ -39,6 +42,7 @@ export async function ensureAgentTables(env) {
       await env.DB.prepare(`
         CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON agent_chat_messages(session_id, created_at ASC)
       `).run();
+      agentTablesEnsured = true;
     } catch (e) {
       console.warn("[AgentDB] ensureAgentTables error:", e);
     }

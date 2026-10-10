@@ -1,4 +1,5 @@
 import { getAdminNotificationEmail, authenticateRequest } from "../_auth_utils.js";
+import { getClientIp } from "../_rate_limit.js";
 
 // In-memory rate limiting for per-IP burst protection
 const ipRequestHistory = new Map();
@@ -34,10 +35,7 @@ export async function onRequestPost(context) {
   const url = new URL(request.url);
 
   // 1. IP Burst Protection / Rate Limiting
-  const clientIp =
-    request.headers.get("CF-Connecting-IP") ||
-    request.headers.get("X-Forwarded-For") ||
-    "127.0.0.1";
+  const clientIp = getClientIp(request);
 
   if (!checkRateLimit(clientIp)) {
     return new Response(
@@ -442,6 +440,10 @@ export async function onRequestGet(context) {
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
 
+  // Mandatory Administrator Authentication Gate for ALL GET actions
+  const auth = await authenticateRequest(context, ["admin"]);
+  if (!auth.authenticated) return auth.response;
+
   if (action === "test_resend" || url.searchParams.get("test_resend") === "1") {
     if (!env.RESEND_API_KEY || !env.RESEND_API_KEY.trim()) {
       return new Response(
@@ -499,9 +501,6 @@ export async function onRequestGet(context) {
       );
     }
   }
-
-  const auth = await authenticateRequest(context, ["admin"]);
-  if (!auth.authenticated) return auth.response;
 
   if (action === "test_email" || action === "test_delivery") {
     const adminRecipient = await getAdminNotificationEmail(env);

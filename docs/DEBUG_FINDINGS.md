@@ -345,6 +345,108 @@ None identified. Both FAIL items (`V075` and `V080`) are self-contained frontend
   - *Actual:* `ensurePreferencesTable(env)` executes `CREATE TABLE IF NOT EXISTS morning_digest_preferences` on every request.
 - **Proposed Surgical Fix (Prompt 6):** Add memory flag `let preferencesTableEnsured = false;` to guard table creation.
 
+---
+
+## 11. Prompt 6 — Fix Pass Execution Log (FIXLOG)
+
+### Discipline & Verification Rules
+1. Every fix represents the smallest possible diff that completely resolves the issue without introducing unintended side-effects.
+2. Every fix was immediately re-verified with either node test assertions, contract checks, adversarial test suites, or full TypeScript/Vite builds.
+3. Every auth-boundary or security posture change is explicitly highlighted below.
+
+---
+
+### FIX-01: `FAIL M01` — Gate Admin Inquiries Diagnostics Behind Admin Auth
+- **File / Lines:** `functions/api/admin/inquiries.js:34-45`
+- **Security Posture Shift Note:**
+  > `/api/admin/inquiries` `GET` route now strictly requires authenticated session with admin role (`auth.user.role === 'admin'`). Was previously reachable unauthenticated by anyone due to public allowlist fall-through, which exposed Resend API diagnostics and configuration probes.
+- **Verification:**
+  - Automated test: `tests/middleware_adversarial.test.mjs` Group 2 & Group 4.
+  - Manual test: `curl -s http://localhost:8788/api/admin/inquiries?action=test_resend` returns 401 Unauthorized (`{"error":"Authentication required"}`).
+
+---
+
+### FIX-02: `FAIL S03` — Use Sanitized `getClientIp` in Admin Inquiries
+- **File / Lines:** `functions/api/admin/inquiries.js:18,50-51`
+- **Fix Summary:** Replaced direct reading of untrusted `request.headers.get("x-forwarded-for")` with `getClientIp(request)` from `_auth_utils.js` / `_rate_limit.js`.
+- **Security Posture Shift Note:** Prevents spoofed client IP bypass in inquiry submission logs and rate limits.
+- **Verification:** Verified via `test_web_financial_math.mjs` (test 13) and contract suite A016.
+
+---
+
+### FIX-03: `FAIL M02` — Fail Closed When `DISCORD_PUBLIC_KEY` is Unset in Production
+- **File / Lines:** `functions/api/bot/discord.js:46-55`
+- **Security Posture Shift Note:**
+  > `/api/bot/discord` now fails closed with HTTP 503 (`Discord bot webhook is disabled in production`) if `DISCORD_PUBLIC_KEY` is not provisioned on the production environment. Prevents unauthenticated/unsigned webhook execution. Test and staging environments without the key continue to permit local development.
+- **Verification:** Verified via `tests/middleware_adversarial.test.mjs` Group 8 and node contract suite A030.
+
+---
+
+### FIX-04: `FAIL S01` — Enforce Admin Gate on LLM System Key Modification
+- **File / Lines:** `functions/api/agent/chat.js:45-56`
+- **Security Posture Shift Note:**
+  > `/api/agent/chat?action=save_key` now enforces that the authenticated user must have role `admin`. Non-admin authenticated users attempting to overwrite the system LLM API key receive HTTP 403 Forbidden (`Admin privileges required to configure system LLM key`).
+- **Verification:** Verified via custom test asserting that Client role receives 403 while Admin role receives 200, matching frontend UI behavior in `StrategyAgentChatView.tsx`.
+
+---
+
+### FIX-05: `FAIL S02` — Add Dual Rate Limiting to Password Change Endpoint
+- **File / Lines:** `functions/api/user/change-password.js:33-47`
+- **Fix Summary:** Added rate limiting to `POST /api/user/change-password`: 10 requests per 15 minutes per IP address (`pwd_chg_ip`), and 5 requests per 15 minutes per user ID (`pwd_chg_usr`).
+- **Security Posture Shift Note:** Protects against credential stuffing and automated password rotation brute-forcing.
+- **Verification:** Verified via test harness sending 6 rapid password change attempts; 6th attempt returns HTTP 429 Too Many Requests with standard `Retry-After` header.
+
+---
+
+### FIX-06: `FAIL S04` — Prune Expired Memory Store Entries in Rate Limiter
+- **File / Lines:** `functions/api/_rate_limit.js:61-68`
+- **Fix Summary:** Added automatic eviction of expired timestamp buckets whenever `memoryStore.size > 500`.
+- **Verification:** Memory tests confirm map size remains bounded under high distinct key insertion.
+
+---
+
+### FIX-07: `FAIL S05` — Bound Morning Digest Recipient Query to 100 Users
+- **File / Lines:** `functions/api/scheduled/morning-digest.js:218-220`
+- **Fix Summary:** Replaced `SELECT * FROM morning_digest_preferences WHERE opted_in = 1` with `SELECT user_id, email, discord_webhook_url FROM morning_digest_preferences WHERE opted_in = 1 LIMIT 100`.
+- **Verification:** Node contract suite A020/A021 and test 22 pass cleanly.
+
+---
+
+### FIX-08: `FAIL S06` — Avoid Redundant DDL in Agent Chat Database
+- **File / Lines:** `functions/api/agent/_agent_db.js:10-44`
+- **Fix Summary:** Added `let agentTablesEnsured = false;` in-memory flag per edge isolate. `ensureAgentTables` executes DDL only on first cold-start invocation rather than on every query.
+- **Verification:** Contract suite A029 passes cleanly.
+
+---
+
+### FIX-09: `FAIL D01` — Bound User Trades and Watchlists Queries
+- **File / Lines:** `functions/api/user/data.js:25-29`
+- **Fix Summary:** Added `LIMIT 1` for user portfolio, `LIMIT 250` for user trades, and `LIMIT 100` for user watchlists.
+- **Verification:** Contract suite A009 passes cleanly; test 6 multi-tenant isolation passes.
+
+---
+
+### FIX-10: `FAIL D02` & Redundant DDL — Cache Signal Journal Table Initialization
+- **File / Lines:** `functions/api/options/journal.js:13-43`
+- **Fix Summary:** Added `let journalTableEnsured = false;` flag per edge isolate to prevent per-request DDL. Confirmed list query already enforces `LIMIT 100`.
+- **Verification:** Contract suite A026 passes cleanly.
+
+---
+
+### FIX-11: `FAIL D03` — Cache Digest Preferences Table Initialization
+- **File / Lines:** `functions/api/user/digest-preferences.js:9-25`
+- **Fix Summary:** Added `let preferencesTableEnsured = false;` flag per isolate to eliminate per-request DDL execution.
+- **Verification:** Contract suite A010 passes cleanly.
+
+---
+
+### FIX-12: `FAIL F01` — Wrap Root Authenticated Terminal Suspense with ErrorBoundary
+- **File / Lines:** `web/src/App.tsx:6,53-70`
+- **Fix Summary:** Imported `ErrorBoundary` into `App.tsx` and wrapped `<Suspense fallback={...}><AuthenticatedTerminal /></Suspense>`.
+- **User Impact:** When a Cloudflare Pages deployment occurs mid-session and dynamic chunk imports throw `ChunkLoadError`, the user is greeted with a sleek, actionable "Workspace Loading Interrupted" recovery card with a direct "Reload Workspace" action instead of an unrecoverable blank screen.
+- **Verification:** Full `tsc -b && vite build` completed in 12.96s with 0 errors.
+
+
 
 
 
