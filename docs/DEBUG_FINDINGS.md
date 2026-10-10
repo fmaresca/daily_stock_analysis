@@ -137,3 +137,82 @@ None identified. Both FAIL items (`V075` and `V080`) are self-contained frontend
   - *Actual:* If `DISCORD_PUBLIC_KEY` is omitted from Cloudflare environment variables, signature validation is skipped and unauthenticated/spoofed webhook payloads are executed.
 - **Proposed Surgical Fix (Prompt 6):** Enforce fail-closed check: if `DISCORD_PUBLIC_KEY` is not provisioned, reject incoming interaction webhooks with 500 "Discord gateway unconfigured".
 
+---
+
+## 8. Deep Code Audit Findings — Shared Server Modules (Prompt 3)
+
+### Exported Functions Contract Inventory:
+- `_auth_utils.js` (24 functions): `requireSessionSecret`, `generateRandomSalt`, `hashPassword`, `verifyPassword`, `generateSecureRandomToken`, `hashTokenSha256`, `createSessionToken`, `verifySessionToken`, `buildSessionCookie`, `buildClearSessionCookie`, `parseSessionCookie`, `ensureUsersTables`, `ensurePasswordResetTable`, `storePasswordResetToken`, `consumePasswordResetToken`, `getUserByEmail`, `getUserById`, `getAllUsers`, `createUser`, `updateUserPassword`, `resetUserPasswordAdmin`, `toggleUserStatus`, `updateLastLogin`, `authenticateRequest`, `getAdminNotificationEmail`, `setAdminNotificationEmail`.
+- `_rate_limit.js` (3 functions): `getClientIp`, `checkRateLimit`, `buildRateLimitResponse`.
+- `_llm.js` (7 functions): `sanitizeKeyLeakage`, `getActiveProviderName`, `resolveGeminiApiKey`, `resolveSlotApiKey`, `getFallbackSlots`, `completeLLM`, `testFallbackSlot`.
+- `agent/chat.js` + `_agent_tools.js` (7 functions): `onRequest`, `getMarketPriceAndTechnicals`, `getOptionsPreFlightChecklist`, `getMacroCalendarSummary`, `getSectorRotationCatalysts`, `searchFinancialCatalysts`, `executeAgentTool`.
+- `agent/_agent_db.js` (6 functions): `ensureAgentTables`, `getOrCreateSession`, `listUserSessions`, `getSessionMessages`, `saveMessage`, `deleteUserSession`.
+- `_market_recap_core.js` (1 function): `getDailyMarketRecap`.
+
+---
+
+### FAIL S01: `functions/api/agent/chat.js` — Non-Admin Client Can Overwrite Global Gemini Key
+- **Severity:** `CRITICAL`
+- **File / Lines:** `functions/api/agent/chat.js:498-519`
+- **Trigger Condition:** Any authenticated non-admin user (`role: 'client'`) sends `POST /api/agent/chat?action=save_key` with `{ apiKey: "..." }`.
+- **Expected vs Actual Behavior:**
+  - *Expected:* Updating global system settings (`system_settings`) in D1 must be strictly restricted to authenticated administrators (`user.role === 'admin'`).
+  - *Actual:* Lines 498–519 only check `url.searchParams.get("action") === "save_key" || body?.action === "save_key"` after basic user authentication. Any authenticated client can overwrite or delete the global `gemini_api_key` for the entire application and all tenants.
+- **Proposed Surgical Fix (Prompt 6):** Add an admin role guard: `if (user.role?.toLowerCase() !== 'admin') return new Response(JSON.stringify({ error: "Forbidden: Admin role required to modify global API keys" }), { status: 403, headers: { "Content-Type": "application/json" } });`.
+
+---
+
+### FAIL S02: `functions/api/user/change-password.js` — Password Change Missing Rate Limiting
+- **Severity:** `HIGH`
+- **File / Lines:** `functions/api/user/change-password.js:18-60`
+- **Trigger Condition:** Rapid repetitive POST requests to `/api/user/change-password`.
+- **Expected vs Actual Behavior:**
+  - *Expected:* Sensitive authentication mutations (especially verifying `currentPassword`) should be rate-limited by IP and user ID to prevent automated brute-forcing.
+  - *Actual:* The endpoint imports auth utilities but does NOT invoke `checkRateLimit`. An attacker with a compromised session or brute-force tool can send unlimited password guesses against `currentPassword`.
+- **Proposed Surgical Fix (Prompt 6):** Add rate limiting in `user/change-password.js` (max 5 attempts per user per 15 minutes).
+
+---
+
+### FAIL S03: `functions/api/admin/inquiries.js` — Trust of Unverified `X-Forwarded-For` Enables Rate Limit Bypass
+- **Severity:** `MEDIUM`
+- **File / Lines:** `functions/api/admin/inquiries.js:37-40`
+- **Trigger Condition:** Remote caller sends inquiry requests while rotating arbitrary `X-Forwarded-For` header values.
+- **Expected vs Actual Behavior:**
+  - *Expected:* Client IP resolution should strictly key on `CF-Connecting-IP` via `getClientIp(request)`.
+  - *Actual:* Line 39 explicitly checks `request.headers.get("X-Forwarded-For")`. An attacker can spoof IP headers to bypass the burst rate limit (3 req/min) and spam administrator inboxes.
+- **Proposed Surgical Fix (Prompt 6):** Replace custom IP extraction in `inquiries.js` with `getClientIp(request)` imported from `../_rate_limit.js`.
+
+---
+
+### FAIL S04: `functions/api/_rate_limit.js` — Unbounded Memory Map Growth
+- **Severity:** `MEDIUM`
+- **File / Lines:** `functions/api/_rate_limit.js:11,61-73`
+- **Trigger Condition:** High volume of requests from distinct IP addresses when `RATE_LIMIT_KV` is unavailable or during local fallback.
+- **Expected vs Actual Behavior:**
+  - *Expected:* In-memory rate limiting map should have TTL eviction or max size bounds to prevent memory leaks.
+  - *Actual:* `memoryStore` is a plain `Map` where entries are only updated or overwritten upon re-access by the same IP. Expired entries are never pruned, causing linear memory growth in long-running edge isolates.
+- **Proposed Surgical Fix (Prompt 6):** Add periodic pruning (sweep records where `now >= record.resetAt`) or an LRU bound of 1,000 entries.
+
+---
+
+### FAIL S05: `functions/api/scheduled/morning-digest.js` — Unbounded Query for Opted-In Users
+- **Severity:** `LOW`
+- **File / Lines:** `functions/api/scheduled/morning-digest.js:219-224`
+- **Trigger Condition:** Scheduled cron execution when `morning_digest_preferences` contains large numbers of users.
+- **Expected vs Actual Behavior:**
+  - *Expected:* Digest batch processing should enforce pagination or a reasonable upper limit per execution (`LIMIT 100`).
+  - *Actual:* The query `SELECT user_id, email, discord_webhook_url FROM morning_digest_preferences WHERE opted_in = 1` has no `LIMIT`. A large user base will cause execution to exceed Cloudflare Worker CPU/time limits and fail mid-run.
+- **Proposed Surgical Fix (Prompt 6):** Add `LIMIT 100` to the query and log telemetry if additional users remain.
+
+---
+
+### FAIL S06: `functions/api/agent/_agent_db.js` — Redundant Hot-Path DDL Execution
+- **Severity:** `LOW`
+- **File / Lines:** `functions/api/agent/_agent_db.js:49,72,92,106`
+- **Trigger Condition:** Every agent chat message sent or retrieved.
+- **Expected vs Actual Behavior:**
+  - *Expected:* Schema creation (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`) should run once per isolate or via migrations.
+  - *Actual:* `ensureAgentTables(env)` is called on every single `getOrCreateSession`, `saveMessage`, `getSessionMessages`, and `listUserSessions` call, issuing 4 DDL queries per HTTP request.
+- **Proposed Surgical Fix (Prompt 6):** Cache schema initialization flag in memory (`let schemaEnsured = false`) similar to `_auth_utils.js`.
+
+
