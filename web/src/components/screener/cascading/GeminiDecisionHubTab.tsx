@@ -279,6 +279,7 @@ export const GeminiDecisionHubTab: React.FC<GeminiDecisionHubTabProps> = React.m
                   <SortableTh label="Put Strike" sortKey="suggestedStrike" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
                   <SortableTh label="Delta" sortKey="delta" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
                   <SortableTh label="Est. Premium" sortKey="estPremiumAnnualized" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
+                  <SortableTh label="Contracts to Write" sortKey="contracts" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} align="center" title="Number of CSP contracts to be written (100 shares per contract)" />
                   <SortableTh label="Cash Collateral" sortKey="capitalCommitted" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
                   <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-3 text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">Rationale &amp; Support Level</th>
                   <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-3 text-right text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">Workbench Action</th>
@@ -297,6 +298,11 @@ export const GeminiDecisionHubTab: React.FC<GeminiDecisionHubTabProps> = React.m
                     </td>
                     <td className="py-3 px-3 text-slate-300 font-bold">{trade.delta}&Delta;</td>
                     <td className="py-3 px-3 text-emerald-400 font-bold">{trade.estPremiumAnnualized}</td>
+                    <td className="py-3 px-3 text-center font-mono">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                        {trade.contracts || 1}x
+                      </span>
+                    </td>
                     <td className="py-3 px-3 text-amber-300 font-bold">
                       ${trade.capitalCommitted.toLocaleString()}
                     </td>

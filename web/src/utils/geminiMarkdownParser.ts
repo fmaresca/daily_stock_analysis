@@ -51,6 +51,15 @@ export function parseGeminiMarkdownTables(text: string): GeminiScreenResult {
       firstColLower.includes('rank')
     ) {
       currentHeaders = cols.map((c) => c.toLowerCase().trim());
+      if (!currentTable) {
+        if (currentHeaders.some((h) => h.includes('borderline'))) {
+          currentTable = 'BORDERLINE';
+        } else if (currentHeaders.some((h) => h.includes('exclu'))) {
+          currentTable = 'EXCLUDED';
+        } else {
+          currentTable = 'RECOMMENDED';
+        }
+      }
       continue;
     }
 
@@ -79,7 +88,16 @@ export function parseGeminiMarkdownTables(text: string): GeminiScreenResult {
           const rsiIdx = findColIdx(['14-day rsi', '14d rsi', 'rsi']);
           const premIdx = findColIdx(['total premium', 'est. premium', 'net premium', 'premium']);
           const collateralIdx = findColIdx(['collateral committed', 'collateral', 'capital']);
-          const contractsIdx = findColIdx(['contracts']);
+          const contractsIdx = findColIdx([
+            'contractstobewritten',
+            'contractstowrite',
+            'numberofcontracts',
+            'numcontracts',
+            'contractcount',
+            'contracts',
+            'qty',
+            'quantity',
+          ]);
           const cushionIdx = findColIdx(['otm cushion', 'cushion']);
           const rocIdx = findColIdx(['annualized roc', 'ann. roc', 'weekly roc', 'roc']);
           const justIdx = findColIdx(['justification', 'rationale', 'support', 'reason']);
@@ -94,8 +112,12 @@ export function parseGeminiMarkdownTables(text: string): GeminiScreenResult {
           const delta = deltaIdx !== -1 ? Math.abs(parseFloat((cols[deltaIdx] || '0.20').replace(/[^0-9.-]/g, '')) || 0.20) : 0.20;
           const rsi = rsiIdx !== -1 ? parseFloat((cols[rsiIdx] || '55').replace(/[^0-9.]/g, '')) || 55 : 55;
           const prem = premIdx !== -1 ? cols[premIdx] : '$1.50';
-          const contracts = contractsIdx !== -1 ? parseInt((cols[contractsIdx] || '1').replace(/[^0-9]/g, ''), 10) || 1 : 1;
+          let contracts = contractsIdx !== -1 ? parseInt((cols[contractsIdx] || '0').replace(/[^0-9]/g, ''), 10) || 0 : 0;
           let collateral = collateralIdx !== -1 ? parseFloat((cols[collateralIdx] || '0').replace(/[^0-9.]/g, '')) || 0 : 0;
+          if (contracts <= 0 && collateral > 0 && strike > 0) {
+            contracts = Math.max(1, Math.round(collateral / (strike * 100)));
+          }
+          if (contracts <= 0) contracts = 1;
           if (collateral === 0 && strike > 0) collateral = strike * 100 * contracts;
 
           const cushion = cushionIdx !== -1 ? cols[cushionIdx] : '';
@@ -113,6 +135,7 @@ export function parseGeminiMarkdownTables(text: string): GeminiScreenResult {
             delta,
             estPremiumAnnualized: prem,
             capitalCommitted: collateral,
+            contracts,
             sentimentFlags: 'Bullish',
             technicalJustification: justification,
           });
@@ -150,6 +173,8 @@ export function parseGeminiMarkdownTables(text: string): GeminiScreenResult {
             justification = cols[offset + 10] || cols[cols.length - 1] || 'Confirmed by technicals';
           }
 
+          const fallbackContracts = collateral > 0 && strike > 0 ? Math.max(1, Math.round(collateral / (strike * 100))) : 1;
+
           result.recommendedTrades.push({
             riskRank: rank,
             symbol: sym,
@@ -161,6 +186,7 @@ export function parseGeminiMarkdownTables(text: string): GeminiScreenResult {
             delta: Math.abs(delta),
             estPremiumAnnualized: prem,
             capitalCommitted: collateral,
+            contracts: fallbackContracts,
             sentimentFlags: 'Bullish',
             technicalJustification: justification,
           });

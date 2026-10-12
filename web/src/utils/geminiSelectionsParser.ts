@@ -102,6 +102,7 @@ interface ColumnIndices {
   priceIdx: number;
   strikeIdx: number;
   deltaIdx: number;
+  contractsIdx: number;
   premiumIdx: number;
   collateralIdx: number;
   rationaleIdx: number;
@@ -125,6 +126,16 @@ function detectColumnIndices(headers: string[]): ColumnIndices {
     priceIdx: find(['spotprice', 'currentprice', 'spot', 'price', 'last']),
     strikeIdx: find(['suggestedstrike', 'putstrike', 'strike']),
     deltaIdx: find(['optiondelta', 'delta']),
+    contractsIdx: find([
+      'contractstobewritten',
+      'contractstowrite',
+      'numberofcontracts',
+      'numcontracts',
+      'contractcount',
+      'contracts',
+      'qty',
+      'quantity',
+    ]),
     premiumIdx: find(['totalpremium', 'estpremium', 'netpremium', 'premium', 'sharepremium']),
     collateralIdx: find(['collateralcommitted', 'collateral', 'capitalcommitted', 'capital', 'cashcollateral']),
     rationaleIdx: find(['justification', 'rationale', 'support', 'notes', 'comments', 'technicaljustification']),
@@ -237,9 +248,19 @@ export function parseRowsIntoGeminiResult(rawRows: string[][], rawSourceText = '
         premStr = `$${(suggestedStrike * 0.015).toFixed(2)}`;
       }
 
+      let contracts = activeColIndices.contractsIdx !== -1
+        ? parseInteger(row[activeColIndices.contractsIdx], 0)
+        : 0;
+
       let collateral = parseNumber(row[collIdx], 0);
+      if (contracts <= 0 && collateral > 0 && suggestedStrike > 0) {
+        contracts = Math.max(1, Math.round(collateral / (suggestedStrike * 100)));
+      }
+      if (contracts <= 0) {
+        contracts = 1;
+      }
       if (collateral === 0 && suggestedStrike > 0) {
-        collateral = suggestedStrike * 100;
+        collateral = suggestedStrike * 100 * contracts;
       }
 
       const trendStrDir = activeColIndices.trendIdx !== -1 && row[activeColIndices.trendIdx]
@@ -269,6 +290,7 @@ export function parseRowsIntoGeminiResult(rawRows: string[][], rawSourceText = '
         delta,
         estPremiumAnnualized: premStr,
         capitalCommitted: collateral,
+        contracts,
         sentimentFlags: 'Bullish',
         technicalJustification,
       });

@@ -136,3 +136,53 @@ test('7. parseGeminiSelectionsCSV handles empty or garbage input gracefully', ()
   const nonDataRes = parseGeminiSelectionsCSV('TOTALS ROW ONLY\n$550,000 cash balance\nFormula: Delta * IV');
   assert.equal(nonDataRes.recommendedTrades.length, 0);
 });
+
+test('8. parseGeminiSelectionsCSV parses explicit Contracts to Write column', () => {
+  const csv = `Rank,Symbol,Spot,Strike,Delta,Est. Premium,Contracts to Write,Cash Collateral,Rationale
+1,NVDA,120.50,114.00,0.20,$1.85,3,34200,Confirmed support
+2,MSFT,425.00,405.00,0.18,$3.50,2,81000,Horizontal base`;
+
+  const result = parseGeminiSelectionsCSV(csv);
+  assert.equal(result.recommendedTrades.length, 2);
+  assert.equal(result.recommendedTrades[0].symbol, 'NVDA');
+  assert.equal(result.recommendedTrades[0].contracts, 3);
+  assert.equal(result.recommendedTrades[0].capitalCommitted, 34200);
+
+  assert.equal(result.recommendedTrades[1].symbol, 'MSFT');
+  assert.equal(result.recommendedTrades[1].contracts, 2);
+  assert.equal(result.recommendedTrades[1].capitalCommitted, 81000);
+});
+
+test('9. parseGeminiSelectionsCSV derives contracts count from collateral and strike when contracts column is omitted', () => {
+  const csv = `Rank,Symbol,Spot,Strike,Delta,Est. Premium,Cash Collateral,Rationale
+1,NVDA,120.50,114.00,0.20,$1.85,22800,Confirmed support
+2,AAPL,230.00,220.00,0.19,$2.10,22000,Mega-cap tier 1`;
+
+  const result = parseGeminiSelectionsCSV(csv);
+  assert.equal(result.recommendedTrades.length, 2);
+  // NVDA: $22,800 collateral / ($114 * 100) = 2 contracts
+  assert.equal(result.recommendedTrades[0].symbol, 'NVDA');
+  assert.equal(result.recommendedTrades[0].contracts, 2);
+
+  // AAPL: $22,000 collateral / ($220 * 100) = 1 contract
+  assert.equal(result.recommendedTrades[1].symbol, 'AAPL');
+  assert.equal(result.recommendedTrades[1].contracts, 1);
+});
+
+test('10. parseGeminiSelectionsCSV parses markdown table with Contracts column', () => {
+  const md = `| Risk Rank | Stock Symbol | Current Price | Suggested Strike | Option Delta | Contracts | Collateral Committed |
+|---|---|---|---|---|---|---|
+| 1 | NVDA | 120.50 | 114.00 | 0.20 | 4 | 45600 |
+| 2 | MSFT | 425.00 | 405.00 | 0.18 | 1 | 40500 |`;
+
+  const result = parseGeminiSelectionsCSV(md);
+  assert.equal(result.recommendedTrades.length, 2);
+  assert.equal(result.recommendedTrades[0].symbol, 'NVDA');
+  assert.equal(result.recommendedTrades[0].contracts, 4);
+  assert.equal(result.recommendedTrades[0].capitalCommitted, 45600);
+
+  assert.equal(result.recommendedTrades[1].symbol, 'MSFT');
+  assert.equal(result.recommendedTrades[1].contracts, 1);
+  assert.equal(result.recommendedTrades[1].capitalCommitted, 40500);
+});
+

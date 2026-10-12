@@ -190,6 +190,10 @@ export const GeminiSelectionsUploadTab: React.FC<GeminiSelectionsUploadTabProps>
     (sum, t) => sum + (t.capitalCommitted || 0),
     0
   );
+  const totalContracts = (parsedGeminiResult?.recommendedTrades || []).reduce(
+    (sum, t) => sum + (t.contracts || 1),
+    0
+  );
   const avgDelta =
     parsedGeminiResult?.recommendedTrades && parsedGeminiResult.recommendedTrades.length > 0
       ? (
@@ -197,6 +201,26 @@ export const GeminiSelectionsUploadTab: React.FC<GeminiSelectionsUploadTabProps>
           parsedGeminiResult.recommendedTrades.length
         ).toFixed(2)
       : '0.20';
+
+  const handleUpdateContracts = (trade: GeminiRecommendedTrade, newContracts: number) => {
+    if (!parsedGeminiResult) return;
+    const safeContracts = Math.max(1, Math.round(newContracts));
+    const updatedTrades = parsedGeminiResult.recommendedTrades.map((t) => {
+      if (t.symbol === trade.symbol && t.suggestedStrike === trade.suggestedStrike) {
+        const updatedCollateral = t.suggestedStrike > 0 ? t.suggestedStrike * 100 * safeContracts : t.capitalCommitted;
+        return {
+          ...t,
+          contracts: safeContracts,
+          capitalCommitted: updatedCollateral,
+        };
+      }
+      return t;
+    });
+    onUpdateGeminiResult({
+      ...parsedGeminiResult,
+      recommendedTrades: updatedTrades,
+    });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -493,6 +517,9 @@ export const GeminiSelectionsUploadTab: React.FC<GeminiSelectionsUploadTabProps>
             <span className="text-lg font-bold text-emerald-400">
               {parsedGeminiResult.recommendedTrades.length} Candidates
             </span>
+            <span className="text-[10px] text-slate-400 block font-mono">
+              {totalContracts} Contracts to Write
+            </span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
@@ -570,6 +597,7 @@ export const GeminiSelectionsUploadTab: React.FC<GeminiSelectionsUploadTabProps>
                   <SortableTh label="Put Strike" sortKey="suggestedStrike" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
                   <SortableTh label="Delta" sortKey="delta" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
                   <SortableTh label="Est. Premium" sortKey="estPremiumAnnualized" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
+                  <SortableTh label="Contracts to Write" sortKey="contracts" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} align="center" title="Number of CSP contracts to be written (100 shares per contract)" />
                   <SortableTh label="Cash Collateral" sortKey="capitalCommitted" currentSortKey={geminiTradesSortKey} currentSortOrder={geminiTradesSortOrder} onSort={requestGeminiTradesSort} />
                   <th className="sticky top-0 z-10 bg-slate-950/98 backdrop-blur py-2.5 px-3 text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">
                     Rationale &amp; Support Level
@@ -602,6 +630,32 @@ export const GeminiSelectionsUploadTab: React.FC<GeminiSelectionsUploadTabProps>
                     </td>
                     <td className="py-3 px-3 text-emerald-400 font-bold font-mono">
                       {trade.estPremiumAnnualized}
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <div className="inline-flex items-center justify-center space-x-1 bg-slate-950/80 border border-slate-700/80 rounded-lg p-0.5 shadow-inner">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateContracts(trade, Math.max(1, (trade.contracts || 1) - 1))}
+                          className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded text-xs transition-colors cursor-pointer"
+                          title="Decrease contracts to write"
+                        >
+                          -
+                        </button>
+                        <span className="w-8 text-center text-emerald-300 font-bold font-mono text-xs">
+                          {trade.contracts || 1}x
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateContracts(trade, (trade.contracts || 1) + 1)}
+                          className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded text-xs transition-colors cursor-pointer"
+                          title="Increase contracts to write"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono block mt-0.5">
+                        {((trade.contracts || 1) * 100).toLocaleString()} shs
+                      </span>
                     </td>
                     <td className="py-3 px-3 text-amber-300 font-bold font-mono">
                       ${trade.capitalCommitted.toLocaleString()}

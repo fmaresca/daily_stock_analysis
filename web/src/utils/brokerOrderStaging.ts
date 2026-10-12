@@ -113,6 +113,8 @@ export function stageSingleLegOrder(
   customPrice?: number,
   portfolioEquity: number = 100000
 ): StagedBracketOrder {
+  const finalQuantity = Math.max(1, quantity > 1 ? quantity : (opportunity.contracts || quantity || 1));
+  quantity = finalQuantity;
   const isPut = opportunity.strategy === 'CSP';
   const optType: 'PUT' | 'CALL' = isPut ? 'PUT' : 'CALL';
   const spot = opportunity.current_price;
@@ -136,7 +138,7 @@ export function stageSingleLegOrder(
   const stopLossPrice = Math.round(limitPrice * 2.0 * 100) / 100;
 
   const netCreditPerContract = Math.round(limitPrice * 100);
-  const totalNetCredit = netCreditPerContract * quantity;
+  const totalNetCredit = netCreditPerContract * finalQuantity;
 
   // Margin calculation: Reg-T CSP requires 100% strike cash
   // CC requires 100 shares of stock

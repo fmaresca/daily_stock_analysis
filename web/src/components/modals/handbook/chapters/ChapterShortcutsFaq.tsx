@@ -566,9 +566,9 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
           </p>
           <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
             <li><strong>Supported Formats:</strong> RFC 4180 CSV, tab-separated TSV, standard Excel workbook (.xlsx), Microsoft XML Spreadsheet 2003 (.xls/.xml), Google Sheets public/sharing URLs, or raw clipboard paste.</li>
-            <li><strong>Automated 3-Table Partitioning:</strong> Automatically parses rows into Table 1 (Recommended Institutional Trades), Table 2 (Borderline Candidates), and Table 3 (Excluded), normalizing ticker symbols, strike prices, expiration dates, delta, and premium yields.</li>
-            <li><strong>Broker Workbench Staging:</strong> Once imported, Table 1 selections activate direct staging to the Charles Schwab Order Workbench with 1 click for bracket order staging and cash collateral check.</li>
-            <li><strong>Template &amp; Export:</strong> Includes 1-click download of standardized CSV and Excel import templates, as well as real-time export of your current active selections.</li>
+            <li><strong>Automated 3-Table Partitioning &amp; Contracts Sizing:</strong> Automatically parses rows into Table 1 (Recommended Institutional Trades), Table 2 (Borderline Candidates), and Table 3 (Excluded), normalizing ticker symbols, strike prices, expiration dates, delta, premium yields, and number of contracts to be written (Contracts to Write). Also supports inline interactive +/- adjustment of contract counts with instant cash collateral recalculation.</li>
+            <li><strong>Broker Workbench Staging:</strong> Once imported, Table 1 selections activate direct staging to the Charles Schwab Order Workbench with 1 click, preserving the exact number of contracts to write, bracket order parameters, and cash collateral check.</li>
+            <li><strong>Template &amp; Export:</strong> Includes 1-click download of standardized CSV and Excel import templates (including Contracts to Write), as well as real-time roundtrip export of your current active selections.</li>
           </ul>
         </div>
       </div>

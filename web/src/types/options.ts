@@ -322,6 +322,7 @@ export interface OptionOpportunity {
   target_exp?: string;
   target_dte?: number;
   barchart_opinion?: BarchartOpinion;
+  contracts?: number;
 }
 
 export interface ScreenerSummary {
@@ -596,6 +597,7 @@ export interface GeminiRecommendedTrade {
   delta: number;
   estPremiumAnnualized: string;
   capitalCommitted: number;
+  contracts?: number;
   sentimentFlags: string;
   technicalJustification: string;
 }

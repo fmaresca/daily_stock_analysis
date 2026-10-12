@@ -975,6 +975,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     const weeklyExp = getNextWeeklyExpiration(now());
     const expStr = weeklyExp.dateString;
     const effectiveDte = weeklyExp.dte || 6;
+    const contracts = Math.max(1, trade.contracts || 1);
 
     const opp: OptionOpportunity = {
       id: `GEMINI_${trade.symbol}_${trade.suggestedStrike}_PUT`,
@@ -1000,8 +1001,8 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       theta: 0.08,
       pop_pct: Math.round((1 - Math.abs(trade.delta || 0.20)) * 100),
       cushion_pct: trade.currentPrice > 0 ? ((trade.currentPrice - trade.suggestedStrike) / trade.currentPrice) * 100 : 5.0,
-      collateral_required: trade.capitalCommitted || trade.suggestedStrike * 100,
-      premium_total: 150,
+      collateral_required: trade.capitalCommitted || (trade.suggestedStrike * 100 * contracts),
+      premium_total: Math.round(150 * contracts),
       breakeven: trade.suggestedStrike - 1.50,
       roc_pct: 1.5,
       annualized_roc: 25.0,
@@ -1011,6 +1012,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
       tags: ['GEMINI_AI', 'WEEKLY_CSP'],
       rating: 95,
       earnings_within_7d: false,
+      contracts,
     };
 
     if (onStageOpportunity) {
@@ -1019,7 +1021,7 @@ export const CascadingScreenerView: React.FC<CascadingScreenerViewProps> = ({
     if (onOpenBrokerStaging) {
       onOpenBrokerStaging(trade.symbol, 'CSP');
     }
-    showToast(`Staged ${trade.symbol} $${trade.suggestedStrike} Put in Broker Order Workbench!`);
+    showToast(`Staged ${trade.symbol} ${contracts > 1 ? `${contracts}x ` : ''}$${trade.suggestedStrike} Put in Broker Order Workbench!`);
   };
 
   // Copy Results as TSV
