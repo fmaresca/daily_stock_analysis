@@ -66,16 +66,41 @@ export async function resolveGeminiApiKey(env = {}) {
     env?.GEMINI_API_KEYS ||
     env?.GOOGLE_API_KEY ||
     env?.GOOGLE_GEMINI_API_KEY ||
+    env?.LLM_GEMINI_API_KEY ||
+    env?.LLM_GEMINI_API_KEYS ||
+    env?.GEMINI_KEY ||
+    env?.GOOGLE_AI_KEY ||
+    env?.GOOGLE_APIKEY ||
     env?.GEMINI_TOKEN ||
     ""
   );
+
+  // Case-insensitive lookup across all keys if not found directly
+  if (!key && env && typeof env === "object") {
+    for (const [k, v] of Object.entries(env)) {
+      if (typeof v === "string" && v.trim()) {
+        const upper = k.toUpperCase();
+        if (
+          upper === "GEMINI_API_KEY" ||
+          upper === "GOOGLE_API_KEY" ||
+          upper === "LLM_GEMINI_API_KEY" ||
+          upper === "GEMINI_KEY" ||
+          upper === "GOOGLE_AI_KEY"
+        ) {
+          key = v;
+          break;
+        }
+      }
+    }
+  }
+
   if (typeof key === "string" && key.includes(",")) {
     key = key.split(",")[0].trim();
   }
   if (!key && env?.DB && typeof env.DB.prepare === "function") {
     try {
       const row = await env.DB.prepare(
-        "SELECT value FROM system_settings WHERE key IN ('gemini_api_key', 'GEMINI_API_KEY', 'google_api_key', 'llm_api_key') ORDER BY updated_at DESC LIMIT 1"
+        "SELECT value FROM system_settings WHERE key IN ('gemini_api_key', 'GEMINI_API_KEY', 'google_api_key', 'GOOGLE_API_KEY', 'llm_gemini_api_key', 'LLM_GEMINI_API_KEY', 'gemini_key', 'llm_api_key') ORDER BY updated_at DESC LIMIT 1"
       ).first();
       if (row?.value && typeof row.value === "string" && row.value.trim()) {
         key = row.value.trim().split(",")[0].trim();
@@ -84,7 +109,7 @@ export async function resolveGeminiApiKey(env = {}) {
       // non-blocking
     }
   }
-  return (key || "").trim();
+  return (typeof key === "string" ? key.replace(/^["']|["']$/g, "") : "").trim();
 }
 
 /**
@@ -225,84 +250,126 @@ export function getFallbackSlots(env = {}) {
   // If no numbered slots were explicitly defined, auto-synthesize fallback slots from known provider env vars
   if (slots.length === 0) {
     let nextSlot = 1;
-    if (env.GROQ_API_KEY) {
+    const cleanVal = (v) => (typeof v === "string" ? v.replace(/^["']|["']$/g, "").trim() : "");
+
+    const groqKey = cleanVal(env.GROQ_API_KEY || env.LLM_GROQ_API_KEY);
+    if (groqKey) {
       slots.push({
         slot: nextSlot++,
         providerType: "openai-compatible",
         name: "groq",
         baseUrl: DEFAULT_SLOT_CONFIGS[1].baseUrl,
-        apiKey: env.GROQ_API_KEY.trim(),
+        apiKey: groqKey,
         model: DEFAULT_SLOT_CONFIGS[1].model,
       });
     }
-    if (env.CEREBRAS_API_KEY) {
+
+    const cerebrasKey = cleanVal(env.CEREBRAS_API_KEY || env.LLM_CEREBRAS_API_KEY);
+    if (cerebrasKey) {
       slots.push({
         slot: nextSlot++,
         providerType: "openai-compatible",
         name: "cerebras",
         baseUrl: DEFAULT_SLOT_CONFIGS[2].baseUrl,
-        apiKey: env.CEREBRAS_API_KEY.trim(),
+        apiKey: cerebrasKey,
         model: DEFAULT_SLOT_CONFIGS[2].model,
       });
     }
-    if (env.OPENROUTER_API_KEY || env.OPENROUTER_KEY) {
+
+    const openrouterKey = cleanVal(env.OPENROUTER_API_KEY || env.OPENROUTER_KEY || env.LLM_OPENROUTER_API_KEY);
+    if (openrouterKey) {
       slots.push({
         slot: nextSlot++,
         providerType: "openai-compatible",
         name: "openrouter",
         baseUrl: DEFAULT_SLOT_CONFIGS[3].baseUrl,
-        apiKey: (env.OPENROUTER_API_KEY || env.OPENROUTER_KEY).trim(),
+        apiKey: openrouterKey,
         model: DEFAULT_SLOT_CONFIGS[3].model,
       });
     }
-    if (env.MISTRAL_API_KEY) {
+
+    const mistralKey = cleanVal(env.MISTRAL_API_KEY || env.LLM_MISTRAL_API_KEY);
+    if (mistralKey) {
       slots.push({
         slot: nextSlot++,
         providerType: "openai-compatible",
         name: "mistral",
         baseUrl: DEFAULT_SLOT_CONFIGS[4].baseUrl,
-        apiKey: env.MISTRAL_API_KEY.trim(),
+        apiKey: mistralKey,
         model: DEFAULT_SLOT_CONFIGS[4].model,
       });
     }
-    if (env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY) {
+
+    const nvidiaKey = cleanVal(env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY || env.LLM_NVIDIA_API_KEY);
+    if (nvidiaKey) {
       slots.push({
         slot: nextSlot++,
         providerType: "openai-compatible",
         name: "nvidia",
         baseUrl: DEFAULT_SLOT_CONFIGS[5].baseUrl,
-        apiKey: (env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY).trim(),
+        apiKey: nvidiaKey,
         model: DEFAULT_SLOT_CONFIGS[5].model,
       });
     }
-    if (env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN) {
+
+    const cfToken = cleanVal(env.CLOUDFLARE_API_TOKEN || env.CF_API_TOKEN);
+    const cfAccount = cleanVal(env.CLOUDFLARE_ACCOUNT_ID || env.CF_ACCOUNT_ID);
+    if (cfAccount && cfToken) {
       slots.push({
         slot: nextSlot++,
         providerType: "cloudflare-workers-ai",
         name: "cloudflare-workers-ai",
         baseUrl: "",
-        apiKey: env.CLOUDFLARE_API_TOKEN.trim(),
+        apiKey: cfToken,
         model: DEFAULT_SLOT_CONFIGS[6].model,
       });
     }
-    if (env.COHERE_API_KEY) {
+
+    const cohereKey = cleanVal(env.COHERE_API_KEY || env.LLM_COHERE_API_KEY);
+    if (cohereKey) {
       slots.push({
         slot: nextSlot++,
         providerType: "openai-compatible",
         name: "cohere",
         baseUrl: DEFAULT_SLOT_CONFIGS[7].baseUrl,
-        apiKey: env.COHERE_API_KEY.trim(),
+        apiKey: cohereKey,
         model: DEFAULT_SLOT_CONFIGS[7].model,
       });
     }
-    if (env.DEEPSEEK_API_KEY) {
+
+    const deepseekKey = cleanVal(env.DEEPSEEK_API_KEY || env.LLM_DEEPSEEK_API_KEY);
+    if (deepseekKey) {
       slots.push({
         slot: nextSlot++,
         providerType: "openai-compatible",
         name: "deepseek",
         baseUrl: "https://api.deepseek.com",
-        apiKey: env.DEEPSEEK_API_KEY.trim(),
+        apiKey: deepseekKey,
         model: "deepseek-chat",
+      });
+    }
+
+    const openaiKey = cleanVal(env.OPENAI_API_KEY || env.LLM_OPENAI_API_KEY);
+    if (openaiKey) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "openai-compatible",
+        name: "openai",
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: openaiKey,
+        model: "gpt-4o-mini",
+      });
+    }
+
+    const anthropicKey = cleanVal(env.ANTHROPIC_API_KEY || env.LLM_ANTHROPIC_API_KEY);
+    if (anthropicKey) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "anthropic",
+        name: "anthropic",
+        baseUrl: "https://api.anthropic.com",
+        apiKey: anthropicKey,
+        model: "claude-3-5-haiku-latest",
       });
     }
   }
@@ -652,7 +719,7 @@ async function callGemini({
   };
 
   if (system && typeof system === "string" && system.trim()) {
-    bodyPayload.system_instruction = {
+    bodyPayload.systemInstruction = {
       parts: [{ text: system.trim() }]
     };
   }

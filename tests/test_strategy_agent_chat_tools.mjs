@@ -240,3 +240,76 @@ test('7. /api/agent/chat key_status Detects Fallback Providers', async () => {
   assert.strictEqual(data.provider, 'groq');
   assert.strictEqual(data.fallbackCount, 1);
 });
+
+test('8. extractTickerFromMessage Accurately Detects AXTI Over Conversational English "GOING"', async () => {
+  const { extractTickerFromMessage } = await import('../functions/api/agent/chat.js');
+
+  const userQuery = 'What is going on with AXTI today and is it a good option writing candidate and at what strike price for the week?';
+  const detectedTicker = extractTickerFromMessage(userQuery, 'SPY');
+  assert.strictEqual(detectedTicker, 'AXTI', 'Must extract "AXTI" and NEVER mistake "GOING" for a ticker');
+
+  assert.strictEqual(extractTickerFromMessage('What is going on with TSLA?', 'SPY'), 'TSLA');
+  assert.strictEqual(extractTickerFromMessage('Tell me about $NVDA', 'SPY'), 'NVDA');
+  assert.strictEqual(extractTickerFromMessage('Can I sell cash-secured puts on symbol AXTI?', 'SPY'), 'AXTI');
+  assert.strictEqual(extractTickerFromMessage('What is going on with the market today?', 'SPY'), 'SPY');
+});
+
+test('9. generateQuantitativeAnalysisReport for AXTI Directly Answers Options Writing Query', async () => {
+  const { generateQuantitativeAnalysisReport } = await import('../functions/api/agent/chat.js');
+
+  const mockTechData = {
+    symbol: 'AXTI',
+    spotPrice: 64.10,
+    prevClose: 64.18,
+    changePct: -0.12,
+    sma20: 74.85,
+    sma50: 71.68,
+    rsi14: 41.4,
+    upperBb: 89.94,
+    lowerBb: 59.76,
+    bbWidthPct: 40.3,
+    bollingerBands: { upper: 89.94, middle: 74.85, lower: 59.76 }
+  };
+
+  const mockNewsData = {
+    symbol: 'AXTI',
+    articles: [{ title: 'AXTI Reports Strong Semiconductor Demand', source: 'Reuters', pubDate: new Date().toISOString() }]
+  };
+
+  const report = generateQuantitativeAnalysisReport({
+    ticker: 'AXTI',
+    lens: 'Risk/Defensive',
+    userQuery: 'What is going on with AXTI today and is it a good option writing candidate and at what strike price for the week?',
+    techData: mockTechData,
+    newsData: mockNewsData,
+    macroData: { upcomingEvents: [{ name: 'CPI', date: '2026-10-14', impact: 'High' }] },
+  });
+
+  assert.ok(report.includes('### 📊 AXTI Institutional Strategy Briefing'), 'Must headline with AXTI');
+  assert.ok(report.includes('$64.1'), 'Must include real spot price $64.1');
+  assert.ok(!report.includes('Spot Price: **$N/A**'), 'Must NOT have $N/A spot price');
+  assert.ok(report.includes('74.85'), 'Must cite 20-day SMA');
+  assert.ok(report.includes('41.4'), 'Must cite 14-Day RSI');
+  assert.ok(report.includes('Option Writing Candidate Assessment'), 'Must directly address user inquiry');
+  assert.ok(report.includes('Google Gemini 3.8 Flash'), 'Notice must cite Google Gemini 3.8 Flash');
+});
+
+test('10. enrichEnvFromSystemSettings Loads D1 System Settings into Env', async () => {
+  const { enrichEnvFromSystemSettings } = await import('../functions/api/agent/chat.js');
+
+  const mockDb = {
+    prepare: (query) => ({
+      all: async () => ({
+        results: [
+          { key: 'gemini_api_key', value: 'mock_d1_gemini_key' },
+          { key: 'groq_api_key', value: 'mock_d1_groq_key' },
+        ]
+      })
+    })
+  };
+
+  const enriched = await enrichEnvFromSystemSettings({ DB: mockDb });
+  assert.strictEqual(enriched.GEMINI_API_KEY, 'mock_d1_gemini_key');
+  assert.strictEqual(enriched.GROQ_API_KEY, 'mock_d1_groq_key');
+});
+

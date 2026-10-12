@@ -30,6 +30,7 @@ import {
 } from "./_agent_db.js";
 import { AGENT_TOOLS, executeAgentTool } from "./_agent_tools.js";
 import { STRATEGY_PLAYBOOKS, getPlaybookById } from "./_playbooks.js";
+import { CBOE_TICKERS_SET } from "./_cboe_registry.js";
 
 const VALID_LENSES = [
   "Trend/Momentum",
@@ -77,18 +78,16 @@ ${playbookSection}
 ${tickerContext ? `Currently focused ticker context: ${tickerContext}` : ""}`;
 }
 
-const POPULAR_TICKERS = new Set([
-  "TSLA", "AAPL", "NVDA", "MSFT", "AMZN", "GOOGL", "GOOG", "META", "AMD",
-  "PLTR", "SPY", "QQQ", "IWM", "DIA", "VIX", "NFLX", "AVGO", "COST",
-  "JPM", "BAC", "DIS", "INTC", "COIN", "SOFI", "UBER", "MARA", "RIOT",
-  "MSTR", "SMCI", "BABA", "NIO", "XOM", "CVX", "LLY", "UNH", "WMT",
-  "TGT", "BA", "CAT", "GE", "CRM", "ORCL", "PYPL", "SQ", "ROKU",
-  "SHOP", "ARM", "MU", "QCOM", "TXN", "PANW", "CRWD", "NOW", "SNOW",
-  "NET", "F", "GM", "RIVN", "LCID", "TLT", "GLD", "SLV", "USO", "UNG"
+export const POPULAR_TICKERS = new Set([
+  ...CBOE_TICKERS_SET,
+  "SPY", "QQQ", "IWM", "DIA", "VIX", "TLT", "GLD", "SLV", "USO", "UNG",
+  "NVDA", "AAPL", "MSFT", "AMZN", "GOOGL", "GOOG", "META", "TSLA", "AMD",
+  "PLTR", "AXTI", "SMCI", "ARM", "MSTR", "COIN", "SOFI", "UBER", "AVGO"
 ]);
 
-const ENGLISH_WORDS_STOPLIST = new Set([
+export const ENGLISH_WORDS_STOPLIST = new Set([
   "A", "I", "IN", "ON", "AT", "TO", "OF", "FOR", "IS", "IT", "BY", "AS",
+  "WITH", "FROM", "ONTO", "UPON", "THROUGH", "BETWEEN", "AMONG", "AGAINST",
   "AND", "OR", "THE", "CAN", "HOW", "WHY", "WHAT", "WHEN", "WILL", "DO",
   "ARE", "NOT", "BUT", "ALL", "NEW", "BUY", "PUT", "CALL", "RSI", "SMA",
   "MACD", "IV", "DTE", "ATM", "OTM", "ITM", "POP", "CBOE", "FOMC", "CPI",
@@ -113,34 +112,90 @@ const ENGLISH_WORDS_STOPLIST = new Set([
   "NEED", "ONCE", "ONLY", "OVER", "POOR", "REST", "SAME",
   "SEEK", "SEND", "SHOT", "SLIP", "SNAP", "SOME",
   "SUCH", "TALL", "THEN", "THEY", "TINY", "TOLD",
-  "TOOK", "VERY", "WERE", "WILD"
+  "TOOK", "VERY", "WERE", "WILD",
+  // Common conversational verbs & questions
+  "GOING", "DOING", "BEING", "HAVING", "GET", "GETS", "GOT", "GO", "GOES", "GONE",
+  "COME", "COMES", "CAME", "LIKE", "LIKES", "LOOKS", "SEEMS", "THINKS", "WANTS",
+  "NEEDS", "MEANS", "FEELS", "SEES", "HEARS", "GIVES", "FINDS", "TELLS", "SHOWS",
+  "WORKS", "RUNS", "PULLS", "DROPS", "FAILS", "PASS", "RISES", "FALLS", "TAKES",
+  // Options and trading vocabulary
+  "OPTION", "OPTIONS", "STRIKE", "STRIKES", "WRITE", "WRITING", "WRITES", "WRITTEN",
+  "CANDIDATE", "CANDIDATES", "DELTA", "GAMMA", "THETA", "VEGA", "RHO", "PREMIUM",
+  "PREMIUMS", "YIELD", "YIELDS", "SPREAD", "SPREADS", "COLLATERAL", "MARGIN",
+  "EXPIRY", "EXPIRATION", "EXPIRATIONS", "MONTH", "MONTHS", "DAILY", "DATED",
+  "ENTRY", "ENTRIES", "EXIT", "EXITS", "PROFIT", "PROFITS", "SHARES", "EQUITY",
+  "PORTFOLIO", "ACCOUNT", "MONEY", "WORTH", "VALUE", "VALUES", "INDEX", "INDEXES",
+  "MARKET", "MARKETS", "CHART", "CHARTS", "RANGE", "RANGES", "SETUP", "SETUPS",
+  // Modals, conjunctions, pronouns
+  "WHICH", "WHERE", "WHOSE", "WHOM", "THEIR", "THERE", "THESE", "THOSE", "THEM",
+  "COULD", "WOULD", "SHOULD", "SHALL", "MUST", "MAYBE", "UNDER", "ABOVE", "BELOW",
+  "AFTER", "BEFORE", "WHILE", "UNTIL", "SINCE", "STILL", "AGAIN", "NEVER", "ALWAYS",
+  "OFTEN", "EVERY", "OTHER", "ANOTHER", "EITHER", "NEITHER", "BOTH", "EACH",
+  "GREAT", "NICE", "COOL", "FINE", "WORSE", "WORST", "BETTER", "CHEAP",
+  "LOWER", "UPPER", "INNER", "OUTER", "CLOSE", "CLOSES", "CLOSED"
 ]);
 
 /**
- * Extracts a ticker candidate from the user's message if not specified.
+ * Extracts a ticker candidate from the user's message using an institutional 6-stage detector.
  */
-function extractTickerFromMessage(msg, fallbackTicker) {
+export function extractTickerFromMessage(msg, fallbackTicker) {
   if (!msg || typeof msg !== "string") return fallbackTicker || "SPY";
 
-  // 1. Explicit dollar-prefixed ticker e.g. $TSLA or $AAPL
+  // 1. Explicit dollar-prefixed ticker e.g. $TSLA or $AAPL or $AXTI
   const dollarMatch = msg.match(/\$([A-Za-z]{1,5})\b/);
   if (dollarMatch) return dollarMatch[1].toUpperCase();
 
-  const words = msg.split(/[\s,?.!;:()"'`]+/);
+  // 2. Explicit keyword pattern e.g. "symbol AXTI", "ticker AXTI", "stock AXTI"
+  const keywordMatch = msg.match(/\b(?:symbol|ticker|stock)\s+[:=]?\s*([A-Za-z]{1,5})\b/i);
+  if (keywordMatch) {
+    const cand = keywordMatch[1].toUpperCase();
+    if (!ENGLISH_WORDS_STOPLIST.has(cand)) return cand;
+  }
 
-  // 2. High-priority check: explicitly matches a known prominent ticker
-  for (const w of words) {
-    const clean = w.toUpperCase();
-    if (POPULAR_TICKERS.has(clean)) {
-      return clean;
+  // 3. Contextual preposition pattern e.g. "on AXTI", "with AXTI", "for AXTI", "about AXTI", "in AXTI"
+  const prepMatches = [...msg.matchAll(/\b(?:on|with|for|about|in|at)\s+([A-Za-z]{1,5})\b/gi)];
+  for (const pm of prepMatches) {
+    const rawWord = pm[1];
+    const cand = rawWord.toUpperCase();
+    if (!ENGLISH_WORDS_STOPLIST.has(cand)) {
+      if (POPULAR_TICKERS.has(cand) || (/^[A-Z]{2,5}$/.test(rawWord) && rawWord === cand)) {
+        return cand;
+      }
     }
   }
 
-  // 3. Fallback check: 1-5 letters that are not conversational English stopwords
-  for (const w of words) {
-    const clean = w.toUpperCase();
-    if (/^[A-Z]{1,5}$/.test(clean) && !ENGLISH_WORDS_STOPLIST.has(clean)) {
-      return clean;
+  // Tokenize preserving original casing
+  const rawTokens = msg.split(/[\s,?.!;:()"'`\/]+/).filter(Boolean);
+
+  // 4. Match against known prominent or CBOE registry tickers
+  // Priority 4A: Exact ALL-CAPS token matching a known ticker
+  for (const token of rawTokens) {
+    const cand = token.toUpperCase();
+    if (token === cand && POPULAR_TICKERS.has(cand) && !ENGLISH_WORDS_STOPLIST.has(cand)) {
+      return cand;
+    }
+  }
+
+  // Priority 4B: Case-insensitive token matching a known ticker
+  for (const token of rawTokens) {
+    const cand = token.toUpperCase();
+    if (POPULAR_TICKERS.has(cand) && !ENGLISH_WORDS_STOPLIST.has(cand)) {
+      return cand;
+    }
+  }
+
+  // 5. Look for tokens that were explicitly typed in ALL UPPERCASE (2 to 5 letters) and not in stoplist
+  for (const token of rawTokens) {
+    if (/^[A-Z]{2,5}$/.test(token) && !ENGLISH_WORDS_STOPLIST.has(token)) {
+      return token;
+    }
+  }
+
+  // 6. Fallback check: 1-5 letters that are not conversational English stopwords
+  for (const token of rawTokens) {
+    const cand = token.toUpperCase();
+    if (/^[A-Z]{1,5}$/.test(cand) && !ENGLISH_WORDS_STOPLIST.has(cand)) {
+      return cand;
     }
   }
 
@@ -150,9 +205,10 @@ function extractTickerFromMessage(msg, fallbackTicker) {
 /**
  * Synthesizes institutional quantitative markdown using real data gathered from tools.
  */
-function generateQuantitativeAnalysisReport({
+export function generateQuantitativeAnalysisReport({
   ticker,
   lens,
+  userQuery = "",
   techData,
   newsData,
   macroData,
@@ -211,6 +267,22 @@ function generateQuantitativeAnalysisReport({
     ccStrike = `$${(Math.ceil(callAnchor / 2.5) * 2.5).toFixed(2)} (approx. +${(((callAnchor - spot) / spot) * 100).toFixed(1)}% upside resistance)`;
   }
 
+  // Direct strategy verdict addressing user's query if specific option writing questions asked
+  let directAnswerSection = "";
+  const queryLower = (userQuery || "").toLowerCase();
+  const asksAboutOptionWriting = /option|writing|candidate|strike|csp|put|call|premium|weekly/i.test(queryLower);
+  if (asksAboutOptionWriting && typeof spot === "number" && spot > 0) {
+    const isGoodCandidate = typeof rsi === "number" ? (rsi >= 35 && rsi <= 68) : true;
+    const candidateVerdict = isGoodCandidate ? "Favorable Conditional Candidate" : (rsi > 68 ? "Caution (Overbought — Wait for pullback)" : "Defensive Posture (Elevated downside volatility)");
+    directAnswerSection = `\n#### 🎯 Executive Strategy Verdict on Inquiry
+- **Option Writing Candidate Assessment:** **${candidateVerdict}**
+  - **Live Market Posture:** Spot is trading at **$${spot}** (${changePct}) with 14-day RSI at **${rsi}** (${rsiStance.split("—")[0].trim()}).
+  - **Moving Average Baseline:** 20-day SMA ($${sma20}, cushion: ${sma20Buffer}) and 50-day SMA ($${sma50}, cushion: ${sma50Buffer}).
+- **Recommended Option Targets for the Week:**
+  - **Cash-Secured Put (CSP):** Target **${cspStrike}** strictly below technical support to prioritize capital preservation (PoP > 75%).
+  - **Covered Call (CC):** Target **${ccStrike}** anchored near upper resistance to generate income without risking premature assignment.\n`;
+  }
+
   let lensAnalysis = "";
   if (lens === "Trend/Momentum") {
     lensAnalysis = `Under the **Trend/Momentum** lens, **${ticker}** is currently in a **${posture}**. Spot is trading at **$${spot}** relative to its 20-day SMA ($${sma20}) and 50-day SMA ($${sma50}). Momentum confirmation: RSI-14 is currently **${rsi}**, indicating ${rsiStance.toLowerCase()}.`;
@@ -258,7 +330,7 @@ function generateQuantitativeAnalysisReport({
 
 **Executive Posture:** ${posture}
 Spot Price: **$${spot}** (${changePct}) | 14-Day RSI: **${rsi}** (${rsiStance})
-
+${directAnswerSection}
 ---
 
 #### 📈 Key Quantitative Boundary Matrix
@@ -375,6 +447,34 @@ async function executeAlgorithmicFallback({
   await writer.write(encoder.encode("data: [DONE]\n\n"));
 }
 
+/**
+ * Loads all key/value entries from D1 system_settings and enriches env.
+ */
+export async function enrichEnvFromSystemSettings(env) {
+  if (!env || typeof env !== "object") return {};
+  if (!env.DB || typeof env.DB.prepare !== "function") return { ...env };
+  const enriched = { ...env };
+  try {
+    const { results } = await env.DB.prepare("SELECT key, value FROM system_settings").all();
+    if (Array.isArray(results)) {
+      for (const row of results) {
+        if (row?.key && row?.value && typeof row.value === "string") {
+          const val = row.value.replace(/^["']|["']$/g, "").trim();
+          if (val) {
+            const rawK = row.key.trim();
+            const upperK = rawK.toUpperCase();
+            if (!enriched[rawK]) enriched[rawK] = val;
+            if (!enriched[upperK]) enriched[upperK] = val;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // non-blocking
+  }
+  return enriched;
+}
+
 export async function onRequest(context) {
   const { request } = context;
 
@@ -422,25 +522,36 @@ export async function onRequest(context) {
 async function handleGet(context, user) {
   const { request, env } = context;
   const url = new URL(request.url);
+  const effectiveEnv = await enrichEnvFromSystemSettings(env);
 
   // Status check for configured API keys
   if (url.searchParams.get("action") === "key_status") {
-    const activeKey = await resolveGeminiApiKey(env);
-    const fallbackSlots = getFallbackSlots(env);
+    const activeKey = await resolveGeminiApiKey(effectiveEnv);
+    const fallbackSlots = getFallbackSlots(effectiveEnv);
     const hasAnyKey = Boolean(
       activeKey ||
       fallbackSlots.length > 0 ||
-      env?.LLM_API_KEY ||
-      env?.OPENAI_API_KEY ||
-      env?.ANTHROPIC_API_KEY ||
-      env?.DEEPSEEK_API_KEY ||
-      env?.GROQ_API_KEY ||
-      env?.CEREBRAS_API_KEY ||
-      env?.OPENROUTER_API_KEY ||
-      env?.MISTRAL_API_KEY ||
-      env?.NVIDIA_API_KEY ||
-      env?.COHERE_API_KEY ||
-      (env?.CLOUDFLARE_ACCOUNT_ID && env?.CLOUDFLARE_API_TOKEN)
+      effectiveEnv?.LLM_API_KEY ||
+      effectiveEnv?.OPENAI_API_KEY ||
+      effectiveEnv?.LLM_OPENAI_API_KEY ||
+      effectiveEnv?.ANTHROPIC_API_KEY ||
+      effectiveEnv?.LLM_ANTHROPIC_API_KEY ||
+      effectiveEnv?.DEEPSEEK_API_KEY ||
+      effectiveEnv?.LLM_DEEPSEEK_API_KEY ||
+      effectiveEnv?.GROQ_API_KEY ||
+      effectiveEnv?.LLM_GROQ_API_KEY ||
+      effectiveEnv?.CEREBRAS_API_KEY ||
+      effectiveEnv?.LLM_CEREBRAS_API_KEY ||
+      effectiveEnv?.OPENROUTER_API_KEY ||
+      effectiveEnv?.OPENROUTER_KEY ||
+      effectiveEnv?.LLM_OPENROUTER_API_KEY ||
+      effectiveEnv?.MISTRAL_API_KEY ||
+      effectiveEnv?.LLM_MISTRAL_API_KEY ||
+      effectiveEnv?.NVIDIA_API_KEY ||
+      effectiveEnv?.LLM_NVIDIA_API_KEY ||
+      effectiveEnv?.COHERE_API_KEY ||
+      effectiveEnv?.LLM_COHERE_API_KEY ||
+      ((effectiveEnv?.CLOUDFLARE_ACCOUNT_ID || effectiveEnv?.CF_ACCOUNT_ID) && (effectiveEnv?.CLOUDFLARE_API_TOKEN || effectiveEnv?.CF_API_TOKEN))
     );
     return new Response(
       JSON.stringify({
@@ -575,7 +686,7 @@ async function handlePost(context, user) {
     ""
   ).trim();
 
-  let effectiveEnv = { ...env };
+  let effectiveEnv = await enrichEnvFromSystemSettings(env);
   if (clientApiKey) {
     effectiveEnv.GEMINI_API_KEY = clientApiKey;
   }
@@ -591,15 +702,25 @@ async function handlePost(context, user) {
     fallbackSlots.length > 0 ||
     effectiveEnv.LLM_API_KEY ||
     effectiveEnv.OPENAI_API_KEY ||
+    effectiveEnv.LLM_OPENAI_API_KEY ||
     effectiveEnv.ANTHROPIC_API_KEY ||
+    effectiveEnv.LLM_ANTHROPIC_API_KEY ||
     effectiveEnv.DEEPSEEK_API_KEY ||
+    effectiveEnv.LLM_DEEPSEEK_API_KEY ||
     effectiveEnv.GROQ_API_KEY ||
+    effectiveEnv.LLM_GROQ_API_KEY ||
     effectiveEnv.CEREBRAS_API_KEY ||
+    effectiveEnv.LLM_CEREBRAS_API_KEY ||
     effectiveEnv.OPENROUTER_API_KEY ||
+    effectiveEnv.OPENROUTER_KEY ||
+    effectiveEnv.LLM_OPENROUTER_API_KEY ||
     effectiveEnv.MISTRAL_API_KEY ||
+    effectiveEnv.LLM_MISTRAL_API_KEY ||
     effectiveEnv.NVIDIA_API_KEY ||
+    effectiveEnv.LLM_NVIDIA_API_KEY ||
     effectiveEnv.COHERE_API_KEY ||
-    (effectiveEnv.CLOUDFLARE_ACCOUNT_ID && effectiveEnv.CLOUDFLARE_API_TOKEN)
+    effectiveEnv.LLM_COHERE_API_KEY ||
+    ((effectiveEnv.CLOUDFLARE_ACCOUNT_ID || effectiveEnv.CF_ACCOUNT_ID) && (effectiveEnv.CLOUDFLARE_API_TOKEN || effectiveEnv.CF_API_TOKEN))
   );
 
   // Get or initialize session

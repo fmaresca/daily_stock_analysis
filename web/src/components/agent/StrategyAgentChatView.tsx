@@ -375,14 +375,17 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
               // ── Tool call announced (show status banner) ───────────────────
               } else if (data.type === 'tool' || data.tool) {
                 const toolName = data.tool;
+                const targetSym = data.args?.symbol || data.args?.ticker || ticker;
                 if (toolName === 'get_market_price_and_technicals') {
-                  setActiveToolStatus(`⚡ Pulling live spot price & technicals for ${ticker}...`);
+                  setActiveToolStatus(`⚡ Pulling live spot price & technicals for ${targetSym}...`);
                 } else if (toolName === 'get_market_sentiment') {
-                  setActiveToolStatus(`⚡ Inquiring Adanos multi-source crowd sentiment for ${ticker}...`);
+                  setActiveToolStatus(`⚡ Inquiring Adanos multi-source crowd sentiment for ${targetSym}...`);
                 } else if (toolName === 'get_ticker_news') {
-                  setActiveToolStatus(`⚡ Aggregating recent catalyst headlines for ${ticker}...`);
-                } else if (toolName === 'get_economic_calendar') {
+                  setActiveToolStatus(`⚡ Aggregating recent catalyst headlines for ${targetSym}...`);
+                } else if (toolName === 'get_economic_calendar' || toolName === 'get_macro_economic_calendar') {
                   setActiveToolStatus(`⚡ Inspecting high-impact macroeconomic calendar...`);
+                } else if (toolName === 'get_options_preflight_checklist') {
+                  setActiveToolStatus(`⚡ Evaluating 5-point options pre-flight scorecard for ${targetSym}...`);
                 } else {
                   setActiveToolStatus(`⚡ Running quantitative tool: ${toolName}...`);
                 }
@@ -396,6 +399,10 @@ export const StrategyAgentChatView: React.FC<StrategyAgentChatViewProps> = ({
                 if (data.sessionId && !currentSessionId) {
                   setCurrentSessionId(data.sessionId);
                   fetchSessions();
+                }
+                if (data.ticker && typeof data.ticker === 'string') {
+                  setTicker(data.ticker.toUpperCase());
+                  setTickerInput(data.ticker.toUpperCase());
                 }
                 if (data.type === 'done') {
                   setActiveToolStatus(null);
