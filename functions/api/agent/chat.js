@@ -20,7 +20,7 @@
 
 import { authenticateRequest } from "../_auth_utils.js";
 import { checkRateLimit, buildRateLimitResponse } from "../_rate_limit.js";
-import { completeLLM, resolveGeminiApiKey } from "../_llm.js";
+import { completeLLM, resolveGeminiApiKey, getFallbackSlots } from "../_llm.js";
 import {
   getOrCreateSession,
   listUserSessions,
@@ -165,11 +165,14 @@ function generateQuantitativeAnalysisReport({
   const sma20 = techData?.sma20 ?? "N/A";
   const sma50 = techData?.sma50 ?? "N/A";
   const rsi = techData?.rsi14 ?? "N/A";
-  const upperBb = techData?.upperBb ?? "N/A";
-  const lowerBb = techData?.lowerBb ?? "N/A";
-  const bbWidth = typeof techData?.bbWidthPct === "number"
-    ? `${techData.bbWidthPct.toFixed(1)}%`
-    : "N/A";
+  const upperBb = techData?.upperBb ?? techData?.bollingerBands?.upper ?? "N/A";
+  const lowerBb = techData?.lowerBb ?? techData?.bollingerBands?.lower ?? "N/A";
+  let bbWidth = "N/A";
+  if (typeof techData?.bbWidthPct === "number") {
+    bbWidth = `${techData.bbWidthPct.toFixed(1)}%`;
+  } else if (typeof upperBb === "number" && typeof lowerBb === "number" && typeof sma20 === "number" && sma20 > 0) {
+    bbWidth = `${(((upperBb - lowerBb) / sma20) * 100).toFixed(1)}%`;
+  }
 
   let sma20Buffer = "N/A";
   let sma50Buffer = "N/A";
@@ -222,22 +225,34 @@ function generateQuantitativeAnalysisReport({
   }
 
   let newsSection = "No recent catalyst headlines retrieved.";
-  if (Array.isArray(newsData?.articles) && newsData.articles.length > 0) {
-    newsSection = newsData.articles.slice(0, 4).map((a) =>
-      `- **${a.title}** (${a.source || "Google News"}, ${a.pubDate ? new Date(a.pubDate).toLocaleDateString() : "Recent"})`
-    ).join("\n");
+  const rawArticles = Array.isArray(newsData?.articles) && newsData.articles.length > 0
+    ? newsData.articles
+    : (Array.isArray(newsData?.headlines) ? newsData.headlines : []);
+  if (rawArticles.length > 0) {
+    newsSection = rawArticles.slice(0, 4).map((a) => {
+      const title = a.title || a.headline || "Headline";
+      const source = a.source || "Google News";
+      const dateStr = a.pubDate ? new Date(a.pubDate).toLocaleDateString() : "Recent";
+      return `- **${title}** (${source}, ${dateStr})`;
+    }).join("\n");
   }
 
   let macroSection = "No immediate high-impact catalysts scheduled.";
-  if (Array.isArray(macroData?.upcomingEvents) && macroData.upcomingEvents.length > 0) {
-    macroSection = macroData.upcomingEvents.slice(0, 3).map((e) =>
-      `- **${e.name || e.event}**: ${e.date || "Upcoming"} (${e.impact || "High"} Impact)`
-    ).join("\n");
+  const rawEvents = Array.isArray(macroData?.upcomingEvents) && macroData.upcomingEvents.length > 0
+    ? macroData.upcomingEvents
+    : (Array.isArray(macroData?.events) ? macroData.events : []);
+  if (rawEvents.length > 0) {
+    macroSection = rawEvents.slice(0, 3).map((e) => {
+      const name = e.name || e.event || e.title || "Macro Event";
+      const date = e.date || "Upcoming";
+      const impact = e.impact || "High";
+      return `- **${name}**: ${date} (${impact} Impact)`;
+    }).join("\n");
   }
 
   const noticeBadge = notice
     ? `> ⚠️ **Notice:** ${notice}\n\n`
-    : `> 💡 **Notice:** *Analysis synthesized by DeltaHarvest's Edge Quantitative Engine using live real-time market feeds. To unlock unrestricted neural reasoning with Google Gemini 2.5 Flash, enter your Gemini API key via the 🔑 API Key button above or set \`GEMINI_API_KEY\` in Cloudflare Pages.*\n\n`;
+    : `> 💡 **Notice:** *Analysis synthesized by DeltaHarvest's Edge Quantitative Engine using live real-time market feeds. To unlock unrestricted neural reasoning with Google Gemini 3.8 Flash, enter your Gemini API key via the 🔑 API Key button above or set \`GEMINI_API_KEY\` in Cloudflare Pages.*\n\n`;
 
   return `### 📊 ${ticker} Institutional Strategy Briefing (${lens})
 
@@ -326,13 +341,13 @@ async function executeAlgorithmicFallback({
   // Step 3: Run macro calendar tool
   await sendData({
     type: "tool",
-    tool: "get_macro_economic_calendar",
+    tool: "get_economic_calendar",
     args: {},
   });
-  const macroData = await executeAgentTool("get_macro_economic_calendar", {}, env);
+  const macroData = await executeAgentTool("get_economic_calendar", {}, env);
   await sendData({
     type: "tool_result",
-    tool: "get_macro_economic_calendar",
+    tool: "get_economic_calendar",
     result: macroData,
   });
 
@@ -411,17 +426,28 @@ async function handleGet(context, user) {
   // Status check for configured API keys
   if (url.searchParams.get("action") === "key_status") {
     const activeKey = await resolveGeminiApiKey(env);
+    const fallbackSlots = getFallbackSlots(env);
     const hasAnyKey = Boolean(
       activeKey ||
+      fallbackSlots.length > 0 ||
       env?.LLM_API_KEY ||
       env?.OPENAI_API_KEY ||
       env?.ANTHROPIC_API_KEY ||
-      env?.DEEPSEEK_API_KEY
+      env?.DEEPSEEK_API_KEY ||
+      env?.GROQ_API_KEY ||
+      env?.CEREBRAS_API_KEY ||
+      env?.OPENROUTER_API_KEY ||
+      env?.MISTRAL_API_KEY ||
+      env?.NVIDIA_API_KEY ||
+      env?.COHERE_API_KEY ||
+      (env?.CLOUDFLARE_ACCOUNT_ID && env?.CLOUDFLARE_API_TOKEN)
     );
     return new Response(
       JSON.stringify({
         configured: hasAnyKey,
-        provider: hasAnyKey ? "gemini" : "algorithmic",
+        provider: activeKey ? "gemini" : (fallbackSlots.length > 0 ? fallbackSlots[0].name : (hasAnyKey ? "custom" : "algorithmic")),
+        model: activeKey ? "gemini-3.8-flash" : (fallbackSlots.length > 0 ? fallbackSlots[0].model : "algorithmic"),
+        fallbackCount: fallbackSlots.length,
       }),
       {
         status: 200,
@@ -559,12 +585,21 @@ async function handlePost(context, user) {
     effectiveEnv.GEMINI_API_KEY = resolvedGeminiKey;
   }
 
+  const fallbackSlots = getFallbackSlots(effectiveEnv);
   const hasLLMProvider = Boolean(
     resolvedGeminiKey ||
+    fallbackSlots.length > 0 ||
     effectiveEnv.LLM_API_KEY ||
     effectiveEnv.OPENAI_API_KEY ||
     effectiveEnv.ANTHROPIC_API_KEY ||
-    effectiveEnv.DEEPSEEK_API_KEY
+    effectiveEnv.DEEPSEEK_API_KEY ||
+    effectiveEnv.GROQ_API_KEY ||
+    effectiveEnv.CEREBRAS_API_KEY ||
+    effectiveEnv.OPENROUTER_API_KEY ||
+    effectiveEnv.MISTRAL_API_KEY ||
+    effectiveEnv.NVIDIA_API_KEY ||
+    effectiveEnv.COHERE_API_KEY ||
+    (effectiveEnv.CLOUDFLARE_ACCOUNT_ID && effectiveEnv.CLOUDFLARE_API_TOKEN)
   );
 
   // Get or initialize session

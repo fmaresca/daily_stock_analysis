@@ -18,7 +18,7 @@ export const ChapterAiOptionsIncome: React.FC<ChapterAiOptionsIncomeProps> = ({
           <span>AI Options Income Screener (Gemini Extended Thinking)</span>
         </h3>
         <p className="text-slate-400 mt-1">
-          Automated institutional quantitative engine that filters stock screeners (Barchart Direction Strength View 190898, MarketChameleon, or custom CSVs) into high-probability Cash-Secured Put (CSP) and Covered Call (CC) candidates using Gemini 2.5 Flash / 2.0 Pro with extended chain-of-thought reasoning.
+          Automated institutional quantitative engine that filters stock screeners (Barchart Direction Strength View 190898, MarketChameleon, or custom CSVs) into high-probability Cash-Secured Put (CSP) and Covered Call (CC) candidates using Gemini 3.8 Flash / 2.0 Pro with extended chain-of-thought reasoning.
         </p>
       </div>
 

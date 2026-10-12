@@ -221,6 +221,92 @@ export function getFallbackSlots(env = {}) {
       model: modelRaw,
     });
   }
+
+  // If no numbered slots were explicitly defined, auto-synthesize fallback slots from known provider env vars
+  if (slots.length === 0) {
+    let nextSlot = 1;
+    if (env.GROQ_API_KEY) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "openai-compatible",
+        name: "groq",
+        baseUrl: DEFAULT_SLOT_CONFIGS[1].baseUrl,
+        apiKey: env.GROQ_API_KEY.trim(),
+        model: DEFAULT_SLOT_CONFIGS[1].model,
+      });
+    }
+    if (env.CEREBRAS_API_KEY) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "openai-compatible",
+        name: "cerebras",
+        baseUrl: DEFAULT_SLOT_CONFIGS[2].baseUrl,
+        apiKey: env.CEREBRAS_API_KEY.trim(),
+        model: DEFAULT_SLOT_CONFIGS[2].model,
+      });
+    }
+    if (env.OPENROUTER_API_KEY || env.OPENROUTER_KEY) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "openai-compatible",
+        name: "openrouter",
+        baseUrl: DEFAULT_SLOT_CONFIGS[3].baseUrl,
+        apiKey: (env.OPENROUTER_API_KEY || env.OPENROUTER_KEY).trim(),
+        model: DEFAULT_SLOT_CONFIGS[3].model,
+      });
+    }
+    if (env.MISTRAL_API_KEY) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "openai-compatible",
+        name: "mistral",
+        baseUrl: DEFAULT_SLOT_CONFIGS[4].baseUrl,
+        apiKey: env.MISTRAL_API_KEY.trim(),
+        model: DEFAULT_SLOT_CONFIGS[4].model,
+      });
+    }
+    if (env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "openai-compatible",
+        name: "nvidia",
+        baseUrl: DEFAULT_SLOT_CONFIGS[5].baseUrl,
+        apiKey: (env.NVIDIA_API_KEY || env.NVIDIA_NIM_API_KEY).trim(),
+        model: DEFAULT_SLOT_CONFIGS[5].model,
+      });
+    }
+    if (env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "cloudflare-workers-ai",
+        name: "cloudflare-workers-ai",
+        baseUrl: "",
+        apiKey: env.CLOUDFLARE_API_TOKEN.trim(),
+        model: DEFAULT_SLOT_CONFIGS[6].model,
+      });
+    }
+    if (env.COHERE_API_KEY) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "openai-compatible",
+        name: "cohere",
+        baseUrl: DEFAULT_SLOT_CONFIGS[7].baseUrl,
+        apiKey: env.COHERE_API_KEY.trim(),
+        model: DEFAULT_SLOT_CONFIGS[7].model,
+      });
+    }
+    if (env.DEEPSEEK_API_KEY) {
+      slots.push({
+        slot: nextSlot++,
+        providerType: "openai-compatible",
+        name: "deepseek",
+        baseUrl: "https://api.deepseek.com",
+        apiKey: env.DEEPSEEK_API_KEY.trim(),
+        model: "deepseek-chat",
+      });
+    }
+  }
+
   return slots;
 }
 
@@ -572,17 +658,16 @@ async function callGemini({
   }
 
   if (Array.isArray(tools) && tools.length > 0) {
+    const formattedFns = tools.map(t => {
+      const fn = t.function || t;
+      return {
+        name: fn.name,
+        description: fn.description,
+        parameters: fn.parameters || { type: "object", properties: {} }
+      };
+    });
     bodyPayload.tools = [{
-      function_declarations: tools.map(t => {
-        if (t.function) {
-          return {
-            name: t.function.name,
-            description: t.function.description,
-            parameters: t.function.parameters
-          };
-        }
-        return t;
-      })
+      functionDeclarations: formattedFns,
     }];
   }
 
@@ -689,10 +774,15 @@ async function callOpenAICompatible({
         content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
       });
     } else {
-      formattedMessages.push({
+      const msgObj = {
         role: m.role === "model" ? "assistant" : m.role,
-        content: m.content,
-      });
+        content: m.content ?? "",
+      };
+      if (m.tool_calls && Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
+        msgObj.tool_calls = m.tool_calls;
+        if (!msgObj.content) msgObj.content = null;
+      }
+      formattedMessages.push(msgObj);
     }
   }
 

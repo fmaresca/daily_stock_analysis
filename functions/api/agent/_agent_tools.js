@@ -56,23 +56,39 @@ export async function getMarketPriceAndTechnicals(symbol, env) {
   const cleanSym = String(symbol || "").trim().toUpperCase();
   if (!cleanSym) return { error: "Symbol required" };
 
-  try {
-    const yUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cleanSym)}?interval=1d&range=6mo`;
-    const yResp = await fetch(yUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "application/json",
-      },
-    });
+  // Attempt multi-tier market data fetch: Yahoo query1 -> Yahoo query2
+  let result = null;
+  const urls = [
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cleanSym)}?interval=1d&range=6mo`,
+    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cleanSym)}?interval=1d&range=6mo`,
+  ];
 
-    if (!yResp.ok) {
-      return { error: `Market data provider returned HTTP ${yResp.status} for ${cleanSym}` };
+  for (const yUrl of urls) {
+    try {
+      const yResp = await fetch(yUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "application/json",
+        },
+      });
+      if (yResp.ok) {
+        const yData = await yResp.json();
+        const cand = yData?.chart?.result?.[0];
+        if (cand) {
+          result = cand;
+          break;
+        }
+      }
+    } catch {
+      // try next provider
     }
+  }
 
-    const yData = await yResp.json();
-    const result = yData?.chart?.result?.[0];
-    if (!result) return { error: `No market chart data found for ${cleanSym}` };
+  if (!result) {
+    return { error: `Market chart data currently unavailable for ${cleanSym}` };
+  }
 
+  try {
     const meta = result.meta || {};
     const quotes = result.indicators?.quote?.[0] || {};
     const rawCloses = quotes.close || [];
@@ -88,12 +104,16 @@ export async function getMarketPriceAndTechnicals(symbol, env) {
 
     let bbUpper = null;
     let bbLower = null;
+    let bbWidthPct = null;
     if (validCloses.length >= 20 && sma20 !== null) {
       const slice20 = validCloses.slice(-20);
       const variance = slice20.reduce((acc, val) => acc + Math.pow(val - sma20, 2), 0) / 20;
       const stdDev = Math.sqrt(variance);
       bbUpper = Math.round((sma20 + 2 * stdDev) * 100) / 100;
       bbLower = Math.round((sma20 - 2 * stdDev) * 100) / 100;
+      if (sma20 > 0) {
+        bbWidthPct = Math.round(((bbUpper - bbLower) / sma20) * 1000) / 10;
+      }
     }
 
     return {
@@ -104,6 +124,9 @@ export async function getMarketPriceAndTechnicals(symbol, env) {
       sma20,
       sma50,
       rsi14,
+      upperBb: bbUpper,
+      lowerBb: bbLower,
+      bbWidthPct,
       bollingerBands: {
         upper: bbUpper,
         middle: sma20,
@@ -137,23 +160,31 @@ export async function getTickerNews(symbol, env) {
     }
 
     const xml = await resp.text();
-    const titleMatches = xml.match(/<item>[\s\S]*?<title>(.*?)<\/title>/g) || [];
-    const items = [];
+    const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+    const headlines = [];
+    const articles = [];
 
-    for (let i = 0; i < Math.min(titleMatches.length, 5); i++) {
-      const match = titleMatches[i];
+    for (let i = 0; i < Math.min(itemMatches.length, 5); i++) {
+      const match = itemMatches[i];
       const titleMatch = match.match(/<title>(.*?)<\/title>/);
+      const sourceMatch = match.match(/<source[^>]*>(.*?)<\/source>/);
+      const pubDateMatch = match.match(/<pubDate>(.*?)<\/pubDate>/);
+
       if (titleMatch && titleMatch[1]) {
-        items.push({
-          headline: titleMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/, "$1").replace(/&amp;/g, "&").trim(),
-        });
+        const headline = titleMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/, "$1").replace(/&amp;/g, "&").trim();
+        const source = sourceMatch ? sourceMatch[1].trim() : "Google News";
+        const pubDate = pubDateMatch ? pubDateMatch[1].trim() : new Date().toISOString();
+
+        headlines.push({ headline });
+        articles.push({ title: headline, headline, source, pubDate });
       }
     }
 
     return {
       symbol: cleanSym,
-      newsCount: items.length,
-      headlines: items,
+      newsCount: articles.length,
+      headlines,
+      articles,
     };
   } catch (err) {
     return { error: `News retrieval error: ${err.message}` };
@@ -212,18 +243,34 @@ export async function getEconomicCalendarEvents(env) {
           previous: e.previous || "N/A",
         }));
 
-      return { events: highImpactUsd };
+      return {
+        events: highImpactUsd,
+        upcomingEvents: highImpactUsd.map(e => ({
+          name: e.title,
+          event: e.title,
+          date: e.date,
+          impact: e.impact,
+        })),
+      };
     }
   } catch (e) {
     // Non-blocking
   }
 
+  const defaultEvents = [
+    { title: "FOMC Rate Decision / Press Conference", impact: "High", date: "Upcoming" },
+    { title: "US Consumer Price Index (CPI)", impact: "High", date: "Upcoming" },
+    { title: "US Non-Farm Payrolls & Unemployment", impact: "High", date: "Upcoming" },
+  ];
+
   return {
-    events: [
-      { title: "FOMC Rate Decision / Press Conference", impact: "High", date: "Upcoming" },
-      { title: "US Consumer Price Index (CPI)", impact: "High", date: "Upcoming" },
-      { title: "US Non-Farm Payrolls & Unemployment", impact: "High", date: "Upcoming" },
-    ],
+    events: defaultEvents,
+    upcomingEvents: defaultEvents.map(e => ({
+      name: e.title,
+      event: e.title,
+      date: e.date,
+      impact: e.impact,
+    })),
   };
 }
 
@@ -468,7 +515,7 @@ export async function executeAgentTool(name, args, env) {
     return await getTickerNews(parsedArgs.symbol, env);
   } else if (name === "get_market_sentiment") {
     return await getMarketSentiment(parsedArgs.symbol, env);
-  } else if (name === "get_economic_calendar") {
+  } else if (name === "get_economic_calendar" || name === "get_macro_economic_calendar") {
     return await getEconomicCalendarEvents(env);
   } else if (name === "search_financial_catalysts") {
     return await searchFinancialCatalysts(parsedArgs.query, parsedArgs.symbol, env);

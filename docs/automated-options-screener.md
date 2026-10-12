@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-The **AI Options Income Screener** is an institutional quantitative options engine integrated into DeltaHarvest. It bridges market data screeners (such as Barchart Direction Strength View 190898, MarketChameleon Weekly Options, and custom watchlists) with **Google Gemini 2.5 Flash / 2.0 Pro** running in **Extended Thinking Mode** (`thinking_level: HIGH`).
+The **AI Options Income Screener** is an institutional quantitative options engine integrated into DeltaHarvest. It bridges market data screeners (such as Barchart Direction Strength View 190898, MarketChameleon Weekly Options, and custom watchlists) with **Google Gemini 3.8 Flash / 2.0 Pro** running in **Extended Thinking Mode** (`thinking_level: HIGH`).
 
 The screener enforces mathematical constraints for selling **Cash-Secured Puts (CSP)** and **Covered Calls (CC)**, auditing candidates against dynamic technical support/resistance anchors, earnings event windows, bid/ask spreads, and annualized return on capital (AROC).
 
