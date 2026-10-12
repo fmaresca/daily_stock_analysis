@@ -144,6 +144,10 @@ export function parseRouteFromLocation(autoRedirect = false): RouteLocation {
     if (autoRedirect && path !== '/research/charts') window.history.replaceState(null, '', '/research/charts');
     return makeRoute({ tree: 'EQUITIES', equitiesTab: 'INTERACTIVE_CHARTS', canonicalPath: '/research/charts' });
   }
+  if (path === '/research/price-action' || path === '/price-action' || path === '/priceaction' || path === '/equities/price-action') {
+    if (autoRedirect && path !== '/research/price-action') window.history.replaceState(null, '', '/research/price-action');
+    return makeRoute({ tree: 'EQUITIES', equitiesTab: 'PRICE_ACTION', canonicalPath: '/research/price-action' });
+  }
   if (
     path === '/research/fundamentals' ||
     path === '/research/health' ||
@@ -294,6 +298,7 @@ export function useAppNavigation() {
       } else if (tree === 'EQUITIES') {
         if (equitiesTab === 'WEEKLY_STOCK_SCREENERS') targetPath = '/research/weekly-stocks';
         else if (equitiesTab === 'INTERACTIVE_CHARTS') targetPath = '/research/charts';
+        else if (equitiesTab === 'PRICE_ACTION') targetPath = '/research/price-action';
         else if (equitiesTab === 'FUNDAMENTAL_HEALTH') targetPath = '/research/fundamentals';
         else if (equitiesTab === 'ECONOMIC_CALENDAR') targetPath = '/research/calendar';
         else if (equitiesTab === 'TREND_SUPPORT') targetPath = '/research/trend';

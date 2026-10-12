@@ -60,6 +60,7 @@ const AdminUsersView = lazyWithRetry(() => import('./auth/AdminUsersView').then(
 const PasswordChangeView = lazyWithRetry(() => import('./auth/PasswordChangeView').then(m => ({ default: m.PasswordChangeView })), 'PasswordChangeView');
 const StrategyAgentChatView = lazyWithRetry(() => import('./agent/StrategyAgentChatView').then(m => ({ default: m.StrategyAgentChatView })), 'StrategyAgentChatView');
 const MarketRecapSection = lazyWithRetry(() => import('./market/MarketRecapSection').then(m => ({ default: m.MarketRecapSection })), 'MarketRecapSection');
+const PriceActionView = lazyWithRetry(() => import('./PriceActionView').then(m => ({ default: m.PriceActionView })), 'PriceActionView');
 import { Users } from './icons';
 
 
@@ -843,6 +844,7 @@ export const AuthenticatedTerminal: React.FC = () => {
             />
           ) : activeTree === 'FAQ' ? (
             <FaqView
+              onNavigateToPriceAction={() => navigateTo('EQUITIES', undefined, 'PRICE_ACTION')}
               onNavigateToScreener={() => navigateTo('EQUITIES', undefined, 'TECHNICAL_SCREENER')}
               onNavigateToMethodology={() => navigateTo('METHODOLOGY')}
               onOpenTradier={() => setIsTradierModalOpen(true)}
@@ -908,6 +910,15 @@ export const AuthenticatedTerminal: React.FC = () => {
                   ) : null;
                 })()}
               </div>
+            ) : activeEquitiesTab === 'PRICE_ACTION' ? (
+              <PriceActionView
+                initialSymbol={activeChartSymbol || modalState.selectedTicker?.symbol || 'SPY'}
+                watchlistSymbols={universeTickers.map((t) => t.symbol)}
+                onOpenTickerAudit={(sym) => {
+                  const target = universeTickers.find((t) => t.symbol === sym) || createFallbackTickerMeta(sym);
+                  setSelectedTicker(target);
+                }}
+              />
             ) : activeEquitiesTab === 'FUNDAMENTAL_HEALTH' ? (
               <div className="space-y-4">
                 <FundamentalHealthTable

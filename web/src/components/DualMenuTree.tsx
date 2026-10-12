@@ -638,7 +638,24 @@ export const DualMenuTree: React.FC<DualMenuTreeProps> = ({
               <span>Interactive Charts</span>
             </button>
 
-            {/* 4. Company Health & SEC */}
+            {/* 4. Price Action Analysis */}
+            <button
+              onClick={() => onSelectEquitiesTab('PRICE_ACTION')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${
+                activeEquitiesTab === 'PRICE_ACTION'
+                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-md ring-1 ring-emerald-400/50'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70'
+              }`}
+              title="Al Brooks price action bar-by-bar analysis, trend legs, and pattern setups."
+              aria-label="Price Action"
+              aria-current={activeEquitiesTab === 'PRICE_ACTION' ? 'true' : undefined}
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Price Action</span>
+              <span className="text-[10px] font-mono opacity-70">(Brooks)</span>
+            </button>
+
+            {/* 5. Company Health & SEC */}
             <button
               onClick={() => onSelectEquitiesTab('FUNDAMENTAL_HEALTH')}
               className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border ${

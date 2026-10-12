@@ -156,6 +156,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
+      id: 'nav-price-action',
+      title: 'Al Brooks Price Action Lab (H1/H2, L1/L2, Swings & Setups)',
+      subtitle: 'Bar-by-bar reading, swing pivot structure, pullback signals, and regime transitions',
+      icon: <TrendingUp className="w-4 h-4 text-emerald-400" />,
+      action: () => {
+        onNavigateTree('EQUITIES', 'PRICE_ACTION');
+        onClose();
+      },
+    },
+    {
       id: 'nav-fundamentals',
       title: 'Fundamental Solvency & CEF Audit',
       subtitle: 'Altman Z-Score bankruptcy risk, Piotroski F-Score & CEF discount/premium Z-scores',

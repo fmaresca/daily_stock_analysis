@@ -1,0 +1,1600 @@
+{
+  "setupsCount": 22,
+  "swingPivotsCount": 45,
+  "trendLegsCount": 44,
+  "tradingRangesCount": 2,
+  "alwaysInState": "NEUTRAL",
+  "setups": [
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 8,
+      "entryBarIndex": 9,
+      "signalBarDate": "2023-10-09",
+      "entryPrice": 484,
+      "invalidationLevel": 480.59,
+      "measuredMoveTarget": 492.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 18,
+      "entryBarIndex": 19,
+      "signalBarDate": "2023-10-19",
+      "entryPrice": 493,
+      "invalidationLevel": 489.59,
+      "measuredMoveTarget": 510.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 28,
+      "entryBarIndex": 29,
+      "signalBarDate": "2023-10-29",
+      "entryPrice": 502,
+      "invalidationLevel": 498.59,
+      "measuredMoveTarget": 528.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 38,
+      "entryBarIndex": 39,
+      "signalBarDate": "2023-11-08",
+      "entryPrice": 511,
+      "invalidationLevel": 507.59,
+      "measuredMoveTarget": 546.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 48,
+      "entryBarIndex": 49,
+      "signalBarDate": "2023-11-18",
+      "entryPrice": 520,
+      "invalidationLevel": 516.59,
+      "measuredMoveTarget": 564.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 58,
+      "entryBarIndex": 59,
+      "signalBarDate": "2023-11-28",
+      "entryPrice": 529,
+      "invalidationLevel": 525.59,
+      "measuredMoveTarget": 582.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 68,
+      "entryBarIndex": 69,
+      "signalBarDate": "2023-12-08",
+      "entryPrice": 538,
+      "invalidationLevel": 534.59,
+      "measuredMoveTarget": 600.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 78,
+      "entryBarIndex": 79,
+      "signalBarDate": "2023-12-18",
+      "entryPrice": 547,
+      "invalidationLevel": 543.59,
+      "measuredMoveTarget": 618.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 88,
+      "entryBarIndex": 89,
+      "signalBarDate": "2023-12-28",
+      "entryPrice": 556,
+      "invalidationLevel": 552.59,
+      "measuredMoveTarget": 636.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 98,
+      "entryBarIndex": 99,
+      "signalBarDate": "2024-01-07",
+      "entryPrice": 565,
+      "invalidationLevel": 561.59,
+      "measuredMoveTarget": 654.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "H2",
+      "direction": "BULL",
+      "signalBarIndex": 108,
+      "entryBarIndex": 109,
+      "signalBarDate": "2024-01-17",
+      "entryPrice": 574,
+      "invalidationLevel": 570.59,
+      "measuredMoveTarget": 672.3,
+      "rationale": "Bull trend: Pullback made 3 counter-trend bar(s), followed by H2 signal bar breaking prior high.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates below signal bar low.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "H2"
+      }
+    },
+    {
+      "type": "FAILED_BREAKOUT_REVERSAL",
+      "direction": "BEAR",
+      "signalBarIndex": 135,
+      "entryBarIndex": 135,
+      "signalBarDate": "2024-02-13",
+      "entryPrice": 583.1,
+      "invalidationLevel": 587.51,
+      "measuredMoveTarget": 579,
+      "rationale": "Failed breakout reversal: Price probed above range top ($584) but closed back inside with bear reversal bar.",
+      "confidenceNote": "Not financial advice — range fade setup targeting opposite side of trading range.",
+      "parametersUsed": {
+        "rangeTop": 584,
+        "rangeBottom": 579
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 158,
+      "entryBarIndex": 159,
+      "signalBarDate": "2024-03-07",
+      "entryPrice": 574,
+      "invalidationLevel": 577.41,
+      "measuredMoveTarget": 565.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 168,
+      "entryBarIndex": 169,
+      "signalBarDate": "2024-03-17",
+      "entryPrice": 565,
+      "invalidationLevel": 568.41,
+      "measuredMoveTarget": 547.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 178,
+      "entryBarIndex": 179,
+      "signalBarDate": "2024-03-27",
+      "entryPrice": 556,
+      "invalidationLevel": 559.41,
+      "measuredMoveTarget": 529.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 188,
+      "entryBarIndex": 189,
+      "signalBarDate": "2024-04-06",
+      "entryPrice": 547,
+      "invalidationLevel": 550.41,
+      "measuredMoveTarget": 511.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 198,
+      "entryBarIndex": 199,
+      "signalBarDate": "2024-04-16",
+      "entryPrice": 538,
+      "invalidationLevel": 541.41,
+      "measuredMoveTarget": 493.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 208,
+      "entryBarIndex": 209,
+      "signalBarDate": "2024-04-26",
+      "entryPrice": 529,
+      "invalidationLevel": 532.41,
+      "measuredMoveTarget": 475.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 218,
+      "entryBarIndex": 219,
+      "signalBarDate": "2024-05-06",
+      "entryPrice": 520,
+      "invalidationLevel": 523.41,
+      "measuredMoveTarget": 457.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 228,
+      "entryBarIndex": 229,
+      "signalBarDate": "2024-05-16",
+      "entryPrice": 511,
+      "invalidationLevel": 514.41,
+      "measuredMoveTarget": 439.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 238,
+      "entryBarIndex": 239,
+      "signalBarDate": "2024-05-26",
+      "entryPrice": 502,
+      "invalidationLevel": 505.41,
+      "measuredMoveTarget": 421.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    },
+    {
+      "type": "L2",
+      "direction": "BEAR",
+      "signalBarIndex": 248,
+      "entryBarIndex": 249,
+      "signalBarDate": "2024-06-05",
+      "entryPrice": 493,
+      "invalidationLevel": 496.41,
+      "measuredMoveTarget": 403.1,
+      "rationale": "Bear trend: Pullback made 3 counter-trend bar(s), followed by L2 signal bar breaking prior low.",
+      "confidenceNote": "Not financial advice — probabilistic pullback setup. Invalidates above signal bar high.",
+      "parametersUsed": {
+        "pullbackCount": 3,
+        "emaPeriod": 20,
+        "setupType": "L2"
+      }
+    }
+  ],
+  "swingPivots": [
+    {
+      "index": 5,
+      "type": "SWING_HIGH",
+      "price": 485,
+      "confirmedAtIndex": 7
+    },
+    {
+      "index": 7,
+      "type": "SWING_LOW",
+      "price": 480,
+      "confirmedAtIndex": 9
+    },
+    {
+      "index": 15,
+      "type": "SWING_HIGH",
+      "price": 494,
+      "confirmedAtIndex": 17
+    },
+    {
+      "index": 17,
+      "type": "SWING_LOW",
+      "price": 489,
+      "confirmedAtIndex": 19
+    },
+    {
+      "index": 25,
+      "type": "SWING_HIGH",
+      "price": 503,
+      "confirmedAtIndex": 27
+    },
+    {
+      "index": 27,
+      "type": "SWING_LOW",
+      "price": 498,
+      "confirmedAtIndex": 29
+    },
+    {
+      "index": 35,
+      "type": "SWING_HIGH",
+      "price": 512,
+      "confirmedAtIndex": 37
+    },
+    {
+      "index": 37,
+      "type": "SWING_LOW",
+      "price": 507,
+      "confirmedAtIndex": 39
+    },
+    {
+      "index": 45,
+      "type": "SWING_HIGH",
+      "price": 521,
+      "confirmedAtIndex": 47
+    },
+    {
+      "index": 47,
+      "type": "SWING_LOW",
+      "price": 516,
+      "confirmedAtIndex": 49
+    },
+    {
+      "index": 55,
+      "type": "SWING_HIGH",
+      "price": 530,
+      "confirmedAtIndex": 57
+    },
+    {
+      "index": 57,
+      "type": "SWING_LOW",
+      "price": 525,
+      "confirmedAtIndex": 59
+    },
+    {
+      "index": 65,
+      "type": "SWING_HIGH",
+      "price": 539,
+      "confirmedAtIndex": 67
+    },
+    {
+      "index": 67,
+      "type": "SWING_LOW",
+      "price": 534,
+      "confirmedAtIndex": 69
+    },
+    {
+      "index": 75,
+      "type": "SWING_HIGH",
+      "price": 548,
+      "confirmedAtIndex": 77
+    },
+    {
+      "index": 77,
+      "type": "SWING_LOW",
+      "price": 543,
+      "confirmedAtIndex": 79
+    },
+    {
+      "index": 85,
+      "type": "SWING_HIGH",
+      "price": 557,
+      "confirmedAtIndex": 87
+    },
+    {
+      "index": 87,
+      "type": "SWING_LOW",
+      "price": 552,
+      "confirmedAtIndex": 89
+    },
+    {
+      "index": 95,
+      "type": "SWING_HIGH",
+      "price": 566,
+      "confirmedAtIndex": 97
+    },
+    {
+      "index": 97,
+      "type": "SWING_LOW",
+      "price": 561,
+      "confirmedAtIndex": 99
+    },
+    {
+      "index": 105,
+      "type": "SWING_HIGH",
+      "price": 575,
+      "confirmedAtIndex": 107
+    },
+    {
+      "index": 107,
+      "type": "SWING_LOW",
+      "price": 570,
+      "confirmedAtIndex": 109
+    },
+    {
+      "index": 115,
+      "type": "SWING_HIGH",
+      "price": 584,
+      "confirmedAtIndex": 117
+    },
+    {
+      "index": 117,
+      "type": "SWING_LOW",
+      "price": 579,
+      "confirmedAtIndex": 119
+    },
+    {
+      "index": 135,
+      "type": "SWING_HIGH",
+      "price": 587.5,
+      "confirmedAtIndex": 137
+    },
+    {
+      "index": 155,
+      "type": "SWING_LOW",
+      "price": 573,
+      "confirmedAtIndex": 157
+    },
+    {
+      "index": 157,
+      "type": "SWING_HIGH",
+      "price": 578,
+      "confirmedAtIndex": 159
+    },
+    {
+      "index": 165,
+      "type": "SWING_LOW",
+      "price": 564,
+      "confirmedAtIndex": 167
+    },
+    {
+      "index": 167,
+      "type": "SWING_HIGH",
+      "price": 569,
+      "confirmedAtIndex": 169
+    },
+    {
+      "index": 175,
+      "type": "SWING_LOW",
+      "price": 555,
+      "confirmedAtIndex": 177
+    },
+    {
+      "index": 177,
+      "type": "SWING_HIGH",
+      "price": 560,
+      "confirmedAtIndex": 179
+    },
+    {
+      "index": 185,
+      "type": "SWING_LOW",
+      "price": 546,
+      "confirmedAtIndex": 187
+    },
+    {
+      "index": 187,
+      "type": "SWING_HIGH",
+      "price": 551,
+      "confirmedAtIndex": 189
+    },
+    {
+      "index": 195,
+      "type": "SWING_LOW",
+      "price": 537,
+      "confirmedAtIndex": 197
+    },
+    {
+      "index": 197,
+      "type": "SWING_HIGH",
+      "price": 542,
+      "confirmedAtIndex": 199
+    },
+    {
+      "index": 205,
+      "type": "SWING_LOW",
+      "price": 528,
+      "confirmedAtIndex": 207
+    },
+    {
+      "index": 207,
+      "type": "SWING_HIGH",
+      "price": 533,
+      "confirmedAtIndex": 209
+    },
+    {
+      "index": 215,
+      "type": "SWING_LOW",
+      "price": 519,
+      "confirmedAtIndex": 217
+    },
+    {
+      "index": 217,
+      "type": "SWING_HIGH",
+      "price": 524,
+      "confirmedAtIndex": 219
+    },
+    {
+      "index": 225,
+      "type": "SWING_LOW",
+      "price": 510,
+      "confirmedAtIndex": 227
+    },
+    {
+      "index": 227,
+      "type": "SWING_HIGH",
+      "price": 515,
+      "confirmedAtIndex": 229
+    },
+    {
+      "index": 235,
+      "type": "SWING_LOW",
+      "price": 501,
+      "confirmedAtIndex": 237
+    },
+    {
+      "index": 237,
+      "type": "SWING_HIGH",
+      "price": 506,
+      "confirmedAtIndex": 239
+    },
+    {
+      "index": 245,
+      "type": "SWING_LOW",
+      "price": 492,
+      "confirmedAtIndex": 247
+    },
+    {
+      "index": 247,
+      "type": "SWING_HIGH",
+      "price": 497,
+      "confirmedAtIndex": 249
+    }
+  ],
+  "trendLegs": [
+    {
+      "direction": "BEAR",
+      "startBarIndex": 5,
+      "endBarIndex": 7,
+      "startPrice": 485,
+      "endPrice": 480,
+      "barCount": 3,
+      "netChangePct": -1.03,
+      "pivots": [
+        {
+          "index": 5,
+          "type": "LH",
+          "price": 485
+        },
+        {
+          "index": 7,
+          "type": "HL",
+          "price": 480
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 7,
+      "endBarIndex": 15,
+      "startPrice": 480,
+      "endPrice": 494,
+      "barCount": 9,
+      "netChangePct": 2.92,
+      "pivots": [
+        {
+          "index": 7,
+          "type": "HL",
+          "price": 480
+        },
+        {
+          "index": 15,
+          "type": "HH",
+          "price": 494
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 15,
+      "endBarIndex": 17,
+      "startPrice": 494,
+      "endPrice": 489,
+      "barCount": 3,
+      "netChangePct": -1.01,
+      "pivots": [
+        {
+          "index": 15,
+          "type": "LH",
+          "price": 494
+        },
+        {
+          "index": 17,
+          "type": "LL",
+          "price": 489
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 17,
+      "endBarIndex": 25,
+      "startPrice": 489,
+      "endPrice": 503,
+      "barCount": 9,
+      "netChangePct": 2.86,
+      "pivots": [
+        {
+          "index": 17,
+          "type": "HL",
+          "price": 489
+        },
+        {
+          "index": 25,
+          "type": "HH",
+          "price": 503
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 25,
+      "endBarIndex": 27,
+      "startPrice": 503,
+      "endPrice": 498,
+      "barCount": 3,
+      "netChangePct": -0.99,
+      "pivots": [
+        {
+          "index": 25,
+          "type": "LH",
+          "price": 503
+        },
+        {
+          "index": 27,
+          "type": "LL",
+          "price": 498
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 27,
+      "endBarIndex": 35,
+      "startPrice": 498,
+      "endPrice": 512,
+      "barCount": 9,
+      "netChangePct": 2.81,
+      "pivots": [
+        {
+          "index": 27,
+          "type": "HL",
+          "price": 498
+        },
+        {
+          "index": 35,
+          "type": "HH",
+          "price": 512
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 35,
+      "endBarIndex": 37,
+      "startPrice": 512,
+      "endPrice": 507,
+      "barCount": 3,
+      "netChangePct": -0.98,
+      "pivots": [
+        {
+          "index": 35,
+          "type": "LH",
+          "price": 512
+        },
+        {
+          "index": 37,
+          "type": "LL",
+          "price": 507
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 37,
+      "endBarIndex": 45,
+      "startPrice": 507,
+      "endPrice": 521,
+      "barCount": 9,
+      "netChangePct": 2.76,
+      "pivots": [
+        {
+          "index": 37,
+          "type": "HL",
+          "price": 507
+        },
+        {
+          "index": 45,
+          "type": "HH",
+          "price": 521
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 45,
+      "endBarIndex": 47,
+      "startPrice": 521,
+      "endPrice": 516,
+      "barCount": 3,
+      "netChangePct": -0.96,
+      "pivots": [
+        {
+          "index": 45,
+          "type": "LH",
+          "price": 521
+        },
+        {
+          "index": 47,
+          "type": "LL",
+          "price": 516
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 47,
+      "endBarIndex": 55,
+      "startPrice": 516,
+      "endPrice": 530,
+      "barCount": 9,
+      "netChangePct": 2.71,
+      "pivots": [
+        {
+          "index": 47,
+          "type": "HL",
+          "price": 516
+        },
+        {
+          "index": 55,
+          "type": "HH",
+          "price": 530
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 55,
+      "endBarIndex": 57,
+      "startPrice": 530,
+      "endPrice": 525,
+      "barCount": 3,
+      "netChangePct": -0.94,
+      "pivots": [
+        {
+          "index": 55,
+          "type": "LH",
+          "price": 530
+        },
+        {
+          "index": 57,
+          "type": "LL",
+          "price": 525
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 57,
+      "endBarIndex": 65,
+      "startPrice": 525,
+      "endPrice": 539,
+      "barCount": 9,
+      "netChangePct": 2.67,
+      "pivots": [
+        {
+          "index": 57,
+          "type": "HL",
+          "price": 525
+        },
+        {
+          "index": 65,
+          "type": "HH",
+          "price": 539
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 65,
+      "endBarIndex": 67,
+      "startPrice": 539,
+      "endPrice": 534,
+      "barCount": 3,
+      "netChangePct": -0.93,
+      "pivots": [
+        {
+          "index": 65,
+          "type": "LH",
+          "price": 539
+        },
+        {
+          "index": 67,
+          "type": "LL",
+          "price": 534
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 67,
+      "endBarIndex": 75,
+      "startPrice": 534,
+      "endPrice": 548,
+      "barCount": 9,
+      "netChangePct": 2.62,
+      "pivots": [
+        {
+          "index": 67,
+          "type": "HL",
+          "price": 534
+        },
+        {
+          "index": 75,
+          "type": "HH",
+          "price": 548
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 75,
+      "endBarIndex": 77,
+      "startPrice": 548,
+      "endPrice": 543,
+      "barCount": 3,
+      "netChangePct": -0.91,
+      "pivots": [
+        {
+          "index": 75,
+          "type": "LH",
+          "price": 548
+        },
+        {
+          "index": 77,
+          "type": "LL",
+          "price": 543
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 77,
+      "endBarIndex": 85,
+      "startPrice": 543,
+      "endPrice": 557,
+      "barCount": 9,
+      "netChangePct": 2.58,
+      "pivots": [
+        {
+          "index": 77,
+          "type": "HL",
+          "price": 543
+        },
+        {
+          "index": 85,
+          "type": "HH",
+          "price": 557
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 85,
+      "endBarIndex": 87,
+      "startPrice": 557,
+      "endPrice": 552,
+      "barCount": 3,
+      "netChangePct": -0.9,
+      "pivots": [
+        {
+          "index": 85,
+          "type": "LH",
+          "price": 557
+        },
+        {
+          "index": 87,
+          "type": "LL",
+          "price": 552
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 87,
+      "endBarIndex": 95,
+      "startPrice": 552,
+      "endPrice": 566,
+      "barCount": 9,
+      "netChangePct": 2.54,
+      "pivots": [
+        {
+          "index": 87,
+          "type": "HL",
+          "price": 552
+        },
+        {
+          "index": 95,
+          "type": "HH",
+          "price": 566
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 95,
+      "endBarIndex": 97,
+      "startPrice": 566,
+      "endPrice": 561,
+      "barCount": 3,
+      "netChangePct": -0.88,
+      "pivots": [
+        {
+          "index": 95,
+          "type": "LH",
+          "price": 566
+        },
+        {
+          "index": 97,
+          "type": "LL",
+          "price": 561
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 97,
+      "endBarIndex": 105,
+      "startPrice": 561,
+      "endPrice": 575,
+      "barCount": 9,
+      "netChangePct": 2.5,
+      "pivots": [
+        {
+          "index": 97,
+          "type": "HL",
+          "price": 561
+        },
+        {
+          "index": 105,
+          "type": "HH",
+          "price": 575
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 105,
+      "endBarIndex": 107,
+      "startPrice": 575,
+      "endPrice": 570,
+      "barCount": 3,
+      "netChangePct": -0.87,
+      "pivots": [
+        {
+          "index": 105,
+          "type": "LH",
+          "price": 575
+        },
+        {
+          "index": 107,
+          "type": "LL",
+          "price": 570
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 107,
+      "endBarIndex": 115,
+      "startPrice": 570,
+      "endPrice": 584,
+      "barCount": 9,
+      "netChangePct": 2.46,
+      "pivots": [
+        {
+          "index": 107,
+          "type": "HL",
+          "price": 570
+        },
+        {
+          "index": 115,
+          "type": "HH",
+          "price": 584
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 115,
+      "endBarIndex": 117,
+      "startPrice": 584,
+      "endPrice": 579,
+      "barCount": 3,
+      "netChangePct": -0.86,
+      "pivots": [
+        {
+          "index": 115,
+          "type": "LH",
+          "price": 584
+        },
+        {
+          "index": 117,
+          "type": "LL",
+          "price": 579
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 117,
+      "endBarIndex": 135,
+      "startPrice": 579,
+      "endPrice": 587.5,
+      "barCount": 19,
+      "netChangePct": 1.47,
+      "pivots": [
+        {
+          "index": 117,
+          "type": "HL",
+          "price": 579
+        },
+        {
+          "index": 135,
+          "type": "HH",
+          "price": 587.5
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 135,
+      "endBarIndex": 155,
+      "startPrice": 587.5,
+      "endPrice": 573,
+      "barCount": 21,
+      "netChangePct": -2.47,
+      "pivots": [
+        {
+          "index": 135,
+          "type": "LH",
+          "price": 587.5
+        },
+        {
+          "index": 155,
+          "type": "LL",
+          "price": 573
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 155,
+      "endBarIndex": 157,
+      "startPrice": 573,
+      "endPrice": 578,
+      "barCount": 3,
+      "netChangePct": 0.87,
+      "pivots": [
+        {
+          "index": 155,
+          "type": "HL",
+          "price": 573
+        },
+        {
+          "index": 157,
+          "type": "HH",
+          "price": 578
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 157,
+      "endBarIndex": 165,
+      "startPrice": 578,
+      "endPrice": 564,
+      "barCount": 9,
+      "netChangePct": -2.42,
+      "pivots": [
+        {
+          "index": 157,
+          "type": "LH",
+          "price": 578
+        },
+        {
+          "index": 165,
+          "type": "LL",
+          "price": 564
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 165,
+      "endBarIndex": 167,
+      "startPrice": 564,
+      "endPrice": 569,
+      "barCount": 3,
+      "netChangePct": 0.89,
+      "pivots": [
+        {
+          "index": 165,
+          "type": "HL",
+          "price": 564
+        },
+        {
+          "index": 167,
+          "type": "HH",
+          "price": 569
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 167,
+      "endBarIndex": 175,
+      "startPrice": 569,
+      "endPrice": 555,
+      "barCount": 9,
+      "netChangePct": -2.46,
+      "pivots": [
+        {
+          "index": 167,
+          "type": "LH",
+          "price": 569
+        },
+        {
+          "index": 175,
+          "type": "LL",
+          "price": 555
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 175,
+      "endBarIndex": 177,
+      "startPrice": 555,
+      "endPrice": 560,
+      "barCount": 3,
+      "netChangePct": 0.9,
+      "pivots": [
+        {
+          "index": 175,
+          "type": "HL",
+          "price": 555
+        },
+        {
+          "index": 177,
+          "type": "HH",
+          "price": 560
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 177,
+      "endBarIndex": 185,
+      "startPrice": 560,
+      "endPrice": 546,
+      "barCount": 9,
+      "netChangePct": -2.5,
+      "pivots": [
+        {
+          "index": 177,
+          "type": "LH",
+          "price": 560
+        },
+        {
+          "index": 185,
+          "type": "LL",
+          "price": 546
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 185,
+      "endBarIndex": 187,
+      "startPrice": 546,
+      "endPrice": 551,
+      "barCount": 3,
+      "netChangePct": 0.92,
+      "pivots": [
+        {
+          "index": 185,
+          "type": "HL",
+          "price": 546
+        },
+        {
+          "index": 187,
+          "type": "HH",
+          "price": 551
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 187,
+      "endBarIndex": 195,
+      "startPrice": 551,
+      "endPrice": 537,
+      "barCount": 9,
+      "netChangePct": -2.54,
+      "pivots": [
+        {
+          "index": 187,
+          "type": "LH",
+          "price": 551
+        },
+        {
+          "index": 195,
+          "type": "LL",
+          "price": 537
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 195,
+      "endBarIndex": 197,
+      "startPrice": 537,
+      "endPrice": 542,
+      "barCount": 3,
+      "netChangePct": 0.93,
+      "pivots": [
+        {
+          "index": 195,
+          "type": "HL",
+          "price": 537
+        },
+        {
+          "index": 197,
+          "type": "HH",
+          "price": 542
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 197,
+      "endBarIndex": 205,
+      "startPrice": 542,
+      "endPrice": 528,
+      "barCount": 9,
+      "netChangePct": -2.58,
+      "pivots": [
+        {
+          "index": 197,
+          "type": "LH",
+          "price": 542
+        },
+        {
+          "index": 205,
+          "type": "LL",
+          "price": 528
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 205,
+      "endBarIndex": 207,
+      "startPrice": 528,
+      "endPrice": 533,
+      "barCount": 3,
+      "netChangePct": 0.95,
+      "pivots": [
+        {
+          "index": 205,
+          "type": "HL",
+          "price": 528
+        },
+        {
+          "index": 207,
+          "type": "HH",
+          "price": 533
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 207,
+      "endBarIndex": 215,
+      "startPrice": 533,
+      "endPrice": 519,
+      "barCount": 9,
+      "netChangePct": -2.63,
+      "pivots": [
+        {
+          "index": 207,
+          "type": "LH",
+          "price": 533
+        },
+        {
+          "index": 215,
+          "type": "LL",
+          "price": 519
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 215,
+      "endBarIndex": 217,
+      "startPrice": 519,
+      "endPrice": 524,
+      "barCount": 3,
+      "netChangePct": 0.96,
+      "pivots": [
+        {
+          "index": 215,
+          "type": "HL",
+          "price": 519
+        },
+        {
+          "index": 217,
+          "type": "HH",
+          "price": 524
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 217,
+      "endBarIndex": 225,
+      "startPrice": 524,
+      "endPrice": 510,
+      "barCount": 9,
+      "netChangePct": -2.67,
+      "pivots": [
+        {
+          "index": 217,
+          "type": "LH",
+          "price": 524
+        },
+        {
+          "index": 225,
+          "type": "LL",
+          "price": 510
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 225,
+      "endBarIndex": 227,
+      "startPrice": 510,
+      "endPrice": 515,
+      "barCount": 3,
+      "netChangePct": 0.98,
+      "pivots": [
+        {
+          "index": 225,
+          "type": "HL",
+          "price": 510
+        },
+        {
+          "index": 227,
+          "type": "HH",
+          "price": 515
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 227,
+      "endBarIndex": 235,
+      "startPrice": 515,
+      "endPrice": 501,
+      "barCount": 9,
+      "netChangePct": -2.72,
+      "pivots": [
+        {
+          "index": 227,
+          "type": "LH",
+          "price": 515
+        },
+        {
+          "index": 235,
+          "type": "LL",
+          "price": 501
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 235,
+      "endBarIndex": 237,
+      "startPrice": 501,
+      "endPrice": 506,
+      "barCount": 3,
+      "netChangePct": 1,
+      "pivots": [
+        {
+          "index": 235,
+          "type": "HL",
+          "price": 501
+        },
+        {
+          "index": 237,
+          "type": "HH",
+          "price": 506
+        }
+      ]
+    },
+    {
+      "direction": "BEAR",
+      "startBarIndex": 237,
+      "endBarIndex": 245,
+      "startPrice": 506,
+      "endPrice": 492,
+      "barCount": 9,
+      "netChangePct": -2.77,
+      "pivots": [
+        {
+          "index": 237,
+          "type": "LH",
+          "price": 506
+        },
+        {
+          "index": 245,
+          "type": "LL",
+          "price": 492
+        }
+      ]
+    },
+    {
+      "direction": "BULL",
+      "startBarIndex": 245,
+      "endBarIndex": 247,
+      "startPrice": 492,
+      "endPrice": 497,
+      "barCount": 3,
+      "netChangePct": 1.02,
+      "pivots": [
+        {
+          "index": 245,
+          "type": "HL",
+          "price": 492
+        },
+        {
+          "index": 247,
+          "type": "HH",
+          "price": 497
+        }
+      ]
+    }
+  ],
+  "tradingRanges": [
+    {
+      "startBarIndex": 117,
+      "endBarIndex": 134,
+      "top": 584,
+      "bottom": 579,
+      "height": 5,
+      "barCount": 18,
+      "overlapRatio": 0.94
+    },
+    {
+      "startBarIndex": 136,
+      "endBarIndex": 149,
+      "top": 584,
+      "bottom": 582.6,
+      "height": 1.4,
+      "barCount": 14,
+      "overlapRatio": 1
+    }
+  ]
+}

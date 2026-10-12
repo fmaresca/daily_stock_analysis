@@ -301,6 +301,10 @@ export const AppModalsContainer: React.FC<AppModalsContainerProps> = ({
                 setIsSimulatorModalOpen(true);
               }
             }}
+            onNavigateToPriceAction={(sym) => {
+              setSelectedTicker(null);
+              navigateTo('EQUITIES', undefined, 'PRICE_ACTION');
+            }}
           />
         </ErrorBoundary>
       )}

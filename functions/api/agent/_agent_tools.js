@@ -173,7 +173,7 @@ export async function getTickerNews(symbol, env) {
       if (titleMatch && titleMatch[1]) {
         const headline = titleMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/, "$1").replace(/&amp;/g, "&").trim();
         const source = sourceMatch ? sourceMatch[1].trim() : "Google News";
-        const pubDate = pubDateMatch ? pubDateMatch[1].trim() : new Date().toISOString();
+        const pubDate = pubDateMatch ? pubDateMatch[1].trim() : new Date().toISOString(); // wall-clock-ok: RSS article timestamp fallback
 
         headlines.push({ headline });
         articles.push({ title: headline, headline, source, pubDate });

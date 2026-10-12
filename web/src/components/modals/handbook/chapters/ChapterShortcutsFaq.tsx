@@ -32,6 +32,11 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
         title="Shortcuts &amp; System Features Direct Access"
         actions={[
           {
+            label: 'Al Brooks Price Action Lab',
+            location: 'Equities > Price Action',
+            onClick: () => onNavigate?.('EQUITIES', undefined, 'PRICE_ACTION'),
+          },
+          {
             label: 'Command Palette (Ctrl+K)',
             location: 'Modal: Command Palette',
             onClick: onOpenCommandPalette,
@@ -569,6 +574,72 @@ export const ChapterShortcutsFaq: React.FC<ChapterShortcutsFaqProps> = ({
             <li><strong>Automated 3-Table Partitioning &amp; Contracts Sizing:</strong> Automatically parses rows into Table 1 (Recommended Institutional Trades), Table 2 (Borderline Candidates), and Table 3 (Excluded), normalizing ticker symbols, strike prices, expiration dates, delta, premium yields, and number of contracts to be written (Contracts to Write). Also supports inline interactive +/- adjustment of contract counts with instant cash collateral recalculation.</li>
             <li><strong>Broker Workbench Staging:</strong> Once imported, Table 1 selections activate direct staging to the Charles Schwab Order Workbench with 1 click, preserving the exact number of contracts to write, bracket order parameters, and cash collateral check.</li>
             <li><strong>Template &amp; Export:</strong> Includes 1-click download of standardized CSV and Excel import templates (including Contracts to Write), as well as real-time roundtrip export of your current active selections.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/40 space-y-1.5">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-emerald-400">📊</span>
+            <span>What is the Al Brooks Price Action Method and how does the Bar-by-Bar Lab work?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            The <strong>Price Action Lab</strong> implements non-repainting bar-by-bar analysis based on concepts published by Al Brooks (John Wiley &amp; Sons):
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Canonical Bar Pipeline:</strong> Normalizes Tradier and Yahoo Finance market feeds through a 2% bad-tick filter (<code className="text-teal-300 font-mono">maxBadTickPct = 0.02</code>), preserving price gaps and strict chronological order without synthetic candle fabrication.</li>
+            <li><strong>Objective Bar Classification:</strong> Classifies candles into Trend Bars (&gt;55% body ratio), Dojis (&lt;20% body ratio), Reversal Bars (&gt;50% tail/wick rejection), and Inside/Outside bars.</li>
+            <li><strong>2-Bar Lag Swing Pivots:</strong> Swing highs and lows require 2 subsequent lower highs or higher lows to confirm (<code className="text-cyan-300 font-mono">H[t-2] &gt; H[t-4..t]</code>), eliminating live chart repainting.</li>
+            <li><strong>Always-In State Machine:</strong> Tracks whether dominant market pressure is Always-In Long (AIL), Always-In Short (AIS), or Neutral / Range-bound.</li>
+            <li><strong>Core Setups:</strong> Detects H1/H2 bull pullbacks to 20 EMA, L1/L2 bear pullbacks, 2-test trading ranges, range breakouts, and breakout-fade reversals with invalidation boundaries.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-cyan-500/40 space-y-1.5">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-cyan-400">🌐</span>
+            <span>How does the Dual-Index Market Regime (SPX &amp; NDX) drive position sizing?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Broad market regime is determined by evaluating S&amp;P 500 (SPY proxy) and Nasdaq-100 (QQQ proxy) concurrently against an institutional Agreement Matrix:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>AGREE (Aligned Trend):</strong> Both SPY and QQQ share the same Always-In trend state (both AIL Bullish or both AIS Bearish). Authorizes full/aggressive capital allocation for aligned setups and premium writing.</li>
+            <li><strong>MIXED (Partial Alignment):</strong> One index is trending while the other is Neutral / Trading Range. Suggests moderate trend conviction; position sizing scales down to 50%–75% of standard risk.</li>
+            <li><strong>CONFLICT (Inter-Market Divergence):</strong> One index is Always-In Long while the other is Always-In Short. Rotational turbulence or sector divergence; stand aside or scale down to &le;25% risk.</li>
+            <li><strong>Immutable D1 Audit Trail:</strong> Daily evaluations are stored immutably in browser storage and edge D1 (<code className="text-purple-300 font-mono">price_action_regimes</code> table with <code className="text-slate-200 font-mono">INSERT OR IGNORE</code>) anchored to America/New_York (ET). Past dates are never rewritten.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-indigo-500/40 space-y-1.5">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-indigo-400">🔔</span>
+            <span>How do Price Action Setup Alerts work, and how is noise suppressed?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            The Setup Alerts engine dispatches multi-channel notifications (Browser, Discord/Slack Webhook, Email) with five institutional noise filters:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Deduplication Key:</strong> Formatted as <code className="text-teal-300 font-mono">ticker:setupType:signalBarDate</code>; suppresses multiple firings for the same bar.</li>
+            <li><strong>5-Bar Directional Cooldown:</strong> Subsequent setups in the same direction on a ticker are suppressed for 5 trading bars.</li>
+            <li><strong>Regime Alignment Filter:</strong> When enabled, contra-trend setups (e.g. Long setups during Bearish AIS regime) are silenced.</li>
+            <li><strong>Quiet Hours (22:00–07:00 ET):</strong> Non-critical alerts are held overnight, matching platform noise gate <code className="text-amber-300 font-mono">src/notification_noise.py</code>.</li>
+            <li><strong>Observational Wording:</strong> Notifications use objective, non-repainting language (e.g. <em>&quot;Pattern observed: H2 Pullback detected at 20 EMA on SPY&quot;</em>) rather than buy/sell commands.</li>
+          </ul>
+        </div>
+
+        <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-700 space-y-1.5">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span className="text-slate-300">🔄</span>
+            <span>How do I customize, toggle off, or safely revert Price Action settings and alert configurations?</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            DeltaHarvest provides strict non-destructive isolation for all Price Action settings and history:
+          </p>
+          <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside mt-1">
+            <li><strong>Master Alert Switch &amp; Channel Mutes:</strong> Click the <strong>Bell icon</strong> in the Price Action Lab header to open the Alerts Preferences drawer. Toggle off master alerts or silence individual channels (Browser, Discord, Email) at any time.</li>
+            <li><strong>Factory Heuristic Defaults:</strong> Resetting detection parameters restores institutional factory benchmarks (20 EMA baseline, 55% trend bar body, 2-bar lag pivots) immediately.</li>
+            <li><strong>Data Isolation &amp; Ledger Safety:</strong> Local alert history (<code className="text-teal-300 font-mono">deltaharvest_price_action_alerts</code>) and regime caches are quarantined from your core options journal (<code className="text-purple-300 font-mono">options_signal_journal</code>), YTD premiums earned, and Schwab portfolio balances. Clearing alert logs never affects trading records.</li>
+            <li><strong>Seamless View Switching:</strong> You can toggle between the Al Brooks Price Action Lab and standard Interactive Candlestick / Barchart 13-Study view at any time from the Equities navigation menu with full state preservation.</li>
           </ul>
         </div>
       </div>

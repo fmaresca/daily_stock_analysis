@@ -18,7 +18,7 @@ import {
 
 interface FaqItem {
   id: string;
-  category: 'GENERAL' | 'STRATEGY' | 'EXECUTION' | 'MARGIN' | 'APIS' | 'TAX' | 'AI';
+  category: 'GENERAL' | 'STRATEGY' | 'EXECUTION' | 'MARGIN' | 'APIS' | 'TAX' | 'AI' | 'PRICE_ACTION';
   question: string;
   answer: React.ReactNode;
 }
@@ -26,6 +26,7 @@ interface FaqItem {
 interface FaqViewProps {
   onNavigateToScreener?: () => void;
   onNavigateToMethodology?: () => void;
+  onNavigateToPriceAction?: () => void;
   onOpenTradier?: () => void;
   onOpenSchwab?: () => void;
 }
@@ -33,6 +34,7 @@ interface FaqViewProps {
 export const FaqView: React.FC<FaqViewProps> = ({
   onNavigateToScreener,
   onNavigateToMethodology,
+  onNavigateToPriceAction,
   onOpenTradier,
   onOpenSchwab,
 }) => {
@@ -341,7 +343,85 @@ export const FaqView: React.FC<FaqViewProps> = ({
         </div>
       ),
     },
-  ];
+    {
+      id: 'faq-18',
+        category: 'PRICE_ACTION',
+        question: 'What is the Al Brooks Price Action Method and how does the Bar-by-Bar Lab work?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>
+              The <strong>Price Action Lab</strong> implements non-repainting bar-by-bar analysis based on concepts published by Al Brooks (John Wiley &amp; Sons). Key principles include:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400 text-xs">
+              <li><strong>Canonical Bar Normalization:</strong> Raw equity feeds from Tradier or Yahoo Finance are validated through a 2% bad-tick filter (<code className="text-teal-300 font-mono">maxBadTickPct = 0.02</code>), preserving natural price gaps without synthesizing fictitious candles.</li>
+              <li><strong>Bar Classification:</strong> Classifies bars objectively into Trend Bars (&gt;55% body ratio), Dojis (&lt;20% body ratio), Reversal Bars (&gt;50% tail/wick rejection), and Inside/Outside bars.</li>
+              <li><strong>2-Bar Lag Swing Pivots:</strong> Swing highs and lows require 2 subsequent lower highs or higher lows to confirm (<code className="text-cyan-300 font-mono">H[t-2] &gt; H[t-4..t]</code>), eliminating repainting on live charts.</li>
+              <li><strong>Always-In State Machine:</strong> Tracks whether dominant market pressure is Always-In Long (AIL), Always-In Short (AIS), or Neutral / Range-bound.</li>
+              <li><strong>High-Probability Setups:</strong> Automatically detects H1/H2 pullbacks to the 20 EMA in bull trends, L1/L2 pullbacks in bear trends, trading range breakouts, and breakout-fade reversals with invalidation levels.</li>
+            </ul>
+            <p className="text-xs text-amber-300/90 italic">
+              Regulatory Note: Detections and measured moves are probabilistic educational patterns, not financial advice or deterministic guarantees.
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'faq-19',
+        category: 'PRICE_ACTION',
+        question: 'How does the Dual-Index Market Regime (SPX & NDX) work and how should I adjust position sizing?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>
+              DeltaHarvest evaluates broad market health by running the price action engine concurrently on <strong>SPX</strong> (using liquid proxy SPY) and <strong>NDX</strong> (using liquid proxy QQQ). Their interplay forms an institutional Agreement Matrix:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400 text-xs">
+              <li><strong>AGREE (Aligned Trend):</strong> Both SPY and QQQ share the same Always-In state (both Bullish AIL or both Bearish AIS). When Bullish AGREE is active, full/aggressive position sizing is favored for long setups and Cash-Secured Puts (CSPs). When Bearish AGREE is active, defensive positioning or Covered Calls are favored.</li>
+              <li><strong>MIXED (Partial Alignment):</strong> One index is trending (AIL/AIS) while the other is Neutral / Trading Range. Suggests moderate trend conviction; position sizing should scale down to 50%–75% of standard risk.</li>
+              <li><strong>CONFLICT (Inter-Market Divergence):</strong> One index is Always-In Long while the other is Always-In Short. Indicates severe market fragmentation or rotational turbulence. Stand aside or reduce sizing to 25%–50% until alignment resolves.</li>
+              <li><strong>Append-Only Audit Trail:</strong> Every daily regime evaluation is stored immutably in browser storage and edge D1 database (<code className="text-purple-300 font-mono">price_action_regimes</code> table with <code className="text-slate-200 font-mono">INSERT OR IGNORE</code>), anchoring to New York time (ET) and never rewriting history.</li>
+            </ul>
+          </div>
+        ),
+      },
+      {
+        id: 'faq-20',
+        category: 'PRICE_ACTION',
+        question: 'How do Price Action Setup Alerts work, and how does the engine prevent notification spam?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>
+              The Setup Alerts engine monitors detected patterns across your watchlist and dispatches notifications across multiple channels with institutional noise guards:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400 text-xs">
+              <li><strong>Strict Deduplication Key:</strong> Every alert produces a unique signature: <code className="text-teal-300 font-mono">&quot;ticker:setupType:signalBarDate&quot;</code>. A setup cannot fire more than once for the same bar date.</li>
+              <li><strong>5-Bar Directional Cooldown:</strong> Once a Bullish or Bearish setup triggers for a symbol, subsequent setups in that same direction are suppressed for 5 trading bars to prevent cluster fatigue.</li>
+              <li><strong>Regime Alignment Filter:</strong> When enabled in preferences, contra-trend setups (e.g. Long setups during Bearish AIS regime) are automatically filtered out.</li>
+              <li><strong>Quiet Hours Window (22:00–07:00 ET):</strong> Non-critical alerts are suppressed during overnight hours (aligned with platform noise gate <code className="text-amber-300 font-mono">src/notification_noise.py</code>).</li>
+              <li><strong>Observational Wording:</strong> All alerts use non-repainting observational language (e.g. <em>&quot;Pattern observed: H2 Pullback detected at 20 EMA on SPY&quot;</em>) rather than predictive trade commands.</li>
+              <li><strong>Multi-Channel Dispatch:</strong> Supports native browser notifications, Edge Webhooks (Discord/Slack), and Email with channel-level mute toggles.</li>
+            </ul>
+          </div>
+        ),
+      },
+      {
+        id: 'faq-21',
+        category: 'PRICE_ACTION',
+        question: 'How do I customize, toggle off, or safely revert Price Action settings and alert configurations?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>
+              DeltaHarvest is built with strict non-destructive isolation, making customization, toggling, or rolling back completely safe:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400 text-xs">
+              <li><strong>Master Alert Toggle &amp; Channel Mute:</strong> In the Price Action Lab header, click the <strong>Bell icon</strong> to open the Alerts Preferences drawer. You can toggle off the master switch (disabling all notifications instantly) or silence individual channels (Browser, Discord, or Email) with zero disruption to chart analysis.</li>
+              <li><strong>Parameter Reversion to Default:</strong> All pattern detection thresholds (20 EMA baseline, 55% trend bar body ratio, 2-bar lag pivots) are anchored to institutional defaults. Reverting or clearing user overrides restores factory heuristics immediately.</li>
+              <li><strong>Non-Destructive Data Boundaries:</strong> Price Action alert logs (<code className="text-teal-300 font-mono">deltaharvest_price_action_alerts</code>) and regime caches are strictly quarantined from your core options journal (<code className="text-purple-300 font-mono">options_signal_journal</code>), YTD premiums earned, and Schwab portfolio ledgers. Clearing local alert history never modifies or deletes financial trade records.</li>
+              <li><strong>Seamless View Switching:</strong> You can transition between the Al Brooks Price Action Lab and the standard Interactive Candlestick / Barchart 13-Study view at any time from the Equities navigation menu with full state preservation.</li>
+            </ul>
+          </div>
+        ),
+      },
+    ];
 
   const filteredFaqs = faqs.filter((item) => {
     const matchesCategory = activeCategory === 'ALL' || item.category === activeCategory;
@@ -372,6 +452,15 @@ export const FaqView: React.FC<FaqViewProps> = ({
           </div>
 
           <div className="flex flex-wrap gap-3">
+            {onNavigateToPriceAction && (
+              <button
+                onClick={onNavigateToPriceAction}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-cyan-700/30 transition-all cursor-pointer"
+              >
+                <span>Price Action Lab</span>
+                <Layers className="w-4 h-4 text-cyan-300" />
+              </button>
+            )}
             {onNavigateToMethodology && (
               <button
                 onClick={onNavigateToMethodology}
@@ -401,7 +490,7 @@ export const FaqView: React.FC<FaqViewProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search FAQ questions (e.g. 1256, 80% rule, Tradier, margin)..."
+              placeholder="Search FAQ questions (e.g. 1256, 80% rule, Tradier, margin, price action)..."
               className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 transition-colors"
             />
           </div>
@@ -409,6 +498,7 @@ export const FaqView: React.FC<FaqViewProps> = ({
           <div className="flex flex-wrap gap-2">
             {[
               { key: 'ALL', label: 'All Topics' },
+              { key: 'PRICE_ACTION', label: 'Price Action & Regime' },
               { key: 'STRATEGY', label: 'Strategy Rules' },
               { key: 'TAX', label: 'Section 1256 & Taxes' },
               { key: 'AI', label: 'Strategy Agent & LLMs' },

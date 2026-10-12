@@ -633,6 +633,34 @@ export const InstitutionalSidebar: React.FC<InstitutionalSidebarProps> = ({
               )}
             </button>
 
+            {/* Price Action Analysis (Al Brooks Method) */}
+            <button
+              onClick={() => {
+                onSelectTree('EQUITIES');
+                onSelectEquitiesTab('PRICE_ACTION');
+                onCloseMobile?.();
+              }}
+              className={`${getItemClasses(activeTree === 'EQUITIES' && activeEquitiesTab === 'PRICE_ACTION')} w-full`}
+              title="Al Brooks price action bar-by-bar analysis, swing legs, and setup detection."
+              aria-label="Price Action Analysis"
+              aria-current={activeTree === 'EQUITIES' && activeEquitiesTab === 'PRICE_ACTION' ? 'true' : undefined}
+            >
+              <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
+              {!isCollapsed && (
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold truncate">Price Action</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Brooks
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 light:text-slate-400 font-normal truncate">
+                    Swings &amp; Setups
+                  </div>
+                </div>
+              )}
+            </button>
+
             {/* Market Calendars (Economic & Catalysts) */}
             <button
               onClick={() => {

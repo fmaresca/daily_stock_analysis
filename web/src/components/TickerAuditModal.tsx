@@ -12,6 +12,7 @@ import {
   Search,
   RefreshCw,
   Zap,
+  TrendingUp,
 } from './icons';
 import { TickerMeta, OptionOpportunity, AdanosMarketSentiment } from '../types/options';
 import { getSecurityIntelligence } from '../utils/securityIntelligence';
@@ -37,6 +38,7 @@ interface TickerAuditModalProps {
   onClose: () => void;
   onOpenSimulator?: (ticker: string) => void;
   onUpdateTicker?: (ticker: TickerMeta) => void;
+  onNavigateToPriceAction?: (symbol: string) => void;
 }
 
 /**
@@ -144,6 +146,7 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
   onClose,
   onOpenSimulator,
   onUpdateTicker,
+  onNavigateToPriceAction,
 }) => {
   const [activeTicker, setActiveTicker] = useState<TickerMeta | null>(ticker);
   const [activeOpportunities, setActiveOpportunities] = useState<OptionOpportunity[]>(opportunities || []);
@@ -564,6 +567,20 @@ export const TickerAuditModal: React.FC<TickerAuditModalProps> = ({
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-300" />
                   <span>Simulator</span>
+                </button>
+              )}
+              {onNavigateToPriceAction && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onNavigateToPriceAction(activeTicker.symbol);
+                    onClose();
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer border border-emerald-400/50"
+                  title={`View Al Brooks Price Action analysis and pattern detection for ${activeTicker.symbol}`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5 text-white" />
+                  <span>Price Action</span>
                 </button>
               )}
               <a
