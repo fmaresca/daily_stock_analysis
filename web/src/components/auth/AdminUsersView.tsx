@@ -74,10 +74,64 @@ export interface AdminInquiryItem {
   request_type: string;
   name: string;
   email: string;
-  note: string | null;
+  note?: string | null;
   ip: string | null;
-  status: string;
+  status: 'pending' | 'used' | 'expired' | 'revoked' | string;
   created_at: string;
+  expires_at?: string | null;
+  token_fingerprint?: string | null;
+}
+
+function formatInquiryTimestamp(isoStr?: string | null): string {
+  if (!isoStr) return '—';
+  try {
+    const d = new Date(isoStr.includes('T') ? isoStr : isoStr + 'Z');
+    if (isNaN(d.getTime())) return isoStr;
+    return d.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return isoStr;
+  }
+}
+
+function renderInquiryStatusBadge(status: string) {
+  const norm = (status || 'pending').toLowerCase();
+  switch (norm) {
+    case 'pending':
+      return (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+          Pending
+        </span>
+      );
+    case 'used':
+      return (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+          Used
+        </span>
+      );
+    case 'expired':
+      return (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-700/40 text-slate-400 border border-slate-700/60">
+          Expired
+        </span>
+      );
+    case 'revoked':
+      return (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
+          Revoked
+        </span>
+      );
+    default:
+      return (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+          {status}
+        </span>
+      );
+  }
 }
 
 export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspace }) => {
@@ -89,6 +143,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
   // Inquiries State
   const [inquiries, setInquiries] = useState<AdminInquiryItem[]>([]);
   const [isLoadingInquiries, setIsLoadingInquiries] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -203,6 +258,32 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
       // Ignore network errors
     } finally {
       setIsLoadingInquiries(false);
+    }
+  }, []);
+
+  const handleRevokeInquiry = useCallback(async (inquiryId: string) => {
+    setRevokingId(inquiryId);
+    try {
+      const res = await fetch('/api/admin/inquiries', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ id: inquiryId, status: 'revoked' }),
+      });
+      if (res.ok) {
+        setInquiries((prev) =>
+          prev.map((item) =>
+            item.id === inquiryId ? { ...item, status: 'revoked' } : item
+          )
+        );
+      }
+    } catch {
+      // Ignore network errors
+    } finally {
+      setRevokingId(null);
     }
   }, []);
 
@@ -594,74 +675,105 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
               <table className="w-full text-left text-xs text-slate-300 font-sans">
                 <thead className="bg-slate-950/80 text-[11px] font-semibold text-slate-400 border-b border-slate-800 uppercase tracking-wider">
                   <tr>
-                    <th className="py-3 px-4">Request Type</th>
-                    <th className="py-3 px-4">Submitter</th>
-                    <th className="py-3 px-4">Details / Context</th>
-                    <th className="py-3 px-4">Origin IP &amp; Date</th>
-                    <th className="py-3 px-4 text-right">Quick Action</th>
+                    <th className="py-3 px-4">Request ID</th>
+                    <th className="py-3 px-4">User (Email)</th>
+                    <th className="py-3 px-4">Requested</th>
+                    <th className="py-3 px-4">Expires</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Token Fingerprint</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 bg-slate-900/40">
                   {inquiries.map((inq) => {
                     const isReset = inq.request_type === 'PASSWORD_RESET';
-                    const isAccount = inq.request_type === 'NEW_ACCOUNT';
+                    const isPending = (inq.status || 'pending').toLowerCase() === 'pending';
+                    const isRevoking = revokingId === inq.id;
                     return (
                       <tr key={inq.id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="py-3 px-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                              isReset
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                : isAccount
-                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                            }`}
-                          >
+                          <div className="font-mono text-[11px] text-cyan-400/90 font-medium">
+                            {inq.id}
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
                             {inq.request_type.replace('_', ' ')}
-                          </span>
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="font-semibold text-white">{inq.name || inq.email.split('@')[0]}</div>
                           <div className="text-[11px] font-mono text-slate-400">{inq.email}</div>
+                          {inq.ip && (
+                            <div className="text-[10px] font-mono text-slate-500 mt-0.5">IP: {inq.ip}</div>
+                          )}
                         </td>
-                        <td className="py-3 px-4 max-w-xs truncate text-[11px] text-slate-300">
-                          {inq.note || 'No additional note'}
+                        <td className="py-3 px-4 whitespace-nowrap text-[11px] text-slate-300">
+                          {formatInquiryTimestamp(inq.created_at)}
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap text-[11px] text-slate-400">
-                          <div>{inq.created_at || 'Recent'}</div>
-                          <div className="font-mono text-[10px] text-slate-500">{inq.ip || 'Unknown IP'}</div>
+                          {formatInquiryTimestamp(inq.expires_at)}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {renderInquiryStatusBadge(inq.status)}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {inq.token_fingerprint ? (
+                            <span className="font-mono text-[11px] text-amber-300/90 bg-amber-950/40 border border-amber-900/40 px-2 py-0.5 rounded">
+                              {inq.token_fingerprint}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 text-[11px]">—</span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-right whitespace-nowrap">
-                          {isReset ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const found = users.find((u) => u.email.toLowerCase() === inq.email.toLowerCase());
-                                if (found) {
-                                  setTargetResetUser(found);
-                                  setIsResetModalOpen(true);
-                                } else {
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isPending && (
+                              <button
+                                type="button"
+                                onClick={() => handleRevokeInquiry(inq.id)}
+                                disabled={isRevoking}
+                                className="px-2.5 py-1 bg-rose-600/80 hover:bg-rose-600 disabled:opacity-50 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer"
+                                title="Revoke reset token immediately server-side"
+                              >
+                                {isRevoking ? 'Revoking…' : 'Revoke'}
+                              </button>
+                            )}
+                            {isPending && isReset && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const found = users.find((u) => u.email.toLowerCase() === inq.email.toLowerCase());
+                                  if (found) {
+                                    setTargetResetUser(found);
+                                    setIsResetModalOpen(true);
+                                  } else {
+                                    setNewEmail(inq.email);
+                                    setIsCreateModalOpen(true);
+                                  }
+                                }}
+                                className="px-2.5 py-1 bg-amber-600/80 hover:bg-amber-600 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer"
+                              >
+                                Reset Password
+                              </button>
+                            )}
+                            {isPending && !isReset && (
+                              <button
+                                type="button"
+                                onClick={() => {
                                   setNewEmail(inq.email);
+                                  setNewDisplayName(inq.name || '');
                                   setIsCreateModalOpen(true);
-                                }
-                              }}
-                              className="px-2.5 py-1 bg-amber-600/80 hover:bg-amber-600 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer"
-                            >
-                              Reset Password
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setNewEmail(inq.email);
-                                setNewDisplayName(inq.name || '');
-                                setIsCreateModalOpen(true);
-                              }}
-                              className="px-2.5 py-1 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer"
-                            >
-                              Provision Account
-                            </button>
-                          )}
+                                }}
+                                className="px-2.5 py-1 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer"
+                              >
+                                Provision Account
+                              </button>
+                            )}
+                            {!isPending && (
+                              <span className="text-[11px] text-slate-500 italic pr-1 capitalize">
+                                {inq.status}
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

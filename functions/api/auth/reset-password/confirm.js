@@ -90,6 +90,19 @@ export async function onRequestPost(context) {
     // Update password in D1 (and memory fallback)
     await updateUserPassword(env, user.id, hashHex, saltHex);
 
+    // Update status in access_inquiries audit ledger to 'used' (cite: plaintext token exposure, 2026-10-11)
+    if (env && env.DB && user.email) {
+      try {
+        await env.DB.prepare(`
+          UPDATE access_inquiries
+          SET status = 'used'
+          WHERE email = ? AND request_type = 'PASSWORD_RESET' AND status = 'pending'
+        `).bind(user.email).run();
+      } catch (updateInqErr) {
+        console.warn("D1 access_inquiries status update notice:", updateInqErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

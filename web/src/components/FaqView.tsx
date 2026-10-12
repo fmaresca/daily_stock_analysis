@@ -324,6 +324,23 @@ export const FaqView: React.FC<FaqViewProps> = ({
         </div>
       ),
     },
+    {
+      id: 'faq-17',
+      category: 'GENERAL',
+      question: 'How does DeltaHarvest protect Password Reset Inquiries and prevent token exposure?',
+      answer: (
+        <div className="space-y-2 text-slate-300">
+          <p>
+            DeltaHarvest adheres to strict institutional zero-exposure credentials architecture:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-slate-400">
+            <li><strong>Single-Recipient Token Dispatch:</strong> Cryptographically generated single-use reset tokens (30-minute validity) are dispatched exclusively to the registered user&apos;s verified mailbox. They are never sent to administrative channels or notification copies.</li>
+            <li><strong>Masked Admin Metadata:</strong> The Admin Console &quot;Access &amp; Reset Inquiries&quot; tab displays only safe metadata (Request ID, Submitter, Request/Expiry Timestamps, Status, and a 6-character non-usable correlation fingerprint). Plaintext reset URLs and tokens are never returned by the API or rendered in the DOM.</li>
+            <li><strong>Server-Side Revocation:</strong> Administrators can immediately revoke pending reset requests server-side, which purges the cryptographic token from D1 while preserving the audit trail.</li>
+          </ul>
+        </div>
+      ),
+    },
   ];
 
   const filteredFaqs = faqs.filter((item) => {

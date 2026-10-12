@@ -1,4 +1,4 @@
-import { getAdminNotificationEmail, authenticateRequest } from "../_auth_utils.js";
+import { getAdminNotificationEmail, authenticateRequest, getUserByEmail } from "../_auth_utils.js";
 import { getClientIp } from "../_rate_limit.js";
 
 // In-memory rate limiting for per-IP burst protection
@@ -616,11 +616,69 @@ export async function onRequestGet(context) {
           created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
         )
       `).run();
-      const rows = await env.DB.prepare(
-        "SELECT * FROM access_inquiries ORDER BY created_at DESC LIMIT 50"
-      ).all();
+
+      // Security query hardening (cite: plaintext token exposure, 2026-10-11):
+      // Explicitly select only non-sensitive columns. Plaintext tokens or raw URLs must NEVER be returned.
+      const rows = await env.DB.prepare(`
+        SELECT id, request_type, name, email, note, ip, status, created_at
+        FROM access_inquiries
+        ORDER BY created_at DESC
+        LIMIT 50
+      `).all();
+
+      const inquiries = (rows.results || []).map((row) => {
+        // Plaintext token exposure remediation (cite: plaintext token exposure, 2026-10-11):
+        // Ensure no legacy or newly inserted note exposes a plaintext reset token or URL.
+        let safeNote = row.note || "";
+        let tokenFingerprint = null;
+
+        if (row.request_type === "PASSWORD_RESET") {
+          // If legacy note contained reset_token, extract safe correlation fingerprint (first 6 chars)
+          const tokenMatch = safeNote.match(/reset_token=([a-fA-F0-9]{6})/);
+          if (tokenMatch) {
+            tokenFingerprint = `${tokenMatch[1]}…`;
+          } else {
+            // Derive a safe non-usable correlation fingerprint from the inquiry ID
+            const idHash = (row.id || "").replace(/^inq_reset_/, "");
+            tokenFingerprint = idHash ? `${idHash.substring(0, 6)}…` : "rst…";
+          }
+          // Never return reset URL or raw token in the note field
+          safeNote = "Password reset link dispatched directly to user email.";
+        } else if (safeNote.includes("reset_token=")) {
+          // Extra defense in depth: scrub any string resembling a reset token from any note
+          safeNote = safeNote.replace(/reset_token=[a-zA-Z0-9_\-]+/g, "reset_token=[REDACTED]");
+        }
+
+        // Calculate expiry timestamp (reset tokens expire 30 minutes after issuance)
+        let expiresAt = null;
+        let computedStatus = row.status || "pending";
+        if (row.created_at) {
+          const createdMs = new Date(row.created_at.includes("T") ? row.created_at : row.created_at + "Z").getTime();
+          if (!isNaN(createdMs)) {
+            expiresAt = new Date(createdMs + 30 * 60 * 1000).toISOString();
+            const nowMs = Date.now(); // wall-clock-ok: inquiry expiry calculation
+            if (computedStatus === "pending" && nowMs > createdMs + 30 * 60 * 1000) {
+              computedStatus = "expired";
+            }
+          }
+        }
+
+        return {
+          id: row.id,
+          request_type: row.request_type,
+          name: row.name,
+          email: row.email,
+          note: safeNote,
+          ip: row.ip,
+          status: computedStatus,
+          created_at: row.created_at,
+          expires_at: expiresAt,
+          token_fingerprint: tokenFingerprint,
+        };
+      });
+
       return new Response(
-        JSON.stringify({ success: true, inquiries: rows.results || [] }),
+        JSON.stringify({ success: true, inquiries }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -632,6 +690,77 @@ export async function onRequestGet(context) {
     console.error("[inquiries] Failed to fetch inquiries:", err);
     return new Response(
       JSON.stringify({ error: "Failed to retrieve access inquiries." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+/**
+ * Cloudflare Pages Function: PATCH /api/admin/inquiries
+ * Updates inquiry status (e.g. revoking a pending password reset inquiry).
+ * Restricted to authenticated administrators.
+ */
+export async function onRequestPatch(context) {
+  const { request, env } = context;
+  const auth = await authenticateRequest(context, ["admin"]);
+  if (!auth.authenticated) return auth.response;
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { id, status } = body;
+    if (!id || typeof id !== "string") {
+      return new Response(JSON.stringify({ error: "Missing inquiry ID" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const targetStatus = status === "revoked" ? "revoked" : (status || "revoked");
+
+    if (env && env.DB) {
+      const inquiry = await env.DB.prepare(
+        "SELECT id, request_type, email FROM access_inquiries WHERE id = ?"
+      ).bind(id).first();
+
+      if (!inquiry) {
+        return new Response(JSON.stringify({ error: "Inquiry not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      await env.DB.prepare(
+        "UPDATE access_inquiries SET status = ? WHERE id = ?"
+      ).bind(targetStatus, id).run();
+
+      // If revoking a password reset, immediately invalidate active reset tokens for that user
+      if (targetStatus === "revoked" && inquiry.request_type === "PASSWORD_RESET" && inquiry.email) {
+        const targetUser = await getUserByEmail(env, inquiry.email);
+        if (targetUser && targetUser.id) {
+          try {
+            await env.DB.prepare(
+              "DELETE FROM password_reset_tokens WHERE user_id = ?"
+            ).bind(targetUser.id).run();
+          } catch (delErr) {
+            console.warn("Failed to delete password reset token during revocation:", delErr);
+          }
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, id, status: targetStatus }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, id, status: targetStatus }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    console.error("[inquiries] Failed to update inquiry status:", err);
+    return new Response(
+      JSON.stringify({ error: "Failed to update inquiry status." }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
