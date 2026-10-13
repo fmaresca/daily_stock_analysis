@@ -146,89 +146,31 @@ export async function onRequestPost(context) {
 </body>
 </html>`;
 
-      // Always send to administrator email to guarantee delivery to administrator
-      const targetEmails = new Set();
-      if (adminEmail) targetEmails.add(adminEmail);
-      targetEmails.add(cleanEmail);
-
-      for (const targetEmail of targetEmails) {
-        try {
-          const isAdminNotice = adminEmail && targetEmail.toLowerCase() === adminEmail.toLowerCase() && cleanEmail.toLowerCase() !== adminEmail.toLowerCase();
-          const emailSubject = isAdminNotice ? `[DeltaHarvest Security] Password Reset Requested: ${cleanEmail}` : userSubject;
-          // Plaintext token exposure fix (cite: plaintext token exposure, 2026-10-11):
-          // Never send reset tokens or reset links to administrative notification channels.
-          // Plaintext reset links and tokens must ONLY be dispatched to the requesting user.
-          const tokenFingerprint = tokenHash ? `${tokenHash.substring(0, 6)}…` : "rst…";
-          const adminNoticeTime = new Date().toUTCString(); // wall-clock-ok: security notification timestamp
-          const adminNoticeText = `DeltaHarvest Security Alert:\n\nA password reset was requested for ${cleanEmail}.\nOrigin IP: ${clientIp}\nTimestamp: ${adminNoticeTime}\n\nA single-use reset link was generated and dispatched strictly to the user's registered address.\nToken correlation fingerprint: ${tokenFingerprint}\n\nFor account security, reset tokens are never transmitted to administrative channels.`;
-          const adminNoticeHtml = `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #020617; color: #f8fafc; padding: 24px;">
-  <div style="max-width: 560px; margin: 0 auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 24px;">
-    <h2 style="color: #f59e0b; margin-top: 0;">DeltaHarvest Security Notice</h2>
-    <p style="color: #cbd5e1; font-size: 14px;">A password reset request was initiated for account: <strong>${cleanEmail}</strong></p>
-    <p style="color: #94a3b8; font-size: 13px;">Origin IP: <code style="color: #38bdf8;">${clientIp}</code></p>
-    <p style="color: #94a3b8; font-size: 13px;">Timestamp: ${adminNoticeTime}</p>
-    <p style="color: #94a3b8; font-size: 13px;">Token correlation fingerprint: <code style="color: #cbd5e1;">${tokenFingerprint}</code></p>
-    <p style="color: #64748b; font-size: 11px; margin-top: 20px;">For account security, single-use reset links are dispatched exclusively to the registered user. The token is never exposed to administrative channels.</p>
-  </div>
-</body>
-</html>`;
-
-          const textBody = isAdminNotice ? adminNoticeText : userTextBody;
-          const htmlBody = isAdminNotice ? adminNoticeHtml : userHtmlBody;
-
-          const resendResp = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${env.RESEND_API_KEY.trim()}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              from: fromAddress,
-              to: [targetEmail],
-              subject: emailSubject,
-              text: textBody,
-              html: htmlBody,
-            }),
-          });
-          if (resendResp.ok) {
-            emailDispatched = true;
-          } else {
-            console.warn(`Resend dispatch notice for ${targetEmail}:`, resendResp.status, await resendResp.text().catch(() => ""));
-          }
-        } catch (emailErr) {
-          console.warn(`Resend dispatch error for ${targetEmail}:`, emailErr);
-        }
-      }
-    }
-
-    // 4. Active Fallback: Notify administrator via FormSubmit
-    if (!emailDispatched && adminEmail) {
+      // Option B Policy: Administrative security alerts on password reset are disabled per policy.
+      // Reset links and single-use tokens are dispatched exclusively to the requesting user's registered email.
+      // Administrators can audit all reset inquiries in the Admin Console via D1 access_inquiries.
       try {
-        await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
+        const resendResp = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
+            "Authorization": `Bearer ${env.RESEND_API_KEY.trim()}`,
             "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Origin": (url.origin && url.origin.startsWith("https://")) ? url.origin : "https://daily-stock-analysis-89j.pages.dev",
-            "Referer": (url.origin && url.origin.startsWith("https://")) ? `${url.origin}/` : "https://daily-stock-analysis-89j.pages.dev/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           },
           body: JSON.stringify({
-            _subject: `[DeltaHarvest Alert] Password Reset Request: ${cleanEmail}`,
-            _captcha: "false",
-            accountEmail: cleanEmail,
-            requestType: "Password Reset Request",
-            note: "A password reset was requested. The reset token was delivered via the primary email channel and is registered in the system.",
-            timestamp: new Date().toUTCString(), // wall-clock-ok: security fallback timestamp
-            originIP: clientIp,
-            _template: "table",
+            from: fromAddress,
+            to: [cleanEmail],
+            subject: userSubject,
+            text: userTextBody,
+            html: userHtmlBody,
           }),
         });
-      } catch (fallbackErr) {
-        console.warn("Admin notification fallback error:", fallbackErr);
+        if (resendResp.ok) {
+          emailDispatched = true;
+        } else {
+          console.warn(`Resend dispatch notice for ${cleanEmail}:`, resendResp.status, await resendResp.text().catch(() => ""));
+        }
+      } catch (emailErr) {
+        console.warn(`Resend dispatch error for ${cleanEmail}:`, emailErr);
       }
     }
 

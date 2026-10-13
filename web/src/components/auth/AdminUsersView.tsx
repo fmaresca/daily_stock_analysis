@@ -144,6 +144,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
   const [inquiries, setInquiries] = useState<AdminInquiryItem[]>([]);
   const [isLoadingInquiries, setIsLoadingInquiries] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [revokeConfirmInquiry, setRevokeConfirmInquiry] = useState<AdminInquiryItem | null>(null);
 
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -264,15 +265,25 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
   const handleRevokeInquiry = useCallback(async (inquiryId: string) => {
     setRevokingId(inquiryId);
     try {
-      const res = await fetch('/api/admin/inquiries', {
-        method: 'PATCH',
+      let res = await fetch(`/api/admin/reset-tokens/${encodeURIComponent(inquiryId)}/revoke`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ id: inquiryId, status: 'revoked' }),
       });
+      if (res.status === 404 || !res.ok) {
+        res = await fetch('/api/admin/inquiries', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ id: inquiryId, status: 'revoked' }),
+        });
+      }
       if (res.ok) {
         setInquiries((prev) =>
           prev.map((item) =>
@@ -284,6 +295,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
       // Ignore network errors
     } finally {
       setRevokingId(null);
+      setRevokeConfirmInquiry(null);
     }
   }, []);
 
@@ -726,17 +738,26 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
                         </td>
                         <td className="py-3 px-4 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
-                            {isPending && (
-                              <button
-                                type="button"
-                                onClick={() => handleRevokeInquiry(inq.id)}
-                                disabled={isRevoking}
-                                className="px-2.5 py-1 bg-rose-600/80 hover:bg-rose-600 disabled:opacity-50 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer"
-                                title="Revoke reset token immediately server-side"
-                              >
-                                {isRevoking ? 'Revoking…' : 'Revoke'}
-                              </button>
-                            )}
+                            {(() => {
+                              const isRevoked = (inq.status || '').toLowerCase() === 'revoked';
+                              const isUsed = (inq.status || '').toLowerCase() === 'used';
+                              const canRevoke = !isRevoked && !isUsed;
+                              return (
+                                <>
+                                  {canRevoke && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setRevokeConfirmInquiry(inq)}
+                                      disabled={isRevoking}
+                                      className="px-2.5 py-1 bg-rose-600/80 hover:bg-rose-600 disabled:opacity-50 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer"
+                                      title="Revoke reset token immediately server-side"
+                                    >
+                                      {isRevoking ? 'Revoking…' : 'Revoke'}
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
                             {isPending && isReset && (
                               <button
                                 type="button"
@@ -1207,6 +1228,60 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Revocation Confirmation Modal */}
+      {revokeConfirmInquiry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl relative text-left">
+            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+              <span className="text-rose-400">⚠️</span> Revoke Reset Token
+            </h3>
+            <p className="text-sm text-slate-300 mb-4 leading-relaxed">
+              Are you sure you want to revoke the password reset token for{' '}
+              <strong className="text-white font-mono">{revokeConfirmInquiry.email}</strong>?
+            </p>
+            <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3 mb-5 space-y-1 text-xs">
+              <div className="text-slate-400">
+                Inquiry ID: <span className="font-mono text-cyan-400">{revokeConfirmInquiry.id}</span>
+              </div>
+              {revokeConfirmInquiry.token_fingerprint && (
+                <div className="text-slate-400">
+                  Fingerprint:{' '}
+                  <span className="font-mono text-amber-300">{revokeConfirmInquiry.token_fingerprint}</span>
+                </div>
+              )}
+              <div className="text-rose-300/90 text-[11px] mt-2">
+                This token will be permanently invalidated server-side. The user will not be able to reset their password using the existing link and must request a new one if access is required.
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setRevokeConfirmInquiry(null)}
+                disabled={revokingId === revokeConfirmInquiry.id}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRevokeInquiry(revokeConfirmInquiry.id)}
+                disabled={revokingId === revokeConfirmInquiry.id}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-lg shadow-rose-950/50"
+              >
+                {revokingId === revokeConfirmInquiry.id ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Revoking…</span>
+                  </>
+                ) : (
+                  <span>Confirm Revocation</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

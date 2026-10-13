@@ -287,6 +287,18 @@ export async function ensureUsersTables(env) {
           created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
         )
       `).run();
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS user_trades (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            symbol TEXT,
+            created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+          )
+        `).run();
+      } catch (tradeTableErr) {
+        // Ignored if table creation fails
+      }
       schemaEnsured = true;
       resetSchemaEnsured = true;
     } catch (e) {
@@ -307,6 +319,11 @@ export async function ensurePasswordResetTable(env) {
           created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
         )
       `).run();
+      try {
+        await env.DB.prepare("DELETE FROM password_reset_tokens WHERE expires_at < DATETIME('now')").run();
+      } catch (sweepErr) {
+        // non-blocking sweep
+      }
       resetSchemaEnsured = true;
     } catch (e) {
       console.warn("D1 ensurePasswordResetTable error:", e);
@@ -450,16 +467,32 @@ export async function getAllUsers(env) {
   if (env && env.DB) {
     try {
       await ensureUsersTables(env);
-      const stmt = env.DB.prepare(`
-        SELECT u.id, u.email, u.role, u.is_active, u.must_change_password, u.last_login_at, u.created_at, u.updated_at,
-               p.display_name, p.account_notes,
-               (SELECT COUNT(*) FROM user_trades WHERE user_id = u.id) AS trade_count
-        FROM users u
-        LEFT JOIN user_profiles p ON u.id = p.user_id
-        ORDER BY u.created_at DESC
-      `);
-      const { results } = await stmt.all();
-      const existingEmails = new Set((results || []).map((u) => u.email.toLowerCase()));
+      let results;
+      try {
+        const stmt = env.DB.prepare(`
+          SELECT u.id, u.email, u.role, u.is_active, u.must_change_password, u.last_login_at, u.created_at, u.updated_at,
+                 p.display_name, p.account_notes,
+                 (SELECT COUNT(*) FROM user_trades WHERE user_id = u.id) AS trade_count
+          FROM users u
+          LEFT JOIN user_profiles p ON u.id = p.user_id
+          ORDER BY u.created_at DESC
+        `);
+        const queryRes = await stmt.all();
+        results = queryRes?.results;
+      } catch (subqueryErr) {
+        console.warn("Subquery user_trades failed in getAllUsers, falling back to 0 trade_count:", subqueryErr?.message || subqueryErr);
+        const fallbackStmt = env.DB.prepare(`
+          SELECT u.id, u.email, u.role, u.is_active, u.must_change_password, u.last_login_at, u.created_at, u.updated_at,
+                 p.display_name, p.account_notes,
+                 0 AS trade_count
+          FROM users u
+          LEFT JOIN user_profiles p ON u.id = p.user_id
+          ORDER BY u.created_at DESC
+        `);
+        const fallbackRes = await fallbackStmt.all();
+        results = fallbackRes?.results;
+      }
+
       const userList = (results || []).map((u) => ({
         id: u.id,
         email: u.email,

@@ -102,6 +102,10 @@ function createMockD1() {
               const [status, id] = boundParams;
               const found = d1.tables.access_inquiries.find((r) => r.id === id);
               if (found) found.status = status;
+            } else if (sql.includes("SET status = 'revoked'")) {
+              const [id] = boundParams;
+              const found = d1.tables.access_inquiries.find((r) => r.id === id);
+              if (found) found.status = 'revoked';
             } else if (sql.includes("SET status = 'used'")) {
               const [email] = boundParams;
               const found = d1.tables.access_inquiries.find(
@@ -322,26 +326,21 @@ test('3. Legitimate Reset Flow & User Email Dispatch Contract', async () => {
     const res = await handleResetRequest({ request: req, env });
     assert.strictEqual(res.status, 200, 'Reset request must return 200 OK');
 
-    assert.strictEqual(dispatchedEmails.length, 2, 'Must dispatch 2 emails: 1 to user, 1 to admin alert');
+    // Option B Policy: Zero emails sent to admin; reset email goes exclusively to requesting user
+    assert.strictEqual(dispatchedEmails.length, 1, 'Option B: Must dispatch exactly 1 email exclusively to the user');
     const userEmail = dispatchedEmails.find((e) => e.to.includes('target@example.com'));
     const adminAlert = dispatchedEmails.find((e) => e.to.includes('superadmin@example.com'));
 
     assert.ok(userEmail, 'User must receive reset email');
-    assert.ok(adminAlert, 'Admin must receive security alert email');
+    assert.strictEqual(adminAlert, undefined, 'Option B: Admin must NOT receive reset alert emails');
 
     // Legitimate user email contains the token link
     assert.ok(userEmail.text.includes('reset_token='), 'User email must contain reset link');
     assert.ok(userEmail.html.includes('reset_token='), 'User email HTML must contain reset button');
 
-    // Admin security notice email MUST NOT contain the token or link
     const tokenMatch = userEmail.text.match(/login\?reset_token=([a-zA-Z0-9]+)/);
     assert.ok(tokenMatch && tokenMatch[1], 'Must have generated a reset token');
     const rawToken = tokenMatch[1];
-
-    assert.ok(!adminAlert.text.includes(rawToken), 'Admin alert text must NOT contain user reset token');
-    assert.ok(!adminAlert.html.includes(rawToken), 'Admin alert HTML must NOT contain user reset token');
-    assert.ok(!adminAlert.text.includes('reset_token='), 'Admin alert text must NOT contain reset link');
-    assert.ok(!adminAlert.html.includes('reset_token='), 'Admin alert HTML must NOT contain reset link');
 
     // access_inquiries table must NOT contain the token
     const inqRow = mockDb.tables.access_inquiries.find((r) => r.email === 'target@example.com');
@@ -374,7 +373,157 @@ test('4. UI Contract & Masked Display Invariants: AdminUsersView.tsx', () => {
   assert.ok(content.includes('Token Fingerprint'), 'Must have Token Fingerprint header');
   assert.ok(content.includes('Actions'), 'Must have Actions header');
 
-  // Enforce Revoke action
+  // Enforce Revoke action and Confirmation Modal
   assert.ok(content.includes('handleRevokeInquiry'), 'Must define handleRevokeInquiry handler');
   assert.ok(content.includes('Revoke'), 'Must render Revoke button');
+  assert.ok(content.includes('revokeConfirmInquiry'), 'Must declare revokeConfirmInquiry state');
+  assert.ok(content.includes('Confirm Revocation'), 'Must provide Confirm Revocation modal button');
+});
+
+test('5. Dedicated Revocation Route POST /api/admin/reset-tokens/:id/revoke Contract & Idempotency', async () => {
+  const { onRequestPost: handleRevokePost } = await import('../functions/api/admin/reset-tokens/[id]/revoke.js');
+  const { createSessionToken, hashTokenSha256 } = await import('../functions/api/_auth_utils.js');
+
+  const mockDb = createMockD1();
+  const testToken = 'token_dedicated_revoke_987654321';
+  const tokenHash = await hashTokenSha256(testToken);
+
+  mockDb.tables.password_reset_tokens.push({
+    token_hash: tokenHash,
+    user_id: 'usr_target_victim',
+    expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    created_at: new Date().toISOString(),
+  });
+
+  mockDb.tables.access_inquiries.push({
+    id: 'inq_dedicated_revoke_1',
+    request_type: 'PASSWORD_RESET',
+    name: 'Target Account',
+    email: 'target@example.com',
+    note: 'Password reset link dispatched.',
+    ip: '127.0.0.1',
+    status: 'pending',
+    created_at: new Date().toISOString(),
+  });
+
+  const env = {
+    DB: mockDb,
+    SESSION_SECRET: 'super_secret_session_key_minimum_32_characters_for_hmac',
+    ADMIN_NOTIFICATION_EMAIL: 'superadmin@example.com',
+  };
+
+  const adminToken = await createSessionToken(
+    { sub: 'usr_super_admin', id: 'usr_super_admin', email: 'superadmin@example.com', role: 'admin' },
+    env.SESSION_SECRET
+  );
+
+  const clientToken = await createSessionToken(
+    { sub: 'usr_target_victim', id: 'usr_target_victim', email: 'target@example.com', role: 'client' },
+    env.SESSION_SECRET
+  );
+
+  // A. Non-admin forbidden check
+  const nonAdminReq = new Request('https://app.deltaharvest.local/api/admin/reset-tokens/inq_dedicated_revoke_1/revoke', {
+    method: 'POST',
+    headers: { Cookie: `deltaharvest_session=${clientToken}` },
+  });
+  const forbiddenRes = await handleRevokePost({
+    request: nonAdminReq,
+    params: { id: 'inq_dedicated_revoke_1' },
+    env,
+  });
+  assert.strictEqual(forbiddenRes.status, 403, 'Non-admin request to revoke endpoint must return 403 Forbidden');
+
+  // B. Admin successful revocation
+  const adminReq = new Request('https://app.deltaharvest.local/api/admin/reset-tokens/inq_dedicated_revoke_1/revoke', {
+    method: 'POST',
+    headers: { Cookie: `deltaharvest_session=${adminToken}` },
+  });
+  const revokeRes = await handleRevokePost({
+    request: adminReq,
+    params: { id: 'inq_dedicated_revoke_1' },
+    env,
+  });
+  assert.strictEqual(revokeRes.status, 200, 'Admin revocation must return 200 OK');
+  const revokeData = await revokeRes.json();
+  assert.strictEqual(revokeData.status, 'revoked');
+  assert.strictEqual(revokeData.success, true);
+
+  // Verify DB state
+  const inq = mockDb.tables.access_inquiries.find((r) => r.id === 'inq_dedicated_revoke_1');
+  assert.strictEqual(inq.status, 'revoked', 'Inquiry must be marked revoked');
+  const activeTokens = mockDb.tables.password_reset_tokens.filter((r) => r.user_id === 'usr_target_victim');
+  assert.strictEqual(activeTokens.length, 0, 'Active token must be deleted from table');
+
+  // C. Idempotency on second call
+  const repeatRes = await handleRevokePost({
+    request: adminReq,
+    params: { id: 'inq_dedicated_revoke_1' },
+    env,
+  });
+  assert.strictEqual(repeatRes.status, 200, 'Repeated revocation call must succeed idempotently');
+  const repeatData = await repeatRes.json();
+  assert.strictEqual(repeatData.alreadyRevoked, true, 'Repeated call must report alreadyRevoked');
+});
+
+test('6. Negative Token-Use Contract: Revoked token cannot be consumed', async () => {
+  const { consumePasswordResetToken, hashTokenSha256 } = await import('../functions/api/_auth_utils.js');
+
+  const mockDb = createMockD1();
+  const testToken = 'revoked_token_must_fail_123456';
+  const tokenHash = await hashTokenSha256(testToken);
+
+  // Notice: token is NOT present in password_reset_tokens because it was revoked
+  const env = { DB: mockDb };
+  const consumedUserId = await consumePasswordResetToken(env, tokenHash);
+  assert.strictEqual(consumedUserId, null, 'Attempting to consume a revoked/deleted token must return null');
+});
+
+test('7. User Directory Resiliency: getAllUsers succeeds when user_trades table is missing', async () => {
+  const { getAllUsers } = await import('../functions/api/_auth_utils.js');
+
+  // Custom mock D1 that throws on user_trades queries
+  const mockDb = {
+    prepare(sql) {
+      return {
+        bind() { return this; },
+        async run() { return { success: true }; },
+        async all() {
+          if (sql.includes('user_trades')) {
+            throw new Error('D1_ERROR: no such table: user_trades');
+          }
+          if (sql.includes('FROM users u')) {
+            return {
+              results: [
+                {
+                  id: 'usr_resilient_1',
+                  email: 'resilient@example.com',
+                  role: 'client',
+                  is_active: 1,
+                  must_change_password: 0,
+                  last_login_at: '2026-10-12T12:00:00Z',
+                  created_at: '2026-10-12T10:00:00Z',
+                  updated_at: '2026-10-12T10:00:00Z',
+                  display_name: 'Resilient User',
+                  account_notes: '',
+                },
+              ],
+            };
+          }
+          return { results: [] };
+        },
+      };
+    },
+  };
+
+  const env = {
+    DB: mockDb,
+    ENVIRONMENT: 'production', // Must test production mode where errors previously rethrew
+  };
+
+  const users = await getAllUsers(env);
+  assert.ok(Array.isArray(users), 'Must return users array even when user_trades is absent');
+  assert.strictEqual(users.length, 1, 'Must return the user');
+  assert.strictEqual(users[0].email, 'resilient@example.com');
+  assert.strictEqual(users[0].trade_count, 0, 'trade_count must default to 0 on fallback');
 });
