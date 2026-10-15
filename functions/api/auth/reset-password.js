@@ -10,6 +10,7 @@ import {
   checkRateLimit,
   buildRateLimitResponse,
 } from "../_rate_limit.js";
+import { sendResendEmail, logEmailDelivery } from "../_email_delivery.js";
 
 /**
  * Cloudflare Pages Function: POST /api/auth/reset-password
@@ -149,29 +150,30 @@ export async function onRequestPost(context) {
       // Option B Policy: Administrative security alerts on password reset are disabled per policy.
       // Reset links and single-use tokens are dispatched exclusively to the requesting user's registered email.
       // Administrators can audit all reset inquiries in the Admin Console via D1 access_inquiries.
-      try {
-        const resendResp = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${env.RESEND_API_KEY.trim()}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: [cleanEmail],
-            subject: userSubject,
-            text: userTextBody,
-            html: userHtmlBody,
-          }),
-        });
-        if (resendResp.ok) {
-          emailDispatched = true;
-        } else {
-          console.warn(`Resend dispatch notice for ${cleanEmail}:`, resendResp.status, await resendResp.text().catch(() => ""));
-        }
-      } catch (emailErr) {
-        console.warn(`Resend dispatch error for ${cleanEmail}:`, emailErr);
+      const r = await sendResendEmail({
+        apiKey: env.RESEND_API_KEY,
+        from: fromAddress,
+        to: cleanEmail,
+        subject: userSubject,
+        text: userTextBody,
+        html: userHtmlBody,
+      });
+
+      if (r.ok) {
+        emailDispatched = true;
+      } else {
+        console.warn(`Resend dispatch notice for ${cleanEmail}:`, r.status, r.body);
       }
+
+      await logEmailDelivery(env, {
+        endpoint: "password_reset",
+        recipient: cleanEmail,
+        channel: "Resend API",
+        httpStatus: r.status,
+        attempts: r.attempts,
+        errorName: r.ok ? null : (r.body?.name || "resend_error"),
+        errorMessage: r.ok ? null : (r.body?.message || JSON.stringify(r.body).slice(0, 300)),
+      });
     }
 
     // Always return the identical generic confirmation

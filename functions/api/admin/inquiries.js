@@ -1,5 +1,6 @@
 import { getAdminNotificationEmail, authenticateRequest, getUserByEmail } from "../_auth_utils.js";
 import { getClientIp } from "../_rate_limit.js";
+import { sendResendEmail, logEmailDelivery, getEmailHealth } from "../_email_delivery.js";
 
 // In-memory rate limiting for per-IP burst protection
 const ipRequestHistory = new Map();
@@ -168,39 +169,38 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
 
     // 3. Primary Dispatch: Resend REST API (if configured)
     if (env.RESEND_API_KEY && env.RESEND_API_KEY.trim() && adminRecipient) {
-      try {
-        const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
-        const resendResp = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.RESEND_API_KEY.trim()}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: [adminRecipient],
-            reply_to: cleanEmail,
-            subject,
-            html: htmlContent,
-            text: textContent,
-          }),
-        });
+      const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
+      const r = await sendResendEmail({
+        apiKey: env.RESEND_API_KEY,
+        from: fromAddress,
+        to: adminRecipient,
+        replyTo: cleanEmail,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      });
 
-        const resData = await resendResp.json().catch(() => ({}));
-        diagnostics.resendStatus = resendResp.status;
-        diagnostics.resendResponse = resData;
+      diagnostics.resendStatus = r.status;
+      diagnostics.resendResponse = r.body;
+      diagnostics.resendAttempts = r.attempts;
 
-        if (resendResp.ok) {
-          emailSent = true;
-          deliveryProtocols.push("Resend API");
-          console.info(`[inquiries] Dispatched inquiry ${type} via Resend API to ${adminRecipient}.`);
-        } else {
-          console.warn(`[inquiries] Resend API returned ${resendResp.status}:`, resData);
-        }
-      } catch (rErr) {
-        diagnostics.resendError = String(rErr);
-        console.warn("[inquiries] Resend dispatch failed:", rErr);
+      if (r.ok) {
+        emailSent = true;
+        deliveryProtocols.push("Resend API");
+        console.info(`[inquiries] Dispatched inquiry ${type} via Resend API to ${adminRecipient}.`);
+      } else {
+        console.warn(`[inquiries] Resend API returned ${r.status}:`, r.body);
       }
+
+      await logEmailDelivery(env, {
+        endpoint: "inquiry_post",
+        recipient: adminRecipient,
+        channel: "Resend API",
+        httpStatus: r.status,
+        attempts: r.attempts,
+        errorName: r.ok ? null : (r.body?.name || "resend_error"),
+        errorMessage: r.ok ? null : (r.body?.message || JSON.stringify(r.body).slice(0, 300)),
+      });
     }
 
     // 4. Active Fallback: FormSubmit Direct Email Gateway (Zero-config HTTPS transport)
@@ -246,6 +246,16 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
         console.warn("[inquiries] FormSubmit dispatch error:", fsErr);
       }
 
+      await logEmailDelivery(env, {
+        endpoint: "inquiry_post",
+        recipient: adminRecipient,
+        channel: "FormSubmit Gateway",
+        httpStatus: diagnostics.formSubmitStatus ?? null,
+        attempts: 1,
+        errorName: emailSent ? null : (diagnostics.formSubmitError ? "network_error" : "formsubmit_error"),
+        errorMessage: emailSent ? null : (diagnostics.formSubmitError || JSON.stringify(diagnostics.formSubmitResponse).slice(0, 300)),
+      });
+
       // Try URL-encoded FormSubmit endpoint if JSON attempt did not report success
       if (!emailSent) {
         try {
@@ -284,6 +294,8 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
 
     // 5. Additional Fallback: MailChannels (if available)
     if (!emailSent) {
+      let mcStatus = 0;
+      let mcErrStr = null;
       try {
         const mcResp = await fetch("https://api.mailchannels.net/tx/v1/send", {
           method: "POST",
@@ -310,14 +322,26 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
           }),
         });
 
+        mcStatus = mcResp.status;
         if (mcResp.ok || mcResp.status === 202) {
           emailSent = true;
           deliveryProtocols.push("MailChannels");
           console.info(`[inquiries] Dispatched inquiry ${type} via MailChannels.`);
         }
       } catch (mcErr) {
+        mcErrStr = String(mcErr);
         console.warn("[inquiries] MailChannels dispatch failed:", mcErr);
       }
+
+      await logEmailDelivery(env, {
+        endpoint: "inquiry_post",
+        recipient: adminRecipient,
+        channel: "MailChannels",
+        httpStatus: mcStatus || null,
+        attempts: 1,
+        errorName: emailSent ? null : (mcErrStr ? "network_error" : "mailchannels_error"),
+        errorMessage: emailSent ? null : (mcErrStr || (mcStatus ? `HTTP ${mcStatus}` : "mailchannels_failed")),
+      });
     }
 
     // 6. Webhook Broadcast (if env.ADMIN_NOTIFICATION_WEBHOOK or env.DISCORD_WEBHOOK_URL is configured)
@@ -465,41 +489,41 @@ export async function onRequestGet(context) {
       );
     }
     const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
-    try {
-      const resendResp = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.RESEND_API_KEY.trim()}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: fromAddress,
-          to: [adminRecipient],
-          subject: "[DeltaHarvest] Resend Configuration Verification Test",
-          text: `This is an automated verification test email dispatched via Resend REST API to ${adminRecipient}.`,
-        }),
-      });
-      const resData = await resendResp.json().catch(() => ({}));
-      return new Response(
-        JSON.stringify({
-          configured: true,
-          status: resendResp.status,
-          ok: resendResp.ok,
-          from: fromAddress,
-          to: adminRecipient,
-          resendResponse: resData,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
-    } catch (testErr) {
-      return new Response(
-        JSON.stringify({
-          configured: true,
-          error: String(testErr),
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
+    const r = await sendResendEmail({
+      apiKey: env.RESEND_API_KEY,
+      from: fromAddress,
+      to: adminRecipient,
+      subject: "[DeltaHarvest] Resend Configuration Verification Test",
+      text: `This is an automated verification test email dispatched via Resend REST API to ${adminRecipient}.`,
+    });
+    await logEmailDelivery(env, {
+      endpoint: "test_resend",
+      recipient: adminRecipient,
+      channel: "Resend API",
+      httpStatus: r.status,
+      attempts: r.attempts,
+      errorName: r.ok ? null : (r.body?.name || "resend_error"),
+      errorMessage: r.ok ? null : (r.body?.message || JSON.stringify(r.body).slice(0, 300)),
+    });
+    return new Response(
+      JSON.stringify({
+        configured: true,
+        status: r.status,
+        ok: r.ok,
+        from: fromAddress,
+        to: adminRecipient,
+        resendResponse: r.body,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  if (action === "email_health" || action === "health") {
+    const healthData = await getEmailHealth(env);
+    return new Response(JSON.stringify(healthData), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   if (action === "test_email" || action === "test_delivery") {
@@ -521,34 +545,33 @@ export async function onRequestGet(context) {
     const protocols = [];
     const testDiag = { recipient: adminRecipient };
 
-    // 1. Resend
+    // 1. Resend (with retry on transient failures)
     if (env.RESEND_API_KEY && env.RESEND_API_KEY.trim()) {
-      try {
-        const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
-        const resendResp = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.RESEND_API_KEY.trim()}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: [adminRecipient],
-            subject: testSubject,
-            text: testText,
-            html: testHtml,
-          }),
-        });
-        const resData = await resendResp.json().catch(() => ({}));
-        testDiag.resendStatus = resendResp.status;
-        testDiag.resendResponse = resData;
-        if (resendResp.ok) {
-          emailSent = true;
-          protocols.push("Resend API");
-        }
-      } catch (err) {
-        testDiag.resendError = String(err);
+      const fromAddress = env.EMAIL_FROM || "DeltaHarvest Inquiries <onboarding@resend.dev>";
+      const r = await sendResendEmail({
+        apiKey: env.RESEND_API_KEY,
+        from: fromAddress,
+        to: adminRecipient,
+        subject: testSubject,
+        text: testText,
+        html: testHtml,
+      });
+      testDiag.resendStatus = r.status;
+      testDiag.resendResponse = r.body;
+      testDiag.resendAttempts = r.attempts;
+      if (r.ok) {
+        emailSent = true;
+        protocols.push("Resend API");
       }
+      await logEmailDelivery(env, {
+        endpoint: "test_email",
+        recipient: adminRecipient,
+        channel: "Resend API",
+        httpStatus: r.status,
+        attempts: r.attempts,
+        errorName: r.ok ? null : (r.body?.name || "resend_error"),
+        errorMessage: r.ok ? null : (r.body?.message || JSON.stringify(r.body).slice(0, 300)),
+      });
     }
 
     // 2. FormSubmit Gateway fallback
@@ -585,6 +608,15 @@ export async function onRequestGet(context) {
       } catch (fsErr) {
         testDiag.formSubmitError = String(fsErr);
       }
+      await logEmailDelivery(env, {
+        endpoint: "test_email",
+        recipient: adminRecipient,
+        channel: "FormSubmit Gateway",
+        httpStatus: testDiag.formSubmitStatus ?? null,
+        attempts: 1,
+        errorName: emailSent ? null : (testDiag.formSubmitError ? "network_error" : "formsubmit_error"),
+        errorMessage: emailSent ? null : (testDiag.formSubmitError || JSON.stringify(testDiag.formSubmitResponse).slice(0, 300)),
+      });
     }
 
     return new Response(
@@ -598,7 +630,7 @@ export async function onRequestGet(context) {
           ? `✓ Test alert successfully delivered to ${adminRecipient} via ${protocols.join(", ")}!`
           : `Failed to deliver test alert to ${adminRecipient}.`,
       }),
-      { status: emailSent ? 200 : 502, headers: { "Content-Type": "application/json" } }
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
   }
 

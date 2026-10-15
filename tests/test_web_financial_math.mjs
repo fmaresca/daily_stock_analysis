@@ -445,7 +445,7 @@ test('13. Admin Inquiries Multi-Channel Dispatch Contract & Server-Side Security
   assert.ok(inquiriesContent.includes('export async function onRequestPost'), 'Must export onRequestPost');
   assert.ok(inquiriesContent.includes('export async function onRequestGet'), 'Must export onRequestGet');
   assert.ok(inquiriesContent.includes('formsubmit.co/ajax/'), 'Must integrate FormSubmit direct transport');
-  assert.ok(inquiriesContent.includes('api.resend.com/emails'), 'Must integrate Resend direct transport');
+  assert.ok(inquiriesContent.includes('sendResendEmail'), 'Must integrate Resend transport via sendResendEmail');
   assert.ok(inquiriesContent.includes('access_inquiries'), 'Must integrate Cloudflare D1 persistent audit storage');
   assert.ok(inquiriesContent.includes('test_resend'), 'Must integrate Resend test diagnostic action');
   assert.ok(inquiriesContent.includes('test_email'), 'Must integrate Email test diagnostic action');

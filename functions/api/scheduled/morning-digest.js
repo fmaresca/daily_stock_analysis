@@ -21,6 +21,7 @@ import { authenticateRequest } from "../_auth_utils.js";
 import { getDailyMarketRecap } from "../_market_recap_core.js";
 import { getMarketPriceAndTechnicals, getOptionsPreFlightChecklist } from "../agent/_agent_tools.js";
 import { nowET, todayET, isExpiredOption } from "../_now.js";
+import { sendResendEmail, logEmailDelivery } from "../_email_delivery.js";
 
 /**
  * Purges expired option contracts and past economic calendar events from digest content.
@@ -404,38 +405,33 @@ export async function onRequest(context) {
         runDate: todayStr,
       });
 
-      // 6. Push via Resend (with 1-retry fallback)
+      // 6. Push via Resend (with retry & D1 delivery logging)
       if (env?.RESEND_API_KEY && env.RESEND_API_KEY.trim()) {
-        let sentOk = false;
-        for (let attempt = 1; attempt <= 2; attempt++) {
-          try {
-            const resendResp = await fetch("https://api.resend.com/emails", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${env.RESEND_API_KEY.trim()}`,
-              },
-              body: JSON.stringify({
-                from: env.EMAIL_FROM || "DeltaHarvest Digest <onboarding@resend.dev>",
-                to: user.email,
-                subject: `[DeltaHarvest] Morning Market Digest • ${todayStr}`,
-                html: emailHtml,
-              }),
-            });
+        const fromAddress = env.EMAIL_FROM || "DeltaHarvest Digest <onboarding@resend.dev>";
+        const r = await sendResendEmail({
+          apiKey: env.RESEND_API_KEY,
+          from: fromAddress,
+          to: user.email,
+          subject: `[DeltaHarvest] Morning Market Digest • ${todayStr}`,
+          html: emailHtml,
+        });
 
-            if (resendResp.ok) {
-              sentOk = true;
-              break;
-            } else {
-              console.warn(`Resend dispatch attempt ${attempt} returned ${resendResp.status}`);
-            }
-          } catch (rErr) {
-            console.warn(`Resend dispatch attempt ${attempt} error:`, rErr);
-          }
+        if (r.ok) {
+          successCount++;
+        } else {
+          errorCount++;
+          console.warn(`Resend morning digest dispatch failed for ${user.email}: HTTP ${r.status}`);
         }
 
-        if (sentOk) successCount++;
-        else errorCount++;
+        await logEmailDelivery(env, {
+          endpoint: "morning_digest",
+          recipient: user.email,
+          channel: "Resend API",
+          httpStatus: r.status,
+          attempts: r.attempts,
+          errorName: r.ok ? null : (r.body?.name || "resend_error"),
+          errorMessage: r.ok ? null : (r.body?.message || JSON.stringify(r.body).slice(0, 300)),
+        });
       }
 
       // 7. Push to user's optional Discord Webhook

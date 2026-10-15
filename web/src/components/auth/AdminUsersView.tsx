@@ -172,6 +172,21 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
   const [emailSaveError, setEmailSaveError] = useState<string | null>(null);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [emailHealth, setEmailHealth] = useState<{
+    healthy: boolean;
+    lastSuccessAt: string | null;
+    lastFailureAt: string | null;
+    recentFailures: number;
+    totalLogged: number;
+    latestStatus: 'OK' | 'FAILING' | 'EMPTY';
+    latestAttempt?: {
+      channel?: string;
+      httpStatus?: number;
+      createdAt?: string;
+      errorName?: string;
+      errorMessage?: string;
+    } | null;
+  } | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
@@ -299,11 +314,27 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
     }
   }, []);
 
+  const fetchEmailHealth = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/email-health', {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmailHealth(data);
+      }
+    } catch {
+      // Ignore network errors
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
     fetchSettings();
     fetchInquiries();
-  }, [fetchUsers, fetchSettings, fetchInquiries]);
+    fetchEmailHealth();
+  }, [fetchUsers, fetchSettings, fetchInquiries, fetchEmailHealth]);
 
   const handleSaveEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -345,83 +376,49 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
     setTestEmailResult(null);
 
     try {
-      // 1. Dispatch through server-side edge middleware test endpoint
-      let res = await fetch('/api/admin/inquiries?action=test_email', {
+      // Dispatch through server-side edge middleware test probe
+      const res = await fetch('/api/admin/inquiries?action=test_email', {
         headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
       });
-      let data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({}));
 
-      // Fallback: If GET test_email was not 200, try POST /api/admin/inquiries
-      if (!res.ok || !data.success) {
-        res = await fetch('/api/admin/inquiries', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: 'Platform Administrator',
-            email: targetEmail,
-            requestType: 'MAINTENANCE',
-            message: `[DeltaHarvest System Test] Live test alert from Tenant Directory to verify notifications for ${targetEmail}.`,
-            note: 'Verification test alert',
-          }),
-        });
-        data = await res.json().catch(() => ({}));
-      }
-
-      // Browser Client Direct Fallback: Dispatch from user browser residential IP
-      if (!res.ok || (!data.success && !data.delivered)) {
-        try {
-          const clientRes = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetEmail)}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Origin': window.location.origin,
-              'Referer': window.location.href,
-            },
-            body: JSON.stringify({
-              _subject: `[DeltaHarvest System Test] Live Alert Verification for ${targetEmail}`,
-              _captcha: 'false',
-              name: 'Platform Administrator',
-              email: targetEmail,
-              requestType: 'System Test',
-              message: `Live test alert dispatched from browser client IP to verify mailbox delivery for ${targetEmail}.`,
-              timestamp: new Date().toUTCString(),
-            }),
-          });
-          const clientData = await clientRes.json().catch(() => ({}));
-          if (clientRes.ok && (clientData.success === true || clientData.success === 'true')) {
-            setTestEmailResult({
-              success: true,
-              message: `✓ Test alert successfully delivered to ${targetEmail} via FormSubmit Browser Gateway! Check your inbox.`,
-            });
-            return;
-          }
-        } catch {
-          // Ignore
-        }
-      }
-
-      if (res.ok && (data.success || data.delivered)) {
+      if (res.ok && data.success) {
         const protocolInfo = Array.isArray(data.protocols) && data.protocols.length > 0
           ? ` via ${data.protocols.join(', ')}`
           : '';
         setTestEmailResult({
           success: true,
-          message: `✓ Test alert successfully dispatched to ${targetEmail}${protocolInfo}! Check your inbox.`,
+          message: data.message || `✓ Test alert successfully delivered to ${targetEmail}${protocolInfo}! Check your inbox.`,
         });
       } else {
+        // Construct actionable diagnostic message for admin
+        const diag = data.diagnostics || {};
+        const parts: string[] = [];
+        if (diag.resendStatus !== undefined) {
+          const resendMsg = diag.resendResponse?.message
+            || diag.resendResponse?.name
+            || diag.resendError;
+          parts.push(`Resend HTTP ${diag.resendStatus}${resendMsg ? `: "${resendMsg}"` : ''}`);
+        }
+        if (diag.formSubmitStatus !== undefined) {
+          parts.push(`FormSubmit HTTP ${diag.formSubmitStatus}`);
+        }
+        const diagnosticSuffix = parts.length > 0 ? ` [${parts.join(' | ')}]` : '';
+
         setTestEmailResult({
           success: false,
-          message: data.error || data.message || `Unable to send test alert to ${targetEmail}. Please check spam filter or settings.`,
+          message: (data.message || data.error || `Failed to deliver test alert to ${targetEmail}.`) + diagnosticSuffix,
         });
       }
-    } catch {
+    } catch (err: unknown) {
       setTestEmailResult({
         success: false,
-        message: `Network error dispatching test email alert to ${targetEmail}.`,
+        message: `Network error dispatching test email alert to ${targetEmail}: ${err instanceof Error ? err.message : String(err)}`,
       });
     } finally {
       setIsTestingEmail(false);
+      fetchEmailHealth();
     }
   };
 
@@ -605,53 +602,85 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
       </div>
 
       {/* Console Section Navigation Tabs */}
-      <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab('USERS')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'USERS'
-              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>User Directory &amp; Provisioning</span>
-          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-200">
-            {users.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => { setActiveTab('INQUIRIES'); fetchInquiries(); }}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'INQUIRIES'
-              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
-          }`}
-        >
-          <Mail className="w-4 h-4" />
-          <span>Access &amp; Reset Inquiries</span>
-          {inquiries.length > 0 && (
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/30 text-amber-300 border border-amber-500/40">
-              {inquiries.length}
+      <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 gap-2">
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('USERS')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'USERS'
+                ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>User Directory &amp; Provisioning</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-200">
+              {users.length}
             </span>
-          )}
-        </button>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('SETTINGS')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'SETTINGS'
-              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>Notification &amp; Inquiry Settings</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => { setActiveTab('INQUIRIES'); fetchInquiries(); }}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'INQUIRIES'
+                ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            <span>Access &amp; Reset Inquiries</span>
+            {inquiries.length > 0 && (
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/30 text-amber-300 border border-amber-500/40">
+                {inquiries.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('SETTINGS')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'SETTINGS'
+                ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Notification &amp; Inquiry Settings</span>
+          </button>
+        </div>
+
+        {/* Email Health Status Indicator (Prompt 4b) */}
+        {emailHealth && (
+          <div className="flex items-center gap-2 pr-1">
+            {emailHealth.latestStatus === 'OK' ? (
+              <span
+                title={emailHealth.lastSuccessAt ? `Last success: ${emailHealth.lastSuccessAt}` : 'Latest delivery succeeded'}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 shadow-sm"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Email OK
+              </span>
+            ) : emailHealth.latestStatus === 'FAILING' ? (
+              <span
+                title={emailHealth.latestAttempt?.errorMessage || (emailHealth.lastFailureAt ? `Last failure: ${emailHealth.lastFailureAt}` : 'Email delivery failed')}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-950/80 border border-rose-500/50 text-rose-300 shadow-sm"
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                Email delivery failing — check Resend
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800/80 border border-slate-700 text-slate-400"
+              >
+                <span className="w-2 h-2 rounded-full bg-slate-500" />
+                No delivery attempts logged yet
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {activeTab === 'INQUIRIES' ? (
@@ -909,6 +938,22 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
                 </button>
               </div>
             )}
+
+            {/* External Monitor Hint (Prompt 4c) */}
+            <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 space-y-1.5">
+              <p className="flex items-center gap-1.5 text-slate-300 font-semibold">
+                <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                <span>External Uptime Monitoring</span>
+              </p>
+              <p className="leading-relaxed">
+                Point a free UptimeRobot keyword monitor at <code className="text-cyan-300 font-mono bg-slate-950 px-1 py-0.5 rounded border border-slate-800 select-all">https://daily-stock-analysis-89j.pages.dev/api/admin/email-health?key=YOUR_KEY</code> alerting when the body does not contain <code className="text-cyan-300 font-mono bg-slate-950 px-1 py-0.5 rounded border border-slate-800 select-all">&quot;healthy&quot;:true</code>.
+              </p>
+              {emailHealth?.latestAttempt && (
+                <p className="text-[10px] text-slate-500 font-mono pt-1">
+                  Last attempt: {emailHealth.latestAttempt.channel || 'None'} • HTTP {emailHealth.latestAttempt.httpStatus ?? 'N/A'} • {emailHealth.latestAttempt.createdAt || 'N/A'}
+                </p>
+              )}
+            </div>
           </form>
         </div>
       ) : (

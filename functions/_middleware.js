@@ -42,6 +42,7 @@ export async function onRequest(context) {
     pathname === "/api/auth/request-access" ||
     pathname.startsWith("/api/auth/reset-password") ||
     pathname === "/api/admin/inquiries" ||
+    pathname === "/api/admin/email-health" ||
     pathname.startsWith("/api/v1/options/") ||
     pathname === "/api/economic-calendar" ||
     pathname === "/api/analyze-options" ||
