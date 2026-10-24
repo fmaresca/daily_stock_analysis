@@ -104,7 +104,7 @@ Origin IP:       ${clientIp}
 User-Agent:      ${userAgent}
 
 Reply directly to this email to contact the user at ${cleanEmail}.
-Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
+Manage user accounts at: ${url.origin || 'https://invest.marescagovernance.com'}/admin/users
 `;
 
     const htmlContent = `<!DOCTYPE html>
@@ -205,7 +205,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
 
     // 4. Active Fallback: FormSubmit Direct Email Gateway (Zero-config HTTPS transport)
     if (!emailSent && adminRecipient) {
-      const fsOrigin = "https://daily-stock-analysis-89j.pages.dev";
+      const fsOrigin = url.origin || "https://invest.marescagovernance.com";
       try {
         const fsResp = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminRecipient)}`, {
           method: "POST",
@@ -307,7 +307,7 @@ Manage user accounts at: https://daily-stock-analysis-89j.pages.dev/admin/users
               },
             ],
             from: {
-              email: "no-reply@daily-stock-analysis-89j.pages.dev",
+              email: `no-reply@${url.hostname || 'invest.marescagovernance.com'}`,
               name: "DeltaHarvest Inquiries",
             },
             reply_to: {
@@ -576,7 +576,7 @@ export async function onRequestGet(context) {
 
     // 2. FormSubmit Gateway fallback
     if (!emailSent) {
-      const fsOrigin = "https://daily-stock-analysis-89j.pages.dev";
+      const fsOrigin = url.origin || "https://invest.marescagovernance.com";
       try {
         const fsResp = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminRecipient)}`, {
           method: "POST",

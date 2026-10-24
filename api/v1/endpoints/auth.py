@@ -558,7 +558,7 @@ Applicant Details:
 
 Admin Actions:
 1. Provision this user in the Admin Console:
-   https://daily-stock-analysis-89j.pages.dev/admin/users
+   https://invest.marescagovernance.com/admin/users
 2. Reply directly to applicant:
    {clean_email}
 """

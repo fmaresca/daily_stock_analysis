@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-09  
 **Repository:** `fmaresca/daily_stock_analysis`  
-**Application URL:** `https://daily-stock-analysis-89j.pages.dev/`  
+**Application URL:** `https://invest.marescagovernance.com/` (Pages mirror: `https://daily-stock-analysis-89j.pages.dev/`)  
 **Execution Type:** Complete Depth Audit Pack (Prompts 1–7)
 
 ---

@@ -314,7 +314,8 @@ export function useOptionsData(currentWatchlistSymbols: string[]) {
       hostname.endsWith('pages.dev') ||
       hostname.endsWith('github.io') ||
       hostname.endsWith('netlify.app') ||
-      hostname.endsWith('vercel.app');
+      hostname.endsWith('vercel.app') ||
+      hostname.includes('marescagovernance.com');
 
     if (isStaticCDN) return;
 

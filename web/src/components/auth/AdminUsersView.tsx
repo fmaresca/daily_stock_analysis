@@ -946,7 +946,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBackToWorkspac
                 <span>External Uptime Monitoring</span>
               </p>
               <p className="leading-relaxed">
-                Point a free UptimeRobot keyword monitor at <code className="text-cyan-300 font-mono bg-slate-950 px-1 py-0.5 rounded border border-slate-800 select-all">https://daily-stock-analysis-89j.pages.dev/api/admin/email-health?key=YOUR_KEY</code> alerting when the body does not contain <code className="text-cyan-300 font-mono bg-slate-950 px-1 py-0.5 rounded border border-slate-800 select-all">&quot;healthy&quot;:true</code>.
+                Point a free UptimeRobot keyword monitor at <code className="text-cyan-300 font-mono bg-slate-950 px-1 py-0.5 rounded border border-slate-800 select-all">{typeof window !== 'undefined' ? `${window.location.origin}/api/admin/email-health?key=YOUR_KEY` : 'https://invest.marescagovernance.com/api/admin/email-health?key=YOUR_KEY'}</code> alerting when the body does not contain <code className="text-cyan-300 font-mono bg-slate-950 px-1 py-0.5 rounded border border-slate-800 select-all">&quot;healthy&quot;:true</code>.
               </p>
               {emailHealth?.latestAttempt && (
                 <p className="text-[10px] text-slate-500 font-mono pt-1">

@@ -39,7 +39,10 @@ export interface DiscordDispatchResult {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const APP_URL = 'https://daily-stock-analysis-89j.pages.dev';
+const APP_URL =
+  typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : 'https://invest.marescagovernance.com';
 
 /**
  * Validates that a URL is a real Discord Webhook endpoint.
