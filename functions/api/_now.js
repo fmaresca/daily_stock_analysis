@@ -5,8 +5,18 @@
  * Mirrors web/src/utils/appNow.ts for edge functions.
  */
 
+let mockNowDate = null;
+
 export function now() {
-  return new Date();
+  return mockNowDate ? new Date(mockNowDate.getTime()) : new Date();
+}
+
+export function setMockNow(isoOrDate) {
+  mockNowDate = typeof isoOrDate === 'string' ? new Date(isoOrDate) : new Date(isoOrDate.getTime());
+}
+
+export function resetNow() {
+  mockNowDate = null;
 }
 
 /**

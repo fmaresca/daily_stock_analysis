@@ -2122,19 +2122,25 @@ test('27. YTD Premiums Written ($746,277.69) Currency Parsing & Economic Calenda
   assert.strictEqual(weekUpcoming.isoFriday, '2026-10-16', 'Target week Friday must be 2026-10-16');
 
   // Verify Cloudflare Pages Function onRequestGet produces indicators strictly for 2026-10-12 - 2026-10-16
-  const { onRequestGet } = await import('../functions/api/economic-calendar.js');
-  const mockContext = { request: new Request('http://localhost/api/economic-calendar?scope=upcoming') };
-  const res = await onRequestGet(mockContext);
-  assert.strictEqual(res.status, 200);
-  const data = await res.json();
-  assert.ok(Array.isArray(data.indicators), 'Indicators must be an array');
-  assert.ok(data.indicators.length >= 5, 'Must have at least 5 events');
-  
-  // Every event returned for upcoming must have isoDate in target week
-  for (const item of data.indicators) {
-    const prefix = (item.isoDate || '').substring(0, 10);
-    assert.ok(prefix >= '2026-10-12', `Event ${item.title} date ${prefix} must be >= 2026-10-12, not past week`);
-    assert.ok(prefix <= '2026-10-16', `Event ${item.title} date ${prefix} must be <= 2026-10-16`);
+  const { setMockNow: setServerMockNow, resetNow: resetServerNow } = await import('../functions/api/_now.js');
+  setServerMockNow('2026-10-09T21:00:00Z');
+  try {
+    const { onRequestGet } = await import('../functions/api/economic-calendar.js');
+    const mockContext = { request: new Request('http://localhost/api/economic-calendar?scope=upcoming') };
+    const res = await onRequestGet(mockContext);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.indicators), 'Indicators must be an array');
+    assert.ok(data.indicators.length >= 5, 'Must have at least 5 events');
+    
+    // Every event returned for upcoming must have isoDate in target week
+    for (const item of data.indicators) {
+      const prefix = (item.isoDate || '').substring(0, 10);
+      assert.ok(prefix >= '2026-10-12', `Event ${item.title} date ${prefix} must be >= 2026-10-12, not past week`);
+      assert.ok(prefix <= '2026-10-16', `Event ${item.title} date ${prefix} must be <= 2026-10-16`);
+    }
+  } finally {
+    resetServerNow();
   }
 
   // C. Column Sort Engine Verification
